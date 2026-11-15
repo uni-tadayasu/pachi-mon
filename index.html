@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#081a23">
-  <meta name="description" content="灯獣と出会い、共鳴し、八つの灯をつなぐ。独自の世界と音楽で描く、PC・スマートフォン対応の探索・育成RPG『灯獣紀 — 星環の旅路』。">
-  <title>灯獣紀 — 星環の旅路 | LUMINA TRAIL REMASTER</title>
+  
+  
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23081a23'/%3E%3Cpath d='M32 7 51 31 32 57 13 31Z' fill='none' stroke='%23dfc68e' stroke-width='3'/%3E%3Cpath d='m32 16 10 16-10 16-10-16Z' fill='%23a9ddc9'/%3E%3Cpath d='M32 24v16M25 32h14' stroke='%23081a23' stroke-width='3'/%3E%3C/svg%3E">
   <style>
 :root{
@@ -103,12 +103,247 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
 /* Keep capture labels and counts on a readable pair of lines on phones. */
 @media(max-width:600px){.battle-actions>.btn,.battle-actions>button:not(.move-btn){flex-basis:44%;flex-wrap:wrap;white-space:nowrap}.battle-actions .btn small{flex-basis:100%}.battle-actions .battle-continue{flex-basis:100%}}
 
+/* 2.1 · The celestial field atlas. Every frame shares the lantern and star-chart motif. */
+:root{--atlas-ink:#071b25;--atlas-copper:#bc8e63;--atlas-ivory:#f5ead0;--atlas-etched:rgba(220,201,154,.19)}
+body{background:radial-gradient(ellipse at 12% 0%,#193d42 0,transparent 42%),radial-gradient(ellipse at 95% 72%,#18313c 0,transparent 45%),#071820}
+body:not(.is-playing){overflow:auto}
+body:not(.is-playing) #app{display:none}
+.title-screen{position:relative;inset:auto;min-height:100vh;min-height:100svh;overflow:clip;z-index:1}
+.title-inner{position:relative;z-index:2;flex:1}
+.title-topbar,.title-footer{position:relative;z-index:3}
+.title-backdrop{background-position:center right}
+.title-screen::before{z-index:1;background:linear-gradient(90deg,#031922ee 0,#061d27cc 31%,#07232b40 68%,#071a2220),linear-gradient(0deg,#04171ef2 0,transparent 29%,transparent 79%,#04192377)}
+.title-astrolabe{position:absolute;right:-8%;top:7%;width:min(63vw,880px);aspect-ratio:1;z-index:2;pointer-events:none;opacity:.3;border:1px solid #e8cf934f;border-radius:50%;box-shadow:0 0 0 14px #ddc78808,0 0 0 15px #ddc78828,inset 0 0 0 16px #ddc78808}
+.title-astrolabe::before,.title-astrolabe::after{content:"";position:absolute;inset:9%;border:1px solid #edd89e70;border-radius:50%;transform:rotate(24deg)}
+.title-astrolabe::after{inset:26%;border-style:dashed;opacity:.65}
+.title-astrolabe>span{position:absolute;left:50%;top:-2%;height:104%;width:1px;background:linear-gradient(#d6cda400 0,#d6cda455 17%,#d6cda420 50%,#d6cda455 83%,#d6cda400)}
+.title-astrolabe>span:nth-child(2){transform:rotate(60deg)}
+.title-astrolabe>span:nth-child(3){transform:rotate(120deg)}
+.title-astrolabe>i{position:absolute;left:14%;top:13%;width:9px;height:9px;transform:rotate(45deg);background:#f6dfa9;box-shadow:0 0 20px #f1d79d99,calc(min(63vw,880px)*.59) calc(min(63vw,880px)*.38) 0 -2px #efdcad}
+.title-wordmark h1{text-shadow:0 3px 28px #0007,0 0 60px #e0cb7b14}
+.title-edition small{letter-spacing:2.8px;color:#ddc698}
+.title-eyebrow{color:#dfc99c}
+.title-metrics{position:relative;border-top:1px solid #cdb57b40;padding-top:23px}
+.title-metrics::before{content:"✦";position:absolute;top:-11px;left:0;color:#d8c18b;font-size:15px;background:#0b2028;padding-right:14px}
+.title-metrics strong{color:#f3dfb4;font-family:var(--serif)}
+.title-discover{display:inline-flex;align-items:center;justify-content:center;gap:13px;min-height:44px;padding:6px 0 6px 15px;color:#e7d6af;font-size:12px;letter-spacing:1.4px;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+.title-discover svg{width:14px;height:14px;transform:rotate(90deg)}
+.title-discover:hover{color:#fff0c9;border-color:#e5ce965e}
+.title-start{position:relative;border-radius:3px 13px 3px 13px;box-shadow:inset 0 0 0 3px #d8cc9a08,0 5px 18px #00151f38}
+.title-start::after{content:"";position:absolute;inset:4px;border:1px solid #e2ca8b18;border-radius:1px 9px 1px 9px;pointer-events:none}
+.topbar{position:relative;background:linear-gradient(90deg,#0c2730e6,#071923d9);border-bottom:1px solid #dcc28b35}
+.topbar::after{content:"";position:absolute;left:28px;right:28px;bottom:-4px;height:1px;background:linear-gradient(90deg,#d3b77c00,#d3b77c35 25%,#d3b77c35 75%,#d3b77c00);pointer-events:none}
+.brand-mark{position:relative;isolation:isolate}
+.brand-mark::before{content:"";position:absolute;inset:-4px;border:1px solid #e4c88c45;border-radius:50%;z-index:-1;box-shadow:0 0 0 5px #d6ba7d07}
+.brand-mark::after{content:"";position:absolute;inset:5px;border:1px solid #e1c99024;transform:rotate(45deg);z-index:-1}
+.location-compass{width:31px;height:31px;display:grid;place-items:center;flex-shrink:0;color:#bcd9c3;border:1px solid #9dbdaa40;border-radius:50%;box-shadow:0 0 0 4px #91baa408}
+.location-compass svg{width:21px;height:21px}
+.location-info #location-name{font-family:var(--serif);font-size:16px;letter-spacing:1.8px}
+.field-heading .eyebrow{font-size:9px;letter-spacing:2.4px;color:#d9c394}
+.field-status{font-family:var(--serif);letter-spacing:1px}
+.game-stage{border-radius:3px 18px 3px 18px;border:1px solid #d7bf80a6;box-shadow:0 0 0 3px #d3be8309,0 0 0 4px #a6b9a22b,0 20px 50px #00101899}
+.game-stage::after{content:"";position:absolute;inset:7px;border:1px solid #f9eed522;border-radius:1px 12px 1px 12px;pointer-events:none;z-index:2}
+.stage-corner{z-index:3;border-color:#f1dfb6aa}
+.world-label{border-radius:0 8px 0 8px;padding:8px 17px;background:linear-gradient(115deg,#09242ef7,#163d41ef);border-color:#e5cd9499;box-shadow:0 3px 14px #03151d70,inset 0 0 0 3px #c9b67e10;font-size:14px}
+.world-hint{border-radius:2px 10px 2px 10px;border:1px solid #bfa77445;background:#0b2530e8}
+.journal{position:relative;padding-top:24px;border-radius:3px 16px 3px 16px;border-color:#c0b4814a;border-top-color:#e3c995a8;background:linear-gradient(90deg,transparent 14px,#dac38e12 15px,transparent 16px),radial-gradient(circle at 95% 0,#c3ac6a14 0,transparent 32%),linear-gradient(145deg,#16363e,#0c2731 80%);box-shadow:3px 4px 0 #0b1d25,4px 5px 0 #bda16a26,0 12px 30px #0003}
+.journal::before{content:"";position:absolute;top:9px;left:8px;right:8px;border-top:1px solid #c6b17b30;pointer-events:none}
+.journal-heading h2{font-family:var(--serif);font-size:26px;letter-spacing:2px;font-weight:500;margin:7px 0 0;line-height:1.5}
+.journal-heading .eyebrow{font-size:8px;letter-spacing:1.6px}
+.journal-seal{position:relative;display:grid;place-items:center;width:48px;height:48px;flex-shrink:0;border:1px solid #e1c68666;border-radius:50%;color:#d5c494}
+.journal-seal::before{content:"";position:absolute;inset:5px;border:1px dashed #dbc89850;border-radius:50%}
+.journal-seal .journal-icon{width:25px;height:25px;margin:0;opacity:1;color:inherit}
+.journal-seal i{position:absolute;bottom:-7px;width:9px;height:9px;background:#bca274;transform:rotate(45deg);border:2px solid #17373c}
+.quest-section{border-top:1px solid #ddc58a26;border-bottom:1px solid #ddc58a26}
+.section-kicker h2{letter-spacing:1.3px}
+.section-note{font-size:7px;letter-spacing:1.4px}
+.seal{position:relative}
+.seal.earned{color:#ead7a5}
+.seal.earned>span{border-color:#e1c5809e;box-shadow:0 0 0 3px #d9c28a09,0 0 13px #c7bc7c19;background:radial-gradient(circle at 35% 25%,#ccbc7050,#667d5c18 70%)}
+.party-card{position:relative;border-radius:2px 10px 2px 10px;background:linear-gradient(135deg,#2d4a487d,#102c338c);border-color:#bfbd8e31;box-shadow:inset 0 0 0 3px #c6c39404}
+.party-card:hover{border-color:#e3ce8d9e;background:linear-gradient(135deg,#345650,#173c40)}
+.party-card.leader{border-color:#e1c58a8c;background:linear-gradient(125deg,#6b65432e,#16363a)}
+.party-card.leader::before{content:"";position:absolute;left:0;top:0;width:0;height:0;border-top:11px solid #e7cf94;border-right:11px solid transparent}
+.party-card .creature-portrait{filter:drop-shadow(0 4px 5px #001a2566)}
+.party-name{color:#f3ecd9}
+.lead-mark{font-size:7px;letter-spacing:.5px;color:#dfc693}
+.hp-track{background:#031b25b3;box-shadow:inset 0 1px 3px #0005}
+.hp-fill{background:linear-gradient(90deg,#75bca4,#c4dfad)}
+.journal-nav button{position:relative;border-radius:2px 8px 2px 8px;background:linear-gradient(120deg,#1d3c43a6,#0c273080);border-color:#c8bd8a2b;min-height:46px}
+.journal-nav button::after{content:"";position:absolute;right:5px;bottom:4px;width:6px;height:6px;border-right:1px solid #cbb57d50;border-bottom:1px solid #cbb57d50;pointer-events:none}
+.journal-nav button:hover{background:linear-gradient(120deg,#34544d,#16353d);border-color:#d9c38c8a}
+.combatant{border-radius:2px 12px 2px 12px;background:linear-gradient(115deg,#09232ef5,#1b4146ed);border-color:#e0c68c80;box-shadow:inset 0 0 0 3px #d7be7e0d,0 5px 18px #00151f66}
+.combatant::before{content:"";position:absolute;top:5px;left:5px;width:8px;height:8px;border-left:1px solid #e5d2a7a6;border-top:1px solid #e5d2a7a6}
+.combatant-top strong{font-family:var(--serif);letter-spacing:1px;font-size:16px}
+.enemy-card .hp-label{color:#c9d7b9}
+.battle-panel{border-radius:3px 15px 3px 15px;border-color:#cdb77a5e;background:linear-gradient(140deg,#1c3d44,#0c2731)}
+.battle-log-wrap{border-bottom-color:#c8b27d2d;background:linear-gradient(90deg,#d4bc7808,transparent)}
+.battle-actions>.btn{border-radius:2px 9px 2px 9px}
+.move-btn{border-radius:2px 9px 2px 9px;box-shadow:inset 3px 0 0 color-mix(in srgb,var(--type-color) 55%,transparent)}
+#modal{border-radius:3px 20px 3px 20px;border:1px solid #dcc68d8c;box-shadow:0 0 0 4px #d9c58d0b,0 0 0 5px #d9c58d21,0 24px 90px #001018bb;background:linear-gradient(145deg,#183941,#0e2833)}
+.modal-heading{position:relative;border-bottom-color:#cbb47d42;background:linear-gradient(90deg,#cab27d08,transparent)}
+.modal-heading::after{content:"◆";position:absolute;bottom:-9px;left:29px;color:#d5bd85;font-size:11px;line-height:16px;background:#17353e;padding:0 8px}
+.modal-heading h2{letter-spacing:1.7px}
+.menu-grid>button{border-radius:3px 12px 3px 12px;background:radial-gradient(circle at 50% 10%,#e7cd8d0b,transparent 75%),linear-gradient(145deg,#24444b,#12313b);border-color:#d5c18b3d}
+.menu-grid>button:hover{border-color:#ead39a99;box-shadow:inset 0 0 0 4px #d7c48708}
+.dex-card{border-radius:3px 12px 3px 12px;background:radial-gradient(ellipse at 50% 30%,#a7d3bd13,transparent 70%),linear-gradient(145deg,#1c3b42,#102c36)}
+.controller-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:13px 0 0;padding:9px 12px;border:1px solid #bfc58e52;border-radius:3px 9px 3px 9px;color:#c9dfbd;background:linear-gradient(90deg,#284c421f,#102f3680);font-size:11px}
+.controller-status-label{display:flex;align-items:center;gap:9px;min-width:0}
+.controller-status-label svg{width:22px;height:22px;flex-shrink:0;color:#e4ce94}
+#controller-status-text{overflow-wrap:anywhere}
+.controller-help{color:#afc4bd;font-size:10px;text-align:right;line-height:1.8}
+.controller-help b{font-weight:500;color:#e4d5ac;margin-left:6px}
+.gamepad-focus{outline:3px solid #ffe4a3!important;outline-offset:3px!important;box-shadow:0 0 0 6px #e2bf6130,0 0 24px #d2ac4933!important}
+.gamepad-focus:not(:disabled){color:#fff1cb}
+.btn-primary.gamepad-focus{color:#10282b}
+
+/* The public guide is readable before play and hidden while the game is active. */
+.game-info{position:relative;isolation:isolate;padding:100px 28px 84px;background:radial-gradient(ellipse at 50% 0,#24474b66,transparent 55%),linear-gradient(#0b242d,#071820);border-top:1px solid #cbb9874d;scroll-margin-top:0;color:#e7e7d6}
+.game-info::before{content:"";position:absolute;inset:22px 24px auto;height:1px;background:linear-gradient(90deg,transparent,#d5c28b4d,transparent);pointer-events:none}
+.game-info-inner{max-width:1120px;margin:auto}
+.game-info-heading{max-width:760px;margin:0 auto 46px;text-align:center}
+.game-info-heading .eyebrow{justify-content:center;color:#d6c28e}
+.game-info h2{font-family:var(--serif);font-size:clamp(27px,3vw,40px);font-weight:500;letter-spacing:2px;line-height:1.6;margin:0 0 17px;color:#f2e6c9}
+.game-info h3{font-family:var(--serif);font-size:23px;letter-spacing:1px;font-weight:500;color:#eee0ba;margin:0 0 14px}
+.game-info p{font-size:14px;line-height:2.1;color:#b8cbc3;margin:12px 0}
+.game-info a{color:#e4d197;text-underline-offset:4px;text-decoration:underline}
+.game-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:30px 0 48px}
+.game-info-card{position:relative;min-width:0;padding:29px 25px 25px;border:1px solid #b7b58342;border-radius:3px 18px 3px 18px;background:linear-gradient(145deg,#2141498f,#102c35);box-shadow:inset 0 0 0 5px #c9bb8105,0 10px 25px #00141b22}
+.game-info-card::before{content:"✦";display:block;color:#dec78d;font-size:22px;margin-bottom:15px}
+.game-info-card p{font-size:13px;line-height:2}
+.game-info-card strong{color:#e6d8b3}
+.game-info table{border-collapse:collapse;width:100%;margin:24px 0 48px;font-size:13px;table-layout:fixed;border:1px solid #b8bd9542;background:#0d293280}
+.game-info th,.game-info td{text-align:left;vertical-align:top;padding:17px 20px;border-bottom:1px solid #b8bd9526;overflow-wrap:anywhere;line-height:1.9}
+.game-info th{color:#ead7a4;background:#d0bc7910;font-weight:600}
+.game-info td{color:#bbcec5}
+.game-info th:first-child,.game-info td:first-child{width:28%;color:#e1dfc5}
+.game-info-faq{margin:35px 0 0}
+.game-info-faq details{border-top:1px solid #b9ba8e38;padding:0;background:linear-gradient(90deg,#b4b88205,transparent)}
+.game-info-faq details:last-child{border-bottom:1px solid #b9ba8e38}
+.game-info-faq summary{cursor:pointer;min-height:58px;padding:18px 30px 18px 3px;color:#e7ddbf;font-size:15px;line-height:1.6}
+.game-info-faq details[open] summary{color:#efdaa1}
+.game-info-faq details>p{margin:0;padding:0 24px 20px;font-size:13px}
+.game-info .game-info-cta{display:flex;justify-content:center;margin:38px 0 0}
+body.is-playing .game-info{display:none}
+@media(min-width:1500px){.title-astrolabe{right:-2%;top:2%}}
+@media(max-width:950px){.game-info-grid{gap:13px}.game-info-card{padding:23px 18px}.game-info h3{font-size:20px}.controller-status{align-items:flex-start}.controller-help{max-width:60%}.title-astrolabe{right:-25%;width:85vw}}
+@media(max-width:600px){
+ .title-screen{min-height:100svh}.title-astrolabe{width:125vw;right:-67%;top:14%;opacity:.22}.title-screen::before{background:linear-gradient(90deg,#051c27e6,#092832a1 75%,#0a233180),linear-gradient(0deg,#031820f5 0,transparent 62%)}
+ .title-platform{font-size:7px;letter-spacing:.5px;gap:5px}.title-platform svg{width:17px;height:17px}.title-topbar{gap:12px}.title-edition{font-size:9px;letter-spacing:2px}.title-edition small{font-size:6px;letter-spacing:1.5px}
+ .title-footer{gap:10px;padding:13px 0;min-height:65px}.title-footer>span{font-size:7px;letter-spacing:.6px}.title-discover{font-size:10px;letter-spacing:.8px;gap:7px;white-space:nowrap;padding-left:7px}.title-discover svg{width:12px;height:12px}
+ .title-metrics{padding-top:21px;margin-top:26px}.title-metrics::before{font-size:12px;top:-10px;padding-right:10px}.title-start{border-radius:3px 11px 3px 11px}.title-wordmark h1{font-size:clamp(61px,18vw,77px)}
+ .topbar{gap:12px}.topbar::after{left:14px;right:14px}.brand-mark::before{inset:-2px}.brand-mark::after{inset:6px}.location-compass{display:none}.location-info #location-name{font-size:13px;letter-spacing:.7px}
+ .field-heading .eyebrow{font-size:8px;letter-spacing:1.7px}.field-status{font-size:10px}.game-stage{border-radius:3px 13px 3px 13px}.game-stage::after{inset:5px;border-radius:1px 9px 1px 9px}.world-label{font-size:11px;padding:6px 11px;top:11px;left:11px}
+ .journal{padding:21px 17px 17px}.journal-heading h2{font-size:25px;margin-top:7px}.journal-heading .eyebrow{font-size:7px;letter-spacing:1.2px}.journal-seal{width:43px;height:43px}.journal-seal .journal-icon{width:23px;height:23px}
+ .party-card{min-height:76px;padding:6px}.party-name{font-size:12px}.party-card .creature-portrait{width:49px!important;height:49px!important}.section-note{font-size:7px}.combatant-top strong{font-size:13px;letter-spacing:.5px}.combatant{border-radius:2px 10px 2px 10px}.battle-actions>.btn{min-height:51px}
+ .controller-status{flex-wrap:wrap;gap:6px;margin-top:11px;padding:9px 11px;font-size:10px}.controller-help{max-width:none;text-align:left;font-size:9px}.controller-help b:first-child{margin-left:0}.controller-status-label svg{width:20px;height:20px}
+ #modal{border-radius:3px 15px 3px 15px}.modal-heading::after{left:17px}.modal-heading h2{letter-spacing:1px}.game-info{padding:62px 20px 56px}.game-info::before{inset:15px 20px auto}.game-info-heading{margin-bottom:29px;text-align:left}.game-info-heading .eyebrow{justify-content:flex-start;line-height:1.8}.game-info h2{font-size:27px;letter-spacing:1px}.game-info h3{font-size:21px}.game-info p{font-size:13px}.game-info-grid{grid-template-columns:1fr;gap:15px;margin-bottom:38px}.game-info-card{padding:23px 21px}.game-info-card::before{position:absolute;right:20px;top:19px;opacity:.65;font-size:18px}.game-info-card h3{padding-right:24px}.game-info table{font-size:12px;margin:20px 0 36px}.game-info th,.game-info td{padding:13px 11px}.game-info th:first-child,.game-info td:first-child{width:30%}.game-info-faq summary{font-size:14px;min-height:60px;padding:17px 11px 17px 2px}.game-info-faq details>p{padding:0 10px 18px;font-size:12px}
+}
+@media(max-width:360px){.title-platform span{max-width:79px;text-align:right;line-height:1.8}.title-edition{font-size:8px}.title-footer>span{max-width:165px;line-height:1.9}.journal-heading h2{font-size:23px}.party-card{gap:3px}.party-card .creature-portrait{width:43px!important;height:43px!important}.party-name{font-size:11px}}
+@media(max-height:520px) and (orientation:landscape){.title-screen{min-height:100svh}.title-astrolabe{width:70vw;right:-4%;top:-47%}.title-footer{padding:9px 0;min-height:52px}.journal-heading h2{font-size:23px}.controller-status{width:calc(100% - 175px)}.controller-help{display:none}.combatant-top strong{font-size:11px}.game-info{padding:56px 28px}}
+@media(prefers-reduced-motion:reduce){.game-info{scroll-behavior:auto}}
+.title-backdrop,.title-screen::before,.title-screen::after,.title-atmosphere{position:absolute;inset:0;pointer-events:none}
+.title-backdrop{z-index:0}.title-screen::after,.title-atmosphere{z-index:1}
+.facing-label{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:2px 7px;margin-left:6px;border:1px solid #d8c08452;border-radius:2px 7px 2px 7px;background:#d3c18c0d;color:#ecdcb6;font-family:var(--sans);font-size:10px;letter-spacing:1px;white-space:nowrap}
+.field-status>.facing-label{width:auto;height:auto;box-shadow:none}
+.game-info-card::before{display:none}
+.game-info-number{display:block;font-size:9px;letter-spacing:2px;color:#d6c08f;margin-bottom:21px}
+.game-info-card>svg{width:34px;height:34px;color:#b6d6c1;margin-bottom:19px;stroke-width:1.3}
+.game-info-card h3{font-size:22px;line-height:1.8;letter-spacing:1px}
+.game-info-controls{padding-top:7px}
+.game-info-controls .game-info-heading{margin-bottom:25px}
+.game-info-table-wrap{overflow-x:auto;scrollbar-width:thin}
+.game-info table caption{text-align:left;padding:0 0 15px;font-size:11px;color:#a9c3b8;letter-spacing:.5px}
+.game-info th:first-child,.game-info td:first-child{width:22%}
+.game-info-footer{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:49px;padding-top:23px;border-top:1px solid #c4b98140}
+.game-info-footer a{display:inline-flex;align-items:center;gap:15px;min-height:44px;font-size:13px;color:#e3d2a5;text-decoration:none}
+.game-info-footer a:hover{text-decoration:underline}
+.game-info-footer a:last-child{font-size:11px;color:#b1c8ba}
+@media(max-width:600px){.field-status{font-size:9px;gap:5px}.facing-label{font-size:9px;min-width:36px;margin-left:1px;padding:1px 5px}.game-info-card h3{font-size:22px;padding-right:0}.game-info-card>svg{position:absolute;right:21px;top:25px;width:25px;height:25px;margin:0}.game-info-number{margin:0 34px 20px 0;font-size:8px;letter-spacing:1.6px}.game-info th:first-child,.game-info td:first-child{width:23%}.game-info th,.game-info td{padding:12px 8px;font-size:11px;line-height:1.9}.game-info table caption{font-size:10px;line-height:1.8}.game-info-footer{flex-direction:column;align-items:flex-start;gap:7px;margin-top:30px;padding-top:19px}.game-info-footer a{font-size:12px}.game-info-footer a:last-child{font-size:10px}}
+.field-status>.facing-label{background:#d3c18c0d;border-radius:2px 7px 2px 7px}
+@media(max-width:600px){.top-actions .icon-btn{width:44px;min-width:44px;height:44px}}
+
 </style>
+  <title>灯獣紀 — 星環の旅路｜151種の灯獣と旅するブラウザーRPG</title>
+  <meta name="description" content="151種の灯獣と心を通わせ、36の地域と8つの試練を巡るオリジナル育成RPG『灯獣紀 — 星環の旅路』。PC・スマートフォンで遊べるブラウザーゲーム。進化、100種類の技、24曲の音楽、クリア後の7島へ。">
+  <link rel="canonical" href="https://uni-tadayasu.github.io/pachi-mon/">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:site_name" content="灯獣紀 — 星環の旅路">
+  <meta property="og:title" content="灯獣紀 — 星環の旅路｜151種の灯獣と旅するブラウザーRPG">
+  <meta property="og:description" content="この出会いが、世界を灯す。151種の灯獣、36の地域、8つの試練。独自の世界と24曲の音楽で描く、PC・スマホ対応の探索・育成RPG。">
+  <meta property="og:url" content="https://uni-tadayasu.github.io/pachi-mon/">
+  <meta property="og:image" content="https://uni-tadayasu.github.io/pachi-mon/assets/cover.webp">
+  <meta property="og:image:secure_url" content="https://uni-tadayasu.github.io/pachi-mon/assets/cover.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1672">
+  <meta property="og:image:height" content="941">
+  <meta property="og:image:alt" content="星環の灯台を望む旅人と、若葉の耳を持つコモリ、水辺のシズク、灯を守るヒバナ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="灯獣紀 — 星環の旅路">
+  <meta name="twitter:description" content="151種の灯獣と心を通わせ、36の地域を旅するオリジナルのブラウザーRPG。PC・スマートフォン対応。">
+  <meta name="twitter:image" content="https://uni-tadayasu.github.io/pachi-mon/assets/cover.webp">
+  <meta name="twitter:image:alt" content="星環の灯台を望む旅人と、3体の灯獣たち">
+  <link rel="preload" as="image" href="assets/cover.webp" fetchpriority="high">
+  <link rel="sitemap" type="application/xml" href="sitemap.xml">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://uni-tadayasu.github.io/pachi-mon/#website",
+        "url": "https://uni-tadayasu.github.io/pachi-mon/",
+        "name": "灯獣紀 — 星環の旅路",
+        "alternateName": "LUMINA TRAIL",
+        "inLanguage": "ja"
+      },
+      {
+        "@type": "WebPage",
+        "@id": "https://uni-tadayasu.github.io/pachi-mon/#webpage",
+        "url": "https://uni-tadayasu.github.io/pachi-mon/",
+        "name": "灯獣紀 — 星環の旅路｜151種の灯獣と旅するブラウザーRPG",
+        "description": "151種の灯獣と共鳴し、36の地域と8つの試練を巡る、PC・スマートフォン対応のオリジナル育成RPG。",
+        "inLanguage": "ja",
+        "isPartOf": {"@id": "https://uni-tadayasu.github.io/pachi-mon/#website"},
+        "mainEntity": {"@id": "https://uni-tadayasu.github.io/pachi-mon/#game"},
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": "https://uni-tadayasu.github.io/pachi-mon/assets/cover.webp",
+          "width": 1672,
+          "height": 941
+        }
+      },
+      {
+        "@type": ["VideoGame", "WebApplication"],
+        "@id": "https://uni-tadayasu.github.io/pachi-mon/#game",
+        "name": "灯獣紀 — 星環の旅路",
+        "alternateName": "LUMINA TRAIL REMASTER",
+        "url": "https://uni-tadayasu.github.io/pachi-mon/",
+        "description": "灯守見習いとなり、151種の灯獣と心を通わせて八つの灯印を集める探索・育成RPG。36エリア、100種類の技、進化、25人の旅人との対戦、12の依頼、50階の塔、クリア後の7島、24曲のオリジナルBGMを収録。",
+        "image": "https://uni-tadayasu.github.io/pachi-mon/assets/cover.webp",
+        "inLanguage": "ja",
+        "applicationCategory": "GameApplication",
+        "genre": ["ロールプレイング", "探索", "育成"],
+        "gamePlatform": "Web browser",
+        "operatingSystem": "Web browser",
+        "browserRequirements": "JavaScriptとCanvas 2Dに対応したブラウザー。音声にはWeb Audio APIを使用。",
+        "playMode": "https://schema.org/SinglePlayer",
+        "isAccessibleForFree": true,
+        "numberOfPlayers": {"@type": "QuantitativeValue", "minValue": 1, "maxValue": 1}
+      }
+    ]
+  }
+  </script>
+
 </head>
 <body>
   <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="i-lantern" viewBox="0 0 24 24"><path d="m12 2 8 10-8 10-8-10 8-10Zm0 4v12M5 12h14M8 7h8M8 17h8"/><path d="m12 8 3 4-3 4-3-4 3-4Z"/></symbol>
     <symbol id="i-sound" viewBox="0 0 24 24"><path d="m10 5-4 4H3v6h3l4 4V5Zm4 3c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></symbol>
+    <symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M8 6h8c3 0 4 2 5 6l1 5c.5 3-2 4-4 2l-3-3H9l-3 3c-2 2-4.5 1-4-2l1-5c1-4 2-6 5-6ZM6 9v5m-2-2h4m7-2h.1m3 3h.1M9 6l1-2h4l1 2"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M7 5h13M7 12h13M7 19h13M3 5h.1M3 12h.1M3 19h.1"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6M8 8l-5-5m13 5 5-5M8 16l-5 5m13-5 5 5"/></symbol>
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5C8 2 4 3 2 4v15c3-1 6-1 10 1 4-2 7-2 10-1V4c-2-1-6-2-10 1Zm0 0v15M5 7l4 1M5 11l4 1m6-4 4-1m-4 5 4-1"/></symbol>
@@ -148,7 +383,7 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
   <div id="app">
     <header class="topbar">
       <a class="brand" href="index.html" aria-label="灯獣紀 タイトルへ"><span class="brand-mark"><svg><use href="#i-lantern"/></svg></span><span class="brand-copy"><strong>灯獣紀</strong><small>LUMINA TRAIL</small></span></a>
-      <div class="location-info"><span class="location-dot"></span><div><span id="location-name">風待ちの里</span><span id="location-subtitle">はじまりの灯り</span></div></div>
+      <div class="location-info"><span class="location-compass" aria-hidden="true"><svg><use href="#i-travel"/></svg></span><div><span id="location-name">風待ちの里</span><span id="location-subtitle">はじまりの灯り</span></div></div>
       <nav class="top-actions" aria-label="ゲーム設定">
         <button id="sound-btn" class="icon-btn" type="button" aria-label="サウンドを切り替え" title="サウンド"><svg><use href="#i-sound"/></svg></button>
         <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="全画面表示" title="全画面"><svg><use href="#i-expand"/></svg></button>
@@ -157,7 +392,7 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
     </header>
     <main class="game-layout">
       <section class="play-column" aria-label="冒険フィールド">
-        <div class="field-heading"><span class="eyebrow"><svg><use href="#i-travel"/></svg> THE LIVING WORLD</span><span class="field-status"><span></span> 冒険の途中</span></div>
+        <div class="field-heading"><span class="eyebrow"><svg><use href="#i-travel"/></svg> LUMEN FIELD ATLAS</span><span class="field-status"><span></span> 灯守の旅録 <span id="facing-label" class="facing-label" aria-label="向き 南">↓ 南</span></span></div>
         <div class="game-stage">
           <canvas id="game-canvas" width="768" height="480" tabindex="0" aria-label="冒険フィールド。矢印またはWASDで移動、スペースまたはEで調べる。">このゲームを遊ぶにはCanvasに対応したブラウザーが必要です。</canvas>
           <div id="world-label" class="world-label">風待ちの里</div><div id="world-hint" class="world-hint">旅は、小さな出会いから。</div>
@@ -168,12 +403,13 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
           <span class="stage-corner tl"></span><span class="stage-corner tr"></span><span class="stage-corner bl"></span><span class="stage-corner br"></span>
         </div>
         <section id="battle-panel" class="battle-panel" aria-label="戦闘コマンド" hidden><div class="battle-log-wrap"><svg class="battle-log-mark"><use href="#i-resonate"/></svg><div id="battle-log" role="log" aria-live="polite" aria-relevant="additions text">どうする？</div></div><div id="battle-actions" class="battle-actions"></div></section>
+        <div id="controller-status" class="controller-status" role="status" aria-live="polite" hidden><span class="controller-status-label"><svg aria-hidden="true"><use href="#i-gamepad"/></svg><span id="controller-status-text">コントローラー接続中</span></span><span id="controller-help" class="controller-help"><b>左スティック・十字</b> 移動 <b>決定</b> 調べる <b>START</b> メニュー</span></div>
         <div id="world-controls" class="world-controls"><div class="keyboard-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><i>移動</i></span><span><kbd>E</kbd><i>話す・調べる</i></span><span><kbd>Shift</kbd><i>走る</i></span></div><button id="interact-btn" type="button" class="btn btn-small interact-btn"><svg><use href="#i-resonate"/></svg>話す・調べる <kbd>E</kbd></button></div>
         <div class="touch-controls" aria-label="タッチ操作"><div class="dpad" aria-label="移動ボタン"><button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><svg><use href="#i-chevron"/></svg></button><span class="dpad-center" aria-hidden="true"><svg><use href="#i-lantern"/></svg></span><button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><svg><use href="#i-chevron"/></svg></button></div><div class="touch-instruction"><small>EXPLORE</small><span>灯りの導くままに</span></div><div class="touch-commands"><button id="touch-action" type="button" class="touch-action"><span>A</span><small>調べる</small></button><button id="touch-menu" type="button" class="touch-menu"><svg><use href="#i-menu"/></svg><small>メニュー</small></button></div></div>
-        <div class="field-caption"><span><svg><use href="#i-lantern"/></svg> 小さな灯りが、世界をつなぐ。</span><span>REMASTER EDITION · 2.0</span></div>
+        <div class="field-caption"><span><svg><use href="#i-lantern"/></svg> 小さな灯りが、世界をつなぐ。</span><span>CELESTIAL ATLAS · 2.1</span></div>
       </section>
       <aside class="journal" aria-label="冒険の手帳">
-        <div class="journal-heading"><div><span class="eyebrow">TRAVELER'S JOURNAL</span><h1>星環の旅路</h1></div><svg class="journal-icon"><use href="#i-book"/></svg></div>
+        <div class="journal-heading"><div><span class="eyebrow">灯守の星図 / FIELD JOURNAL</span><h2>星環の旅路</h2></div><span class="journal-seal" aria-hidden="true"><svg class="journal-icon"><use href="#i-lantern"/></svg><i></i></span></div>
         <section class="quest-section"><div class="section-kicker"><svg><use href="#i-travel"/></svg><h2>次の目的</h2><span class="section-note">OBJECTIVE</span></div><p id="objective-text">最初の灯獣と出会い、旅に出よう。</p><div id="seal-list" class="seal-list" aria-label="集めた灯印"></div></section>
         <section class="party-section"><div class="section-kicker"><svg><use href="#i-leaf"/></svg><h2>旅の仲間</h2><span class="section-note">COMPANIONS</span></div><div id="party-list" class="party-list"></div></section>
         <div id="bag-summary" class="bag-summary"><span>旅の支度</span><span>—</span></div>
@@ -191,8 +427,8 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
   </div>
 
   <section id="title-screen" class="title-screen" aria-label="灯獣紀 タイトル画面">
-    <div class="title-backdrop" aria-hidden="true"></div><div class="title-atmosphere" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-    <header class="title-topbar"><a class="brand title-brand" href="index.html"><span class="brand-mark"><svg><use href="#i-lantern"/></svg></span><span class="title-edition">LUMINA TRAIL <small>REMASTER EDITION</small></span></a><span class="title-platform"><svg><use href="#i-quality"/></svg> PC &amp; MOBILE</span></header>
+    <div class="title-backdrop" aria-hidden="true"></div><div class="title-astrolabe" aria-hidden="true"><span></span><span></span><span></span><i></i></div><div class="title-atmosphere" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    <header class="title-topbar"><a class="brand title-brand" href="index.html"><span class="brand-mark"><svg><use href="#i-lantern"/></svg></span><span class="title-edition">LUMINA TRAIL <small>REMASTER EDITION</small></span></a><span class="title-platform"><svg><use href="#i-gamepad"/></svg><span>PC · MOBILE · GAMEPAD</span></span></header>
     <div class="title-inner"><div class="title-copy">
       <p class="title-eyebrow"><span></span> A WORLD WAITING TO BE LIT</p>
       <div class="title-wordmark"><h1>灯獣紀</h1><p class="title-subtitle"><span></span>星環の旅路<span></span></p><p class="title-english">LUMINA TRAIL</p></div>
@@ -202,8 +438,61 @@ dialog{padding:0;width:min(770px,calc(100vw - 42px));max-height:calc(100dvh - 54
       <p id="title-status" class="title-status">自動セーブ · キーボード &amp; タッチ操作</p>
       <div class="title-metrics" aria-label="冒険の内容"><div><strong id="content-species-count">151</strong><span>灯獣との出会い</span></div><div><strong id="content-map-count">36</strong><span>探索する世界</span></div><div><strong id="content-music-count">24</strong><span>オリジナル楽曲</span></div></div>
     </div><div class="title-world-note" aria-hidden="true"><span class="world-note-line"></span><p>THE LUMEN ARCHIPELAGO<br><b>星の灯を、たずさえて。</b></p><svg><use href="#i-travel"/></svg></div></div>
-    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>·</i> RESONATE <i>·</i> GROW</span><span>あなただけの物語を、この世界で。</span></footer>
+    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>·</i> RESONATE <i>·</i> GROW</span><a id="title-discover" class="title-discover" href="#about-game">世界と遊び方 <svg aria-hidden="true"><use href="#i-chevron"/></svg></a></footer>
   </section>
+  <section id="about-game" class="game-info" aria-labelledby="about-game-title">
+    <div class="game-info-inner">
+      <header class="game-info-heading">
+        <p class="eyebrow"><svg aria-hidden="true"><use href="#i-book"/></svg> THE TRAVELER'S FIELD GUIDE</p>
+        <h2 id="about-game-title">灯獣と歩く、星環の世界。</h2>
+        <p>『灯獣紀 — 星環の旅路』は、灯獣たちと心を通わせながら、島々に失われた「星灯」を届けるオリジナルのブラウザーRPGです。あなたは灯守見習い。最初の相棒を選び、村や森、海辺の街を巡り、八つの灯印をつないでいきます。</p>
+      </header>
+      <div class="game-info-grid">
+        <article class="game-info-card">
+          <span class="game-info-number" aria-hidden="true">01 / ENCOUNTER</span>
+          <svg aria-hidden="true"><use href="#i-resonate"/></svg>
+          <h3>151種との、ひとつずつの出会い。</h3>
+          <p>若葉を宿すコモリ、水辺のシズク、尾の灯を守るヒバナ。旅の途中で出会う灯獣とは「共鳴鈴」で心を通わせます。最大6体の仲間と歩き、進化を見届け、図鑑に足あとを残しましょう。</p>
+        </article>
+        <article class="game-info-card">
+          <span class="game-info-number" aria-hidden="true">02 / EXPLORE</span>
+          <svg aria-hidden="true"><use href="#i-map"/></svg>
+          <h3>36の土地に、それぞれの暮らし。</h3>
+          <p>風待ちの里から、潮鳴り海岸、瑠璃響く洞窟、黎明の天文台へ。人々の話を聞き、休憩所で仲間を休ませ、道具店で旅の支度を。八つの試練の先には、七つの島を結ぶ航路が待っています。</p>
+        </article>
+        <article class="game-info-card">
+          <span class="game-info-number" aria-hidden="true">03 / RESONATE</span>
+          <svg aria-hidden="true"><use href="#i-music"/></svg>
+          <h3>仲間と旋律を重ねる、長い旅。</h3>
+          <p>芽・潮・灯・風・晶の相性と、100種類の技を使うターン制バトル。25人の旅人との対戦、12の依頼、50階の塔も収録しています。24曲のオリジナルBGMは、音楽室でゆっくり聴くこともできます。</p>
+        </article>
+      </div>
+      <section class="game-info-controls" aria-labelledby="controls-title">
+        <div class="game-info-heading"><p class="eyebrow">HOW TO TRAVEL</p><h3 id="controls-title">いつもの操作で、旅に出よう。</h3></div>
+        <div class="game-info-table-wrap">
+          <table>
+            <caption>PC・スマートフォン・コントローラーの基本操作</caption>
+            <thead><tr><th scope="col">操作方法</th><th scope="col">移動</th><th scope="col">決定・調べる</th><th scope="col">メニュー</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">キーボード</th><td>矢印 / W・A・S・D<br>Shiftで走る</td><td>E / Enter / スペース</td><td>Esc<br>J：図鑑 / M：地図 / B：道具</td></tr>
+              <tr><th scope="row">タッチ</th><td>画面の十字キー</td><td>Aボタン / 各項目をタップ</td><td>画面のメニューボタン</td></tr>
+              <tr><th scope="row">コントローラー</th><td>左スティック / 方向キー</td><td>下側のフェイスボタン</td><td>メニューボタン</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>コントローラーは、端末に接続してからボタンを押すと認識されます。標準マッピングに対応した機器で利用できます。ゲーム内の接続表示と操作案内も確認してください。</p>
+      </section>
+      <section class="game-info-faq" aria-labelledby="faq-title">
+        <div class="game-info-heading"><p class="eyebrow">BEFORE YOU SET OUT</p><h3 id="faq-title">旅の前に、知っておきたいこと。</h3></div>
+        <details><summary>インストールや登録は必要ですか？</summary><p>ゲームのダウンロードやアカウント登録は不要です。このページの「旅をはじめる」から無料で遊べます。PCでもスマートフォンでも、JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
+        <details><summary>冒険の記録は、どこに保存されますか？</summary><p>同じ端末・同じブラウザーに自動保存されます。メニューからJSON形式で「記録を書き出す」こともできます。別の端末へ移すときや、ブラウザーのデータを削除する前は、書き出したファイルを保管してください。以前の灯獣紀の記録も引き継げます。</p></details>
+        <details><summary>音が出ないときや、動作が重いときは？</summary><p>音声は最初のクリックやタップの後に再生できます。サウンドをONにし、音量と端末側の設定を確認してください。「遊び方・設定」では画質を標準・軽量へ変更でき、昼夜の演出や動きを控える設定も選べます。</p></details>
+        <details><summary>通信対戦や交換はできますか？</summary><p>本作は1人で探索と育成を楽しむゲームです。対戦相手はゲーム内の旅人や守護者です。冒険の記録は端末内に保存され、オンラインの対戦・交換・自動同期はありません。</p></details>
+      </section>
+      <footer class="game-info-footer"><a href="#title-screen">相棒を選んで、旅をはじめる <span aria-hidden="true">↑</span></a><a href="https://github.com/uni-tadayasu/pachi-mon" target="_blank" rel="noopener noreferrer">作品のソースコード</a></footer>
+    </div>
+  </section>
+
   <dialog id="modal" aria-labelledby="modal-title"><div class="modal-heading"><div><span class="eyebrow"><svg><use href="#i-lantern"/></svg> LUMINA TRAIL</span><h2 id="modal-title">冒険の手帳</h2></div><button id="modal-close" type="button" class="icon-btn" aria-label="閉じる"><svg><use href="#i-close"/></svg></button></div><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <input id="import-input" type="file" accept=".json,application/json" hidden>
@@ -1635,8 +1924,8 @@ function round(c,x,y,w,h,r,fill,stroke=null){c.beginPath();c.roundRect(x,y,w,h,r
 function gradient(c,x,y,x2,y2,a,b){const g=c.createLinearGradient(x,y,x2,y2);g.addColorStop(0,a);g.addColorStop(1,b);return g;}
 function glow(c,x,y,r,color,alpha=.5){c.save();c.globalAlpha*=alpha;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,color+'00');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);c.restore();}
 function star(c,x,y,r,color='#fff5cf',rot=0){c.save();c.translate(x,y);c.rotate(rot);path(c,`M0 ${-r}Q${r*.12} ${-r*.12} ${r} 0Q${r*.12} ${r*.12} 0 ${r}Q${-r*.12} ${r*.12} ${-r} 0Q${-r*.12} ${-r*.12} 0 ${-r}Z`,color);c.restore();}
-function gem(c,x,y,r,color){poly(c,[[x,y-r],[x+r*.66,y-r*.28],[x+r*.44,y+r*.72],[x,y+r],[x-r*.44,y+r*.72],[x-r*.66,y-r*.28]],gradient(c,x-r,y-r,x+r,y+r,shade(color,55),shade(color,-28)),shade(color,-42),1.2);poly(c,[[x,y-r],[x,y+r],[x-r*.45,y+r*.7],[x-r*.65,y-r*.28]],color);line(c,[[x-r*.5,y-r*.25],[x,y-r*.76],[x+r*.25,y-r*.36]],'#ffffffb0',1);}
-function leaf(c,x,y,r,rot,color){c.save();c.translate(x,y);c.rotate(rot);path(c,`M0 0Q${-r*.9} ${-r*.52} 0 ${-r*1.9}Q${r*.95} ${-r*.6} 0 0Z`,gradient(c,-r,0,r,-r*2,shade(color,-25),shade(color,20)),shade(color,-35),.8);path(c,`M0 0Q${r*.05} ${-r} 0 ${-r*1.65}`,null,shade(color,38),.9);c.restore();}
+function gem(c,x,y,r,color){poly(c,[[x,y-r],[x+r*.66,y-r*.28],[x+r*.44,y+r*.72],[x,y+r],[x-r*.44,y+r*.72],[x-r*.66,y-r*.28]],gradient(c,x-r,y-r,x+r,y+r,shade(color,55),shade(color,-28)),shade(color,-42),1.2);poly(c,[[x,y-r],[x,y+r],[x-r*.45,y+r*.7],[x-r*.65,y-r*.28]],color);line(c,[[x-r*.5,y-r*.25],[x,y-r*.76],[x+r*.25,y-r*.36]],'#ffffffb0',1);line(c,[[x-r*.42,y+r*.65],[x,y+r*.2],[x+r*.38,y+r*.62]],'#ffffff42',.65);oval(c,x-r*.15,y-r*.38,Math.max(.7,r*.07),Math.max(.7,r*.07),'#fffced');}
+function leaf(c,x,y,r,rot,color){c.save();c.translate(x,y);c.rotate(rot);path(c,`M0 0Q${-r*.9} ${-r*.52} 0 ${-r*1.9}Q${r*.95} ${-r*.6} 0 0Z`,gradient(c,-r,0,r,-r*2,shade(color,-25),shade(color,20)),shade(color,-35),.8);path(c,`M0 0Q${r*.05} ${-r} 0 ${-r*1.65}`,null,shade(color,38),.9);for(let i=1;i<4;i++){const yy=-r*i*.35;line(c,[[0,yy],[r*.34,yy-r*.28]],shade(color,30),.4);line(c,[[0,yy],[r*-.34,yy-r*.28]],shade(color,30),.4);}c.restore();}
 function blossom(c,x,y,r,color){for(let i=0;i<5;i++){const a=i*Math.PI*.4;oval(c,x+Math.cos(a)*r*.55,y+Math.sin(a)*r*.55,r*.48,r*.4,color);}oval(c,x,y,r*.25,r*.25,'#f5d98a');}
 function grass(c,x,y,col,size=1){path(c,`M${x-4*size} ${y}Q${x-6*size} ${y-6*size} ${x-5*size} ${y-8*size}Q${x-1*size} ${y-4*size} ${x} ${y}Q${x} ${y-9*size} ${x+2*size} ${y-11*size}Q${x+3*size} ${y-5*size} ${x+2*size} ${y}Q${x+5*size} ${y-6*size} ${x+7*size} ${y-7*size}L${x+4*size} ${y}Z`,col);}
 function tileAt(map,x,y){return map.tiles[y]?.[x]||'#';}
@@ -1660,6 +1949,7 @@ for(let r=0;r<2;r++)for(let col=-1;col<3;col++){const xx=x+col*20+(r%2)*10,yy=y+
 if(ch==='_'&&h>.75){poly(c,[[x+20,y+8],[x+32,y+20],[x+20,y+32],[x+8,y+20]],shade(p.path,-14));poly(c,[[x+20,y+11],[x+29,y+20],[x+20,y+29],[x+11,y+20]],shade(p.path,10));star(c,x+20,y+20,5,shade(p.path,-26));}
 }else{for(let i=0;i<9;i++)oval(c,x+hash(gx+i,gy)*36,y+hash(gy+i,gx)*36,1+hash(i,gx)*2,.8,shade(p.path,i%2?12:-12));}
 for(const[dx,dy]of[[0,-1],[0,1],[-1,0],[1,0]])if('.:*'.includes(tileAt(map,gx+dx,gy+dy))){c.strokeStyle=shade(p.path,-17);c.lineWidth=1.3;c.beginPath();if(dx)c.moveTo(x+(dx<0?0:40),y),c.lineTo(x+(dx<0?0:40),y+40);else c.moveTo(x,y+(dy<0?0:40)),c.lineTo(x+40,y+(dy<0?0:40));c.stroke();}
+if(ch==='_'&&h>.45&&h<.48){c.save();c.globalAlpha=.23;c.strokeStyle='#8a936b';c.lineWidth=1;c.beginPath();c.ellipse(x+20,y+20,15,15,0,0,Math.PI*2);c.stroke();star(c,x+20,y+20,10,'#8a936b',Math.PI*.25);c.restore();}
 if(ch==='b'){c.fillStyle='#7c6752';c.fillRect(x,y,40,40);for(let j=0;j<5;j++){round(c,x+2,y+j*8+1,36,6.5,1,gradient(c,x,y+j*8,x,y+j*8+8,'#c6a780','#8e745b'));oval(c,x+7,y+j*8+3,1,1,'#514c46');oval(c,x+33,y+j*8+3,1,1,'#514c46');}round(c,x-1,y,3,40,1,'#594d44');round(c,x+38,y,3,40,1,'#594d44');}return;
 }
 if(ch===':'){
@@ -1714,38 +2004,92 @@ round(c,x+w-42,y-26,16,33,1,'#aa9b7c');round(c,x+w-44,y-28,20,6,1,'#d1bd94');for
 const doorY=y+h-42,doorX=x+w/2-15;round(c,doorX-5,doorY-5,40,49,4,'#a39474');round(c,doorX,doorY,30,42,8,gradient(c,doorX,doorY,doorX+30,doorY+42,'#567771','#2a484b'));round(c,doorX+4,doorY+5,22,12,3,'#c2d5ba');line(c,[[doorX+4,doorY+20],[doorX+26,doorY+20]],'#73918a',1);oval(c,doorX+24,doorY+27,2,2,'#e5c578');round(c,doorX-9,y+h,48,5,2,'#b9b79d');
 for(const wx of [x+20,x+w-50]){const wy=y+Math.max(62,h-57);round(c,wx-4,wy-4,36,34,2,'#a79474');round(c,wx,wy,28,24,2,gradient(c,wx,wy,wx+25,wy+25,'#d3e5ce','#6d9c9a'));line(c,[[wx+14,wy],[wx+14,wy+24]],'#eee4c9',2);line(c,[[wx,wy+12],[wx+28,wy+12]],'#eee4c9',2);round(c,wx-5,wy+26,38,5,1,'#6c7962');for(let f=0;f<5;f++){leaf(c,wx+f*6,wy+27,3,(f-2)*.3,'#608763');blossom(c,wx+f*6,wy+23,2.8,f%2?'#e9bcab':'#f1ddb5');}}
 for(const lx of [doorX-12,doorX+44]){line(c,[[lx,y+h-45],[lx,y+h-31]],'#5d685c',1.4);round(c,lx-4,y+h-34,8,12,2,'#dac48b','#716d50');round(c,lx-2,y+h-32,4,7,1,'#fff2b9');}
+// Roof ridges, facades and shopfront details are baked into the regional cache.
+const timber=theme==='harbor'?'#3f6468':'#7d7359';
+for(const bx of [x+8,x+w-12]){round(c,bx,y+47,4,Math.max(4,h-65),1,timber);line(c,[[bx+1,y+49],[bx+1,y+h-20]],shade(timber,28),.6);}
+line(c,[[x+9,y+51],[x+w-10,y+51]],timber,3);
+for(let rr=0;rr<5;rr++)for(let cc=0;cc<Math.floor(w/20)-1;cc++){const xx=x+17+cc*20+(rr%2)*4,yy=y+rr*7-2;if(xx>x+w-20)continue;path(c,`M${xx} ${yy}q4 2 8 0`,null,shade(roof,40),.45);}
+if(w>125){
+ const dx=x+w*.28,dy=y+12;poly(c,[[dx-17,dy+21],[dx-17,dy+4],[dx,dy-10],[dx+17,dy+4],[dx+17,dy+21]],'#d4d0af',shade(roof,-35),1);poly(c,[[dx-22,dy+4],[dx,dy-16],[dx+22,dy+4]],shade(roof,-5),shade(roof,-38),1.3);round(c,dx-8,dy+4,16,14,3,'#5d8d8b','#8d947b');line(c,[[dx,dy+5],[dx,dy+17]],'#e6dbb8',1.3);line(c,[[dx-7,dy+11],[dx+7,dy+11]],'#e6dbb8',1.1);
+}
+for(const wx of [x+20,x+w-50]){const wy=y+Math.max(62,h-57);round(c,wx-9,wy-1,5,26,1,shade(roof,6),shade(roof,-24));round(c,wx+32,wy-1,5,26,1,shade(roof,6),shade(roof,-24));for(let row=0;row<4;row++){line(c,[[wx-8,wy+4+row*5],[wx-5,wy+4+row*5]],shade(roof,40),.5);line(c,[[wx+33,wy+4+row*5],[wx+36,wy+4+row*5]],shade(roof,40),.5);}path(c,`M${wx+3} ${wy+3}L${wx+11} ${wy+3}L${wx+3} ${wy+10}Z`,'#f4f6dc70');}
+if(w>150&&h>95){const ax=doorX-10,ay=doorY-14;line(c,[[ax-2,ay+13],[ax-2,y+h-3]],'#617060',2);line(c,[[ax+51,ay+13],[ax+51,y+h-3]],'#617060',2);poly(c,[[ax-4,ay+10],[ax+4,ay-4],[ax+45,ay-4],[ax+54,ay+10]],'#d8c99c','#8a8d6d',.7);for(let i=0;i<5;i++)path(c,`M${ax+i*11} ${ay+10}L${ax+4+i*9} ${ay-4}L${ax+12+i*9} ${ay-4}L${ax+10+i*11} ${ay+10}Z`,i%2?'#e4dab8':shade(roof,10));for(let i=0;i<5;i++)path(c,`M${ax+i*11} ${ay+10}Q${ax+5+i*11} ${ay+18} ${ax+11+i*11} ${ay+10}Z`,i%2?'#cfc8a6':shade(roof,-7));}
+const signX=x+w-28;line(c,[[signX,y+48],[signX+14,y+48],[signX+14,y+61]],'#49605a',2);round(c,signX+5,y+59,19,19,4,gradient(c,signX,y+59,signX+24,y+78,'#d7bf83','#a38b5c'),'#6b6e52');star(c,signX+14.5,y+68,5,'#355f61');
+for(let row=0;row<2;row++)round(c,doorX-10-row*4,y+h+row*3,50+row*8,3,1,shade(p.path,10-row*8));
+// Pots and tiny hand-painted wall ornaments anchor the architecture to the street.
+for(const px of [x+10,x+w-15]){oval(c,px,y+h-3,9,3,'#1532372a');path(c,`M${px-6} ${y+h-15}L${px+6} ${y+h-15}L${px+4} ${y+h-4}L${px-4} ${y+h-4}Z`,index%2?'#b58c68':'#6b9280','#62755e',.6);for(let i=0;i<4;i++)leaf(c,px,y+h-14,5.5,(i-1.5)*.65,i%2?p.leaf2:p.leaf3);blossom(c,px+1,y+h-22,3,'#f2d1ae');}
+if(theme==='harbor'){line(c,[[x+w-12,y-3],[x+w+9,y-3]],'#d6c792',1);path(c,`M${x+w-12} ${y-3}L${x+w+9} ${y-3}L${x+w+3} ${y+11}L${x+w-6} ${y+11}Z`,'#799ba2','#42696c',.6);}
 if(theme==='glacier'){path(c,`M${x-8} ${y+39}Q${x+w*.3} ${y+32} ${x+w*.5} ${y+39}Q${x+w*.8} ${y+33} ${x+w+8} ${y+39}L${x+w+7} ${y+45}L${x-7} ${y+45}Z`,'#edf4e7');}
 return cv;}
-function buildTerrain(map){const p=palettes[map.theme]||palettes.meadow,ground=surface(map.width*TILE,map.height*TILE),c=ground.getContext('2d');for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)groundTile(c,x*TILE,y*TILE,tileAt(map,x,y),p,x,y,map);const objects=[];for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)if(tileAt(map,x,y)==='T')objects.push({kind:'tree',x,y,depth:y*TILE+37,variant:Math.floor(hash(x,y)*7)});findBuildings(map).forEach((b,i)=>objects.push({kind:'building',b,sprite:buildingSprite(b,p,i,map.theme),depth:(b.y+b.h)*TILE}));return{ground,objects,p};}
+function townInlay(c,map,p){if(!['village','harbor','observatory','tower'].includes(map.theme))return;const x=(map.spawn.x+.5)*TILE,y=(map.spawn.y+.5)*TILE;c.save();c.beginPath();for(let yy=Math.max(0,map.spawn.y-4);yy<=Math.min(map.height-1,map.spawn.y+4);yy++)for(let xx=Math.max(0,map.spawn.x-4);xx<=Math.min(map.width-1,map.spawn.x+4);xx++)if(['_','='].includes(tileAt(map,xx,yy)))c.rect(xx*TILE,yy*TILE,TILE,TILE);c.clip();c.globalAlpha=.48;
+for(const r of [49,55,87,92]){c.strokeStyle=r%2?'#a69c6a':'#f0deb0';c.lineWidth=r===87?2.5:1;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.stroke();}
+for(let i=0;i<16;i++){const a=i*Math.PI/8;line(c,[[x+Math.cos(a)*58,y+Math.sin(a)*58],[x+Math.cos(a)*84,y+Math.sin(a)*84]],i%2?'#c6bc8f':'#8f926b',i%2?.8:1.7);if(i%2===0){star(c,x+Math.cos(a)*72,y+Math.sin(a)*72,4,'#9b9869',a);}}
+star(c,x,y,43,'#b1ac7a',Math.PI*.25);star(c,x,y,36,'#e8d9ac');star(c,x,y,25,'#9ca27c',Math.PI*.25);star(c,x,y,17,'#e9dcb6');c.globalAlpha=.22;for(let i=0;i<9;i++){const a=i*.7;path(c,`M${x+Math.cos(a)*108} ${y+Math.sin(a)*108}q5-4 10 0q-5 5-10 0`,null,'#7e8968',1.2);}c.restore();}
+function buildTerrain(map){const p=palettes[map.theme]||palettes.meadow,ground=surface(map.width*TILE,map.height*TILE),c=ground.getContext('2d');for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)groundTile(c,x*TILE,y*TILE,tileAt(map,x,y),p,x,y,map);townInlay(c,map,p);const objects=[];for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)if(tileAt(map,x,y)==='T')objects.push({kind:'tree',x,y,depth:y*TILE+37,variant:Math.floor(hash(x,y)*7)});findBuildings(map).forEach((b,i)=>objects.push({kind:'building',b,sprite:buildingSprite(b,p,i,map.theme),depth:(b.y+b.h)*TILE}));return{ground,objects,p};}
 
 // Traveller sprites use curved fabric, directional faces, and a lantern companion.
-function human(c,x,y,kind,facing,time,moving=false,personSeed=0){c.save();c.translate(x+20,y+28);const foot=moving?Math.sin(time*.025)*3:0;oval(c,1,7,12,4,'#112b3b45');const hero=kind==='hero',guardian=kind==='guardian'||kind==='rival',col=hero?'#3a7a85':guardian?'#716795':kind==='shop'?'#b7865a':kind==='rest'?'#92b19b':['#839b94','#b2818c','#9e9a77'][personSeed%3];
-round(c,-8,0,6,12+foot,2,'#2d4652');round(c,3,0,6,12-foot,2,'#2d4652');round(c,-10,9+foot,9,4,2,'#223743');round(c,3,9-foot,10,4,2,'#223743');
-if(guardian)path(c,'M-10-16Q-16-5-17 10L-7 7L0 11L12 8L17 11Q13-10 9-16Z',gradient(c,-15,-16,15,11,shade(col,14),shade(col,-35)),shade(col,-40),1);
-path(c,'M-8-16Q-13-13-14-1L-9 2L-8-7L-8 7Q0 11 9 6L9-7L12 3L16 0Q14-13 8-16Z',gradient(c,-12,-16,14,9,shade(col,25),shade(col,-18)),shade(col,-42),.9);
-path(c,'M-4-13L-4 5L4 6L6-12Z',shade(col,28));round(c,-14,-2,5,6,2,'#e1b990');round(c,11,-1,5,6,2,'#e1b990');
-oval(c,0,-23,9,11,gradient(c,-8,-30,7,-13,'#efc9a4','#cda07f'),'#5c564c',.6);path(c,'M-9-24Q-12-35 0-36Q11-35 10-23L7-17L6-26L2-31L-6-25L-7-17Z','#314752');
-if(facing==='up'){path(c,'M-8-29L8-29L9-19Q1-13-8-20Z','#314752');round(c,-7,-9,14,16,3,'#b89362','#6c705d');round(c,-5,-7,10,7,2,'#d1ba85');}else{if(facing!=='right')oval(c,-4,-22,1.2,1.6,'#203b45');if(facing!=='left')oval(c,4,-22,1.2,1.6,'#203b45');path(c,'M-2-17Q0-16 2-17',null,'#a56c63',.7);}
-if(hero){round(c,-10,-35,20,6,3,'#568f86');path(c,'M-13-30Q0-34 14-30L14-27Q0-29-13-27Z','#c8d0aa','#647c6a',.8);round(c,-9,-14,18,4,1,'#d89766');path(c,'M6-12L11-2L7 1L4-10Z','#c7865c');round(c,9,-3,7,10,2,'#ae8659','#695a48');oval(c,13,1,2,2,'#f4d397');}
-else if(kind==='rest'){round(c,-10,-36,20,7,3,'#ebe4cb');line(c,[[-2,-34],[3,-34]],'#4c9a83',2);line(c,[[.5,-36],[.5,-31]],'#4c9a83',2);}
-else if(kind==='shop'){round(c,-10,-37,19,9,3,'#967654');oval(c,0,-29,14,3,'#c0a477');}
-else if(guardian){path(c,'M-9-33L-5-39L0-34L5-40L10-33Z','#d8c386','#6d6355',.8);gem(c,0,-33,3,'#c8ebda');}
+function human(c,x,y,kind,facing,time,moving=false,personSeed=0,walkPhase){
+c.save();c.translate(x+20,y+39);
+const hero=kind==='hero',guardian=kind==='guardian'||kind==='rival',side=facing==='left'||facing==='right',back=facing==='up';
+const gait=moving?Math.sin(Number.isFinite(walkPhase)?walkPhase*Math.PI:time*.022):0, lift=moving?Math.abs(gait)*1.3:0;
+const skin=['#e8be95','#d3a27d','#bb886c','#edcbb1'][hero?0:personSeed%4],hair=['#263e49','#614b3d','#514a58','#9a8b70'][hero?0:personSeed%4];
+const col=hero?'#397f86':guardian?['#70618a','#986e53','#4d7c7e'][personSeed%3]:kind==='shop'?'#a97c50':kind==='rest'?'#8caf9a':kind==='tower'?'#64688c':['#7c9a8b','#ac7880','#a79b6e','#597f98','#8c7999'][personSeed%5];
+oval(c,1,0,14,4.5,'#0b283537');oval(c,1,0,9,2.8,'#0b28352b');c.translate(0,-lift);
+if(facing==='left')c.scale(-1,1);
+const stroke=shade(col,-54), cloth=gradient(c,-12,-38,12,-6,shade(col,28),shade(col,-24));
+function boot(xx,dy,far=false){round(c,xx-3.4,-13+dy,6.8,12,2,far?'#2e4551':'#3c5660');path(c,`M${xx-3.5} ${-5+dy}L${xx+3.5} ${-5+dy}L${xx+5.8} ${-1+dy}Q${xx+6.1} ${2+dy} ${xx-4.2} ${2+dy}L${xx-4.2} ${-1+dy}Z`,far?'#223843':'#35464b','#21323b',.6);line(c,[[xx-2.5,-3+dy],[xx+2.7,-3+dy]],'#a79a7b',.7);line(c,[[xx-3.7,1+dy],[xx+4.8,1+dy]],'#162c36',.8);}
+function hand(xx,yy){oval(c,xx,yy,2.8,3.5,gradient(c,xx-2,yy-3,xx+3,yy+4,shade(skin,14),shade(skin,-9)),'#6d6458',.45);}
+function lantern(xx,yy){line(c,[[xx,yy-8],[xx,yy-5]],'#b5a57b',.9);path(c,`M${xx-3} ${yy-5}Q${xx-4} ${yy-11} ${xx} ${yy-11}Q${xx+4} ${yy-11} ${xx+3} ${yy-5}`,null,'#c4b38b',.8);round(c,xx-4,yy-5,8,12,2,gradient(c,xx-4,yy-5,xx+4,yy+7,'#d9bb78','#876946'),'#695b45');round(c,xx-2.4,yy-3.5,4.8,8,1,'#ffe9a9');line(c,[[xx,yy-3],[xx,yy+4]],'#ba8b4f',.65);oval(c,xx-.8,yy,1,2,'#fff8cd');}
+if(side){
+ // A genuine profile: narrow torso, rear pack, one eye, projecting nose and brim.
+ boot(-3,gait*3.7,true);hand(-5,-20-gait*2.8);
+ if(hero||kind==='tower')round(c,-14,-34,10,20,3,gradient(c,-15,-34,-4,-14,'#b39e70','#716e52'),'#566255');
+ path(c,'M-6-39Q4-42 10-33L9-12Q4-7-7-10L-10-28Z',cloth,stroke,.8);
+ if(guardian)path(c,'M-7-39Q-12-25-14-7L-3-10L1-37Z',gradient(c,-10,-38,0,-7,shade(col,7),shade(col,-35)),stroke,.8);
+ path(c,'M0-34Q7-32 7-22L10-14L5-12L0-23L-3-31Z',gradient(c,-3,-33,8,-14,shade(col,34),shade(col,-12)),stroke,.6);hand(8,-12+gait*3);
+ boot(5,-gait*3.7);
+ path(c,'M-3-44L4-44L5-37L-4-37Z',skin);
+ path(c,'M-8-56Q-6-66 4-65Q13-63 12-53L16-49Q17-47 12-47L12-43Q9-38 2-40L-5-43Z',gradient(c,-8,-62,13,-40,shade(skin,16),skin),'#625b51',.65);
+ path(c,'M-8-49Q-13-61-4-66Q8-70 13-60L10-56L3-58L0-50L-4-46Z',hair);oval(c,-2,-49,2.6,3.4,shade(skin,-3));path(c,'M-3-50Q0-52 0-48',null,'#ae8268',.65);
+ oval(c,9,-52,1.4,1.8,'#243d44');oval(c,9.4,-52.6,.4,.6,'#faf6dd');line(c,[[8,-56],[11,-55]],hair,.8);path(c,'M10-44L13-44',null,'#a27364',.7);
+ if(hero){path(c,'M-10-62Q-6-70 5-68Q11-68 12-61Z',gradient(c,-10,-70,10,-60,'#6e9b89','#3f736d'),'#415f59',.65);path(c,'M-12-61Q3-64 18-59L18-57Q1-59-11-57Z','#d3ce9d','#6c7a63',.7);round(c,-9,-63,21,2,1,'#31595c');path(c,'M-6-40L7-39L9-35L-6-35Z','#d7a475');path(c,'M-5-37Q-10-31-15-24L-15-34L-10-40Z','#b37f59');line(c,[[-7,-34],[3,-12]],'#a28d61',2);lantern(11,-5+gait*3);}
+ else if(kind==='shop'){path(c,'M-11-61Q-9-69 4-68L11-61Z','#8d7254','#594f43',.7);oval(c,3,-61,15,3,'#c0a67b');path(c,'M1-31L9-29L10-12L2-12Z','#c7b895');round(c,3,-24,5,5,1,'#8d8d6f');}
+ else if(kind==='rest'){round(c,-9,-66,21,7,2,'#f2ebcf','#b9ba9b');line(c,[[3,-65],[3,-60]],'#569b82',1.6);line(c,[[.5,-62.5],[5.5,-62.5]],'#569b82',1.6);path(c,'M1-32L8-31L9-12L1-12Z','#d4dfcc');}
+ else if(guardian){path(c,'M-8-63L-7-70L-2-66L3-73L7-65L12-68L12-61Z','#d5bd7c','#82734f',.7);gem(c,6,-64,2.6,'#bcddce');}
+}else{
+ boot(-6,gait*3.5,back);boot(6,-gait*3.5,back);
+ if(guardian)path(c,'M-8-39Q-14-34-17-8L-8-10L0-6L10-9L16-7Q15-32 8-39Z',gradient(c,-12,-38,12,-7,shade(col,8),shade(col,-33)),stroke,.8);
+ // Sleeves swing with the opposite leg; cuffs and hands keep a stable silhouette.
+ for(const sign of [-1,1]){const swing=gait*sign*3;path(c,`M${sign*8} -37Q${sign*15} ${-33+swing} ${sign*14} ${-18+swing}L${sign*9} ${-17+swing}L${sign*8} -28Z`,gradient(c,-14,-37,14,-16,shade(col,21),shade(col,-20)),stroke,.7);round(c,sign>0?9:-15,-19+swing,6,3,1,shade(col,37));hand(sign*12,-14+swing);}
+ path(c,'M-8-39Q0-43 8-39L10-13Q2-7-10-13Z',cloth,stroke,.9);
+ path(c,'M-4-45L4-45L5-38Q0-35-5-38Z',skin);line(c,[[-8,-14],[9,-14]],'#a9a181',1.4);
+ if(back){path(c,'M-6-36Q0-31 6-36M0-34L0-16',null,shade(col,45),.65);line(c,[[-8,-38],[-6,-19]],'#c6b183',1.9);line(c,[[8,-38],[6,-19]],'#c6b183',1.9);if(hero||kind==='tower'||guardian){round(c,-8,-32,16,22,3,gradient(c,-8,-31,9,-10,'#c2ad79','#837a55'),'#55634f');round(c,-7,-33,14,9,3,'#d1bd88','#827955');round(c,-2,-27,4,7,1,'#857957');oval(c,0,-22,1.1,1.2,'#e6d4a1');round(c,-6,-17,12,6,2,'#9f936c');line(c,[[-5,-15],[4,-15]],'#d3c49a',.6);} }
+ else{path(c,'M-6-38L0-32L6-38L5-14L-5-14Z',shade(col,32));line(c,[[0,-32],[0,-15]],shade(col,-38),.65);for(let i=0;i<3;i++)oval(c,1,-28+i*5,.7,.7,'#d7c594');round(c,3,-27,4,5,.7,shade(col,-8));if(hero)line(c,[[-8,-36],[7,-12]],'#c0a777',2.7);if(kind==='shop'||kind==='rest')path(c,'M-6-32L6-32L8-12Q0-8-8-12Z',kind==='shop'?'#d0b58a':'#dae5d3','#8d9b83',.5);}
+ oval(c,0,-53,10.3,12.2,gradient(c,-9,-63,9,-40,shade(skin,16),shade(skin,-8)),'#625b51',.7);
+ if(back){path(c,'M-10-55Q-12-66 0-68Q13-66 11-53L9-44Q0-38-9-45Z',gradient(c,-9,-66,10,-40,shade(hair,16),hair),'#293a40',.6);for(let i=0;i<5;i++)path(c,`M${-6+i*3} -60Q${-8+i*3} -50 ${-6+i*3} -45`,null,shade(hair,23),.5);}
+ else{path(c,'M-10-54Q-13-65-2-68Q9-69 12-60L10-48L7-53L7-59L1-62L-6-57L-8-48Z',gradient(c,-8,-66,11,-48,shade(hair,18),hair));oval(c,-10,-52,2.3,3,skin);oval(c,10,-52,2.3,3,skin);for(const xx of[-4.2,4.2]){oval(c,xx,-53,1.5,1.9,'#263f47');oval(c,xx+.3,-53.7,.45,.5,'#fff9df');line(c,[[xx-1.4,-57],[xx+1.4,-57.2]],hair,.7);}oval(c,-7,-48,2.3,.9,'#d4957b55');oval(c,7,-48,2.3,.9,'#d4957b55');path(c,'M0-52L-1-48L1-48',null,'#b58c72',.55);path(c,'M-2-44Q0-42.7 2-44',null,'#a66f62',.7);}
+ if(hero){path(c,'M-11-62Q-10-70 0-71Q10-70 11-62Z',gradient(c,-10,-71,10,-61,'#729e88','#3d756c'),'#46675d',.7);round(c,-11,-63,22,3,1,'#315a58');path(c,back?'M-13-62Q0-65 13-62L13-59Q0-61-13-59Z':'M-14-60Q0-64 15-60L15-57Q0-59-14-57Z','#d6d0a3','#6b8068',.7);line(c,[[-8,-66],[7,-66]],'#b6c4a2',.65);round(c,-10,-41,20,4,1,'#dfa976');if(!back)path(c,'M5-38L11-24L7-23L3-36Z','#be865b');lantern(back?-16:16,-7+gait*3);}
+ else if(kind==='rest'){round(c,-10,-69,20,8,3,'#f0e8ce','#b2b69c');if(!back){line(c,[[-3,-65],[3,-65]],'#579b83',1.6);line(c,[[0,-68],[0,-62]],'#579b83',1.6);} }
+ else if(kind==='shop'){path(c,'M-9-62L-8-69Q0-73 8-69L10-62Z','#967a55','#605745',.7);oval(c,0,-62,15,3,'#c2a97c','#7b7057',.6);}
+ else if(guardian){path(c,'M-10-63L-8-71L-3-66L1-74L5-66L10-71L11-63Z','#d9c18a','#85764f',.7);if(!back)gem(c,0,-66,3,'#c3e6d1');}
+}
 c.restore();}
+function traveller(target,options={}){const c=typeof target.getContext==='function'?target.getContext('2d'):target,W=c.canvas.width,H=c.canvas.height,size=options.size||Math.min(W,H);if(typeof target.getContext==='function')c.clearRect(0,0,W,H);c.save();const scale=size/88;c.translate((W-size)/2+size*.5,(H-size)/2+size*.88);c.scale(scale,scale);human(c,-20,-39,options.kind||'hero',options.facing||'down',options.time||0,!!options.moving,options.personSeed||0,options.walkPhase);c.restore();}
 function marker(c,x,y,kind,time){const color=kind==='guardian'||kind==='rival'?'#f4c67e':kind==='rest'?'#a7ebc5':kind==='shop'?'#e6c295':kind==='tower'?'#c8b6ef':'#dae4c8',yy=y+Math.sin(time*.002)*2;c.save();glow(c,x,yy,13,color,.12);round(c,x-7,yy-8,14,16,4,'#183b4bdf',color);if(kind==='rest'){line(c,[[x-3.5,yy],[x+3.5,yy]],color,1.7);line(c,[[x,yy-3.5],[x,yy+3.5]],color,1.7);}else if(kind==='shop'){path(c,`M${x-3} ${yy-1}L${x+3} ${yy-1}L${x+4} ${yy+4}L${x-4} ${yy+4}Z`,null,color,1);path(c,`M${x-2} ${yy-1}Q${x} ${yy-7} ${x+2} ${yy-1}`,null,color,1);}else if(kind==='guardian'||kind==='rival')star(c,x,yy,4,color);else if(kind==='tower'){line(c,[[x-3,yy+4],[x-3,yy-4],[x+3,yy-4],[x+3,yy+4]],color,1.3);}c.restore();}
 function npc(c,n,time,p,flags){const x=n.x*TILE,y=n.y*TILE,k=n.kind||'dialogue';if(k==='cache'){
 oval(c,x+21,y+34,14,4,'#132f393b');round(c,x+7,y+20,27,15,2,gradient(c,x,y+20,x,y+35,'#c4a374','#7b6048'),'#514e42');path(c,`M${x+7} ${y+20}Q${x+20} ${y+11} ${x+34} ${y+20}L${x+34} ${y+23}L${x+7} ${y+23}Z`,'#d6b680','#514e42',1);round(c,x+18,y+20,5,8,1,flags?.[n.id]?'#758177':'#f1d58c');if(!flags?.[n.id])star(c,x+22,y+10,3,p.accent,time*.0003);return;}
 if(k==='guardian'||k==='tower'){c.strokeStyle=p.accent+'88';c.lineWidth=1.5;c.beginPath();c.ellipse(x+20,y+36,24,9,0,0,Math.PI*2);c.stroke();for(let i=0;i<4;i++)star(c,x+20+Math.cos(i*Math.PI/2)*24,y+36+Math.sin(i*Math.PI/2)*9,2,p.accent);}
-human(c,x,y,k,'down',time,false,seed(n.id));if(k!=='dialogue')marker(c,x+20,y-18,k,time);}
+human(c,x,y,k,n.facing||(['left','down','right'][seed(n.id)%3]),time,false,seed(n.id));if(k!=='dialogue')marker(c,x+20,y-47,k,time);}
 function world(canvas,engine,time=0,options={}){
 if(!canvas||!engine?.state)return;const map=engine.map||LT.DATA.maps[engine.state.map];if(!map)return;let info=terrainCache.get(map.id);if(!info)info=limitedSet(terrainCache,map.id,buildTerrain(map),3);
-const c=canvas.getContext('2d'),W=canvas.width,H=canvas.height,p=info.p,zoom=Math.max(.9,Math.min(1.8,options.zoom||1.05)),viewW=W/zoom,viewH=H/zoom;
+const c=canvas.getContext('2d'),ratio=Math.max(1,Math.min(2,options.pixelRatio||1)),W=canvas.width/ratio,H=canvas.height/ratio,p=info.p,zoom=Math.max(.9,Math.min(1.8,options.zoom||1.05)),viewW=W/zoom,viewH=H/zoom;
 const px=Number.isFinite(options.playerX)?options.playerX:engine.state.x,py=Number.isFinite(options.playerY)?options.playerY:engine.state.y,cx=Math.max(0,Math.min(map.width*TILE-viewW,(px+.5)*TILE-viewW/2)),cy=Math.max(0,Math.min(map.height*TILE-viewH,(py+.5)*TILE-viewH/2+14));
-c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,W,H);c.imageSmoothingEnabled=true;c.fillStyle=p.grass;c.fillRect(0,0,W,H);c.save();c.scale(zoom,zoom);c.translate(-cx,-cy);c.drawImage(info.ground,0,0);
+c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,canvas.width,canvas.height);c.setTransform(ratio,0,0,ratio,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.fillStyle=p.grass;c.fillRect(0,0,W,H);c.save();c.scale(zoom,zoom);c.translate(-cx,-cy);c.drawImage(info.ground,0,0);
 const left=Math.max(0,Math.floor(cx/TILE)),top=Math.max(0,Math.floor(cy/TILE)),right=Math.min(map.width,Math.ceil((cx+viewW)/TILE)+1),bottom=Math.min(map.height,Math.ceil((cy+viewH)/TILE)+1);
 for(let y=top;y<bottom;y++)for(let x=left;x<right;x++)if(tileAt(map,x,y)==='~'&&hash(x,y)>.46){const phase=(time*.00018+hash(y,x))%1;c.globalAlpha=Math.sin(phase*Math.PI)*.42;path(c,`M${x*TILE+4+phase*7} ${y*TILE+14}Q${x*TILE+15+phase*7} ${y*TILE+10} ${x*TILE+27+phase*7} ${y*TILE+14}`,null,map.theme==='volcano'?'#ffdd8c':'#d7f8e1',1.2);c.globalAlpha=1;}
 const objects=info.objects.filter(o=>o.kind==='building'||(o.x>=left-2&&o.x<=right+2&&o.y>=top-2&&o.y<=bottom+2));for(const n of map.npcs||[])if(n.x>=left-1&&n.x<=right+1&&n.y>=top-1&&n.y<=bottom+1)objects.push({kind:'npc',n,depth:n.y*TILE+37});
-const companion=engine.state.party?.[0];if(companion)objects.push({kind:'companion',depth:py*TILE+38,x:px*TILE-15,y:py*TILE+4});objects.push({kind:'hero',depth:py*TILE+39});objects.sort((a,b)=>a.depth-b.depth);
-for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(map.theme,o.variant),o.x*TILE-22,o.y*TILE-65);else if(o.kind==='building')c.drawImage(o.sprite,o.b.x*TILE-20,o.b.y*TILE-35);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state.flags);else if(o.kind==='companion'){creature(c,companion.species,{x:o.x-18,y:o.y-4,size:38,time,flip:engine.state.facing==='left'});}else human(c,px*TILE,py*TILE,'hero',engine.state.facing,time,Math.abs(px-engine.state.x)+Math.abs(py-engine.state.y)>.01);}
+const moving=options.moving===undefined?Math.abs(px-engine.state.x)+Math.abs(py-engine.state.y)>.01:!!options.moving,follow=({down:[-.55,-.46],up:[.55,.43],left:[.65,.15],right:[-.65,.15]})[engine.state.facing]||[-.55,-.46],companion=engine.state.party?.[0];if(companion)objects.push({kind:'companion',depth:(py+follow[1])*TILE+37,x:(px+follow[0])*TILE+20,y:(py+follow[1])*TILE+16});objects.push({kind:'hero',depth:py*TILE+39});objects.sort((a,b)=>a.depth-b.depth);
+for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(map.theme,o.variant),o.x*TILE-22,o.y*TILE-65);else if(o.kind==='building')c.drawImage(o.sprite,o.b.x*TILE-20,o.b.y*TILE-35);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state.flags);else if(o.kind==='companion'){follower(c,companion.species,o.x,o.y,engine.state.facing,moving,time,options.walkPhase);}else human(c,px*TILE,py*TILE,'hero',engine.state.facing,time,moving,0,options.walkPhase);}
 for(const e of map.exits||[]){const locked=e.requires&&!engine.state.seals.includes(e.requires),x=e.x*TILE+20,y=e.y*TILE+20;colorExit(c,x,y,locked,time);}
 c.restore();
 const quality=options.quality||'high',count=quality==='low'?8:quality==='balanced'?17:26,night=['forest','grotto','observatory'].includes(map.theme),snow=map.theme==='glacier'||options.weather==='snow',ash=map.theme==='volcano'||options.weather==='embers';
@@ -1754,14 +2098,43 @@ if(options.weather==='rain'){c.save();c.globalAlpha=.25;for(let i=0;i<count*3;i+
 const phase=options.dayPhase,explicitNight=phase==='night'||(typeof phase==='number'&&(phase>.73||phase<.13)),nightStrength=explicitNight?.3:night?.12:0;if(nightStrength){c.fillStyle=`rgba(12,25,52,${nightStrength})`;c.fillRect(0,0,W,H);for(const n of map.npcs||[])if(n.kind==='rest'||n.kind==='guardian')glow(c,(n.x*TILE+20-cx)*zoom,(n.y*TILE+20-cy)*zoom,66*zoom,p.accent,.16);glow(c,((px+.5)*TILE-cx)*zoom,((py+.5)*TILE-cy)*zoom,85,p.accent,.1);}
 if(quality!=='low'){const v=c.createRadialGradient(W*.5,H*.42,W*.24,W*.5,H*.48,W*.68);v.addColorStop(0,'#102e3400');v.addColorStop(1,'#10263855');c.fillStyle=v;c.fillRect(0,0,W,H);}
 }
+function follower(c,id,x,y,facing,moving,time,phase){const d=LT.DATA.species[id],shape=d.shape||'sprig',base=d.color||'#8aad80',bob=moving?Math.abs(Math.sin(Number.isFinite(phase)?phase*Math.PI:time*.022))*1.8:0;c.save();c.translate(x,y-bob);oval(c,0,20,13,3.5,'#102f3433');
+if(facing==='up'){
+ const furry=['sprig','rabbit','fox','wolf','cat','otter','bear','goat'].includes(shape),bird=['owl','crane','phoenix','gryphon'].includes(shape);
+ oval(c,0,7,11,13,gradient(c,-10,-7,11,21,shade(base,22),shade(base,-23)),shade(base,-45),.7);
+ if(furry){if(['sprig','rabbit'].includes(shape)){oval(c,-5,-13,3.5,12,base,shade(base,-45),.6);oval(c,5,-13,3.5,12,base,shade(base,-45),.6);}else{poly(c,[[-10,-5],[-10,-18],[-2,-10]],base,shade(base,-40),.6);poly(c,[[10,-5],[10,-18],[2,-10]],base,shade(base,-40),.6);}oval(c,0,-5,10,10,gradient(c,-10,-15,10,5,shade(base,20),base),shade(base,-45),.6);path(c,'M-4-8L-2-5L0-8L2-5L5-8',null,shade(base,30),.6);}
+ else if(bird){oval(c,0,-5,10,10,base,shade(base,-45),.6);path(c,'M-9 0Q-20 3-14 14L-5 13M9 0Q20 3 14 14L5 13',null,shade(base,-26),5);for(const xx of[-6,0,6])line(c,[[xx,3],[xx,15]],shade(base,27),.6);}
+ else{oval(c,0,-5,8,8,shade(base,12),shade(base,-45),.7);for(let i=0;i<3;i++)gem(c,0,i*5+1,3,d.accent||shade(base,35));}
+ if(['fox','wolf','cat','otter','serpent','lizard'].includes(shape)){path(c,'M6 15Q22 18 18 4',null,shade(base,-35),7);path(c,'M6 14Q21 17 18 4',null,shade(base,15),4.8);}else oval(c,0,18,4,3.5,shade(base,25));
+ oval(c,-6,20,4,2,shade(base,-30));oval(c,6,20,4,2,shade(base,-30));
+}else if(facing==='left'||facing==='right'){
+ if(facing==='left')c.scale(-1,1);
+ // Draw a side-on silhouette to keep a readable traveling direction at field scale.
+ oval(c,-2,9,12,10,gradient(c,-15,-3,12,20,shade(base,20),shade(base,-20)),shade(base,-43),.7);path(c,'M-12 8Q-24 1-20-8',null,shade(base,-32),5);oval(c,8,-2,9,10,base,shade(base,-43),.6);oval(c,14,2,6,4.5,shade(base,30),shade(base,-43),.6);poly(c,[[4,-8],[2,-19],[11,-11]],base,shade(base,-43),.6);oval(c,10,-3,1.5,2,'#1c3743');oval(c,10.4,-3.8,.5,.6,'#f3f4db');oval(c,18,1,1.3,1.1,'#28424a');for(const xx of[-8,6]){const g=moving?Math.sin((Number.isFinite(phase)?phase:time*.007)*Math.PI+(xx<0?0:Math.PI))*2:0;round(c,xx,15+g,5,6,2,shade(base,-25));}if(['owl','crane','phoenix','gryphon','lantern','bat','manta','whale'].includes(shape))path(c,'M-6 2Q-20-9-21 6Q-19 17-6 13Z',shade(base,13),shade(base,-43),.7);
+}else creature(c,id,{x:-23,y:-24,size:46});c.restore();}
 function colorExit(c,x,y,locked,time){c.save();c.globalAlpha=.65+Math.sin(time*.002)*.18;const col=locked?'#dcb18a':'#f4e6b1';oval(c,x,y+12,12,4,col+'33');star(c,x,y,7,col,time*.0001);if(locked){round(c,x-3,y-2,6,5,1,'#785f58');}c.restore();}
 
 // CREATURE PORTRAITS — 29 authored anatomical families with individual markings.
 // The 160-unit illustration coordinate system is rasterized at256px once.
-function creatureSprite(id){if(spriteCache.has(id))return spriteCache.get(id);const d=LT.DATA?.species?.[id]||{id,element:'leaf',shape:'sprig',color:'#85b986'},cv=surface(256,256),c=cv.getContext('2d');c.scale(1.6,1.6);const n=seed(id),e=!!d.evolved,shape=d.shape||'sprig',variant=Number.isFinite(d.variant)?d.variant:0;if(variant){const sx=.94+hash(variant,n)*.11,sy=.95+hash(n,variant)*.07;c.translate(80,143);c.scale(sx,sy);c.translate(-80,-143);}
+function creatureSprite(id){if(spriteCache.has(id))return spriteCache.get(id);const d=LT.DATA?.species?.[id]||{id,element:'leaf',shape:'sprig',color:'#85b986'},cv=surface(320,320),c=cv.getContext('2d');c.scale(2,2);const n=seed(id),e=!!d.evolved,shape=d.shape||'sprig',variant=Number.isFinite(d.variant)?d.variant:0;if(variant){const sx=.94+hash(variant,n)*.11,sy=.95+hash(n,variant)*.07;c.translate(80,143);c.scale(sx,sy);c.translate(-80,-143);}
 let base=d.color||'#85b986';base=mix(base,{leaf:'#75ac73',tide:'#67a9c3',ember:'#d98d61',wind:'#889fba',crystal:'#a39acb'}[d.element]||base,.42);const dark=shade(base,-26),light=shade(base,32),cream='#f0e4c5',accent=d.accent||({leaf:'#d8e5aa',tide:'#b8e5dc',ember:'#ffd38a',wind:'#e2dfc3',crystal:'#e6d9f5'}[d.element]),outline=shade(base,-63);
-const body=(s,col=base)=>path(c,s,gradient(c,35,25,115,143,shade(col,25),shade(col,-16)),outline,2.2),patch=(s,col=cream)=>path(c,s,col,null),leg=(x,y,r=8)=>{oval(c,x,y,r,r*.55,dark,outline,1.4);path(c,`M${x-r*.5} ${y-2}L${x-r*.4} ${y+2}M${x+r*.1} ${y-2}L${x+r*.2} ${y+2}`,null,shade(dark,30),.7);};
-function eyes(x,y,gap=24,r=4){for(const xx of[x,x+gap]){oval(c,xx,y,r,r*1.22,'#f8f2dd',outline,.6);oval(c,xx+.7,y+.5,r*.72,r*.95,gradient(c,xx,y-r,xx,y+r,'#426c75','#122e3c'));oval(c,xx-1,y-r*.35,r*.28,r*.3,'#ffffff');}path(c,`M${x+gap*.4} ${y+11}Q${x+gap*.5} ${y+14} ${x+gap*.61} ${y+11}`,null,outline,1.1);}
+const fur=['sprig','rabbit','stag','otter','fox','wolf','cat','bear','goat'].includes(shape),feathered=['owl','crane','gryphon','phoenix'].includes(shape),scaly=['dragon','serpent','lizard','gecko','seahorse'].includes(shape),mineral=['golem','tortoise','beetle','crab','scorpion'].includes(shape);
+const body=(s,col=base)=>{
+ const form=new Path2D(s);c.save();c.clip(form);
+ c.fillStyle=gradient(c,30,20,126,147,shade(col,32),shade(col,-26));c.fillRect(0,0,160,160);
+ const glow=c.createRadialGradient(55,43,3,60,57,77);glow.addColorStop(0,'#fff3c838');glow.addColorStop(.55,'#fff3c809');glow.addColorStop(1,'#102d3a19');c.fillStyle=glow;c.fillRect(0,0,160,160);
+ for(let i=0;i<45;i++){const x=18+hash(i,n)*126,y=14+hash(n,i)*140;c.globalAlpha=.13+hash(i,n,2)*.1;
+ if(fur)path(c,`M${x} ${y}q${1+hash(i,3)*2} 2 ${1+hash(i,2)*3} ${3+hash(i,4)*3}`,null,i%3?shade(col,42):shade(col,-37),.55);
+ else if(feathered)path(c,`M${x} ${y}q-3 5 1 8q4-3 1-7`,null,i%2?shade(col,34):shade(col,-30),.55);
+ else if(scaly)path(c,`M${x} ${y}q3 4 6 0`,null,i%3?shade(col,42):shade(col,-34),.7);
+ else if(mineral){line(c,[[x,y],[x+3+hash(i,4)*7,y-1.5]],i%3?shade(col,40):shade(col,-34),.55);}
+ else oval(c,x,y,.5+hash(i,n)*.5,.5,shade(col,40));}
+ c.restore();c.strokeStyle=outline;c.lineWidth=1.75;c.lineJoin='round';c.stroke(form);
+ // Inset rim follows the exact anatomy instead of a generic highlight blob.
+ c.save();c.clip(form);c.strokeStyle=shade(col,54);c.globalAlpha=.38;c.lineWidth=1.2;c.translate(.7,1);c.stroke(form);c.restore();
+},patch=(s,col=cream)=>path(c,s,gradient(c,45,55,111,139,shade(col,8),shade(col,-12)),null),leg=(x,y,r=8)=>{oval(c,x,y,r,r*.55,gradient(c,x-r,y-r,x+r,y+r,shade(base,10),dark),outline,1.1);path(c,`M${x-r*.5} ${y-2}L${x-r*.4} ${y+2}M${x+r*.1} ${y-2}L${x+r*.2} ${y+2}`,null,shade(dark,36),.8);};
+function eyes(x,y,gap=24,r=4){for(const xx of[x,x+gap]){oval(c,xx,y,r+1,r*1.3,shade(base,-17),outline,.55);oval(c,xx,y-.3,r,r*1.22,gradient(c,xx,y-r,xx,y+r,'#fff9e7','#e3dac0'));oval(c,xx+.5,y+.4,r*.76,r*.96,gradient(c,xx,y-r,xx,y+r,d.element==='ember'?'#c99d5e':d.element==='leaf'?'#81a78a':'#72a5b0','#173745'));oval(c,xx+.8,y+.4,r*.38,r*.76,'#102936');oval(c,xx-.9,y-r*.4,r*.32,r*.34,'#fffef2');oval(c,xx+r*.35,y+r*.45,r*.15,r*.18,'#c5e4d8');path(c,`M${xx-r} ${y-r*.2}Q${xx} ${y-r*1.7} ${xx+r} ${y-r*.25}`,null,outline,.9);}path(c,`M${x+gap*.4} ${y+11}Q${x+gap*.5} ${y+14} ${x+gap*.61} ${y+11}`,null,outline,1);}
+
 function face(x,y,gap=24,r=4){eyes(x,y,gap,r);oval(c,x+gap*.5,y+8,2.6,1.7,outline);oval(c,x-4,y+9,3.5,1.5,'#ecb0a080');oval(c,x+gap+4,y+9,3.5,1.5,'#ecb0a080');}
 function wing(s,col=base){path(c,s,gradient(c,20,30,80,125,shade(col,30),shade(col,-25)),outline,1.8);}
 function horn(s,col=accent){path(c,s,gradient(c,40,10,90,55,shade(col,22),shade(col,-24)),outline,1.5);}
@@ -1896,7 +2269,7 @@ if(id==='gurenka'){for(let i=0;i<7;i++)star(c,16+hash(i,n)*131,17+hash(n,i)*128,
 if(d.rarity==='legendary'||['luminarch','astralith','silfara'].includes(id)){c.save();c.globalAlpha=.6;c.strokeStyle=accent;c.lineWidth=.9;c.beginPath();c.ellipse(81,73,65,59,-.3,0,Math.PI*2);c.stroke();for(let i=0;i<5;i++)star(c,81+Math.cos(i*1.257)*65,73+Math.sin(i*1.257)*59,3.5,accent);c.restore();}
 // Fine highlights from a common upper-left light source.
 if(['fox','cat','wolf','sprig','rabbit','otter','bear'].includes(shape))path(c,'M46 57Q48 49 54 46',null,'#ffffff65',1.6);
-limitedSet(spriteCache,id,cv,96);return cv;}
+limitedSet(spriteCache,id,cv,72);return cv;}
 function creature(target,id,options={}){if(!target)return;const isCanvas=typeof target.getContext==='function',c=isCanvas?target.getContext('2d'):target,size=options.size||Math.min(c.canvas.width,c.canvas.height),x=options.x??(c.canvas.width-size)/2,y=options.y??(c.canvas.height-size)/2;if(isCanvas)c.clearRect(0,0,c.canvas.width,c.canvas.height);const cv=creatureSprite(id);c.save();c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.globalAlpha=options.alpha??1;if(options.flip||options.back){c.translate(x+size,y);c.scale(-1,1);c.drawImage(cv,0,0,size,size);}else c.drawImage(cv,x,y,size,size);c.restore();}
 
 // Panorama stages are painted once; only weather, creatures and VFX animate.
@@ -1932,7 +2305,7 @@ for(let ribbon=0;ribbon<3;ribbon++){const bend=(ribbon-1)*20*s;path(c,`M${source
 const count=el==='leaf'?19:el==='tide'?25:26;for(let i=0;i<count;i++){const a=i*2.399+time*.001,r=(12+hash(i,7)*68)*s*(.4+impact*1.5),px=x+Math.cos(a)*r,py=y+Math.sin(a)*r*.7;c.globalAlpha=fade*(.35+hash(i,2)*.6);if(el==='leaf')leaf(c,px,py,(4+hash(i,5)*5)*s,a,color);else if(el==='crystal')gem(c,px,py,(3+hash(i,5)*6)*s,color);else if(el==='ember'){glow(c,px,py,(5+hash(i,5)*6)*s,'#ffb458',.7);path(c,`M${px} ${py+5*s}Q${px-9*s} ${py-2*s} ${px+3*s} ${py-15*s}Q${px+2*s} ${py-5*s} ${px+5*s} ${py-3*s}Q${px+9*s} ${py+3*s} ${px} ${py+5*s}Z`,'#ffd498');}else if(el==='tide'){oval(c,px,py,(3+hash(i,5)*5)*s,(3+hash(i,5)*5)*s,'#a4e7ee35','#c4f5e8',s);line(c,[[px-2*s,py-2*s],[px,py-4*s]],'#f4ffec',s);}else {path(c,`M${px-13*s} ${py+5*s}Q${px} ${py-10*s} ${px+15*s} ${py-4*s}`,null,'#e5f2d8',1.3*s);}}
 if(impact>0){c.globalAlpha=Math.sin(impact*Math.PI)*.75;c.strokeStyle=color;c.lineWidth=3*s*(1-impact)+.5;c.beginPath();c.ellipse(tx,ty,(25+impact*93)*s,(15+impact*58)*s,-.35,0,Math.PI*2);c.stroke();for(let i=0;i<8;i++){const a=i*Math.PI/4;line(c,[[tx+Math.cos(a)*(20+impact*35)*s,ty+Math.sin(a)*(15+impact*28)*s],[tx+Math.cos(a)*(33+impact*77)*s,ty+Math.sin(a)*(24+impact*53)*s]],color,1.4*s);}}}
 c.restore();}
-function battle(canvas,engine,time=0,options={}){if(!canvas||!engine?.battle)return;const c=canvas.getContext('2d'),W=canvas.width,H=canvas.height,b=engine.battle,map=engine.map||LT.DATA.maps[engine.state.map],theme=map?.theme||'meadow',p=palettes[theme]||palettes.meadow;c.setTransform(1,0,0,1,0,0);c.imageSmoothingEnabled=true;c.clearRect(0,0,W,H);c.drawImage(battleStage(theme,W,H),0,0);
+function battle(canvas,engine,time=0,options={}){if(!canvas||!engine?.battle)return;const c=canvas.getContext('2d'),ratio=Math.max(1,Math.min(2,options.pixelRatio||1)),W=canvas.width/ratio,H=canvas.height/ratio,b=engine.battle,map=engine.map||LT.DATA.maps[engine.state.map],theme=map?.theme||'meadow',p=palettes[theme]||palettes.meadow;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,canvas.width,canvas.height);c.setTransform(ratio,0,0,ratio,0,0);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';c.drawImage(battleStage(theme,W,H),0,0);
 const s=Math.min(W/768,H/480),enemySize=Math.min(W*.32,H*.52),allySize=Math.min(W*.37,H*.61),enemy={x:W*.73,y:H*.45},ally={x:W*.28,y:H*.70},e=options.effect,age=e?Math.max(0,(time-e.started)/(e.duration||900)):2,shake=age>.45&&age<.8?Math.sin(age*75)*(1-age)*6*s:0;
 const allyMonster=engine.state.party[b.activeIndex]||engine.state.party[0];
 // Soft contact shadows, never UI-like podiums, preserve the illustrated landscape.
@@ -1943,7 +2316,7 @@ if(allyMonster)creature(c,allyMonster.species,{x:ally.x-allySize/2+(e?.side==='e
 const count=options.quality==='low'?8:options.quality==='balanced'?16:26;for(let i=0;i<count;i++){const x=(hash(i,77)*W+time*.005)%(W+20)-10,y=(hash(i,54)*H+time*(theme==='glacier'?.013:-.002))%(H+20);c.globalAlpha=.22+hash(i,12)*.2;if(theme==='glacier'||options.weather==='snow')oval(c,x,y,1.4*s,1.4*s,'#f3f7eb');else if(theme==='volcano'||options.weather==='embers')oval(c,x,y,1.4*s,1.8*s,'#ffc288');else star(c,x,y,1.5*s,p.accent);}c.globalAlpha=1;
 battleEffect(c,W,H,time,e,ally,enemy);
 const vignette=c.createRadialGradient(W*.5,H*.44,W*.25,W*.5,H*.48,W*.7);vignette.addColorStop(0,'#102b3500');vignette.addColorStop(1,'#10213270');c.fillStyle=vignette;c.fillRect(0,0,W,H);}
-LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();spriteCache.clear();treeCache.clear();stageCache.clear();}};
+LT.Art={world,creature,battle,traveller,tileSize:TILE,clearCache(){terrainCache.clear();spriteCache.clear();treeCache.clear();stageCache.clear();}};
 })();
 
 </script><script>
@@ -2314,6 +2687,191 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
 })();
 
 </script><script>
+/* 灯獣紀 — standard gamepad input, focus navigation and safe held-state handling. */
+(() => {
+  'use strict';
+  const LT = globalThis.LT = globalThis.LT || {};
+  const DEAD_ZONE = .26;
+  const noop = () => {};
+  const down = (pad, index) => !!pad?.buttons?.[index]?.pressed || Number(pad?.buttons?.[index]?.value || 0) > .55;
+  const axis = value => Number.isFinite(Number(value)) ? Math.max(-1, Math.min(1, Number(value))) : 0;
+  const ACTIONABLE = 'button, select, input[type="range"], input[type="checkbox"], a[href], summary';
+  function readState(pad, previousDirection = null) {
+    const dx = Number(down(pad, 15)) - Number(down(pad, 14));
+    const dy = Number(down(pad, 13)) - Number(down(pad, 12));
+    const usingDpad = [12, 13, 14, 15].some(index => down(pad, index));
+    const x = usingDpad ? dx : axis(pad?.axes?.[0]), y = usingDpad ? dy : axis(pad?.axes?.[1]);
+    let direction = null;
+    const horizontal = Math.abs(x), vertical = Math.abs(y);
+    if (horizontal > DEAD_ZONE || vertical > DEAD_ZONE) {
+      // A small diagonal hysteresis keeps a steady stick from chattering between axes.
+      const wasHorizontal = previousDirection === 'left' || previousDirection === 'right';
+      const wasVertical = previousDirection === 'up' || previousDirection === 'down';
+      const useX = horizontal > vertical + .1 || (Math.abs(horizontal - vertical) <= .1 && (wasHorizontal || !wasVertical));
+      direction = useX ? (x < 0 ? 'left' : 'right') : (y < 0 ? 'up' : 'down');
+    }
+    return { direction, sprint: down(pad, 4) || down(pad, 5), confirm: down(pad, 0), back: down(pad, 1), menu: down(pad, 9) };
+  }
+  function neutral(state) { return !state.direction && !state.confirm && !state.back && !state.menu && !state.sprint; }
+  function available(element) {
+    if (!element || element.disabled || element.getAttribute?.('aria-disabled') === 'true') return false;
+    if (element.closest?.('[hidden], [inert], [aria-hidden="true"]')) return false;
+    if (element.tabIndex < 0 || !element.getClientRects?.().length) return false;
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(element) : null;
+    return !style || (style.display !== 'none' && style.visibility !== 'hidden' && style.visibility !== 'collapse');
+  }
+  function nearest(current, choices, direction) {
+    const r = current.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const horizontal = direction === 'left' || direction === 'right', sign = direction === 'left' || direction === 'up' ? -1 : 1;
+    let best = null, score = Infinity;
+    for (const candidate of choices) {
+      if (candidate === current) continue;
+      const b = candidate.getBoundingClientRect(), x = b.left + b.width / 2 - cx, y = b.top + b.height / 2 - cy;
+      const along = (horizontal ? x : y) * sign, across = Math.abs(horizontal ? y : x);
+      if (along < 3) continue;
+      // Favor the same visual row/column, while allowing wrapped cards and menus.
+      const lane = horizontal ? (r.height + b.height) * .5 : (r.width + b.width) * .5;
+      const cost = along + across * 2.6 + (across > lane ? 250 : 0);
+      if (cost < score) { best = candidate; score = cost; }
+    }
+    if (best) return best;
+    // Wrap at the edge so every control remains reachable in narrow/scrolling layouts.
+    const index = choices.indexOf(current), delta = sign;
+    return choices[(index + delta + choices.length) % choices.length] || null;
+  }
+  class GamepadInput {
+    constructor(options = {}) {
+      this.context = options.context || (() => ({ mode: 'world', busy: false, scope: null }));
+      for (const name of ['onMove', 'onConfirm', 'onBack', 'onMenu', 'onStatus']) this[name] = typeof options[name] === 'function' ? options[name] : noop;
+      this.padKey = null; this.padIndex = null; this.armed = false; this.previous = readState(null);
+      this.lastDirection = null; this.repeatAt = 0; this.moveDirection = null; this.moveSprint = false;
+      this.focused = null; this.lastMode = null; this.lastScope = null; this.statusKey = ''; this.disposed = false; this.awake = true;
+      this.onBlur = () => { this.awake = false; this.reset(); };
+      this.onFocus = () => { this.awake = true; this.reset(); };
+      this.onVisibility = () => { this.reset(); };
+      this.onPointer = () => this.clearFocus();
+      if (typeof window !== 'undefined') { window.addEventListener('blur', this.onBlur); window.addEventListener('focus', this.onFocus); }
+      if (typeof document !== 'undefined') { document.addEventListener('visibilitychange', this.onVisibility); document.addEventListener('pointerdown', this.onPointer, true); document.addEventListener('keydown', this.onPointer, true); }
+    }
+    status(value) {
+      const key = JSON.stringify(value);
+      if (key !== this.statusKey) { this.statusKey = key; this.onStatus(value); }
+    }
+    move(direction, sprint = false) {
+      if (this.moveDirection !== direction || this.moveSprint !== !!sprint) {
+        this.moveDirection = direction; this.moveSprint = !!sprint;
+        this.onMove(direction, !!sprint);
+      }
+    }
+    clearFocus() { this.focused?.classList?.remove('gamepad-focus'); this.focused = null; }
+    reset() {
+      this.move(null, false); this.armed = false; this.previous = readState(null);
+      this.lastDirection = null; this.repeatAt = 0; this.clearFocus();
+    }
+    controls(context) { return context.scope?.querySelectorAll ? [...context.scope.querySelectorAll(ACTIONABLE)].filter(available) : []; }
+    focus(element) {
+      if (!available(element)) return null;
+      if (this.focused !== element) this.clearFocus();
+      this.focused = element; element.classList?.add('gamepad-focus');
+      element.focus?.({ preventScroll: true });
+      element.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+      return element;
+    }
+    current(context, choices) {
+      const active = typeof document !== 'undefined' ? document.activeElement : null;
+      if (choices.includes(this.focused)) return this.focused;
+      if (choices.includes(context.defaultTarget)) return context.defaultTarget;
+      if (choices.includes(active)) return active;
+      return choices.find(el => el.hasAttribute?.('autofocus') || el.classList?.contains('btn-primary')) || choices[0] || null;
+    }
+    adjust(element, direction) {
+      if (direction !== 'left' && direction !== 'right') return false;
+      const sign = direction === 'left' ? -1 : 1;
+      if (element.tagName === 'SELECT') {
+        const enabled = [...element.options].filter(o => !o.disabled), selected = enabled.indexOf(element.options[element.selectedIndex]);
+        const next = enabled[Math.max(0, Math.min(enabled.length - 1, selected + sign))];
+        if (next && element.value !== next.value) {
+          element.value = next.value; element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return true;
+      }
+      if (element.tagName === 'INPUT' && element.type === 'range') {
+        const min = element.min === '' ? 0 : Number(element.min), max = element.max === '' ? 100 : Number(element.max);
+        const step = element.step === '' || element.step === 'any' ? 1 : Number(element.step);
+        const next = Math.max(min, Math.min(max, Number(element.value) + sign * step));
+        if (Number.isFinite(next) && next !== Number(element.value)) {
+          element.value = String(next); element.dispatchEvent(new Event('input', { bubbles: true })); element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return true;
+      }
+      return false;
+    }
+    navigate(context, direction) {
+      const choices = this.controls(context); if (!choices.length) return;
+      const current = this.current(context, choices);
+      if (!choices.includes(this.focused) && !(typeof document !== 'undefined' && choices.includes(document.activeElement))) { this.focus(current); return; }
+      this.focus(current);
+      if (this.adjust(current, direction)) return;
+      this.focus(nearest(current, choices, direction));
+    }
+    poll(now = 0) {
+      if (this.disposed) return;
+      const supported = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function';
+      if (!supported) { this.reset(); this.status({ supported: false, connected: false, standard: false, id: '', index: null, reason: 'unavailable' }); return; }
+      let pads;
+      try { pads = [...navigator.getGamepads()].filter(p => p && p.connected !== false); }
+      catch (_) { this.reset(); this.status({ supported: false, connected: false, standard: false, id: '', index: null, reason: 'restricted' }); return; }
+      const pad = pads.find(p => p.index === this.padIndex && p.mapping === 'standard') || pads.find(p => p.mapping === 'standard') || pads[0];
+      if (!pad) { this.reset(); this.padKey = null; this.padIndex = null; this.status({ supported: true, connected: false, standard: false, id: '', index: null, reason: 'waiting' }); return; }
+      const standard = pad.mapping === 'standard';
+      this.status({ supported: true, connected: true, standard, id: String(pad.id || 'Gamepad'), index: pad.index, reason: standard ? 'ready' : 'mapping' });
+      const key = `${pad.index}|${pad.id}|${pad.mapping}`;
+      if (key !== this.padKey) { this.reset(); this.padKey = key; this.padIndex = pad.index; }
+      if (!standard || !this.awake || (typeof document !== 'undefined' && document.hidden)) { this.reset(); return; }
+      const state = readState(pad, this.previous.direction);
+      if (!this.armed) { this.previous = state; if (neutral(state)) this.armed = true; return; }
+      const context = this.context() || {};
+      if (context.mode !== this.lastMode || context.scope !== this.lastScope) {
+        this.move(null, false); this.clearFocus(); this.lastDirection = null; this.repeatAt = now + 320;
+        this.lastMode = context.mode; this.lastScope = context.scope;
+      }
+      if (context.busy) { this.move(null, false); this.previous = state; this.lastDirection = state.direction; this.repeatAt = now + 320; return; }
+      const menu = state.menu && !this.previous.menu, back = state.back && !this.previous.back, confirm = state.confirm && !this.previous.confirm;
+      if (menu || back || confirm) {
+        this.move(null, false);
+        if (menu) this.onMenu();
+        else if (back) this.onBack();
+        else if (context.mode === 'world') this.onConfirm(null);
+        else {
+          const target = this.focus(this.current(context, this.controls(context)));
+          // Keep native select popups closed: left/right edits values in place.
+          if (target && target.tagName !== 'SELECT' && !(target.tagName === 'INPUT' && target.type === 'range')) this.onConfirm(target);
+        }
+      } else if (context.mode === 'world') {
+        this.move(state.direction, state.sprint);
+      } else {
+        this.move(null, false);
+        if (state.direction && (state.direction !== this.lastDirection || now >= this.repeatAt)) {
+          this.navigate(context, state.direction); this.repeatAt = now + (state.direction !== this.lastDirection ? 340 : 145);
+        }
+        if (!state.direction) this.repeatAt = 0;
+      }
+      this.lastDirection = state.direction; this.previous = state;
+    }
+    dispose() {
+      if (this.disposed) return;
+      this.reset(); this.disposed = true;
+      if (typeof window !== 'undefined') { window.removeEventListener('blur', this.onBlur); window.removeEventListener('focus', this.onFocus); }
+      if (typeof document !== 'undefined') { document.removeEventListener('visibilitychange', this.onVisibility); document.removeEventListener('pointerdown', this.onPointer, true); document.removeEventListener('keydown', this.onPointer, true); }
+    }
+  }
+  GamepadInput.readState = readState;
+  GamepadInput.deadZone = DEAD_ZONE;
+  GamepadInput.nearest = nearest;
+  LT.Gamepad = GamepadInput;
+})();
+
+</script><script>
 /* 灯獣紀 — LUMINA TRAIL. Browser interface, input and original procedural audio. */
 (() => {
   'use strict';
@@ -2328,6 +2886,7 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
   let playing = false, busy = false, activePane = '', toastTimer = 0, lastSave = 0;
   let saveIssueShown = false, storedSave = null, lastStep = 0, lastFrame = 0, lastClock = 0;
   let moveAnim = null, pressedDirection = null, directionSource = null;
+  let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
   let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches };
   try {
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));
@@ -2343,6 +2902,7 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
   let battleEffect=null, endingActive=false, healingUntil=0, evolutionUntil=0;
   const sealCount=Object.keys(DATA.guardians).length;
   const ico = name => `<svg class="ui-icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+  function renderRatio(){return settings.quality==='high'?(matchMedia('(max-width:600px)').matches?1.5:Math.min(2,Math.max(1.5,window.devicePixelRatio||1))):1;}
   function dayPhase(){ return settings.dayNight ? (.3+engine.state.playSeconds/1200)%1 : .3; }
   function updateScene(){
     const b=engine.battle;
@@ -2350,7 +2910,7 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
   }
   function sceneOptions(){
     const phase=dayPhase(),theme=engine.map.theme;
-    return {quality:settings.quality,dayPhase:phase,weather:theme==='glacier'?'snow':theme==='volcano'?'embers':theme==='forest' && phase>.5?'rain':'clear',effect:settings.reducedMotion?null:battleEffect};
+    return {quality:settings.quality,pixelRatio:renderRatio(),dayPhase:phase,weather:theme==='glacier'?'snow':theme==='volcano'?'embers':theme==='forest' && phase>.5?'rain':'clear',effect:settings.reducedMotion?null:battleEffect};
   }
   function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} }
   function updateSound() {
@@ -2397,7 +2957,7 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
   function begin(starter, data) {
     try { engine = new Engine(data); if (!data) engine.newGame(starter); } catch (err) { toast(err.message || 'セーブデータを読み込めません。'); return; }
     playing = true; busy = false; pressedDirection = null; moveAnim = null; endingActive=false;
-    $('title-screen').hidden = true; document.body.classList.add('is-playing');
+    $('title-screen').hidden = true; document.body.classList.add('is-playing');window.scrollTo({top:0,behavior:'instant'});
     closeModal(); updateAll(); save();
     if (settings.sound) sound.setEnabled(true);
     $('game-canvas').focus({preventScroll:true});
@@ -2422,7 +2982,9 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
     const max = engine.stats(mon).hp, percent = Math.max(0, Math.min(100, mon.hp / max * 100));
     return `<div class="hp-track"${id ? ` id="${id}"` : ''}><span class="hp-fill${percent < 25 ? ' low' : ''}" style="width:${percent}%"></span></div>`;
   }
+  function updateFacing(){const names={up:'↑ 北',right:'→ 東',down:'↓ 南',left:'← 西'},label=$('facing-label');if(label)label.textContent=names[engine.state.facing]||'↓ 南';$('game-canvas').setAttribute('aria-label',`冒険フィールド。現在地 ${engine.map.name}。主人公は${({up:'北',right:'東',down:'南',left:'西'})[engine.state.facing]}向き。矢印・WASD・左スティックで移動、Eまたは決定で調べる。`);}
   function updateAll() {
+    updateFacing();
     const s = engine.state;
     $('location-name').textContent = engine.map.name;
     $('location-subtitle').textContent = engine.map.subtitle;
@@ -2646,10 +3208,10 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
     ctx.beginPath();ctx.arc(ox+(engine.state.x+.5)*size,oy+(engine.state.y+.5)*size,size*.35,0,Math.PI*2);ctx.fillStyle='#d75540';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
   }
   function showHelp() {
-    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>灯獣と共鳴する</h3><p>濃い草むらで野生の灯獣と出会います。HPを減らし「共鳴」を選ぶと共鳴鈴を1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高い灯獣が先に行動します。経験値でレベルアップし、一部の灯獣は進化します。仲間は6体、残りはひかえで待ちます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
+    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>灯獣と共鳴する</h3><p>濃い草むらで野生の灯獣と出会います。HPを減らし「共鳴」を選ぶと共鳴鈴を1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高い灯獣が先に行動します。経験値でレベルアップし、一部の灯獣は進化します。仲間は6体、残りはひかえで待ちます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>端末に合わせて光、影、粒子を調整</p></div><div class="quality-options">${[['high','高精細'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>端末に合わせて光、影、粒子を調整</p></div><div class="quality-options">${[['high','高精細'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();
   }
   function bindVolume(){
@@ -2695,15 +3257,15 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
   }
   function goTitle() {
     if (engine.battle) { toast('バトルを終えてからタイトルに戻れます。'); return; }
-    save();playing=false;endingActive=false;updateScene();closeModal();$('title-screen').hidden=false;document.body.classList.remove('is-playing');loadStored();paintPortraits($('title-screen'));
+    save();playing=false;endingActive=false;updateScene();closeModal();$('title-screen').hidden=false;document.body.classList.remove('is-playing');window.scrollTo({top:0,behavior:'instant'});loadStored();paintPortraits($('title-screen'));
   }
   function walk(dx,dy) {
     if (!playing || engine.battle || $('modal').open || busy) return;
     const old={x:engine.state.x,y:engine.state.y,map:engine.state.map};
-    const result=engine.move(dx,dy);
+    const result=engine.move(dx,dy);updateFacing();
     if(result.message) { const now=performance.now(); if(!walk.lastToast || now-walk.lastToast>2200){toast(result.message);walk.lastToast=now;} }
     if(result.ok) {
-      moveAnim=result.mapChanged?null:{x:old.x,y:old.y,time:performance.now()};
+      moveAnim=result.mapChanged?null:{x:old.x,y:old.y,time:performance.now(),duration:(sprint||padSprint)?82:132,stepIndex:engine.state.steps-1};
       if(result.mapChanged) { toast(engine.map.name); updateAll(); save(); }
       else { $('world-hint').textContent=nearHint(); if(performance.now()-lastSave>1800)save(); }
       if(result.battleStarted || engine.battle)openBattle();
@@ -2729,8 +3291,11 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
     else if(['b','B'].includes(e.key))showBag();
   });
   window.addEventListener('keyup',e=>{if(e.key==='Shift')sprint=false;if(directionSource===e.key){pressedDirection=null;directionSource=null;}});
-  window.addEventListener('blur',()=>{pressedDirection=null;sprint=false;if(playing)save();});
-  document.addEventListener('visibilitychange',()=>{pressedDirection=null;if(document.hidden){if(playing)save();sound.ctx?.suspend();}else if(settings.sound)sound.setEnabled(true);});
+  window.addEventListener('blur',()=>{pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(playing)save();});
+  document.addEventListener('visibilitychange',()=>{pressedDirection=null;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.ctx?.suspend();}else if(settings.sound)sound.setEnabled(true);});
+  const unlockSound=e=>{if(e.isTrusted&&settings.sound&&(!sound.ctx||sound.ctx.state==='suspended'))sound.setEnabled(true);};
+  document.addEventListener('pointerdown',unlockSound,{capture:true});
+  document.addEventListener('keydown',unlockSound,{capture:true});
   window.addEventListener('pagehide',()=>{if(playing)save();});
   document.querySelectorAll('[data-dir]').forEach(btn=>{
     btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open)return;pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
@@ -2779,30 +3344,63 @@ LT.Art={world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();sp
     if(d.claim){const r=engine.claimQuest(d.claim);toast(r.message);if(r.ok){save();updateAll();sound.fx('win');showQuests();}return;}
     if(d.challenge){const r=d.challenge==='tower'?engine.startTower():d.challenge==='rival'?engine.startRival(d.id):engine.startRematch(d.id);if(r.ok){closeModal();openBattle();}else toast(r.message);return;}
     if(d.track){settings.sound=true;sound.setEnabled(true);sound.preview(d.track==='auto'?null:d.track);saveSettings();updateSound();showMusic();return;}
-    if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');saveSettings();showSettings();return;}
+    if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui){sound.fx('click');const actions={quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,help:showHelp,title:goTitle,'new-confirm':chooseStarter};actions[d.ui]?.();}
   });
   function resize() {
     const small=matchMedia('(max-width: 600px)').matches;
     const landscape=matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
-    const c=$('game-canvas'); const w=small?480:768, h=small?(landscape?300:360):480;
+    const c=$('game-canvas'),ratio=renderRatio(); const w=Math.round((small?480:768)*ratio), h=Math.round((small?(landscape?300:360):480)*ratio);
     if(c.width!==w || c.height!==h){c.width=w;c.height=h;}
   }
   window.addEventListener('resize',resize);
   function frame(now) {
     requestAnimationFrame(frame);
+    controller?.poll(now);
     if(document.hidden)return;
-    if(pressedDirection && now-lastStep>(sprint?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
+    if(pressedDirection && now-lastStep>((sprint||padSprint)?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
     if(now-lastClock>=1000){if(playing && !$('modal').open && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
     else sound.tick();
     if(now-lastFrame<(settings.quality==='low'?50:settings.quality==='balanced'?32:16))return;lastFrame=now;
     let options=sceneOptions();
-    if(moveAnim && !settings.reducedMotion){const t=Math.min(1,(now-moveAnim.time)/120);options.playerX=moveAnim.x+(engine.state.x-moveAnim.x)*t;options.playerY=moveAnim.y+(engine.state.y-moveAnim.y)*t;if(t===1)moveAnim=null;}
+    options.moving=false;options.walkPhase=engine.state.steps;
+    if(moveAnim){const t=Math.min(1,(now-moveAnim.time)/(moveAnim.duration||132));if(!settings.reducedMotion){options.playerX=moveAnim.x+(engine.state.x-moveAnim.x)*t;options.playerY=moveAnim.y+(engine.state.y-moveAnim.y)*t;options.moving=t<1;options.walkPhase=moveAnim.stepIndex+t;}if(t===1||settings.reducedMotion)moveAnim=null;}
     if(engine.battle && playing)Art.battle($('game-canvas'),engine,settings.reducedMotion?0:now,options);
     else Art.world($('game-canvas'),engine,settings.reducedMotion?0:now,options);
   }
-  resize();updateSound();loadStored();updateAll();paintPortraits();requestAnimationFrame(frame);
+
+  function controllerContext(){
+    if($('modal').open){const scope=$('modal');return {mode:'modal',busy,scope,defaultTarget:$('dialogue-next')||scope.querySelector('.starter-card, .modal-actions .btn-primary, button:not(#modal-close):not(:disabled), select, input[type=range]')};}
+    if(!playing)return {mode:'title',busy:false,scope:$('title-screen'),defaultTarget:!$('continue-btn').hidden?$('continue-btn'):$('start-btn')};
+    if(engine.battle)return {mode:'battle',busy,scope:$('battle-actions'),defaultTarget:$('battle-actions').querySelector('button:not(:disabled)')};
+    return {mode:'world',busy,scope:$('app')};
+  }
+  function controllerBack(){
+    if(busy)return;
+    if($('modal').open){closeModal();return;}
+    if(engine.battle){if(engine.battle.result)finishBattle();else battleActions();return;}
+    if(playing)showMenu();
+  }
+  function updateControllerStatus(status){
+    controllerStatus=status;
+    const badge=$('controller-status');if(badge){badge.hidden=!status.connected;badge.classList.toggle('unsupported',status.connected&&!status.standard);badge.title=status.id||'';}
+    const label=$('controller-status-text');if(label)label.textContent=status.standard?'コントローラー接続中':'標準マッピング未対応';
+    const line=$('controller-help');if(line)line.hidden=!status.connected||!status.standard;
+    const settingsLabel=$('controller-settings-status');if(settingsLabel)settingsLabel.textContent=status.connected?(status.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):status.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません';
+  }
+  function setupController(){
+    if(!LT.Gamepad)return;
+    controller=new LT.Gamepad({context:controllerContext,onMove:(dir,run)=>{
+      if(!dir){if(directionSource==='gamepad'){pressedDirection=null;directionSource=null;}padSprint=false;return;}
+      if(!playing||engine.battle||$('modal').open||busy)return;
+      padSprint=run;const changed=directionSource!=='gamepad'||pressedDirection!==dir;
+      directionSource='gamepad';pressedDirection=dir;
+      if(changed){lastStep=performance.now();walk(...directions[dir]);}
+    },onConfirm:target=>{if(busy)return;if(target){target.click();return;}if(engine.battle?.result)finishBattle();else if(playing)interact();},onBack:controllerBack,onMenu:()=>{if(busy)return;if($('modal').open)closeModal();else if(playing)showMenu();else showSettings();},onStatus:updateControllerStatus});
+  }
+
+  resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
 })();
 
 </script>
