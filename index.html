@@ -3914,6 +3914,43 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     return `<span class="type-badge" style="--type-color:${escape(e.color)}">${escape(e.name)}</span>`;
   }
   function portrait(id, size = 88) { const raster=Math.max(256,Math.ceil(size*2)); return `<canvas class="creature-portrait" data-creature="${escape(id)}" data-raster="${raster}" width="1" height="1" style="width:${size}px;height:${size}px" aria-label="${escape(DATA.species[id].name)}の姿"></canvas>`; }
+  const evolutionFeatures={
+    sprig:['大きな葉の耳と芽吹いた枝角を持ち、葉と小花の襟が首を囲む。','枝角が木の冠のように広がり、重なった葉と花の房が長い脚の体を飾る。'],
+    rabbit:['長い葉の耳が後ろへ流れ、胸の毛並みと葉の肩飾りが豊かになった。','大きく伸びた葉の耳と厚い胸飾りを持ち、編み込んだ茎のような房が垂れる。'],
+    fox:['頬と胸の毛並みが重なり、炎の形をした大きな尾が広がる。','鋭く流れる頬の毛と幾重もの胸飾りを持ち、長い炎形の尾が大きくうねる。'],
+    wolf:['肩から背へ厚い鬣が流れ、脚と尾の輪郭がたくましくなった。','王冠のように逆立つ鬣と厚い毛並みを持ち、大きな尾が背後へ広がる。'],
+    cat:['三日月形の耳飾りと豊かな胸毛を持ち、羽根のような尾が巻き上がる。','大きな三日月形の耳と層をなす胸飾りを持ち、長い尾の房が幾筋も流れる。'],
+    otter:['胸のしずく形の飾りを残し、腕のひれと三日月形の尾が大きくなった。','胸のしずく形の飾りを中心に大きな肩ひれが重なり、幅広い尾が高く反り返る。'],
+    bear:['肩と背に重なる葉が増え、胸の毛並みと丸い体がふっくら育った。','樹皮のような肩飾りと葉に覆われた太い腕を持ち、胸から背へ厚い葉が重なる。'],
+    stag:['枝分かれした角に若葉が付き、長い首と脚がすらりと伸びた。','枝角が大きな冠のように広がり、葉と小花が首元まで重なっている。'],
+    goat:['巻いた角と長いひげを持ち、足元には雲のような毛の房が付く。','幾重にも巻く大きな角と豊かなひげを持ち、肩から尾へ雲のような毛並みが続く。'],
+    owl:['角のような頭の羽と重なった胸羽を持ち、長い翼を半ば開いている。','頭の羽が大きな冠状に広がり、幾重もの翼羽が体を包む外套のように垂れる。'],
+    crane:['後ろへ流れる冠羽と長い首を持ち、細い脚の脇へ大きな翼羽が垂れる。','長く豊かな冠羽がなびき、重なった翼の飾り羽と尾羽が脚を囲んでいる。'],
+    phoenix:['大きく持ち上がった翼と反り返る冠羽を持ち、炎形の尾羽が扇のように広がる。','幾重にも重なった大きな翼を開き、長い炎形の尾羽が渦を描いている。'],
+    gryphon:['鳥の顔の周りに厚い羽が重なり、獣の脚と大きな翼が発達した。','鋭い冠羽と厚い首羽を持ち、大きく重なった翼が獣の背を覆う。'],
+    lantern:['羽毛のような触角と柔らかな胸毛を持ち、灯籠模様の大きな翅が広がる。','長い触角と厚い胸毛を持ち、灯籠模様の翅がさらに多くの層へ広がった。'],
+    bat:['耳と胸元の毛が長くなり、大きな翼の縁が三日月形に反っている。','長い指骨に沿って翼が大きく広がり、豊かな毛並みと流れる尾が体を縁取る。'],
+    beetle:['結晶のような太い角と重なった甲殻を持ち、節のある脚が体を支える。','大きく分かれた結晶の角と厚い甲殻を持ち、脚にも硬い板が重なっている。'],
+    tortoise:['背の庭が枝葉の茂る林へ育ち、木の根のような脚と葉の裾が見える。','幾段にも枝を広げた大木を背負い、絡み合う根と厚い葉が体を包む。'],
+    golem:['角張った肩の結晶と大きな腕を持ち、胸には六角形の石がはまっている。','肩の周りに浮く結晶と冠状の頭を持ち、長い手足の間で大きな胸の石が目立つ。'],
+    manta:['先の分かれた大きなひれと帯のような尾を持ち、翼面に星形の模様が並ぶ。','二重に重なる大きなひれと長い尾の房を持ち、星形の模様が広い翼面を飾る。'],
+    whale:['波のように曲がったひれと帆形の背びれを持ち、巻いた尾が後ろへ伸びる。','大きな波形のひれが幾重にも広がり、高い背びれと二つに分かれた尾が目立つ。'],
+    jelly:['星を包む結晶の傘の下へ、ひらひらした長い触手が幾筋も垂れている。','重なった結晶の傘と大きな星を持ち、長い帯状の触手が豊かに広がる。'],
+    flower:['大きな花びらが顔を囲み、葉と蔓が重なる体を根の足が支える。','幾重もの花びらが冠のように開き、太い根と豊かな葉が体を包み込む。'],
+    seahorse:['枝分かれした珊瑚の冠と扇形のひれを持ち、節のある尾が丸く巻いている。','横へ大きく広がる珊瑚の冠と幾重ものひれを持ち、長い体が弓なりに曲がる。'],
+    crab:['背に珊瑚の枝が育ち、左右で形の異なる大きなはさみが前へ張り出す。','背の珊瑚が大きな庭のように広がり、厚い甲殻と重なった脚が体を支える。'],
+    scorpion:['節のある尾を背中へ巻き上げ、大きな結晶形のはさみを前へ構える。','背と脚の甲殻が厚く重なり、鋭く分かれた尾先と大きな結晶形のはさみを持つ。'],
+    dragon:['角と翼が伸び、長い尾と層をなす胸の鱗が体を縁取っている。','冠状の角と幾重もの翼膜を持ち、厚い胸の鱗から長い尾へ模様が続く。'],
+    serpent:['長い体が巻き重なり、短い枝角と透き通るようなひれが頭から背へ続く。','枝分かれした角と豊かな鬣を持ち、幾重にも巻いた体の周りへ長いひれが流れる。'],
+    gecko:['首の葉飾りが増え、大きな葉の尾と丸い指先を持つ四本の脚が伸びた。','翼のような大きな葉が肩から広がり、葉の冠と枝分かれした尾が体を飾る。'],
+    lizard:['喉の扇形のひだと背の鱗が重なり、長い節状の尾が高く巻き上がる。','喉の大きな扇形のひだを開き、厚い背の鱗と先の太い尾が輪郭を縁取る。']
+  };
+  function creatureDescription(species) {
+    const family=LT.CreatureArt?.lineage?.(species?.id),features=family&&evolutionFeatures[family.shape];
+    const original=family&&DATA.species[family.rootId];
+    if(!family?.stage||!features||!original||species.specialOnly)return species?.description||'';
+    return `${original.name}から${family.stage===1?'進化した':'二度の進化を経た'}姿。${features[Math.min(2,family.stage)-1]}`;
+  }
   function hpBar(mon, id = '') {
     const max = engine.stats(mon).hp, percent = Math.max(0, Math.min(100, mon.hp / max * 100));
     return `<div class="hp-track"${id ? ` id="${id}"` : ''}><span class="hp-fill${percent < 25 ? ' low' : ''}" style="width:${percent}%"></span></div>`;
@@ -4057,7 +4094,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function chooseStarter() {
     openModal('最初の相棒を、選ぼう。', '<p class="muted">大陸を共に旅する、最初のパートナー。どの相棒でも最後まで冒険できます。</p><div class="starter-grid">'+ DATA.starters.map(id => {
       const s = DATA.species[id];
-      return `<button class="starter-card" data-starter="${id}">${portrait(id,132)}<span class="starter-name">${escape(s.name)}</span>${typeBadge(s.element)}<p>${escape(s.description)}</p><span class="starter-pick">この子と旅立つ →</span></button>`;
+      return `<button class="starter-card" data-starter="${id}">${portrait(id,132)}<span class="starter-name">${escape(s.name)}</span>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><span class="starter-pick">この子と旅立つ →</span></button>`;
     }).join('') + '</div>', 'starters');
   }
   function requestNew() {
@@ -4095,7 +4132,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const mon = engine.state.party[index]; if (!mon) return;
     const s = DATA.species[mon.species], stats = engine.stats(mon);
     const releaseBlocked = engine.state.party.length <= 1 ? '最後の1体は逃がせません。' : !engine.state.party.some((other,i)=>i!==index && other.hp>0) ? '動ける仲間を1体以上残してください。' : '';
-    openModal(s.name, `<div class="creature-card">${portrait(mon.species,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(s.name)} <small>Lv.${mon.level}</small></h3>${typeBadge(s.element)}<p>${escape(s.description)}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
+    openModal(s.name, `<div class="creature-card">${portrait(mon.species,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(s.name)} <small>Lv.${mon.level}</small></h3>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
   }
   function showStorage(slot = null) {
     if (engine.battle) return;
@@ -4171,7 +4208,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showDexEntry(id) {
     const s = DATA.species[id]; if (!s || !engine.state.seen.includes(id)) return;
     const habitats = Object.values(DATA.maps).filter(m => m.encounters.includes(id)).map(m=>m.name);
-    openModal(s.name, `<div class="creature-card">${portrait(id,180)}<div>${typeBadge(s.element)}<p>${escape(s.description)}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 捕獲済み':'未捕獲'}</p><p>生息地：${escape(habitats.length?habitats.join('・'):'進化・星環の地で出会う')}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div>${evolutionLineage(id)}<div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
+    openModal(s.name, `<div class="creature-card">${portrait(id,180)}<div>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 捕獲済み':'未捕獲'}</p><p>生息地：${escape(habitats.length?habitats.join('・'):'進化・星環の地で出会う')}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div>${evolutionLineage(id)}<div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
   }
   function showMap() {
     const st=engine.state;
