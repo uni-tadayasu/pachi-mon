@@ -1,0 +1,73 @@
+{
+  "generator": "Built-in image_gen",
+  "created": "2026-11-16",
+  "copyright": "© 2026 KASAI SOLUTIONS INC.",
+  "description": "29 illustrated creature body forms and 3 additional mature body forms, with independently generated front and rear views. The game applies species colors and subtle size/coat variations; these are not 256 independently illustrated character designs.",
+  "grid": {
+    "columns": 4,
+    "rows": 4
+  },
+  "atlases": [
+    {
+      "file": "creatures-a-front.webp",
+      "view": "front",
+      "forms": [
+        "sprig",
+        "rabbit",
+        "fox",
+        "wolf",
+        "cat",
+        "otter",
+        "bear",
+        "stag",
+        "goat",
+        "owl",
+        "crane",
+        "phoenix",
+        "gryphon",
+        "lantern",
+        "bat",
+        "beetle"
+      ]
+    },
+    {
+      "file": "creatures-a-back.webp",
+      "view": "back",
+      "sameOrderAs": "creatures-a-front.webp"
+    },
+    {
+      "file": "creatures-b-front.webp",
+      "view": "front",
+      "forms": [
+        "tortoise",
+        "golem",
+        "manta",
+        "whale",
+        "jelly",
+        "flower",
+        "seahorse",
+        "crab",
+        "scorpion",
+        "dragon",
+        "serpent",
+        "gecko",
+        "lizard",
+        "tortoise-mature",
+        "dragon-mature",
+        "serpent-mature"
+      ]
+    },
+    {
+      "file": "creatures-b-back.webp",
+      "view": "back",
+      "sameOrderAs": "creatures-b-front.webp"
+    }
+  ],
+  "assetPreparation": "PNG to WebP format encoding at quality 94; original transparency retained. Runtime crops individual atlas cells and normalizes transparent sprite bounds.",
+  "prompts": {
+    "frontA": "Use case: stylized-concept\nAsset type: production-ready transparent monster sprite atlas for the ORIGINAL Japanese browser RPG Pachi Monsters.\nCreate one square 2048x2048 sprite sheet with EXACTLY 16 completely separate full-body creatures in a mathematically regular 4 columns by 4 rows grid, each cell square and equal. Absolutely no grid lines, captions, numbers, letters, scenery or floor. Transparent background. Each entire silhouette fits within its cell with at least 12% empty padding on every side, feet aligned at 85% of cell height, wings and tails never cross cell boundaries.\nStyle: premium finely drawn HD pixel art, exquisite deliberate pixel clusters and clean dark colored contours, nuanced material shading, beautiful expressive faces, coherent anatomy, readable silhouette, appealing polished original fantasy creature design. Not crude geometric blobs. Not 3D, not vector, not blurry painterly art. Rich but harmonized jewel-and-natural palette. Small and medium creatures with mature craftsmanship. All are FRONT THREE-QUARTER battle view looking toward lower right, face and chest visible. No resemblance to any existing monster franchise.\nExact cell order left-to-right then top-to-bottom:\nRow 1: (1) sprig: small ivory woodland seed spirit with upright green leaf ears, leafy collar, round soft body and four little paws; (2) rabbit: elegant mint-green hare with very long folded leaf ears and white chest, short cotton tail; (3) fox: coral-red slender fire fox with cream chest and long curved flame-tipped tail; (4) wolf: dignified dark teal forest wolf with silver mane and amber eyes, standing four-legged.\nRow 2: (5) cat: graceful lavender cat with crescent-shaped ear tufts, plumy long tail, pearl chest; (6) otter: friendly turquoise river otter with smooth fur, cream belly, transparent blue droplet gem at chest, broad paddle tail; (7) bear: stout gentle moss-green bear with honey-colored chest marking and small round ears; (8) stag: noble emerald deer with branching copper antlers bearing tiny leaves, cream underside, long four legs.\nRow 3: (9) goat: sky-blue mountain goat, sweeping spiral cream horns and snowy beard, nimble hooves; (10) owl: rounded pale blue and cream owl with layered cloud feathers and alert warm eyes; (11) crane: elegant turquoise crane with long neck and long legs, white wing feathers, gold beak; (12) phoenix: crimson-gold mythical bird, arched spread wings, long flowing fiery tail feathers, regal head.\nRow 4: (13) gryphon: silver-teal griffin with eagle head, lion hindquarters, powerful feathered wings and curled tail; (14) lantern: original gold-and-amber lantern moth with luminous patterned broad leaflike wings, fuzzy small insect body and delicate antennae; (15) bat: charming midnight violet bat with wide scalloped wings and soft fur, two bright eyes; (16) beetle: polished amethyst rhinoceros beetle with six articulated legs and a crystalline forward horn.\nOne creature per cell, precisely sixteen. Use transparent alpha around every creature, including between all parts. Consistent illumination from upper left, detailed without noise.",
+    "backA": "Use case: identity-preserve\nAsset type: matching rear-view sprite atlas for a Japanese original fantasy RPG.\nEdit target: supplied sixteen-creature atlas. Re-render these EXACT SAME 16 characters with the same colors, proportions, distinguishing features and grid order, but turn EVERY creature around 180 degrees so we see only its BACK THREE-QUARTER VIEW, looking away toward upper left. Faces and chests must NOT be visible: show backs of heads, shoulders, wings, fur patterns and tails. The camera is behind each creature. Do not just mirror the fronts.\nKeep a precise 4 columns by 4 rows grid. Entire bodies isolated on true transparent alpha. No floor, shadows, text, labels, borders or checkerboard. Give each sprite 8% transparent margin so no sprite touches neighboring cells or image edge. Premium finely detailed pixel art, delicate crisp pixels and clear silhouette. Same top-left light. No glowing colored halo outside silhouettes.\nOrder:\nrow1 woodland leaf-eared ivory seed spirit; mint leaf-eared hare; coral fire fox with flame tail; dark teal silver-maned wolf.\nrow2 lavender long-tailed cat; turquoise river otter with broad paddle tail; moss-green bear with leafy back; emerald leaf-antlered deer.\nrow3 sky-blue spiral-horned goat; blue cream owl; turquoise long-neck crane; crimson gold long-tail phoenix.\nrow4 teal silver griffin; amber lantern moth; violet bat; purple crystal rhinoceros beetle.\nExactly sixteen rear-facing creatures, each centered in its own equal square cell, no omissions.",
+    "frontB": "Use case: stylized-concept\nAsset type: production-ready transparent monster sprite atlas for the ORIGINAL Japanese browser RPG Pachi Monsters, matching supplied sheet's premium pixel illustration style.\nCreate one square sprite sheet with EXACTLY 16 completely separate full-body creatures in a mathematically regular 4 columns by 4 rows grid, each cell square and equal. Absolutely no grid lines, captions, numbers, letters, scenery or floor. Transparent background. Each entire silhouette fits within its cell with at least 10% empty padding on every side, wings and tails never cross cell boundaries. No glow outside silhouettes.\nStyle: premium finely drawn HD pixel art, exquisite deliberate pixel clusters and clean dark colored contours, nuanced material shading, beautiful expressive faces, coherent anatomy, readable silhouette, appealing polished ORIGINAL fantasy creature design. Not crude geometric blobs. Not 3D, not vector, not blurry painterly art. Rich but harmonized jewel-and-natural palette. All FRONT THREE-QUARTER battle view looking toward lower right; face and chest visible. No resemblance to any existing monster franchise.\nExact cell order left-to-right then top-to-bottom:\nRow1: 1 moss tortoise with intricate woody green shell bearing a tiny garden of pale flowers; 2 violet-blue faceted crystal golem with two arms two legs, glowing amber eyes and six-sided chest stone; 3 turquoise manta ray with broad elegant wings, star-like markings and two thin trailing tails; 4 deep blue miniature whale with cream belly, carved wave-like fins and a small sail dorsal fin.\nRow2: 5 translucent violet crystal jellyfish with star suspended inside dome, cascading ribbon tentacles; 6 happy forest flower spirit with emerald stem body and five large ivory-gold petals framing face, leafy feet; 7 azure seahorse with coral head crest, curled tail and translucent fins; 8 blue coral crab with segmented carapace, two asymmetrical sculpted claws and six jointed legs.\nRow3: 9 bronze and teal crystal scorpion with raised segmented tail and paired pincers; 10 regal flame-red dragon with four legs, curved ivory horns, broad wings, long tail and gold chest scales; 11 coiled turquoise sea serpent with pearly mane and long translucent fins; 12 small emerald gecko with leaf-shaped tail, expressive eyes and four splayed webbed feet.\nRow4: 13 sandy amber lizard with an articulated curled tail, turquoise throat fan and tiny plated scales; 14 evolved forest tortoise with tiered oak-tree shell; 15 evolved regal ruby dragon with spectacular gold wing membranes; 16 mature jade river serpent with long branching pearl horns.\nOne creature per equal square cell, precisely sixteen. Top-left lighting. Detailed without noise. 2048 square if possible.",
+    "backB": "Use case: identity-preserve\nAsset type: matching rear-view sprite atlas for a Japanese original fantasy RPG.\nEdit target: supplied sixteen-creature atlas. Re-render these EXACT SAME 16 characters with the same colors, proportions, distinguishing features and grid order, but turn EVERY creature around 180 degrees so we see its BACK THREE-QUARTER VIEW, looking away toward upper left. Show backs of heads, shoulders, wings, shells, scales and tails. The camera is behind each creature. Do not mirror the fronts. No visible face or chest.\nKeep precise4 columns by4 rows grid, exactly sixteen. Entire bodies isolated on true transparent alpha. No floor, shadows, text, labels, borders or checkerboard. Each sprite must have8% transparent margin and must not touch neighboring cells or image edge. Premium finely detailed pixel art, delicate crisp pixels and clear silhouette. Same top-left light. No glowing colored halo outside silhouettes.\nOrder:\nrow1 moss tortoise with flower garden woody shell; purple faceted crystal golem; turquoise star-patterned manta ray; blue cream whale with wave-shaped fins.\nrow2 violet crystal jellyfish with trailing ribbons; ivory-gold flower spirit with green leafy back; azure coral-crested seahorse; blue coral crab.\nrow3 bronze and teal scorpion with curled tail; red gold four-legged winged dragon; turquoise coiled sea serpent; green leaf-tailed gecko.\nrow4 amber scaled lizard with turquoise throat; mature forest tortoise with tiered oak on shell; mature ruby dragon with gold wings; mature jade river serpent with branching pearl horns.\nALL creatures face away, heads pointing upper left, tail and backs facing camera. For jellyfish show far-side star through shell, for flower show sepals/back of flower."
+  }
+}
