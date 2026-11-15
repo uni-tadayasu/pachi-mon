@@ -3024,6 +3024,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       this.currentId='title';this.group=null;this.groups=new Set();this.voices=new Set();this.lastError=null;this.enableRequest=0;
       this.quality=isMobile()?'low':'high';this.maxVoices=this.quality==='low'?40:72;this.lastFX=0;
       this.master=null;this.mix=null;this.reverb=null;this.delay=null;this.noise=null;this.fxBus=null;this.waves={};
+      this.playbackSession=null;this.previousAudioType='auto';this.legacyAudio=null;this.legacyBlocked=false;this.playbackRequested=false;
     }
     getTracks() { return SCORES.map(metadata); }
     getCurrentTrack() { return metadata(INDEX[this.previewId || this.currentId]); }
@@ -3034,24 +3035,79 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(this.master&&this.ctx)this.master.gain.setTargetAtTime(this.enabled?this.volume*.72:0,this.ctx.currentTime,.07);
       return this.volume;
     }
+    preparePlayback() {
+      this.playbackRequested=true;
+      const nav=globalThis.navigator;
+      // WebKit's playback category lets both the soundtrack and effects use
+      // media volume, including when the iPhone Ring/Silent switch is silent.
+      try {
+        const session=nav?.audioSession;
+        if(session) {
+          const previous=session.type;
+          session.type='playback';
+          if(session.type==='playback') {
+            if(this.playbackSession!==session){this.previousAudioType=previous||'auto';this.playbackSession=session;}
+            this.legacyAudio?.pause();this.legacyBlocked=false;
+            return;
+          }
+        }
+      } catch(_) {}
+      // Older iOS has no AudioSession API. A silent, unmuted media element
+      // establishes the same output category without changing the synth graph.
+      const ios=/iPad|iPhone|iPod/.test(nav?.userAgent||'') || (nav?.platform==='MacIntel' && nav.maxTouchPoints>1);
+      if(!ios || typeof document==='undefined')return;
+      try {
+        if(!this.legacyAudio) {
+          const samples=8000,bytes=new Uint8Array(44+samples),view=new DataView(bytes.buffer);
+          const text=(at,s)=>{for(let i=0;i<s.length;i++)bytes[at+i]=s.charCodeAt(i);};
+          text(0,'RIFF');view.setUint32(4,36+samples,true);text(8,'WAVE');text(12,'fmt ');
+          view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);
+          view.setUint32(24,8000,true);view.setUint32(28,8000,true);view.setUint16(32,1,true);view.setUint16(34,8,true);
+          text(36,'data');view.setUint32(40,samples,true);bytes.fill(128,44);
+          const audio=document.createElement('audio');audio.hidden=true;audio.loop=true;audio.preload='auto';audio.muted=false;audio.volume=1;
+          audio.setAttribute('playsinline','');audio.setAttribute('aria-hidden','true');
+          audio.src='data:audio/wav;base64,'+btoa(String.fromCharCode(...bytes));
+          document.body?.appendChild(audio);this.legacyAudio=audio;
+        }
+        const audio=this.legacyAudio,request=this.enableRequest;
+        // Invoke play synchronously inside the gesture, before awaiting resume.
+        Promise.resolve(audio.play()).then(()=>{
+          if(!this.playbackRequested || audio!==this.legacyAudio)audio.pause();
+          if(request===this.enableRequest)this.legacyBlocked=false;
+        },()=>{if(request===this.enableRequest)this.legacyBlocked=true;});
+      } catch(_) {this.legacyBlocked=true;}
+    }
+    releasePlayback() {
+      this.playbackRequested=false;
+      try{this.legacyAudio?.pause();}catch(_){}
+      try{if(this.playbackSession?.type==='playback')this.playbackSession.type=this.previousAudioType;}catch(_){}
+      this.playbackSession=null;
+    }
+    needsUnlock() {
+      return !this.enabled || !this.ctx || this.ctx.state!=='running' || (!this.playbackSession && (this.legacyBlocked || !!this.legacyAudio?.paused));
+    }
     async setEnabled(value) {
       const request=++this.enableRequest;
       if(!value) {
-        this.enabled=false;
+        this.enabled=false;this.releasePlayback();
         if(this.ctx&&this.master){this.master.gain.setTargetAtTime(0,this.ctx.currentTime,.035);this.stopAll(this.ctx.currentTime+.16);}
         return false;
       }
       try {
+        if(typeof document!=='undefined' && document.hidden){this.enabled=false;this.releasePlayback();return false;}
+        this.preparePlayback();
         if(!this.ctx)this.setup();
-        if(!this.ctx){this.enabled=false;return false;}
-        if(this.ctx.state==='closed'){this.lastError='音声コンテキストが閉じられています。';this.enabled=false;return false;}
+        if(!this.ctx)throw new Error(this.lastError||'音声を開始できませんでした。');
+        if(this.ctx.state==='closed')throw new Error('音声コンテキストが閉じられています。');
         await this.ctx.resume();
         if(request!==this.enableRequest)return this.enabled;
+        if(typeof document!=='undefined' && document.hidden){this.enabled=false;this.releasePlayback();return false;}
+        if(this.ctx.state!=='running')throw new Error('画面をタップして音声を再開してください。');
         this.enabled=true;this.lastError=null;
         this.master.gain.setTargetAtTime(this.volume*.72,this.ctx.currentTime,.06);
-        this.switchTrack(this.previewId || this.pickScene(),true);
+        if(!this.group)this.switchTrack(this.previewId || this.pickScene(),true);
         return true;
-      } catch(error) {this.lastError=error?.message || '音声を開始できませんでした。';this.enabled=false;return false;}
+      } catch(error) {if(request!==this.enableRequest)return this.enabled;this.lastError=error?.message || '音声を開始できませんでした。';this.enabled=false;this.releasePlayback();return false;}
     }
     setup() {
       const Constructor=globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -3367,9 +3423,15 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(kind==='crystal'){play([79,86,90,95],'bell',.045,.4,.13);return;}
       play([76],'mallet',.05,.12,.09);
     }
-    async suspend() {if(this.ctx?.state==='running')try{await this.ctx.suspend();}catch(_){} }
+    async suspend() {
+      this.enableRequest++;this.enabled=false;this.releasePlayback();
+      if(this.ctx&&this.master)this.master.gain.setTargetAtTime(0,this.ctx.currentTime,.035);
+      if(this.ctx && this.ctx.state!=='closed')try{await this.ctx.suspend();}catch(_){}
+    }
     dispose() {
-      this.enableRequest++;this.enabled=false;if(!this.ctx)return;
+      this.enableRequest++;this.enabled=false;this.releasePlayback();
+      if(this.legacyAudio){this.legacyAudio.remove();this.legacyAudio.removeAttribute('src');this.legacyAudio=null;}
+      if(!this.ctx)return;
       this.stopAll(this.ctx.currentTime);for(const voice of [...this.voices])this.disposeVoice(voice);
       for(const group of this.groups){for(const n of [group.bus,group.send,group.echoSend])try{n.disconnect();}catch(_){}}
       this.groups.clear();try{this.ctx.close();}catch(_){}this.group=null;
@@ -4013,7 +4075,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。HPを減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさ・めいちゅう・かいひがバトルに影響します。物理わざはこうげきとぼうぎょ、特殊わざはとくこうととくぼうで威力が決まり、めいちゅうとかいひで当たりやすさが変わります。</p><h3>建物と星路評議会</h3><p>建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。道具店・宿・研究所には係員がいます。16の旅紋を順番に集め、星路評議会最終会場で四境の守護者4人、星路の継承者1人に挑みましょう。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手のHPを減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所でHPとPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();
   }
   function bindVolume(){
@@ -4111,11 +4173,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   });
   window.addEventListener('keyup',e=>{if(e.key==='Shift')sprint=false;if(directionSource===e.key){pressedDirection=null;directionSource=null;}});
   window.addEventListener('blur',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(playing)save();});
-  document.addEventListener('visibilitychange',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.ctx?.suspend();}else if(settings.sound)sound.setEnabled(true);});
-  const unlockSound=e=>{if(e.isTrusted&&settings.sound&&(!sound.ctx||sound.ctx.state==='suspended'))sound.setEnabled(true);};
+  document.addEventListener('visibilitychange',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.suspend();}else if(settings.sound&&sound.ctx)sound.setEnabled(true);});
+  const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock())sound.setEnabled(true);};
   document.addEventListener('pointerdown',unlockSound,{capture:true});
   document.addEventListener('keydown',unlockSound,{capture:true});
-  window.addEventListener('pagehide',()=>{clearTouchDirections();if(playing)save();});
+  document.addEventListener('touchend',unlockSound,{capture:true,passive:true});
+  document.addEventListener('click',unlockSound,{capture:true});
+  window.addEventListener('pagehide',()=>{clearTouchDirections();if(playing)save();sound.suspend();});
+  window.addEventListener('pageshow',()=>{if(!document.hidden&&settings.sound&&sound.ctx)sound.setEnabled(true);});
   const touchDirections=new Map();
   function clearTouchDirections(){
     const held=[...touchDirections];touchDirections.clear();
@@ -4179,6 +4244,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.track){settings.sound=true;sound.setEnabled(true);sound.preview(d.track==='auto'?null:d.track);saveSettings();updateSound();showMusic();return;}
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
+    if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
     if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,help:showHelp,title:goTitle,'new-confirm':chooseStarter};actions[d.ui]?.();}
   });
   function resize() {
