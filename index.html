@@ -1,0 +1,1678 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#183f3b">
+  <meta name="description" content="灯獣と出会い、共鳴し、失われた灯りを取り戻す。PC・スマートフォンで遊べる、オリジナルの探索・育成RPG『灯獣紀 LUMINA TRAIL』。">
+  <title>灯獣紀 — LUMINA TRAIL</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23183f3b'/%3E%3Cpath d='M32 7 51 31 32 57 13 31Z' fill='%23efd593'/%3E%3Cpath d='m32 17 10 15-10 15-10-15Z' fill='%23183f3b'/%3E%3Cpath d='M29 25h6v14h-6z' fill='%23efd593'/%3E%3C/svg%3E">
+  <style>
+:root{--ink:#203d39;--ink-deep:#18332f;--muted:#748079;--paper:#f5f2e9;--paper-light:#fffdf7;--line:#deded1;--green:#3d7762;--green-dark:#285a49;--mint:#d9e8ce;--gold:#b29454;--coral:#cf8064;--shadow:0 18px 60px #243c3020;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;--serif:"Yu Mincho","Hiragino Mincho ProN","Noto Serif JP",Georgia,serif}
+*{box-sizing:border-box}html{height:100%;scrollbar-color:#adb9a5 var(--paper);scrollbar-width:thin}body{margin:0;min-width:320px;min-height:100%;color:var(--ink);background:var(--paper);font-family:var(--sans);font-size:14px;line-height:1.6;-webkit-tap-highlight-color:transparent}body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.25;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.11' filter='url(%23n)'/%3E%3C/svg%3E")}button,input,select{font:inherit}button{color:inherit;cursor:pointer}button:disabled{cursor:not-allowed;opacity:.45}button,a,input{touch-action:manipulation}button{transition:background .16s,border-color .16s,box-shadow .16s,transform .16s}a{color:inherit}svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}button:focus-visible,a:focus-visible,canvas:focus-visible,input:focus-visible{outline:3px solid #d39a49;outline-offset:4px}button:active:not(:disabled){transform:translateY(1px)}[hidden]{display:none!important}.svg-defs{position:absolute;width:0;height:0;overflow:hidden}.muted{color:var(--muted)}.eyebrow{font-size:10px;letter-spacing:2.1px;font-weight:650;color:var(--muted)}.topbar{height:100px;max-width:1360px;margin:auto;display:flex;align-items:center;gap:40px;padding:0 40px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:12px;flex-shrink:0;text-decoration:none}.brand-mark{width:38px;height:46px;display:grid;place-items:center;color:var(--ink)}.brand-mark svg{width:34px;height:40px;stroke-width:1.35}.brand-copy{display:flex;flex-direction:column}.brand-copy strong{font-family:var(--serif);font-size:26px;letter-spacing:4px;line-height:1.2}.brand-copy small{font-size:8px;letter-spacing:2.2px;margin-top:6px;font-weight:600}.location-info{display:flex;align-items:center;gap:12px;border-left:1px solid var(--line);padding-left:30px;flex:1}.location-dot{height:7px;width:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px #dbe6d7}.location-info>div{display:flex;flex-direction:column;gap:1px}#location-name{font-size:13px;font-weight:650;letter-spacing:1px}#location-subtitle{font-size:10px;color:var(--muted);letter-spacing:.5px}.top-actions{display:flex;align-items:center;gap:9px}.icon-btn{height:42px;min-width:42px;background:transparent;border:1px solid var(--line);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:10px}.icon-btn svg{width:18px;height:18px}.icon-btn:hover{background:#e8ecdf;border-color:#a8b79e}.game-layout{max-width:1360px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 284px;gap:36px;padding:28px 40px 22px}.play-column{min-width:0}.field-heading{display:flex;justify-content:space-between;align-items:center;height:28px;margin-bottom:12px}.tiny-spark{color:var(--gold);margin-right:7px;font-size:13px}.field-status{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:10px}.field-status>span{width:5px;height:5px;border-radius:50%;background:var(--green)}.game-stage{position:relative;overflow:hidden;background:#203f3a;border:6px solid #fffdf5;box-shadow:0 0 0 1px #d9dbcc,0 10px 32px #294b3a16;border-radius:3px;isolation:isolate;aspect-ratio:8/5}#game-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;outline-offset:-4px}.world-label{position:absolute;left:18px;top:18px;font-size:11px;font-weight:600;letter-spacing:1px;background:#fffbeded;color:#29483a;border:1px solid #ffffffa8;border-radius:2px;padding:7px 14px;box-shadow:0 3px 8px #17342818;pointer-events:none}.world-hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);max-width:calc(100% - 28px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:500;letter-spacing:.7px;color:#fffef6;background:#1b3b36cf;padding:7px 14px;border-radius:3px;pointer-events:none}.stage-corner{position:absolute;width:9px;height:9px;border-color:#ffffffa0;pointer-events:none}.tl{top:5px;left:5px;border-top:1px solid;border-left:1px solid}.tr{top:5px;right:5px;border-top:1px solid;border-right:1px solid}.bl{bottom:5px;left:5px;border-bottom:1px solid;border-left:1px solid}.br{bottom:5px;right:5px;border-bottom:1px solid;border-right:1px solid}.world-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 0}.keyboard-help{display:flex;align-items:center;gap:14px}.keyboard-help>span{display:flex;align-items:center;gap:3px}.keyboard-help i{font-style:normal;color:var(--muted);font-size:10px;margin-left:4px}kbd{display:inline-grid;place-items:center;border:1px solid #cfd5c7;border-bottom-width:2px;border-radius:3px;background:#fcfbf5;min-width:20px;height:22px;padding:0 4px;font-size:10px;color:#5b6b5d;font-family:var(--sans)}.btn{min-height:44px;border:1px solid #b9c4ae;background:#e7eddf;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;font-size:13px;font-weight:600;line-height:1.5;text-decoration:none;letter-spacing:.4px}.btn:hover{background:#dae5d0;border-color:#91a789}.btn-primary{background:var(--green-dark);color:#fffdf2;border-color:var(--green-dark);box-shadow:0 3px 0 #183d3020}.btn-primary:hover{background:#1e4a3b;border-color:#1e4a3b}.btn-quiet{background:transparent;border-color:var(--line);color:var(--muted)}.btn-quiet:hover{color:var(--ink);background:#eceee4}.btn-small{min-height:38px;padding:7px 12px;font-size:11px}.interact-btn{white-space:nowrap;background:transparent}.interact-btn span{margin-left:6px;opacity:.65}.field-caption{border-top:1px solid var(--line);padding-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#859080;font-size:9px}.field-caption>span:first-child{display:flex;align-items:center;gap:7px;letter-spacing:.6px}.field-caption svg{height:16px;width:16px}.field-caption>span:last-child{font-size:8px;letter-spacing:1.1px}.journal{border-left:1px solid var(--line);padding-left:28px;min-width:0}.journal-heading{height:69px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.journal-heading .eyebrow{font-size:9px;letter-spacing:1.7px}.journal-heading h1{font-family:var(--serif);font-size:23px;font-weight:600;letter-spacing:2px;line-height:1.3;margin:5px 0 0}.journal-icon{width:28px;height:28px;stroke-width:1.1;opacity:.55;margin-top:9px}.section-kicker{display:flex;align-items:center;gap:8px}.section-kicker h2{font-size:11px;font-weight:600;letter-spacing:.7px;margin:0}.number-tag{font-size:9px;color:var(--gold);font-variant-numeric:tabular-nums}.section-note{margin-left:auto;font-size:8px;letter-spacing:1.5px;color:#92998c}.quest-section{padding:8px 0 19px;border-bottom:1px solid var(--line)}#objective-text{font-size:12px;line-height:1.9;margin:11px 0 15px;min-height:44px;color:#4d6151}.seal-list{display:flex;gap:10px}.seal{position:relative;display:grid;place-items:center;width:36px;height:36px;border:1px dashed #c6ceba;border-radius:50%;color:#aab29e;font-size:15px;background:#ecefdf80}.seal.earned{border-style:solid;border-color:#bdab6e;background:#f2e7bc;color:#8c6e32;box-shadow:inset 0 0 0 3px #f7f2d7}.seal svg{width:19px;height:19px}.party-section{padding:19px 0 14px}.party-list{display:flex;flex-direction:column;margin-top:10px;gap:7px}.party-card{display:flex;align-items:center;text-align:left;gap:10px;min-width:0;width:100%;border:1px solid #e0e2d4;background:#fbfaf3;border-radius:5px;padding:7px 9px;min-height:71px}.party-card:hover{border-color:#aabf9f;background:#f1f5e9}.party-card.selected{border-color:#91ad80;background:#eef3e4}.party-card>canvas,.party-card .creature-portrait{width:48px;height:48px;flex-shrink:0;image-rendering:pixelated;background:#e8eddd80;border-radius:50%;object-fit:contain}.party-meta{flex:1;min-width:0}.party-meta strong,.party-meta .party-name{display:block;font-size:11px;font-weight:650;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.party-meta small{font-size:9px;color:#7a8871}.party-stats{font-size:9px;display:flex;align-items:center;gap:5px;justify-content:space-between;color:#7a8871;margin:2px 0 4px}.party-card .hp-track{height:4px;background:#e2e7d8}.party-card .hp-fill{background:#70a07c}.party-card .type-badge{font-size:8px;padding:1px 5px}.bag-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:10px;color:var(--muted)}.bag-summary strong{color:var(--ink);font-size:12px;font-weight:650}.journal-nav{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;padding-top:10px}.journal-nav button{display:flex;align-items:center;gap:7px;border:0;border-bottom:1px solid #e5e6da;background:transparent;padding:11px 0;min-height:44px;text-align:left;font-size:10px}.journal-nav button svg{width:15px;height:15px;color:#748773}.journal-nav button:hover{color:var(--green);background:#eef0e6}.nav-arrow{margin-left:auto;color:#9ba68d;font-size:13px}.journal-footnote{font-size:8px;color:#97a08e;display:flex;align-items:center;gap:5px;margin:13px 0 0}.saved-dot{height:4px;width:4px;background:#9cae8d;border-radius:50%}.site-footer{max-width:1280px;margin:5px auto 0;padding:16px 0 26px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:8px;letter-spacing:1.4px;color:#94a08d}.site-footer i{font-style:normal;margin:0 7px;color:#bdc4b4}.touch-controls{display:none}
+/* A quiet, illustrated title spread. */
+.title-screen{position:fixed;inset:0;background:var(--paper);z-index:30;overflow:auto;display:flex;flex-direction:column;padding:0 max(36px,calc((100vw - 1280px)/2));isolation:isolate}.title-screen::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at 75% 48%,#dee8d7 0%,#e6ebda55 25%,transparent 55%)}.title-topbar{height:98px;min-height:98px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:15px}.title-brand{gap:10px}.title-edition{font-size:10px;letter-spacing:2px;font-weight:650}.title-edition>span{font-weight:400;color:#a9b099;margin:0 8px}.title-platform{font-size:9px;letter-spacing:1.5px;color:#85927c}.title-inner{display:grid;grid-template-columns:.9fr 1.15fr;flex:1;align-items:center;gap:40px;width:100%;padding:36px 0 42px;max-width:1240px;align-self:center}.title-copy{padding-left:30px;position:relative;z-index:2}.title-eyebrow{font-size:8px;letter-spacing:1.7px;display:flex;align-items:center;gap:9px;margin:0 0 23px;color:#7d8c73;font-weight:650}.title-eyebrow>span{width:26px;height:1px;background:#9baf8b}.title-wordmark{position:relative;display:inline-block}.title-wordmark h1{font-size:86px;font-weight:700;letter-spacing:8px;font-family:var(--serif);line-height:1.1;margin:0 0 10px;color:#21473b;text-shadow:1px 1px 0 #c4cdb3}.title-wordmark-star{position:absolute;right:-23px;top:0px;font-size:23px;color:var(--gold);font-family:Georgia;transform:rotate(10deg)}.title-reading{position:absolute;right:-36px;top:45px;writing-mode:vertical-rl;font-size:8px;letter-spacing:3px;font-weight:600;color:#7c8f75}.title-wordmark p{font-family:Georgia,serif;margin:0 0 34px;font-size:16px;letter-spacing:7px;color:#456955;font-weight:400}.title-copy h2{font-family:var(--serif);font-size:29px;font-weight:500;letter-spacing:3px;line-height:1.7;margin:0 0 20px}.title-description{font-size:12px;line-height:2.1;letter-spacing:1px;color:#77836f;margin:0 0 30px}.title-buttons{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;max-width:400px}.title-start{min-height:52px;min-width:225px;justify-content:space-between;gap:25px;padding:13px 20px;font-size:12px;letter-spacing:1.5px;border-radius:3px;box-shadow:0 4px 0 #224a3920}.title-start svg{width:20px;height:20px}.title-start#start-btn:not(:first-child){min-width:160px}.title-buttons:has(#continue-btn:not([hidden])) #start-btn{background:transparent;color:var(--green-dark);border-color:#bfccaf;box-shadow:none;min-width:160px}.title-settings{background:none;border:0;padding:14px 0;font-size:10px;color:#6c7f65;letter-spacing:.6px;min-height:44px}.title-settings>span{margin-left:12px;color:#819574}.title-settings:hover{color:var(--ink)}.title-status{font-size:8px;letter-spacing:.6px;color:#97a08b;margin:18px 0 0}.title-art{position:relative;width:100%;aspect-ratio:1.03;max-width:600px;justify-self:end}.title-island{position:absolute;left:0;top:7%;width:100%;height:88%;stroke:none;overflow:visible;filter:drop-shadow(0 14px 15px #31513908)}.art-orbit{position:absolute;border:1px solid #b7c6a54d;border-radius:50%;transform:rotate(-22deg)}.orbit-one{inset:13% -2% 10% 1%;border-style:dashed}.orbit-two{inset:21% 3% 1% -3%;transform:rotate(22deg);opacity:.5}.hero-creature{position:absolute;display:flex;flex-direction:column;align-items:center}.hero-creature canvas{width:100%;height:auto;image-rendering:pixelated;filter:drop-shadow(0 9px 3px #213b3520)}.hero-creature>span{font-size:8px;color:#93a081;letter-spacing:1px;white-space:nowrap;background:#f5f2e9a8;backdrop-filter:blur(4px);padding:3px 6px;border-radius:2px}.hero-creature>span b{font-size:9px;margin-left:6px;font-weight:500;color:#526e50;letter-spacing:1px}.hero-komori{width:39%;top:28%;left:29%;z-index:2}.hero-komori>span{margin-top:-9px}.hero-shizuku{width:30%;left:3%;top:44%;z-index:3}.hero-shizuku>span{margin-top:-13px}.hero-hibana{width:30%;right:1%;top:42%;z-index:3}.hero-hibana>span{margin-top:-10px}.art-note{position:absolute;font-size:8px;line-height:1.8;letter-spacing:1.8px;color:#8fa080;z-index:1}.art-note b{font-size:11px;letter-spacing:2.2px;font-weight:500;color:#68845e}.art-note-one{left:7%;top:15%;border-left:1px solid #c1cbb0;padding-left:10px}.art-note-two{right:1%;top:16%;text-align:right}.art-spark{position:absolute;color:#bba86d;z-index:1}.spark-one{font-size:24px;left:19%;top:34%}.spark-two{font-size:35px;right:13%;top:29%;transform:rotate(15deg);color:#92aa7d}.spark-three{font-size:14px;right:29%;bottom:12%}.art-caption{position:absolute;left:8%;bottom:1%;display:flex;align-items:center;gap:15px}.caption-line{height:1px;width:32px;background:#a8b594}.art-caption p{font-family:var(--serif);font-size:13px;letter-spacing:2px;line-height:1.9;color:#8c9d7e;margin:0}.art-caption b{color:#5c7950;font-weight:500}.title-footer{border-top:1px solid var(--line);padding:21px 0 23px;display:flex;justify-content:space-between;gap:15px;font-size:9px;color:#8c9980;letter-spacing:1.5px}.title-footer i{font-style:normal;color:var(--gold);margin-right:8px}.title-footer>span:last-child{font-family:var(--serif);font-size:10px;letter-spacing:1.7px}
+/* Combat sits on top of the field; commands remain regular HTML. */
+.battle-ui{position:absolute;inset:0;pointer-events:none}.combatant{position:absolute;width:220px;border:1px solid #e0e4cc;background:#fffdefee;box-shadow:0 4px 0 #24433026,0 10px 20px #12372212;padding:12px 16px 9px;border-radius:5px}.enemy-card{top:20px;left:20px}.ally-card{right:20px;bottom:23px}.combatant-top{display:flex;align-items:center;justify-content:space-between;gap:8px;line-height:1.2}.combatant-top strong{font-size:14px;letter-spacing:.4px}.combatant-top>span{font-size:10px;color:#61724e;font-weight:650;white-space:nowrap}.combatant-type{display:flex;align-items:center;justify-content:space-between;margin:8px 0 6px}.type-badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 7px;border-radius:3px;font-size:9px;background:#dce8cf;color:#527347;font-weight:600;line-height:1.5;white-space:nowrap;vertical-align:middle}.hp-label{font-size:7px;letter-spacing:1.2px;color:#96a17f}.hp-track{height:7px;overflow:hidden;border-radius:3px;background:#dce3cc;position:relative}.hp-fill{height:100%;width:100%;background:#69a376;display:block;border-radius:inherit;transition:width .35s ease,background .25s}.hp-text{display:block;text-align:right;font-size:9px;font-variant-numeric:tabular-nums;line-height:1.5;color:#7a8966;margin-top:3px}.xp-track{height:3px;margin:4px 0 -2px;border-radius:2px;background:#e6e5ce;overflow:hidden}.xp-track>span{height:100%;display:block;width:0;background:#c2a45c;transition:width .35s}.battle-panel{border:1px solid var(--line);border-radius:0 0 5px 5px;background:#fffdf6;margin:0 5px 16px;overflow:hidden}.battle-log-wrap{display:flex;gap:11px;align-items:flex-start;padding:14px 17px;background:#eff2e5;border-bottom:1px solid #e0e4d4;min-height:63px}.battle-log-mark{color:var(--gold);font-size:13px;padding-top:2px}#battle-log{font-size:12px;line-height:1.8;color:#506248;flex:1;max-height:115px;overflow:auto;scrollbar-width:thin}#battle-log p{margin:0 0 3px}#battle-log p:last-child{margin-bottom:0}#battle-log .log-success{color:#357447}#battle-log .log-important{color:#9a703f}.battle-actions{display:flex;flex-wrap:wrap;gap:8px;padding:13px}.battle-actions>.btn,.battle-actions>button:not(.move-btn){flex:1 0 90px;min-height:44px;font-size:11px}.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}.move-btn{border:1px solid #cfd9bf;background:#f4f6ec;border-radius:4px;padding:9px 13px;min-height:60px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:4px;color:#344e33}.move-btn:hover{background:#e7eedb;border-color:#a4bb8f}.move-btn strong{font-size:12px;font-weight:600;letter-spacing:.4px}.move-meta{font-size:9px;color:#879773;display:flex;align-items:center;gap:8px;justify-content:space-between}.move-btn .type-badge{font-size:8px;padding:1px 5px}
+/* Dialogs, field guide, bag and the party all share the journal language. */
+dialog{color:var(--ink);border:1px solid #d3dcc6;border-radius:9px;padding:0;background:var(--paper-light);box-shadow:0 24px 100px #122a3340;width:min(660px,calc(100vw - 36px));max-height:calc(100dvh - 54px);overflow:auto;scrollbar-width:thin}dialog::backdrop{background:#182d2a90;backdrop-filter:blur(5px)}.modal-heading{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:23px 25px 18px;border-bottom:1px solid #e3e7d8;background:#fffdf7f5;backdrop-filter:blur(8px)}.modal-heading .eyebrow{font-size:8px;letter-spacing:1.7px}.modal-heading h2{font-family:var(--serif);font-size:23px;letter-spacing:1px;margin:4px 0 0;line-height:1.4}.modal-heading .icon-btn{min-width:36px;width:36px;height:36px;border:0;background:#eef2e5}#modal-content{padding:23px 25px 26px}#modal-content p{line-height:1.9}#modal-content p:first-child{margin-top:0}#modal-content p:last-child{margin-bottom:0}.dialogue-text{font-size:14px;letter-spacing:.5px;line-height:2;padding:0 0 10px}.dialogue-text p{margin:0 0 12px}.modal-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #e3e7d8}.notice{border-left:3px solid #99b17c;background:#f0f4e7;padding:12px 15px;font-size:11px;line-height:1.9;color:#72815e;border-radius:0 3px 3px 0;margin:14px 0}.notice strong{color:#4f6a41}.menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.menu-grid>.btn{justify-content:flex-start;min-height:56px;padding:14px;font-size:12px}.menu-grid>.btn svg{width:19px;height:19px}.starter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}.starter-card{position:relative;display:flex;flex-direction:column;align-items:center;border:1px solid #d5dfc5;border-radius:6px;background:linear-gradient(160deg,#f3f7e9,#fffef7);padding:12px 8px 17px;text-align:center;min-width:0;overflow:hidden}.starter-card:hover{border-color:#9bb587;background:#edf3df;transform:translateY(-3px);box-shadow:0 7px 16px #4c743e12}.starter-card.selected{border:2px solid #648b52;background:#edf3df;padding:11px 7px 16px}.starter-card>canvas,.starter-card .creature-portrait{width:100%;max-width:150px;aspect-ratio:1;height:auto;image-rendering:pixelated}.starter-card strong{font-size:14px;letter-spacing:.8px;margin:4px 0 5px}.starter-card p{font-size:10px;line-height:1.7!important;color:#83926e;margin:7px 4px 0!important}.starter-card small{font-size:10px;line-height:1.7;color:#83926e;margin-top:8px}.starter-card .type-badge{font-size:9px}.creature-card{display:flex;align-items:center;gap:20px;border:1px solid #dfe6d0;background:#f4f7eb;border-radius:6px;padding:18px;margin-bottom:18px}.creature-card .creature-portrait,.creature-card>canvas{width:130px;height:130px;image-rendering:pixelated;flex-shrink:0}.creature-card h3{font-size:21px;font-family:var(--serif);letter-spacing:1px;margin:0 0 5px}.creature-card p{font-size:12px;color:#748665;margin:6px 0 0}.stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:15px 0}.stat-cell{border:1px solid #e0e6d3;border-radius:4px;padding:9px 8px;text-align:center;background:#f7f8ef;font-size:10px;color:#80906b}.stat-cell strong{display:block;font-size:19px;line-height:1.5;color:#4f6c3c;font-weight:600}.stat-cell span{font-size:10px;color:#7c8a6b}.item-row{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid #e6eadb}.item-row:first-child{padding-top:4px}.item-row:last-child{border-bottom:0}.item-info{flex:1;min-width:0}.item-info strong{font-size:13px;letter-spacing:.3px}.item-info p,.item-info small{display:block;font-size:11px;line-height:1.8!important;color:#7b896b;margin:4px 0 0!important}.item-row>.btn{white-space:nowrap;flex-shrink:0}.item-row .item-count,.item-row .badge{font-size:10px;white-space:nowrap;color:#6b8153}.badge{display:inline-block;background:#e8eedc;padding:3px 8px;border-radius:3px;font-size:9px;line-height:1.5;color:#71875b}.dex-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:20px}.dex-card{display:flex;align-items:center;flex-direction:column;min-width:0;border:1px solid #dce4cd;background:#f4f7ea;border-radius:5px;text-align:center;padding:10px 7px;position:relative}.dex-card>canvas,.dex-card .creature-portrait{width:100%;max-width:120px;aspect-ratio:1;height:auto;image-rendering:pixelated}.dex-card strong{font-size:11px;margin-bottom:5px}.dex-card small{font-size:9px;color:#94a47b}.dex-card .type-badge{font-size:8px}.dex-card.unknown{filter:grayscale(1);opacity:.6;background:#ecefe4}.list-empty{padding:28px 15px;text-align:center;border:1px dashed #d6dfc8;border-radius:5px;background:#f5f7ed;color:#8d9a7c;font-size:12px}.map-list{display:flex;flex-direction:column;gap:10px}.map-card{display:flex;align-items:center;gap:13px;padding:15px;border:1px solid #dce4cf;background:#f4f7ec;border-radius:5px;position:relative;text-align:left;width:100%}.map-card strong{font-size:13px}.map-card p,.map-card small{font-size:10px;line-height:1.7!important;color:#7f906d;margin:4px 0 0!important}.map-card.selected{border-color:#7fa263;background:#eaf2de}.map-card.current{border-color:#7fa263;background:#eaf2de}.map-card .badge{margin-left:auto}.switch-list{display:flex;flex-direction:column;gap:10px}.switch-list .party-card{min-height:80px;padding:9px 13px}.switch-list .party-card>canvas{width:60px;height:60px}.switch-list .party-meta strong{font-size:13px}.switch-list .party-stats{font-size:10px;margin:4px 0 6px}.setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 0;border-bottom:1px solid #e3e8d6;font-size:12px}.setting-row:last-child{border-bottom:0}.setting-row p,.setting-row small{display:block;font-size:10px;color:#83936f;margin:4px 0 0;line-height:1.7}.setting-row input[type=range]{accent-color:#62874d;width:140px;max-width:40%}.setting-row input[type=checkbox]{accent-color:#62874d;width:20px;height:20px}.setting-row select{border:1px solid #cbd8b9;background:#f4f7e9;padding:8px;color:#4b673b;border-radius:4px}.help-keys{display:grid;grid-template-columns:auto 1fr;gap:12px 17px;align-items:center;font-size:12px}.help-keys kbd{margin-right:4px}.help-keys p{margin:0!important}.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:100;max-width:calc(100vw - 32px);width:max-content;background:#254e40f2;border:1px solid #527663;color:#f5f5e7;font-size:12px;padding:13px 24px;box-shadow:0 6px 30px #173b3330;border-radius:5px;text-align:center;pointer-events:none;line-height:1.7}.noscript-notice{position:fixed;inset:0;z-index:100;background:var(--paper);display:grid;place-items:center;padding:30px;text-align:center}
+@media(min-width:1500px){.title-inner{gap:75px}.title-art{max-width:660px}.title-copy{padding-left:20px}.title-wordmark h1{font-size:100px}.title-copy h2{font-size:32px}.title-description{font-size:13px}.title-status{font-size:9px}}
+@media(max-width:1150px){.topbar{padding:0 28px;height:88px}.game-layout{padding:23px 28px;grid-template-columns:minmax(0,1fr) 250px;gap:25px}.journal{padding-left:21px}.keyboard-help>span:nth-child(3){display:none}.keyboard-help{gap:10px}.field-caption>span:last-child{display:none}.site-footer{margin:0 28px}.title-screen{padding:0 30px}.title-inner{gap:10px}.title-copy{padding-left:10px}.title-wordmark h1{font-size:76px}.title-copy h2{font-size:25px}.title-art{margin-left:-15px;width:calc(100% + 20px)}.title-description{font-size:11px}.title-topbar{height:85px;min-height:85px}.title-eyebrow{font-size:7px;letter-spacing:1.3px}.title-buttons{gap:8px 15px}.title-start{min-width:205px}.title-status{font-size:7px}.combatant{width:180px;padding:9px 12px 7px}.combatant-top strong{font-size:12px}.combatant-type{margin:5px 0}.enemy-card{left:14px;top:14px}.ally-card{right:14px;bottom:16px}}
+@media(max-width:900px){.game-layout{grid-template-columns:minmax(0,1fr);gap:26px;max-width:830px}.journal{border-left:0;border-top:1px solid var(--line);padding:21px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:0 26px}.journal-heading{grid-column:1/-1;height:60px}.quest-section{grid-column:1;border-bottom:0;padding-bottom:8px}.party-section{grid-column:2;grid-row:2/5;padding-top:8px}.bag-summary{grid-column:1;margin-bottom:3px}.journal-nav{grid-column:1}.journal-footnote{grid-column:1/-1}.field-caption>span:last-child{display:block}.topbar{gap:25px}.location-info{padding-left:25px}.site-footer{max-width:774px;margin:0 auto;padding-left:0;padding-right:0}.title-inner{grid-template-columns:1fr 1.05fr;padding:25px 0 32px}.title-wordmark h1{font-size:65px;letter-spacing:5px}.title-wordmark p{font-size:12px;letter-spacing:6px;margin-bottom:23px}.title-reading{right:-30px;top:30px;font-size:7px}.title-copy h2{font-size:22px;letter-spacing:2px;margin-bottom:14px}.title-description{font-size:10px;letter-spacing:.5px;margin-bottom:22px}.title-eyebrow{font-size:6px;letter-spacing:1px;gap:6px;margin-bottom:17px}.title-eyebrow>span{width:18px}.title-start{min-width:190px;min-height:48px;font-size:11px}.title-buttons{gap:4px 15px}.title-settings{font-size:9px}.title-status{font-size:7px;line-height:1.9;max-width:250px}.art-note{font-size:6px}.art-note b{font-size:9px}.hero-creature>span b{font-size:7px;letter-spacing:.4px;margin-left:4px}.hero-creature>span{font-size:7px;letter-spacing:.4px;padding:2px 4px}.art-caption p{font-size:10px}.art-caption{gap:10px;bottom:-2%}.caption-line{width:20px}.title-footer{font-size:8px}.title-footer>span:last-child{font-size:9px}}
+@media(pointer:coarse){.touch-controls{display:flex}.world-controls .keyboard-help{display:none}.world-controls{justify-content:flex-end;padding:12px 0 0}.world-controls .interact-btn{display:none}.touch-controls{justify-content:space-between;align-items:center;gap:15px;padding:12px 10px 18px;user-select:none;-webkit-user-select:none;touch-action:none}.dpad{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px 44px;gap:0;width:132px;height:132px;filter:drop-shadow(0 4px 0 #b8c3a544)}.dpad button{border:1px solid #d1dcc3;background:#e7eede;color:#668351;display:grid;place-items:center;padding:0;touch-action:none;min-width:44px;min-height:44px;font-size:13px;border-radius:0}.dpad button:active,.dpad button.pressed{background:#cedeb9;color:#315923}.dpad-up{grid-area:1/2;border-bottom:0!important;border-radius:6px 6px 0 0!important}.dpad-left{grid-area:2/1;border-right:0!important;border-radius:6px 0 0 6px!important}.dpad-center{grid-area:2/2;display:grid;place-items:center;background:#e7eede;color:#bdcdb0;font-size:16px}.dpad-right{grid-area:2/3;border-left:0!important;border-radius:0 6px 6px 0!important}.dpad-down{grid-area:3/2;border-top:0!important;border-radius:0 0 6px 6px!important}.touch-commands{display:flex;gap:13px;align-items:center}.touch-commands button{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;height:62px;width:62px;border:1px solid #bfceb1;padding:0;box-shadow:0 4px 0 #acc09a40;touch-action:none}.touch-action{background:var(--green-dark);color:#fffcef;border-color:var(--green-dark)!important}.touch-action>span{font-size:17px;font-weight:500;line-height:1.3}.touch-commands small{font-size:8px;letter-spacing:.5px;line-height:1.4}.touch-menu{background:#e9efdf;color:#65804e;transform:translateY(15px)}.touch-menu svg{width:19px;height:19px;margin-bottom:2px}.touch-instruction{display:flex;flex-direction:column;align-items:center;gap:5px}.touch-instruction small{font-size:8px;letter-spacing:2px;color:#a5b298}.touch-instruction>span{font-family:var(--serif);font-size:10px;letter-spacing:1px;color:#92a27f}.battle-panel:not([hidden])~.touch-controls{display:none}}
+@media(max-width:600px){body{font-size:13px}.topbar{height:76px;padding:0 18px;gap:15px}.brand{gap:7px}.brand-mark{width:27px;height:35px}.brand-mark svg{width:27px;height:33px}.brand-copy strong{font-size:21px;letter-spacing:2px}.brand-copy small{font-size:6px;letter-spacing:1.4px;margin-top:4px}.location-info{gap:9px;padding-left:14px}.location-dot{width:5px;height:5px;box-shadow:0 0 0 4px #dbe6d7}#location-name{font-size:11px;letter-spacing:.2px}#location-subtitle{font-size:8px;letter-spacing:0;max-width:115px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top-actions{gap:5px}.top-actions .icon-btn{width:34px;min-width:34px;height:36px;border:0;padding:8px}.top-actions .icon-btn svg{width:17px;height:17px}#fullscreen-btn{display:none}.game-layout{padding:13px 15px 18px;gap:20px}.field-heading{height:24px;margin-bottom:8px}.field-heading .eyebrow{font-size:8px;letter-spacing:1.6px}.field-status{font-size:8px}.game-stage{border-width:4px;aspect-ratio:4/3}.world-label{left:10px;top:10px;font-size:9px;padding:5px 10px;letter-spacing:.5px}.world-hint{bottom:10px;font-size:8px;padding:5px 9px}.world-controls{padding:10px 0}.keyboard-help{gap:10px}.keyboard-help>span:nth-child(2){display:none}.keyboard-help i{font-size:8px}.interact-btn{font-size:10px;min-height:36px;padding:6px 10px}.field-caption{padding-top:11px;font-size:8px}.field-caption>span:last-child{display:none}.journal{gap:0 17px;padding-top:18px}.journal-heading{height:58px}.journal-heading .eyebrow{font-size:8px}.journal-heading h1{font-size:21px;letter-spacing:1.5px}.journal-icon{width:25px;height:25px}.section-kicker{gap:6px}.section-kicker h2{font-size:10px}.number-tag{font-size:8px}.section-note{font-size:7px;letter-spacing:1px}.party-list{gap:6px}.party-card{gap:7px;min-height:64px;padding:5px}.party-card>canvas,.party-card .creature-portrait{width:38px;height:38px}.party-meta strong,.party-meta .party-name{font-size:9px}.party-meta small{font-size:8px}.party-stats{font-size:8px}.party-card .type-badge{font-size:7px;padding:0 3px}.quest-section{padding-top:8px}#objective-text{font-size:10px;line-height:1.9;margin:9px 0 13px}.seal-list{gap:7px}.seal{width:29px;height:29px;font-size:12px}.seal svg{width:15px;height:15px}.bag-summary{padding:10px 0;font-size:8px;gap:3px;flex-wrap:wrap}.bag-summary strong{font-size:11px}.journal-nav{gap:0 8px;padding-top:5px}.journal-nav button{font-size:9px;gap:4px;padding:8px 0;min-height:42px}.journal-nav button svg{width:12px;height:12px}.nav-arrow{font-size:11px}.journal-footnote{font-size:7px}.site-footer{margin:0 15px;padding:15px 0 22px;font-size:7px;letter-spacing:1px}.site-footer>span:last-child{font-size:6px;letter-spacing:.7px}.touch-controls{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 6px 16px;user-select:none;-webkit-user-select:none;touch-action:none}.world-controls{display:none}.dpad{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px 44px;gap:0;width:132px;height:132px;filter:drop-shadow(0 4px 0 #b8c3a544)}.dpad button{border:1px solid #d1dcc3;background:#e7eede;color:#668351;display:grid;place-items:center;padding:0;touch-action:none;min-width:44px;min-height:44px;font-size:12px;border-radius:0}.dpad button:active,.dpad button.pressed{background:#cedeb9;color:#315923}.dpad-up{grid-area:1/2;border-bottom:0!important;border-radius:6px 6px 0 0!important}.dpad-left{grid-area:2/1;border-right:0!important;border-radius:6px 0 0 6px!important}.dpad-center{grid-area:2/2;display:grid;place-items:center;background:#e7eede;color:#bdcdb0;font-size:16px}.dpad-right{grid-area:2/3;border-left:0!important;border-radius:0 6px 6px 0!important}.dpad-down{grid-area:3/2;border-top:0!important;border-radius:0 0 6px 6px!important}.touch-commands{display:flex;gap:11px;align-items:center}.touch-commands button{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:50%;height:60px;width:60px;border:1px solid #bfceb1;padding:0;box-shadow:0 4px 0 #acc09a40;touch-action:none}.touch-action{background:var(--green-dark);color:#fffcef;border-color:var(--green-dark)!important}.touch-action>span{font-size:17px;font-weight:500;line-height:1.3}.touch-commands small{font-size:8px;letter-spacing:.5px;line-height:1.4}.touch-menu{background:#e9efdf;color:#65804e;transform:translateY(15px)}.touch-menu svg{width:19px;height:19px;margin-bottom:2px}.touch-instruction{display:none}.battle-panel:not([hidden])~.touch-controls{display:none}.title-screen{padding:0 23px}.title-topbar{height:70px;min-height:70px}.title-edition{font-size:8px;letter-spacing:1.3px}.title-edition>span{margin:0 5px}.title-platform{font-size:7px;letter-spacing:1px}.title-brand .brand-mark{width:24px}.title-brand .brand-mark svg{width:23px;height:29px}.title-inner{display:flex;flex-direction:column;gap:0;padding:27px 0 26px;flex:initial}.title-copy{width:100%;padding-left:4px}.title-eyebrow{font-size:6px;letter-spacing:1.2px;margin-bottom:15px}.title-wordmark h1{font-size:70px;letter-spacing:6px;margin-bottom:8px}.title-wordmark p{font-size:12px;letter-spacing:6.5px;margin-bottom:20px}.title-wordmark-star{font-size:19px;right:-18px;top:0}.title-reading{top:33px;right:-28px;font-size:6px;letter-spacing:2.6px}.title-copy h2{font-size:23px;letter-spacing:2.5px;line-height:1.7;margin:0 0 12px}.title-description{font-size:10px;line-height:1.9;letter-spacing:.5px;margin:0 0 20px}.title-buttons{max-width:100%;gap:8px 17px}.title-start{min-width:200px;min-height:48px;font-size:11px;letter-spacing:1px;padding:12px 17px}.title-settings{font-size:9px}.title-status{font-size:6.5px;max-width:100%;margin-top:13px;letter-spacing:.6px}.title-art{width:91%;max-width:370px;margin:-4px -10px -15px auto;aspect-ratio:1.15;align-self:flex-end}.title-island{top:1%;height:96%}.orbit-one{inset:6% 1% 7% 1%}.orbit-two{inset:15% 4% 0% -2%}.hero-komori{top:23%;width:39%}.hero-shizuku{top:42%}.hero-hibana{top:40%}.art-note-one{top:10%;left:7%}.art-note-two{top:10%}.art-note{font-size:6px}.art-note b{font-size:8px}.hero-creature>span{font-size:6px}.hero-creature>span b{font-size:7px}.spark-one{top:31%;font-size:18px}.spark-two{top:23%;font-size:26px}.spark-three{font-size:12px;bottom:8%}.art-caption{left:-4%;bottom:1%;gap:8px}.art-caption p{font-size:10px;letter-spacing:1px}.caption-line{width:15px}.title-footer{padding:15px 0 18px;font-size:6px;letter-spacing:.8px;margin-top:auto}.title-footer>span:last-child{font-size:7px;letter-spacing:.8px}.title-footer i{margin-right:4px}.combatant{width:145px;padding:7px 10px 6px;border-radius:4px}.enemy-card{left:10px;top:10px}.ally-card{right:10px;bottom:12px}.combatant-top strong{font-size:11px}.combatant-top>span{font-size:8px}.combatant-type{margin:4px 0 4px}.combatant .type-badge{font-size:7px;padding:1px 4px}.hp-label{font-size:5px;letter-spacing:.7px}.combatant .hp-track{height:5px}.hp-text{font-size:7px;margin-top:2px}.xp-track{height:2px;margin-top:2px}.battle-panel{margin:0 3px 13px}.battle-log-wrap{min-height:60px;padding:10px 12px;gap:8px}.battle-log-mark{font-size:11px}#battle-log{font-size:10px;line-height:1.75;max-height:96px}.battle-actions{padding:10px;gap:6px}.battle-actions>.btn,.battle-actions>button:not(.move-btn){font-size:10px;min-height:42px;padding:8px;flex-basis:75px}.choice-grid{gap:6px}.move-btn{padding:8px 10px;min-height:55px}.move-btn strong{font-size:11px}.move-meta{font-size:8px;gap:5px}.move-btn .type-badge{font-size:7px}dialog{width:calc(100vw - 24px);max-height:calc(100dvh - 30px);border-radius:7px}.modal-heading{padding:18px 18px 14px}.modal-heading h2{font-size:21px}.modal-heading .eyebrow{font-size:7px}.modal-heading .icon-btn{height:34px;min-width:34px;width:34px}.modal-heading .icon-btn svg{width:17px;height:17px}#modal-content{padding:18px 18px 21px}.dialogue-text{font-size:12px;letter-spacing:.3px}.notice{font-size:10px;padding:10px 12px}.modal-actions{margin-top:18px;padding-top:15px;gap:8px}.modal-actions .btn{font-size:11px;padding:10px 14px}.starter-grid{gap:7px;margin:15px 0}.starter-card{padding:9px 5px 12px}.starter-card.selected{padding:8px 4px 11px}.starter-card strong{font-size:11px;letter-spacing:.2px}.starter-card .type-badge{font-size:8px}.starter-card p,.starter-card small{font-size:8px;line-height:1.65!important;letter-spacing:0;margin:5px 1px 0!important}.creature-card{gap:13px;padding:12px}.creature-card .creature-portrait,.creature-card>canvas{width:95px;height:95px}.creature-card h3{font-size:18px}.creature-card p{font-size:10px}.stat-grid{gap:6px}.stat-cell{font-size:9px;padding:7px 4px}.stat-cell strong{font-size:17px}.stat-cell span{font-size:8px}.dex-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.dex-card{padding:8px 5px}.dex-card strong{font-size:10px}.dex-card small{font-size:8px}.menu-grid{gap:8px}.menu-grid>.btn{font-size:11px;padding:12px;min-height:54px}.item-row{gap:8px;padding:13px 0}.item-info strong{font-size:12px}.item-info p,.item-info small{font-size:10px}.item-row>.btn{font-size:10px;min-height:40px;padding:8px 10px}.setting-row{font-size:11px;gap:10px}.setting-row p,.setting-row small{font-size:9px}.setting-row input[type=range]{width:100px}.map-card{padding:12px;gap:10px}.map-card strong{font-size:12px}.map-card p,.map-card small{font-size:9px}.switch-list .party-card{padding:8px 10px}.switch-list .party-card>canvas{width:52px;height:52px}.toast{bottom:max(22px,env(safe-area-inset-bottom));font-size:11px;padding:11px 18px}.help-keys{gap:10px;font-size:10px}}
+@media(max-width:375px){.topbar{padding:0 13px;gap:10px}.location-info{padding-left:11px;gap:8px}#location-name{font-size:10px}#location-subtitle{max-width:94px}.top-actions{gap:0}.top-actions .icon-btn{min-width:31px;width:31px}.game-layout{padding-left:12px;padding-right:12px}.title-screen{padding:0 20px}.title-edition{font-size:7px;letter-spacing:1px}.title-wordmark h1{font-size:65px}.title-start{min-width:188px}.title-buttons{gap:7px 13px}.title-status{font-size:6px;letter-spacing:.4px}.journal{gap:0 14px}.seal-list{gap:5px}.seal{width:27px;height:27px}.journal-nav{grid-template-columns:1fr}.journal-nav button{padding:7px 0;min-height:44px}.party-card{gap:4px}.party-card>canvas,.party-card .creature-portrait{width:33px;height:33px}.party-meta strong,.party-meta .party-name{font-size:8px}.starter-card strong{font-size:10px}.combatant{width:135px}.combatant-top strong{font-size:10px}}
+@media(max-height:650px) and (min-width:601px){.title-topbar{min-height:65px;height:65px}.title-inner{padding:20px 0;align-items:center;max-width:1060px;grid-template-columns:1fr 1fr}.title-wordmark h1{font-size:59px}.title-wordmark p{margin-bottom:16px;font-size:11px}.title-copy h2{font-size:21px;margin-bottom:10px}.title-description{font-size:10px;line-height:1.8;margin-bottom:15px}.title-eyebrow{margin-bottom:12px}.title-status{margin-top:10px}.title-art{max-width:440px;aspect-ratio:1.14}.title-footer{padding:12px 0;font-size:7px}.title-reading{top:25px}.title-start{min-height:44px}.title-settings{padding:10px 0}}
+@media(max-height:520px) and (orientation:landscape){.topbar{height:60px}.game-layout{display:block;padding-top:10px;max-width:1000px}.field-heading{display:none}.game-stage{max-width:630px;width:calc(100% - 155px);aspect-ratio:8/5}.touch-controls{position:fixed;right:8px;top:78px;bottom:10px;width:145px;flex-direction:column;justify-content:center;gap:14px;padding:0;z-index:5}.dpad{grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px 44px;width:132px;height:132px}.dpad button{min-width:44px;min-height:44px}.touch-commands{gap:9px}.touch-commands button{width:52px;height:52px}.touch-instruction{display:none}.journal{margin-top:15px;max-width:630px;width:calc(100% - 155px)}.field-caption{display:none}.site-footer{margin-top:20px}.battle-panel{max-width:624px;width:calc(100% - 161px)}.battle-actions{padding:8px}.title-screen{padding:0 25px}.title-topbar{height:55px;min-height:55px}.title-inner{display:grid;grid-template-columns:1fr 1fr;padding:18px 0;gap:15px}.title-copy{padding-left:0}.title-eyebrow{font-size:6px;margin-bottom:10px}.title-wordmark h1{font-size:49px;letter-spacing:4px}.title-wordmark p{font-size:9px;margin-bottom:10px;letter-spacing:5px}.title-reading{top:22px;right:-23px;font-size:5px}.title-copy h2{font-size:18px;line-height:1.5;margin-bottom:8px}.title-description{font-size:8px;line-height:1.6;margin-bottom:10px}.title-art{width:100%;margin:0;aspect-ratio:1.12}.title-start{font-size:9px;min-width:160px;min-height:40px;padding:9px 12px}.title-settings{font-size:8px;min-height:36px;padding:8px 0}.title-status{font-size:6px;margin-top:8px}.title-footer{padding:9px 0;font-size:6px}.title-footer>span:last-child{font-size:7px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@supports(padding:max(0px)){.title-screen{padding-left:max(23px,env(safe-area-inset-left),calc((100vw - 1280px)/2));padding-right:max(23px,env(safe-area-inset-right),calc((100vw - 1280px)/2))}.title-footer{padding-bottom:max(18px,env(safe-area-inset-bottom))}.site-footer{padding-bottom:max(22px,env(safe-area-inset-bottom))}}
+/* Runtime portraits keep their backing resolution without exceeding a card. */
+.creature-portrait{display:block;object-fit:contain;image-rendering:pixelated}
+.starter-card .creature-portrait,.dex-card .creature-portrait{max-width:100%;height:auto!important}
+.creature-card .creature-portrait{width:130px!important;height:130px!important;max-width:40%;object-fit:contain}
+.creature-card>div{min-width:0;flex:1}
+.party-card .creature-portrait{width:48px!important;height:48px!important}
+.switch-list .party-card .creature-portrait{width:60px!important;height:60px!important}
+.starter-name{display:block;font-size:14px;font-weight:650;letter-spacing:.5px;margin:4px 0 6px}
+.starter-pick{display:block;font-size:9px;color:#628750;letter-spacing:.3px;margin-top:auto;padding-top:12px}
+.lead-mark{display:inline-block!important;font-size:7px!important;letter-spacing:0;margin-left:6px;padding:1px 3px;border-radius:2px;color:#8b713d!important;background:#eee4c4;font-weight:500;vertical-align:middle}
+.party-card.leader{border-color:#bccb9f;background:#f0f5e7}
+.guardian-preview{display:flex;gap:20px;align-items:center;padding:16px;border:1px solid #dce5ce;background:#f3f6e9;border-radius:5px}
+.guardian-preview>.creature-portrait{width:128px!important;height:128px!important;flex-shrink:0}
+.guardian-preview>div{min-width:0;flex:1}
+.guardian-preview strong{font-family:var(--serif);font-size:20px}
+.guardian-preview p{font-size:11px;margin:6px 0 0!important}
+.dex-number{align-self:flex-start;font-size:8px;color:#95a080;margin:0 0 3px}
+.unknown-creature{height:92px;display:grid;place-items:center;font-size:37px;font-family:var(--serif);font-weight:400;color:#bac5aa;width:100%}
+.dex-card.undiscovered{opacity:.6;background:#eef1e6;filter:grayscale(.3)}
+.type-badge{background:color-mix(in srgb,var(--type-color,#91b571) 28%,#fffdf7);border:1px solid color-mix(in srgb,var(--type-color,#91b571) 46%,#fffdf7);color:#294132}
+.combatant-type>.type-badge:has(.type-badge){padding:0;border:0;background:transparent}
+.move-btn{border-left:3px solid var(--type-color,#a4bb8f)}
+.reduce-motion *,.reduce-motion *::before,.reduce-motion *::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+@media(max-width:600px){.starter-name{font-size:11px;letter-spacing:.2px}.starter-pick{font-size:7px;padding-top:9px;letter-spacing:0}.creature-card .creature-portrait{width:95px!important;height:95px!important;max-width:36%}.party-card .creature-portrait{width:38px!important;height:38px!important}.switch-list .party-card .creature-portrait{width:52px!important;height:52px!important}.guardian-preview{gap:13px;padding:12px}.guardian-preview>.creature-portrait{width:90px!important;height:90px!important}.guardian-preview strong{font-size:17px}.guardian-preview p{font-size:10px}.dex-number{font-size:7px}.unknown-creature{height:77px;font-size:30px}.lead-mark{font-size:6px!important;margin-left:4px}}
+@media(max-width:375px){.party-card .creature-portrait{width:33px!important;height:33px!important}.starter-name{font-size:10px}.starter-pick{font-size:6.5px}}
+/* Final integration details. */
+.title-screen{overflow-x:hidden}.title-copy,.title-art{min-width:0}.sound-label{font-size:8px;margin-left:3px}.seal,.seal.earned{width:38px;height:auto;display:flex;flex-direction:column;gap:5px;border:0;background:none;box-shadow:none;border-radius:0}.seal>span{display:grid;place-items:center;width:36px;height:36px;border:1px dashed #c6ceba;border-radius:50%;background:#ecefdf80}.seal small{font-size:9px;white-space:nowrap;line-height:1.3}.seal.earned>span{border-style:solid;border-color:#bdab6e;background:#f2e7bc;box-shadow:inset 0 0 0 3px #f7f2d7}.hp-fill.low{background:#c76d56!important}#mini-map{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:5px;image-rendering:pixelated}.map-legend{font-size:11px;line-height:1.9;color:var(--muted)}.dex-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:15px}.dex-header select{border:1px solid var(--line);padding:8px;background:var(--paper);border-radius:4px;color:var(--ink)}.item-symbol{font-size:24px;width:35px;text-align:center;color:var(--green-dark)}.element-guide{display:flex;flex-wrap:wrap;gap:3px 16px}.help-section h3{margin-top:24px}.help-section p{line-height:1.95}.battle-impact{animation:impact .2s steps(3) 2}@keyframes impact{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@media(max-width:600px){.seal,.seal.earned{width:29px}.seal>span{width:27px;height:27px}.seal small{font-size:7px}.map-legend{font-size:9px}.item-symbol{width:24px;font-size:20px}.help-section p{font-size:12px}.battle-actions .move-btn{flex:1 0 42%}.sound-label{font-size:6px;margin-left:1px}}
+@media(max-width:600px){.starter-card p{font-size:10px;line-height:1.65!important}.starter-card .starter-pick{font-size:9px}.battle-actions>.btn,.battle-actions>button:not(.move-btn){min-height:44px}}
+
+</style>
+  
+  
+  
+  
+</head>
+<body>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 4 6 8H3v8h3l5 4V4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5C8 2 4 3 2 4v15c3-1 6-1 10 1 4-2 7-2 10-1V4c-2-1-6-2-10 1Zm0 0v15"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 7h14l2 14H3L5 7Zm3 0V5a4 4 0 0 1 8 0v2m-9 7h10"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="m2 5 6-3 8 3 6-3v17l-6 3-8-3-6 3V5Zm6-3v17m8-14v17"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M3 3h15l3 3v15H3V3Zm4 0v6h10V3M7 21v-8h10v8"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-lantern" viewBox="0 0 24 24"><path d="M12 2v3M7 6h10l3 6-4 7H8l-4-7 3-6Zm0 0 5-3 5 3m-5 0v13m-7-7h14m-7 7v3"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z"/></symbol>
+  </svg>
+
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="灯獣紀 タイトルへ">
+        <span class="brand-mark"><svg><use href="#i-lantern"/></svg></span>
+        <span class="brand-copy"><strong>灯獣紀</strong><small>LUMINA TRAIL</small></span>
+      </a>
+      <div class="location-info"><span class="location-dot"></span><div><span id="location-name">風待ちの里</span><span id="location-subtitle">はじまりの灯り</span></div></div>
+      <nav class="top-actions" aria-label="ゲーム設定">
+        <button id="sound-btn" class="icon-btn" type="button" aria-label="サウンドを切り替え" title="サウンド"><svg><use href="#i-sound"/></svg></button>
+        <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="全画面表示" title="全画面"><svg><use href="#i-expand"/></svg></button>
+        <button id="menu-btn" class="icon-btn" type="button" aria-label="メニューを開く" title="メニュー"><svg><use href="#i-menu"/></svg></button>
+      </nav>
+    </header>
+
+    <main class="game-layout">
+      <section class="play-column" aria-label="冒険フィールド">
+        <div class="field-heading"><span class="eyebrow"><span class="tiny-spark">✦</span> FIELD NOTES</span><span class="field-status"><span></span> 冒険の途中</span></div>
+        <div class="game-stage">
+          <canvas id="game-canvas" width="768" height="480" tabindex="0" aria-label="冒険フィールド。矢印またはWASDで移動、スペースまたはEで調べる。">このゲームを遊ぶにはCanvasに対応したブラウザーが必要です。</canvas>
+          <div id="world-label" class="world-label">風待ちの里</div>
+          <div id="world-hint" class="world-hint">旅は、小さな出会いから。</div>
+          <div id="battle-ui" class="battle-ui" hidden>
+            <div class="combatant enemy-card">
+              <div class="combatant-top"><strong id="enemy-name">灯獣</strong><span id="enemy-level">Lv. 5</span></div>
+              <div class="combatant-type"><span id="enemy-type" class="type-badge">葉</span><span class="hp-label">VITALITY</span></div>
+              <div class="hp-track"><span id="enemy-hp" class="hp-fill"></span></div>
+              <span id="enemy-hp-text" class="hp-text">— / —</span>
+            </div>
+            <div class="combatant ally-card">
+              <div class="combatant-top"><strong id="ally-name">仲間の灯獣</strong><span id="ally-level">Lv. 5</span></div>
+              <div class="combatant-type"><span id="ally-type" class="type-badge">葉</span><span class="hp-label">VITALITY</span></div>
+              <div class="hp-track"><span id="ally-hp" class="hp-fill"></span></div>
+              <span id="ally-hp-text" class="hp-text">— / —</span>
+              <div class="xp-track"><span id="ally-xp"></span></div>
+            </div>
+          </div>
+          <span class="stage-corner tl"></span><span class="stage-corner tr"></span><span class="stage-corner bl"></span><span class="stage-corner br"></span>
+        </div>
+
+        <section id="battle-panel" class="battle-panel" aria-label="戦闘コマンド" hidden>
+          <div class="battle-log-wrap"><span class="battle-log-mark">✦</span><div id="battle-log" role="log" aria-live="polite" aria-relevant="additions text">どうする？</div></div>
+          <div id="battle-actions" class="battle-actions"></div>
+        </section>
+
+        <div id="world-controls" class="world-controls">
+          <div class="keyboard-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><i>移動</i></span><span><kbd>E</kbd><i>調べる・話す</i></span><span><kbd>Esc</kbd><i>メニュー</i></span></div>
+          <button id="interact-btn" type="button" class="btn btn-small interact-btn">調べる・話す <span>↵</span></button>
+        </div>
+
+        <div class="touch-controls" aria-label="タッチ操作">
+          <div class="dpad" aria-label="移動ボタン">
+            <button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><span>▲</span></button>
+            <button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><span>◀</span></button>
+            <span class="dpad-center" aria-hidden="true">✦</span>
+            <button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><span>▶</span></button>
+            <button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><span>▼</span></button>
+          </div>
+          <div class="touch-instruction"><small>EXPLORE</small><span>灯りの導くままに</span></div>
+          <div class="touch-commands"><button id="touch-action" type="button" class="touch-action"><span>A</span><small>調べる</small></button><button id="touch-menu" type="button" class="touch-menu"><svg><use href="#i-menu"/></svg><small>メニュー</small></button></div>
+        </div>
+
+        <div class="field-caption"><span><svg><use href="#i-lantern"/></svg> この世界に、あなたの足あとを。</span><span>ORIGINAL ADVENTURE · VER. 1.0</span></div>
+      </section>
+
+      <aside class="journal" aria-label="冒険の手帳">
+        <div class="journal-heading"><div><span class="eyebrow">YOUR JOURNEY</span><h1>冒険の手帳</h1></div><svg class="journal-icon"><use href="#i-book"/></svg></div>
+        <section class="quest-section"><div class="section-kicker"><span class="number-tag">01</span><h2>次の目的</h2></div><p id="objective-text">最初の灯獣と出会い、旅に出よう。</p><div id="seal-list" class="seal-list" aria-label="集めた灯印"></div></section>
+        <section class="party-section"><div class="section-kicker"><span class="number-tag">02</span><h2>旅の仲間</h2><span class="section-note">PARTY</span></div><div id="party-list" class="party-list"></div></section>
+        <div id="bag-summary" class="bag-summary"><span>旅の支度</span><span>—</span></div>
+        <nav class="journal-nav" aria-label="冒険メニュー">
+          <button id="journal-btn" type="button"><svg><use href="#i-book"/></svg><span>灯獣図鑑</span><span class="nav-arrow">↗</span></button>
+          <button id="bag-btn" type="button"><svg><use href="#i-bag"/></svg><span>道具袋</span><span class="nav-arrow">↗</span></button>
+          <button id="map-btn" type="button"><svg><use href="#i-map"/></svg><span>旅の地図</span><span class="nav-arrow">↗</span></button>
+          <button id="save-btn" type="button"><svg><use href="#i-save"/></svg><span>冒険を記録</span><span class="nav-arrow">↗</span></button>
+        </nav>
+        <p class="journal-footnote"><span class="saved-dot"></span> この端末のブラウザーに記録されます</p>
+      </aside>
+    </main>
+    <footer class="site-footer"><span>灯獣紀 <i>—</i> LUMINA TRAIL</span><span>A LITTLE LIGHT. A BIG ADVENTURE.</span></footer>
+  </div>
+
+  <section id="title-screen" class="title-screen" aria-label="灯獣紀 タイトル画面">
+    <header class="title-topbar"><a class="brand title-brand" href="index.html"><span class="brand-mark"><svg><use href="#i-lantern"/></svg></span><span class="title-edition">LUMINA TRAIL <span>—</span> ORIGINAL RPG</span></a><span class="title-platform">PC / MOBILE</span></header>
+    <div class="title-inner">
+      <div class="title-copy">
+        <p class="title-eyebrow"><span></span> A CREATURE-COLLECTING ADVENTURE</p>
+        <div class="title-wordmark"><h1>灯獣紀<span class="title-wordmark-star">✦</span></h1><span class="title-reading">ト ウ ジ ュ ウ キ</span><p>LUMINA TRAIL</p></div>
+        <h2>灯りを集めて、<br>まだ見ぬ朝へ。</h2>
+        <p class="title-description">小さな相棒と、海を渡る風に乗って。<br>出会い、共鳴し、育んでゆく。<br>あなただけの冒険を、この島で。</p>
+        <div class="title-buttons"><button id="continue-btn" type="button" class="btn btn-primary title-start" hidden>つづきから <svg><use href="#i-arrow"/></svg></button><button id="start-btn" type="button" class="btn btn-primary title-start">旅をはじめる <svg><use href="#i-arrow"/></svg></button><button id="title-settings-btn" type="button" class="title-settings">遊び方・設定 <span>＋</span></button></div>
+        <p id="title-status" class="title-status">ダウンロード不要 · 自動セーブ · タッチ操作対応</p>
+      </div>
+      <div class="title-art" aria-hidden="true">
+        <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+        <span class="art-note art-note-one">FIELD GUIDE<br><b>VOL. 01</b></span><span class="art-note art-note-two">THE ISLAND<br>OF LITTLE LIGHTS</span>
+        <span class="art-spark spark-one">✦</span><span class="art-spark spark-two">✧</span><span class="art-spark spark-three">✦</span>
+        <svg class="title-island" viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="island-bottom" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#457567"/><stop offset="1" stop-color="#204a46"/></linearGradient><linearGradient id="lantern-glow" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffedb5"/><stop offset="1" stop-color="#d8a557"/></linearGradient></defs>
+          <ellipse cx="305" cy="406" rx="218" ry="39" fill="#294d4412"/>
+          <path d="m64 318 239-91 236 91-39 61-195 59-197-65Z" fill="url(#island-bottom)"/>
+          <path d="m109 367 36 53 30-5 20 30 41-12 37 36 41-40 28 15 55-26 40 7 49-50-178 40Z" fill="#2c5c50"/>
+          <path d="m64 318 239-91 236 91-234 95Z" fill="#9cbe83"/>
+          <path d="m75 318 229-83 223 84-224 82Z" fill="#b5cc97"/>
+          <path d="m182 354 21-19 81-22 38-22 13-32 32 12-26 37-58 26-48 13-29 19Z" fill="#e6d9ac"/>
+          <path d="m86 326 59 19 51-10 13-19-30-8-31 3-24-11-32 11Z" fill="#669d92"/>
+          <path d="m94 322 52 17 44-7 12-14-29-5-26 3-23-10-29 9Z" fill="#83bcb1"/>
+          <path d="m109 321 29 9m16-1 23-5m-49-10 8 3" stroke="#d7e9ca" stroke-width="3" fill="none"/>
+          <path d="m410 334 28-10 21 8-24 10Zm-59 41 16-7 16 6-17 7ZM214 291l17-6 17 6-18 7Z" fill="#7fa974"/>
+          <path d="M115 302v-46m-13 22 13-10 14 5" stroke="#5b7a50" stroke-width="7"/>
+          <path d="m82 259 20-25 16-2 20 17-2 22-25 9-26-7Z" fill="#6e9d69"/>
+          <path d="m82 259 20-25 16-2 11 9-25 8-11 19-8 5Z" fill="#88b079"/>
+          <path d="M454 297v-50m-14 23 14-11 18 5" stroke="#5b7a50" stroke-width="7"/>
+          <path d="m419 252 14-24 26-10 25 22-3 24-26 14-30-6Z" fill="#5b9068"/>
+          <path d="m419 252 14-24 26-10 13 11-25 5-16 18-6 20Z" fill="#7eab77"/>
+          <path d="M477 324v-25" stroke="#5b7a50" stroke-width="5"/>
+          <path d="m457 295 9-19 16-4 15 15-2 17-18 7-18-5Z" fill="#85ad73"/>
+          <path d="m266 285 39-14 38 14-38 15Z" fill="#648b67"/>
+          <path d="m277 285 29-10 26 10-26 10Z" fill="#e7dbb5"/>
+          <path d="M291 277v-85h30v85l-15 6Z" fill="#d9cfac"/>
+          <path d="M306 193v90l15-6v-85Z" fill="#b9bc96"/>
+          <path d="m281 193 25-10 25 10-25 10Z" fill="#e9dfbd"/>
+          <path d="m281 193 25 10 25-10v8l-25 10-25-10Z" fill="#9faca0"/>
+          <path d="m284 151 22-12 22 12-4 37-18 10-18-10Z" fill="url(#lantern-glow)" stroke="#527566" stroke-width="4"/>
+          <path d="m284 151 22 11 22-11m-22 11v36m-24-47 24-16 24 16m-24-16v-16" fill="none" stroke="#527566" stroke-width="4"/>
+          <path d="m302 174 5-11 5 11-5 11Z" fill="#fff8d9"/>
+          <path d="m242 148 7-7m112 11-8-6m-47-48v-9m-47 24-5-7m88 9 6-6" stroke="#c2ac6e" stroke-width="3"/>
+          <g fill="#f2df9d"><path d="m387 312 4-5 5 5-5 5Z"/><path d="m225 376 3-4 4 4-4 4Z"/><path d="m136 288 4-5 5 5-5 5Z"/><path d="m394 272 3-4 4 4-4 4Z"/></g>
+          <g fill="#e4a887"><path d="M165 355h5v5h-5zM349 350h5v5h-5zM412 302h5v5h-5zM215 306h5v5h-5z"/></g>
+          <g stroke="#6e9f69" stroke-width="3" fill="none"><path d="m220 352 1-8 5-3m-5 4-5-3m173-19 1-9 5-2m-5 5-5-3m-217-16 1-8 5-2m-5 5-5-3"/></g>
+        </svg>
+        <div class="hero-creature hero-komori"><canvas class="title-creature" data-creature="komori" width="240" height="240"></canvas><span>01 <b>葉の灯獣</b></span></div>
+        <div class="hero-creature hero-shizuku"><canvas class="title-creature" data-creature="shizuku" width="200" height="200"></canvas><span>02 <b>潮の灯獣</b></span></div>
+        <div class="hero-creature hero-hibana"><canvas class="title-creature" data-creature="hibana" width="200" height="200"></canvas><span>03 <b>灯の灯獣</b></span></div>
+        <div class="art-caption"><span class="caption-line"></span><p>ひとつの出会いが、<br><b>世界を灯す。</b></p></div>
+      </div>
+    </div>
+    <footer class="title-footer"><span><i>✦</i> EXPLORE · RESONATE · GROW</span><span>あなたと、灯獣たちの物語。</span></footer>
+  </section>
+
+  <dialog id="modal" aria-labelledby="modal-title">
+    <div class="modal-heading"><div><span class="eyebrow">LUMINA TRAIL</span><h2 id="modal-title">冒険の手帳</h2></div><button id="modal-close" type="button" class="icon-btn" aria-label="閉じる"><svg><use href="#i-close"/></svg></button></div>
+    <div id="modal-content"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <input id="import-input" type="file" accept=".json,application/json" hidden>
+  <noscript><div class="noscript-notice">灯獣紀を遊ぶには、ブラウザーのJavaScriptを有効にしてください。</div></noscript>
+<script>
+/* data.js */
+/* 灯獣紀 / LUMINA TRAIL — Original world and game data. No external assets. */
+(() => {
+  'use strict';
+  const LT = globalThis.LT = globalThis.LT || {};
+  const elements = {
+    leaf: { name: '芽', color: '#79b88f', strongAgainst: 'tide', weakAgainst: 'ember' },
+    tide: { name: '潮', color: '#68b8d3', strongAgainst: 'ember', weakAgainst: 'leaf' },
+    ember: { name: '灯', color: '#ed9674', strongAgainst: 'leaf', weakAgainst: 'tide' },
+    wind: { name: '風', color: '#b0bdda', strongAgainst: 'crystal', weakAgainst: 'crystal' },
+    crystal: { name: '晶', color: '#c6a2da', strongAgainst: 'wind', weakAgainst: 'wind' }
+  };
+  const moves = {};
+  function move(id, name, element, power, kind, description, accuracy = 100) {
+    moves[id] = { id, name, element, power, accuracy, kind, description };
+  }
+  move('sprout', '若葉のしらべ', 'leaf', 24, 'attack', '葉の音を束ねて放つ。');
+  move('vine', '翠の輪舞', 'leaf', 34, 'attack', '大きな葉の輪で相手を包む。', 93);
+  move('bloom', '芽吹きの息', 'leaf', 30, 'heal', '自分の最大体力の30%を回復。連続使用不可。');
+  move('wave', 'しずくの矢', 'tide', 24, 'attack', '澄んだ水滴を勢いよく飛ばす。');
+  move('surge', '潮のカーテン', 'tide', 35, 'attack', '寄せる潮の力を借りる。', 92);
+  move('mist', '霧のまもり', 'tide', 0, 'guard', '次に受けるダメージを半分にする。');
+  move('spark', '灯火のたね', 'ember', 25, 'attack', '小さな灯を風に乗せる。');
+  move('blaze', '暁のつむじ', 'ember', 36, 'attack', 'あたたかな火の渦をつくる。', 92);
+  move('warmth', 'ぬくもり', 'ember', 30, 'heal', '自分の最大体力の30%を回復。連続使用不可。');
+  move('gust', '風のこだま', 'wind', 23, 'attack', '見えない風の波を送る。');
+  move('storm', '空渡り', 'wind', 34, 'attack', '上空から素早く舞い降りる。', 94);
+  move('shelter', '羽根のまもり', 'wind', 0, 'guard', '次に受けるダメージを半分にする。');
+  move('glint', 'きらめく欠片', 'crystal', 25, 'attack', '結晶の光を反射させる。');
+  move('prism', '星環のひびき', 'crystal', 37, 'attack', '幾重もの光が響き合う。', 90);
+  move('shell', '結晶のまもり', 'crystal', 0, 'guard', '次に受けるダメージを半分にする。');
+  move('nudge', '小さなとっしん', null, 21, 'attack', '属性に左右されない、確実な一撃。');
+  const species = {};
+  function beast(id, name, element, shape, hp, atk, def, speed, moveIds, description, evolution, evolved = false) {
+    species[id] = { id, name, element, color: elements[element].color, shape, description,
+      base: { hp, atk, def, speed }, moves: moveIds, evolved };
+    if (evolution) { species[id].evolvesTo = evolution; species[id].evolveLevel = 8; }
+  }
+  beast('komori', 'コモリ', 'leaf', 'sprig', 25, 12, 12, 12, ['sprout','nudge','bloom'], '耳に若葉を宿す、小さな森の案内役。心を許すと芽がふわりと開く。', 'komorion');
+  beast('komorion', 'コモリオン', 'leaf', 'stag', 39, 20, 18, 18, ['vine','nudge','bloom'], '枝角に旅人の願いを結ぶ、深緑の灯獣。歩いた跡には白い花が咲く。', null, true);
+  beast('shizuku', 'シズク', 'tide', 'otter', 28, 12, 13, 10, ['wave','nudge','mist'], '胸に透明なしずくを抱く、水辺の灯獣。流れる水の歌を覚えている。', 'shizurua');
+  beast('shizurua', 'シズルア', 'tide', 'otter', 42, 19, 22, 15, ['surge','wave','mist'], '月光を織り込んだ尾を持つ。荒れる水面をひと撫でするだけで静める。', null, true);
+  beast('hibana', 'ヒバナ', 'ember', 'fox', 24, 15, 10, 13, ['spark','nudge','warmth'], '尾の先で小さな灯を守る。迷子の旅人を、夜明けまでそっと導く。', 'akebino');
+  beast('akebino', 'アケビノ', 'ember', 'fox', 37, 25, 16, 20, ['blaze','spark','warmth'], '夜明けの色に染まる三つの尾。風が吹くたび、鈴のような音が鳴る。', null, true);
+  beast('fuwari', 'フワリ', 'wind', 'owl', 22, 12, 10, 16, ['gust','nudge','shelter'], '綿雲の羽で音もなく飛ぶ。遠い場所の匂いを、羽根に集めている。', 'sorahane');
+  beast('sorahane', 'ソラハネ', 'wind', 'owl', 35, 21, 16, 25, ['storm','gust','shelter'], '風の地図を読む空の旅人。翼に散る光が、嵐の道を教えてくれる。', null, true);
+  beast('chirari', 'チラリ', 'ember', 'lantern', 21, 14, 10, 14, ['spark','gust','warmth'], '灯籠のような羽を持つ夜の住人。花の蜜を小さな光に変える。', 'tomoriga');
+  beast('tomoriga', 'トモリガ', 'ember', 'lantern', 33, 24, 16, 23, ['blaze','storm','warmth'], '四枚の灯籠羽が、眠る森を照らす。道に迷った者の上を旋回する。', null, true);
+  beast('nemuri', 'ネムリ', 'leaf', 'tortoise', 30, 10, 17, 6, ['sprout','nudge','shell'], '苔の庭を背負って、のんびり歩く。雨の日は背中の花が開く。', 'kodamori');
+  beast('kodamori', 'コダモリ', 'leaf', 'tortoise', 47, 17, 27, 10, ['vine','glint','bloom'], '小さな森を背に育てる。長い眠りから覚めると、季節がひとつ進む。', null, true);
+  beast('minamo', 'ミナモ', 'tide', 'manta', 25, 13, 10, 15, ['wave','gust','mist'], '水面から少し浮かんで泳ぐ。ひれの模様は、生まれた海の星図。', 'shionagi');
+  beast('shionagi', 'シオナギ', 'tide', 'manta', 39, 23, 17, 23, ['surge','storm','mist'], '潮風に乗り、島々の間を渡る。翼のきらめきは夕凪の海に似ている。', null, true);
+  beast('kirari', 'キラリ', 'crystal', 'jelly', 23, 14, 12, 11, ['glint','nudge','shell'], '透明な傘の中に、ひと粒の星を宿す。うれしい時は七色にまたたく。', 'seiran');
+  beast('seiran', 'セイラン', 'crystal', 'jelly', 37, 24, 20, 16, ['prism','wave','shell'], '星の記憶を映す結晶の灯獣。夜空に漂う姿は、流星の花のよう。', null, true);
+  beast('hatane', 'ハタネ', 'leaf', 'gecko', 29, 17, 14, 19, ['vine','gust','bloom'], '葉の尾で風向きを測る。雨が来る前には、木陰へ種を運ぶ。');
+  beast('sunokko', 'スノッコ', 'wind', 'goat', 32, 19, 17, 21, ['storm','nudge','shelter'], '空色の角を持つ崖の跳躍者。雲を足場にするという言い伝えがある。');
+  beast('kagetsu', 'カゲツ', 'ember', 'dragon', 36, 23, 18, 17, ['blaze','glint','warmth'], '首元に日輪の飾りを持つ、夕焼けの竜。灯を奪わず、分け与える。');
+  beast('hoshiwa', 'ホシワ', 'crystal', 'golem', 43, 19, 26, 8, ['prism','nudge','shell'], '空から落ちた石が、長い年月をかけて目覚めた。体に星の軌跡が刻まれる。');
+  beast('yorune', 'ヨルネ', 'wind', 'fox', 32, 20, 16, 25, ['storm','glint','shelter'], '夜風をまとって走る、宵色の灯獣。足音はひとつも残さない。');
+  beast('astralith', 'アストリス', 'crystal', 'dragon', 48, 25, 24, 20, ['prism','storm','shell'], '四つの灯が巡る場所に現れる、星環の守り手。古い旅の記憶を守っている。');
+
+  const guardians = {
+    verdant: { id: 'verdant', name: 'ミオ', title: '芽吹きの守り手', map: 'meadow', species: 'komorion', level: 7, reward: 180, seal: '芽吹きの灯', lines: ['灯獣の声に、耳をすませられたかな。','この原を渡る風と、君の絆を見せてほしい。'] },
+    tidal: { id: 'tidal', name: 'ナギ', title: '潮騒の守り手', map: 'coast', species: 'shionagi', level: 11, reward: 250, seal: '潮騒の灯', lines: ['潮は満ちて、また引いていく。','守る時と踏み出す時。君たちなら、見つけられる。'] },
+    twilight: { id: 'twilight', name: 'トワ', title: '宵風の守り手', map: 'forest', species: 'sorahane', level: 15, reward: 330, seal: '宵風の灯', lines: ['夜の森は、目ではなく心で歩くもの。','ここまで響いてきた君の灯を、見せて。'] },
+    astral: { id: 'astral', name: 'セツナ', title: '星環の守り手', map: 'ruins', species: 'astralith', level: 19, reward: 500, seal: '星環の灯', lines: ['星の灯は、ひとりのものではない。','四つの季節を結ぶ旅。その最後の響きを、ここで。'] }
+  };
+  const items = {
+    salve: { id: 'salve', name: '木漏れ日の薬', description: '体力を最大値の50%回復。倒れた灯獣には使えない。', price: 22 },
+    tonic: { id: 'tonic', name: '夜明けの雫', description: '倒れた灯獣を体力50%で目覚めさせる。', price: 65 },
+    chime: { id: 'chime', name: '共鳴の鈴', description: '野生の灯獣と絆を結ぶ。体力が少ないほど届きやすい。', price: 30 }
+  };
+  function field(id, name, subtitle, theme, w = 44, h = 30) {
+    const grid = Array.from({ length: h }, (_, y) => Array.from({ length: w }, (_, x) => x < 2 || x >= w - 2 || y < 2 || y >= h - 2 ? 'T' : '.'));
+    return { id, name, subtitle, theme, width: w, height: h, grid, npcs: [], exits: [], encounters: [], level: [2,4], spawn: {x:3,y:15} };
+  }
+  function rect(m, x, y, w, h, c) { for(let j=y;j<y+h;j++) for(let i=x;i<x+w;i++) if(m.grid[j] && m.grid[j][i] !== undefined) m.grid[j][i]=c; }
+  function path(m, x1, y1, x2, y2, c = '=') {
+    let x=x1,y=y1;m.grid[y][x]=c;
+    while(x!==x2){x+=Math.sign(x2-x);m.grid[y][x]=c;}
+    while(y!==y2){y+=Math.sign(y2-y);m.grid[y][x]=c;}
+  }
+  function house(m,x,y,w=5,h=4){rect(m,x,y,w,h,'B');m.grid[y+h-1][x+Math.floor(w/2)]='D';if(y>15){path(m,x+Math.floor(w/2),y+h,x+w+1,y+h);path(m,x+w+1,y+h,x+w+1,15);}else path(m,x+Math.floor(w/2),y+h,x+Math.floor(w/2),15);}
+  function flora(m, seed, count, code = '*') {
+    for(let i=0;i<count;i++){const x=3+(i*17+seed*13)%(m.width-6),y=3+(i*11+seed*7)%(m.height-6);if(m.grid[y][x]==='.')m.grid[y][x]=code;}
+  }
+  function npc(m,id,name,x,y,kind,lines,extra={}) { m.npcs.push({id,name,x,y,kind,lines,...extra}); if(m.grid[y][x]==='T'||m.grid[y][x]==='~'||m.grid[y][x]==='#')m.grid[y][x]='.'; }
+  function finish(m){delete m.grid;return m;}
+  const village = field('village','風待ちの里','風の手紙が届く、小さな始まりの里。','village',40,28);
+  rect(village,3,3,34,22,'.');
+  path(village,4,15,38,15);rect(village,17,13,7,8,'=');path(village,20,3,20,23);
+  house(village,7,7,6,4);house(village,26,7,5,4);house(village,27,20,6,4);
+  rect(village,4,19,7,5,'~');rect(village,5,18,5,1,'*');
+  rect(village,31,3,5,3,'T');rect(village,4,3,8,2,'T');
+  flora(village,1,44);village.spawn={x:20,y:18};
+  npc(village,'mentor','旅守り・イオ',19,16,'dialogue',['この島の灯が、少しずつ弱くなっている。','四人の守り手に会い、灯獣とともに「四つの灯」を結んでほしい。','まずは東のこもれび原へ。草むらで出会う灯獣には、共鳴の鈴を鳴らしてみよう。']);
+  npc(village,'village-rest','灯守りの宿',28,12,'rest',['おかえりなさい。灯獣も、旅人も、ひと息つきましょう。','宿ではいつでも、無料で全員の体力を回復できます。']);
+  npc(village,'village-shop','道具屋・ルカ',10,12,'shop',['旅に必要なものを揃えています。','共鳴の鈴は、相手の体力を減らしてから鳴らすのがこつですよ。']);
+  npc(village,'village-child','便りの少女',23,21,'dialogue',['仲間が三体いると、冒険が心強いんだって。','四体目からはメニューの「仲間の入れ替え」で待っていてくれるよ。']);
+  npc(village,'village-cache','旅立ちの小箱',14,20,'cache',['木箱に、旅立つ人への贈り物が入っている。'],{reward:{coins:40,chime:3,salve:2}});
+  village.exits=[{x:38,y:15,to:'meadow',tx:3,ty:15}];
+
+  const meadow=field('meadow','こもれび原','若葉の匂いと、はじまりの共鳴。','meadow');
+  rect(meadow,5,5,11,7,':');rect(meadow,6,19,12,6,':');rect(meadow,28,6,10,6,':');rect(meadow,27,19,12,7,':');
+  rect(meadow,20,18,3,9,'~');rect(meadow,19,20,5,1,'b');
+  path(meadow,2,15,42,15);path(meadow,22,15,22,5);rect(meadow,19,4,7,4,'=');
+  path(meadow,12,15,12,18);path(meadow,34,15,34,18);rect(meadow,33,13,4,1,'*');
+  rect(meadow,3,3,10,1,'T');rect(meadow,34,25,6,2,'T');flora(meadow,3,50);flora(meadow,2,10,'o');
+  meadow.grid[15][2]='=';meadow.grid[15][42]='=';
+  npc(meadow,'verdant','ミオ',22,5,'guardian',guardians.verdant.lines,{guardianId:'verdant'});
+  npc(meadow,'meadow-rest','旅の焚き火',12,18,'rest',['ここは、旅人の休み場。','火を囲んで休めば、仲間の灯も元どおり。']);
+  npc(meadow,'meadow-guide','野草の採集家',31,14,'dialogue',['芽は潮に、潮は灯に、灯は芽に強いんだ。','風と晶は、お互いに強く響き合う。守り手との相性を考えてみてね。']);
+  npc(meadow,'meadow-cache','草陰の小箱',36,22,'cache',['葉の下に、小さな旅の支度が残されている。'],{reward:{coins:55,chime:3,salve:2}});
+  meadow.exits=[{x:2,y:15,to:'village',tx:37,ty:15},{x:42,y:15,to:'coast',tx:3,ty:15,requires:'verdant'}];
+  meadow.encounters=['komori','fuwari','chirari','nemuri'];meadow.level=[3,5];
+
+  const coast=field('coast','潮鳴り海岸','ガラス色の波が、星の欠片を運ぶ。','coast');
+  rect(coast,2,2,40,26,'.');rect(coast,2,22,40,6,'~');rect(coast,2,2,40,4,'~');rect(coast,19,6,3,15,'~');
+  path(coast,2,15,42,15);rect(coast,18,15,5,1,'b');rect(coast,19,14,3,1,'b');
+  rect(coast,5,7,9,5,':');rect(coast,6,17,9,4,':');rect(coast,29,7,9,5,':');rect(coast,28,18,11,4,':');
+  path(coast,25,15,25,8);rect(coast,23,7,5,4,'_');path(coast,10,15,10,16);
+  rect(coast,35,13,3,2,'o');rect(coast,4,20,2,2,'o');flora(coast,5,28);
+  npc(coast,'tidal','ナギ',25,8,'guardian',guardians.tidal.lines,{guardianId:'tidal'});
+  npc(coast,'coast-rest','浜辺の休み場',10,16,'rest',['潮騒を聞きながら、少し休みませんか。','灯獣たちも、この海が好きみたいです。']);
+  npc(coast,'coast-shop','行商人・サザ',15,14,'shop',['島じゅうを歩く旅の道具屋です。必要なものはありますか。']);
+  npc(coast,'coast-guide','貝殻の少年',30,14,'dialogue',['体力の少なくなった灯獣には、鈴の音が届きやすいよ。','でも守り手の相棒とは、共鳴できないんだ。もう強い絆で結ばれているから。']);
+  npc(coast,'coast-cache','波打ち際の小箱',36,20,'cache',['波が運んだ箱の中には、乾いた道具が残っている。'],{reward:{coins:70,chime:4,tonic:1}});
+  coast.exits=[{x:2,y:15,to:'meadow',tx:41,ty:15},{x:42,y:15,to:'forest',tx:3,ty:15,requires:'tidal'}];
+  coast.encounters=['shizuku','minamo','kirari','sunokko'];coast.level=[6,9];
+
+  const forest=field('forest','宵灯りの森','静かな夜にだけ、見える道がある。','forest');
+  rect(forest,2,2,40,26,'T');rect(forest,3,11,13,10,'.');rect(forest,18,3,11,12,'.');rect(forest,30,10,11,14,'.');rect(forest,13,20,20,6,'.');
+  rect(forest,4,17,10,3,':');rect(forest,19,9,9,4,':');rect(forest,31,18,8,5,':');rect(forest,17,22,10,3,':');
+  path(forest,2,15,13,15);path(forest,13,15,13,8);path(forest,13,8,23,8);path(forest,23,8,23,15);path(forest,23,15,42,15);
+  path(forest,23,8,23,5);rect(forest,20,4,7,3,'_');path(forest,13,15,13,22);path(forest,13,22,31,22);path(forest,31,22,31,15);
+  rect(forest,15,14,5,5,'~');rect(forest,15,15,5,1,'b');path(forest,13,15,23,15);rect(forest,15,15,5,1,'b');
+  flora(forest,7,70);
+  npc(forest,'twilight','トワ',23,5,'guardian',guardians.twilight.lines,{guardianId:'twilight'});
+  npc(forest,'forest-rest','森の灯籠',9,14,'rest',['灯籠の光が、灯獣たちを優しく包む。','そっと腰を下ろして、夜の気配に耳をすませた。']);
+  npc(forest,'forest-guide','樹読みの旅人',34,14,'dialogue',['育った灯獣は、レベル8で新しい姿になる。','形が変わっても、いっしょに歩いた記憶は変わらない。']);
+  npc(forest,'forest-cache','根元の小箱',18,23,'cache',['古い木の根元に、灯の紋が刻まれた箱がある。'],{reward:{coins:100,salve:3,tonic:2}});
+  forest.exits=[{x:2,y:15,to:'coast',tx:41,ty:15},{x:42,y:15,to:'ruins',tx:3,ty:15,requires:'twilight'}];
+  forest.encounters=['hibana','hatane','yorune','chirari','nemuri'];forest.level=[10,13];
+
+  const ruins=field('ruins','星環の遺跡','遠い旅の終わりに、次の灯がともる。','ruins');
+  rect(ruins,2,2,40,26,'.');rect(ruins,15,3,18,16,'_');rect(ruins,15,3,18,1,'#');rect(ruins,15,3,1,11,'#');rect(ruins,32,3,1,11,'#');
+  rect(ruins,18,5,2,4,'#');rect(ruins,28,5,2,4,'#');rect(ruins,18,11,2,3,'#');rect(ruins,28,11,2,3,'#');
+  rect(ruins,5,5,8,7,':');rect(ruins,5,20,10,6,':');rect(ruins,34,7,6,7,':');rect(ruins,29,21,11,5,':');
+  rect(ruins,18,22,8,5,'~');rect(ruins,20,21,4,1,'o');
+  path(ruins,2,15,39,15);path(ruins,24,15,24,5,'_');rect(ruins,21,4,6,4,'_');
+  path(ruins,10,15,10,18);flora(ruins,10,40);flora(ruins,11,15,'o');
+  npc(ruins,'astral','セツナ',24,5,'guardian',guardians.astral.lines,{guardianId:'astral'});
+  npc(ruins,'ruins-rest','星見の泉',10,18,'rest',['泉に、遠い星空が映っている。','水面へ手を伸ばすと、仲間の灯が静かに満ちていく。']);
+  npc(ruins,'ruins-shop','旅支度の番人',12,14,'shop',['最後の道も、支度を忘れずに。','共鳴の鈴も、薬も、ここで揃います。']);
+  npc(ruins,'ruins-guide','記録の石碑',23,10,'dialogue',['「四つの灯は、四つの願い。芽吹き、潮騒、宵風、そして星環。」','「旅は誰かに勝つためではなく、知らない声に出会うためにある。」']);
+  npc(ruins,'ruins-cache','星屑の小箱',36,23,'cache',['星屑の模様がある箱に、最後の贈り物が残されている。'],{reward:{coins:150,chime:5,tonic:2}});
+  ruins.exits=[{x:2,y:15,to:'forest',tx:41,ty:15}];ruins.encounters=['kirari','hoshiwa','kagetsu','sunokko','astralith'];ruins.level=[14,17];
+  const maps={village,meadow,coast,forest,ruins};
+  Object.values(maps).forEach(m=>{m.tiles=m.grid.map(row=>row.join(''));finish(m);});
+  LT.DATA={elements,moves,species,maps,guardians,items,starters:['komori','shizuku','hibana'],title:'灯獣紀',subtitle:'LUMINA TRAIL',version:'1.0.0'};
+})();
+
+</script>
+<script>
+/* engine.js */
+/* 灯獣紀 — deterministic rules, progression and validated local save model. */
+(() => {
+  'use strict';
+  const LT = globalThis.LT = globalThis.LT || {};
+  const D = LT.DATA;
+  const BLOCKED = new Set(['T','~','#','B','o']);
+  const ORDER = Object.keys(D.guardians);
+  const MAX_LEVEL = 50;
+  const MAX_STORAGE = 60;
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const finiteInt = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max;
+  const fail = message => ({ ok: false, message });
+  const directions = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+  let serial = 0;
+
+  class Engine {
+    constructor(savedState) {
+      this.rng = Math.random;
+      this.battle = null;
+      this.encounterCooldown = 6;
+      this.state = this.emptyState();
+      if (savedState !== undefined && savedState !== null) this.state = this.validate(savedState);
+    }
+    emptyState() {
+      return { version: 1, started: false, map: 'village', x: 20, y: 18, facing: 'down',
+        party: [], storage: [], inventory: { salve: 5, tonic: 2, chime: 8 }, coins: 120,
+        seals: [], seen: [], caught: [], flags: {}, steps: 0, playSeconds: 0 };
+    }
+    get map() { return D.maps[this.state.map]; }
+    newGame(starterId) {
+      if (!D.starters.includes(starterId)) return fail('最初の相棒を三体の中から選んでください。');
+      this.state = this.emptyState();
+      this.state.started = true;
+      this.state.party = [this.makeMonster(starterId, 5)];
+      this.state.seen = [starterId]; this.state.caught = [starterId];
+      this.battle = null; this.encounterCooldown = 6;
+      return { ok: true, message: `${D.species[starterId].name}と、灯を探す旅が始まった。` };
+    }
+    makeMonster(species, level) {
+      const monster = { uid: `lt-${Date.now().toString(36)}-${(++serial).toString(36)}`, species, level, xp: 0, hp: 1 };
+      monster.hp = this.stats(monster).hp;
+      return monster;
+    }
+    stats(mon) {
+      const s = D.species[mon.species];
+      if (!s || !finiteInt(mon.level,1,MAX_LEVEL)) throw new Error('灯獣の能力データが正しくありません。');
+      return { hp: s.base.hp + mon.level * 5,
+        atk: s.base.atk + mon.level * 3,
+        def: s.base.def + mon.level * 2,
+        speed: s.base.speed + mon.level * 2 };
+    }
+    xpToNext(level) { return level >= MAX_LEVEL ? 0 : 24 + level * 12; }
+    moves(mon) { return D.species[mon.species].moves.map(id => D.moves[id]); }
+    objective() {
+      const next = ORDER.find(id => !this.state.seals.includes(id));
+      if (!this.state.started) return '最初の相棒を選び、四つの灯をつなぐ旅へ。';
+      if (!next) return '四つの灯が結ばれた。まだ見ぬ灯獣を探し、旅を続けよう。';
+      const g = D.guardians[next];
+      return `${D.maps[g.map].name}の${g.name}を訪ね、「${g.seal}」を結ぼう。`;
+    }
+    walkable(map, x, y, includeNPC = true) {
+      if (!finiteInt(x,0,map.width-1) || !finiteInt(y,0,map.height-1)) return false;
+      if (BLOCKED.has(map.tiles[y][x])) return false;
+      return !includeNPC || !map.npcs.some(n => n.x === x && n.y === y);
+    }
+    move(dx, dy) {
+      if (!this.state.started) return fail('相棒を選んでから旅を始めましょう。');
+      if (this.battle) return fail('今は共鳴の最中です。');
+      if (!finiteInt(dx,-1,1) || !finiteInt(dy,-1,1) || Math.abs(dx) + Math.abs(dy) !== 1) return fail('一方向ずつ移動してください。');
+      this.state.facing = dx === 1 ? 'right' : dx === -1 ? 'left' : dy === 1 ? 'down' : 'up';
+      const x = this.state.x + dx, y = this.state.y + dy;
+      if (!this.walkable(this.map,x,y)) return { ok: false, blocked: true };
+      const exit = this.map.exits.find(e => e.x === x && e.y === y);
+      if (exit && exit.requires && !this.state.seals.includes(exit.requires)) {
+        const g = D.guardians[exit.requires];
+        return fail(`この道は「${g.seal}」で開く。まずは${g.name}に会いに行こう。`);
+      }
+      this.state.x = x; this.state.y = y; this.state.steps++;
+      this.encounterCooldown = Math.max(0, this.encounterCooldown - 1);
+      if (exit) {
+        this.state.map = exit.to; this.state.x = exit.tx; this.state.y = exit.ty;
+        this.encounterCooldown = 6;
+        return { ok: true, mapChanged: true, message: `${this.map.name}に着いた。` };
+      }
+      if (this.map.tiles[y][x] === ':' && this.map.encounters.length && this.encounterCooldown === 0 && this.rng() < 0.18) {
+        const species = this.map.encounters[Math.floor(this.rng() * this.map.encounters.length)];
+        const [min,max] = this.map.level;
+        const level = min + Math.floor(this.rng() * (max - min + 1));
+        this.startBattle(species, level);
+        return { ok: true, battleStarted: true };
+      }
+      return { ok: true };
+    }
+    nearbyNPC() {
+      const [dx,dy] = directions[this.state.facing];
+      return this.map.npcs.find(n => n.x === this.state.x + dx && n.y === this.state.y + dy)
+        || this.map.npcs.find(n => Math.abs(n.x - this.state.x) + Math.abs(n.y - this.state.y) <= 1);
+    }
+    interact() {
+      if (this.battle) return { kind: 'dialogue', title: '共鳴の最中', lines: ['まずは灯獣に合図を出そう。'] };
+      const npc = this.nearbyNPC();
+      if (!npc) {
+        const exit = this.map.exits.find(e => Math.abs(e.x-this.state.x)+Math.abs(e.y-this.state.y) <= 2 && e.requires && !this.state.seals.includes(e.requires));
+        if(exit) return {kind:'dialogue',title:'灯の道標',lines:[`「${D.guardians[exit.requires].seal}」を結ぶと、この先へ進める。`]};
+        return {kind:'dialogue',title:this.map.name,lines:[this.map.subtitle,'人や灯籠、小箱の隣で「話す・調べる」を押してみよう。']};
+      }
+      if (npc.kind === 'cache') {
+        if (this.state.flags[npc.id]) return {kind:'cache',title:npc.name,lines:['箱は空になっている。贈り物は、大切に使おう。'],id:npc.id};
+        this.state.flags[npc.id] = true;
+        const rewards = [];
+        Object.entries(npc.reward || {}).forEach(([key, amount]) => {
+          if(key==='coins'){this.state.coins=Math.min(9999999,this.state.coins+amount);rewards.push(`${amount} 灯貨`);}
+          else if(D.items[key]){this.state.inventory[key]=Math.min(999,this.state.inventory[key]+amount);rewards.push(`${D.items[key].name} ×${amount}`);}
+        });
+        return {kind:'cache',title:npc.name,lines:[...npc.lines,`${rewards.join('、')} を受け取った。`],id:npc.id};
+      }
+      if (npc.kind === 'guardian') {
+        const id=npc.guardianId || npc.id, g=D.guardians[id];
+        if(this.state.seals.includes(id)) return {kind:'dialogue',title:g.name,lines:[`「${g.seal}」は、君たちの中で輝いている。`,this.state.flags.completed?'旅に終わりはない。まだ出会っていない声を、探してごらん。':'次の灯へ。私たちの想いも、一緒に連れていって。']};
+        return {kind:'guardian',title:`${g.title}・${g.name}`,lines:[...g.lines,`${D.species[g.species].name} / Lv.${g.level}`],id};
+      }
+      return {kind:npc.kind,title:npc.name,lines:npc.lines.slice(),id:npc.id};
+    }
+    startGuardian(id) {
+      const g=D.guardians[id];
+      if(!g || !this.state.started) return fail('守り手が見つかりません。');
+      if(this.battle) return fail('すでに共鳴の最中です。');
+      if(this.state.seals.includes(id)) return fail('この守り手とは、すでに灯を結びました。');
+      if(this.state.map!==g.map || this.nearbyNPC()?.guardianId!==id) return fail('守り手の隣で話しかけてください。');
+      const index=ORDER.indexOf(id);
+      if(index>0 && !this.state.seals.includes(ORDER[index-1])) return fail('先に、ひとつ前の灯を結びましょう。');
+      if(!this.state.party.some(m=>m.hp>0)) return fail('まずは休み場で、灯獣を回復させましょう。');
+      this.startBattle(g.species,g.level,id);
+      return {ok:true};
+    }
+    startBattle(species,level,guardian=null) {
+      const activeIndex=this.state.party.findIndex(m=>m.hp>0);
+      if(activeIndex<0){this.returnToVillage();return false;}
+      this.battle={enemy:this.makeMonster(species,level),activeIndex,guardian,turn:0,log:[],result:null,allyGuard:false,enemyGuard:false,healCooldown:{ally:0,enemy:0}};
+      this.markSeen(species);
+      this.battle.log.push(guardian ? `${D.guardians[guardian].name}の${D.species[species].name}が、静かに構えた。` : `野生の${D.species[species].name}が現れた。`);
+      return true;
+    }
+    markSeen(id) { if(!this.state.seen.includes(id))this.state.seen.push(id); }
+    markCaught(id) { this.markSeen(id);if(!this.state.caught.includes(id))this.state.caught.push(id); }
+    effectiveness(moveElement, defenderElement) {
+      if(!moveElement) return 1;
+      if(moveElement===defenderElement) return 0.8;
+      if(D.elements[moveElement].strongAgainst===defenderElement) return 1.5;
+      if(D.elements[defenderElement].strongAgainst===moveElement) return 0.7;
+      return 1;
+    }
+    resonanceChance() {
+      if(!this.battle || this.battle.guardian) return 0;
+      const enemy=this.battle.enemy, ratio=enemy.hp/this.stats(enemy).hp;
+      return Math.min(0.94,Math.max(0.2,0.28+(1-ratio)*0.64-(D.species[enemy.species].evolved?0.06:0)));
+    }
+    event(events,text,kind='info') { events.push({text,kind});this.battle.log.push(text);if(this.battle.log.length>40)this.battle.log.shift(); }
+    action(command) {
+      const b=this.battle;
+      if(!b || b.result) return fail('今は合図を出せません。');
+      if(!command || typeof command!=='object') return fail('合図を選んでください。');
+      const events=[];
+      let ally=this.state.party[b.activeIndex];
+      const live=this.state.party.findIndex(m=>m.hp>0);
+      if(live<0){this.endBattle('lost',events);return {ok:true,events,ended:'lost'};}
+      if(ally.hp<=0 && command.type!=='switch') return fail('動ける仲間に交代してください。');
+      let move=null, itemTarget=b.activeIndex;
+      if(command.type==='move') {
+        if(!finiteInt(command.index,0,this.moves(ally).length-1))return fail('使う技を選んでください。');
+        move=this.moves(ally)[command.index];
+        if(move.kind==='heal' && b.healCooldown.ally>0)return fail('回復技は、ほかの技を一度使ってから使えます。');
+        if(move.kind==='heal' && ally.hp>=this.stats(ally).hp)return fail('体力はすでに満ちています。');
+      } else if(command.type==='resonate') {
+        if(b.guardian)return fail('守り手の相棒とは、すでに絆が結ばれています。');
+        if(this.state.inventory.chime<=0)return fail('共鳴の鈴がありません。道具屋で購入できます。');
+        if(this.state.party.length>=3 && this.state.storage.length>=MAX_STORAGE)return fail('預かり所がいっぱいです。');
+      } else if(command.type==='item') {
+        itemTarget=finiteInt(command.index,0,this.state.party.length-1)?command.index:(command.id==='tonic'?this.state.party.findIndex(m=>m.hp<=0):b.activeIndex);
+        const check=this.checkItem(command.id,itemTarget);
+        if(!check.ok) return check;
+      } else if(command.type==='switch') {
+        if(!finiteInt(command.index,0,this.state.party.length-1) || this.state.party[command.index].hp<=0)return fail('動ける仲間を選んでください。');
+        if(command.index===b.activeIndex)return fail('その灯獣は、すでに前に出ています。');
+      } else if(command.type==='flee') {
+        if(b.guardian)return fail('守り手との試練からは離れられません。');
+      } else return fail('合図が見つかりません。');
+
+      b.turn++;
+      if(command.type==='switch') {
+        const forced=ally.hp<=0;
+        b.activeIndex=command.index;b.allyGuard=false;b.healCooldown.ally=0;
+        ally=this.state.party[b.activeIndex];
+        this.event(events,`${D.species[ally.species].name}が前に出た。`,'switch');
+        if(!forced)this.enemyTurn(events);
+      } else if(command.type==='resonate') {
+        this.state.inventory.chime--;
+        this.event(events,'共鳴の鈴を、静かに鳴らした。','resonate');
+        if(this.rng()<this.resonanceChance()) {
+          const caught=clone(b.enemy);caught.uid=`lt-${Date.now().toString(36)}-${(++serial).toString(36)}`;caught.hp=this.stats(caught).hp;
+          const isParty=this.state.party.length<3;
+          (isParty?this.state.party:this.state.storage).push(caught);this.markCaught(caught.species);
+          this.event(events,`${D.species[caught.species].name}と心が響き合った。${isParty?'旅の仲間に加わった！':'預かり所に仲間が増えた！'}`,'caught');
+          this.endBattle('caught',events);
+        } else {this.event(events,'鈴の音は届いた。でも、まだ少し距離がある。');this.enemyTurn(events);}
+      } else if(command.type==='item') {
+        this.applyItem(command.id,itemTarget);
+        this.event(events,`${D.items[command.id].name}で、${D.species[this.state.party[itemTarget].species].name}の体力が戻った。`,'heal');
+        this.enemyTurn(events);
+      } else if(command.type==='flee') {
+        this.event(events,'互いの距離を取り、草むらへ戻った。','flee');this.endBattle('fled',events);
+      } else {
+        const faster=this.stats(ally).speed>=this.stats(b.enemy).speed || move.kind==='guard';
+        if(faster){this.applyMove(ally,b.enemy,move,'ally',events);if(b.enemy.hp>0)this.enemyTurn(events);}
+        else {this.enemyTurn(events);if(!b.result && this.state.party[b.activeIndex]===ally && ally.hp>0)this.applyMove(ally,b.enemy,move,'ally',events);}
+        if(!b.result && b.enemy.hp<=0)this.endBattle('won',events);
+      }
+      if(!b.result && !this.state.party.some(m=>m.hp>0))this.endBattle('lost',events);
+      return {ok:true,events,...(b.result?{ended:b.result}:{})};
+    }
+    applyMove(attacker,defender,move,side,events) {
+      const b=this.battle, name=D.species[attacker.species].name, opp=side==='ally'?'enemy':'ally';
+      if(move.kind==='guard') {
+        b[`${side}Guard`]=true;b.healCooldown[side]=0;
+        this.event(events,`${name}の「${move.name}」。次の一撃をやわらげる。`,'guard');return;
+      }
+      if(move.kind==='heal') {
+        const max=this.stats(attacker).hp,amount=Math.min(max-attacker.hp,Math.ceil(max*move.power/100));
+        attacker.hp+=amount;b.healCooldown[side]=1;
+        this.event(events,`${name}の「${move.name}」。体力が${amount}回復した。`,'heal');return;
+      }
+      b.healCooldown[side]=0;
+      if(this.rng()*100>=move.accuracy){this.event(events,`${name}の「${move.name}」は、すれ違った。`,'miss');return;}
+      const atk=this.stats(attacker),def=this.stats(defender),effect=this.effectiveness(move.element,D.species[defender.species].element);
+      const same=move.element && move.element===D.species[attacker.species].element?1.15:1;
+      const critical=this.rng()<0.07;
+      const variance=0.9+this.rng()*0.2;
+      const guarded=b[`${opp}Guard`];
+      const base=((attacker.level*0.7+5)*move.power*(atk.atk/Math.max(1,def.def))/23)+3;
+      const damage=Math.max(1,Math.round(base*effect*same*variance*(critical?1.35:1)*(guarded?0.5:1)));
+      b[`${opp}Guard`]=false;
+      defender.hp=Math.max(0,defender.hp-damage);
+      const extra=effect>1?' 強く響いた！':effect<1?' 響きは控えめだ。':'';
+      this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}`,'damage');
+      if(defender.hp<=0)this.event(events,`${D.species[defender.species].name}は、そっと灯を休めた。`,'faint');
+    }
+    enemyTurn(events) {
+      const b=this.battle;if(!b || b.result || b.enemy.hp<=0)return;
+      const ally=this.state.party[b.activeIndex];
+      if(ally.hp<=0)return;
+      const choices=this.moves(b.enemy),ratio=b.enemy.hp/this.stats(b.enemy).hp;
+      let move;
+      const heal=choices.find(m=>m.kind==='heal');
+      if(heal && ratio<0.38 && b.healCooldown.enemy===0 && this.rng()<0.4)move=heal;
+      else if(b.turn%5===0 && !b.enemyGuard && this.rng()<0.45)move=choices.find(m=>m.kind==='guard');
+      if(!move){const attacks=choices.filter(m=>m.kind==='attack');move=attacks[Math.floor(this.rng()*attacks.length)];}
+      this.applyMove(b.enemy,ally,move,'enemy',events);
+      if(ally.hp<=0) {
+        const next=this.state.party.findIndex(m=>m.hp>0);
+        if(next<0)this.endBattle('lost',events);
+        else {b.activeIndex=next;b.allyGuard=false;b.healCooldown.ally=0;this.event(events,`${D.species[this.state.party[next].species].name}が、仲間の想いをつないだ。`,'switch');}
+      }
+    }
+    giveXP(mon, amount, events) {
+      if(mon.level>=MAX_LEVEL)return;
+      mon.xp+=amount;
+      while(mon.level<MAX_LEVEL && mon.xp>=this.xpToNext(mon.level)) {
+        mon.xp-=this.xpToNext(mon.level);
+        const oldMax=this.stats(mon).hp;mon.level++;
+        mon.hp=Math.min(this.stats(mon).hp,mon.hp+this.stats(mon).hp-oldMax+6);
+        this.event(events,`${D.species[mon.species].name}は Lv.${mon.level} になった！`,'level');
+        const data=D.species[mon.species];
+        if(data.evolvesTo && mon.level>=data.evolveLevel) {
+          const before=data.name;mon.species=data.evolvesTo;mon.hp=this.stats(mon).hp;this.markCaught(mon.species);
+          this.event(events,`${before}の灯が育ち、${D.species[mon.species].name}に姿を変えた！`,'evolve');
+        }
+      }
+      if(mon.level>=MAX_LEVEL)mon.xp=0;
+    }
+    endBattle(result,events) {
+      const b=this.battle;if(b.result)return;b.result=result;
+      if(result==='won' || result==='caught') {
+        const guardian=b.guardian?D.guardians[b.guardian]:null;
+        const coins=guardian?guardian.reward:18+b.enemy.level*4;
+        const xp=guardian?100+b.enemy.level*30:32+b.enemy.level*10;
+        this.state.coins=Math.min(9999999,this.state.coins+coins);
+        this.event(events,`${coins} 灯貨と、旅の経験 ${xp} を得た。`,'reward');
+        this.state.party.forEach(mon=>this.giveXP(mon,xp,events));
+        if(!guardian && this.rng()<0.3){this.state.inventory.chime=Math.min(999,this.state.inventory.chime+1);this.event(events,'共鳴の鈴を 1 個見つけた。','reward');}
+        if(guardian) {
+          this.state.seals.push(guardian.id);
+          this.state.party.forEach(mon=>{mon.hp=this.stats(mon).hp;});
+          this.state.inventory.salve=Math.min(999,this.state.inventory.salve+2);
+          this.state.inventory.chime=Math.min(999,this.state.inventory.chime+3);
+          this.event(events,`「${guardian.seal}」が旅の手帖にともった。仲間たちは全回復した。`,'seal');
+          if(this.state.seals.length===ORDER.length){this.state.flags.completed=true;this.event(events,'四つの灯が、ひとつの星環になった。島の夜に、あたらしい光が満ちていく。','ending');}
+          else this.event(events,'道標に光が宿り、東への道が開いた。','unlock');
+        }
+      } else if(result==='lost') {
+        this.event(events,'旅の灯が弱まった。里の人が、みんなを宿へ運んでくれた。','lost');
+        this.event(events,'灯貨と道具はそのまま。全回復して、もう一度旅に出よう。','heal');
+        this.returnToVillage();
+      }
+    }
+    returnToVillage() {
+      this.state.map='village';this.state.x=27;this.state.y=13;this.state.facing='down';
+      this.state.party.forEach(mon=>{mon.hp=this.stats(mon).hp;});
+    }
+    finishBattle() {
+      if(!this.battle)return fail('共鳴は始まっていません。');
+      if(!this.battle.result)return fail('共鳴の続きを選んでください。');
+      const result=this.battle.result;this.battle=null;this.encounterCooldown=7;
+      return {ok:true,result};
+    }
+    heal() {
+      if(this.battle)return fail('共鳴の最中は、道具を使って回復しましょう。');
+      if(!this.state.started)return fail('先に旅を始めましょう。');
+      const npc=this.nearbyNPC();
+      if(!npc || npc.kind!=='rest')return fail('宿や休み場の隣で、休んでください。');
+      this.state.party.forEach(mon=>{mon.hp=this.stats(mon).hp;});
+      this.encounterCooldown=6;
+      return {ok:true,message:'みんなの体力が満ちた。新しい一歩を踏み出そう。'};
+    }
+    buy(itemId,qty=1) {
+      if(this.battle)return fail('道具は、旅の途中で揃えましょう。');
+      if(!D.items[itemId] || !finiteInt(qty,1,99))return fail('購入する道具と個数を選んでください。');
+      const npc=this.nearbyNPC();if(!npc || npc.kind!=='shop')return fail('道具屋の隣で話しかけてください。');
+      const cost=D.items[itemId].price*qty;
+      if(this.state.inventory[itemId]+qty>999)return fail('これ以上は持ちきれません。');
+      if(this.state.coins<cost)return fail('灯貨が足りません。草むらでの共鳴でも手に入ります。');
+      this.state.coins-=cost;this.state.inventory[itemId]+=qty;
+      return {ok:true,message:`${D.items[itemId].name}を ${qty} 個受け取った。`};
+    }
+    checkItem(itemId,index) {
+      if(!['salve','tonic'].includes(itemId))return fail('この道具は、ここでは使えません。');
+      if(!finiteInt(index,0,this.state.party.length-1))return fail('使う相手を選んでください。');
+      if(this.state.inventory[itemId]<=0)return fail(`${D.items[itemId].name}がありません。`);
+      const mon=this.state.party[index];
+      if(itemId==='tonic' && mon.hp>0)return fail('夜明けの雫は、倒れた灯獣に使います。');
+      if(itemId==='salve' && mon.hp<=0)return fail('倒れた灯獣には、夜明けの雫を使ってください。');
+      if(itemId==='salve' && mon.hp>=this.stats(mon).hp)return fail('その灯獣の体力は、すでに満ちています。');
+      return {ok:true};
+    }
+    applyItem(itemId,index) {
+      const mon=this.state.party[index],max=this.stats(mon).hp;
+      mon.hp=Math.min(max,mon.hp+Math.ceil(max*0.5));this.state.inventory[itemId]--;
+    }
+    useItem(itemId,partyIndex) {
+      if(this.battle)return fail('共鳴の道具メニューから使ってください。');
+      const check=this.checkItem(itemId,partyIndex);if(!check.ok)return check;
+      this.applyItem(itemId,partyIndex);
+      return {ok:true,message:`${D.species[this.state.party[partyIndex].species].name}の体力が戻った。`};
+    }
+    setLead(index) {
+      if(this.battle)return fail('共鳴の交代メニューから選んでください。');
+      if(!finiteInt(index,0,this.state.party.length-1))return fail('仲間を選んでください。');
+      if(this.state.party[index].hp<=0)return fail('まずは、この灯獣を回復させましょう。');
+      const mon=this.state.party.splice(index,1)[0];this.state.party.unshift(mon);
+      return {ok:true,message:`${D.species[mon.species].name}を先頭にした。`};
+    }
+    exchange(partyIndex,storageIndex) {
+      if(this.battle)return fail('共鳴の最中は預かり所を使えません。');
+      if(!finiteInt(storageIndex,0,this.state.storage.length-1))return fail('預かり所の灯獣を選んでください。');
+      if(this.state.party.length<3 && (partyIndex===this.state.party.length || partyIndex===-1 || partyIndex===undefined)) {
+        const mon=this.state.storage.splice(storageIndex,1)[0];this.state.party.push(mon);
+        return {ok:true,message:`${D.species[mon.species].name}が旅の仲間に加わった。`};
+      }
+      if(!finiteInt(partyIndex,0,this.state.party.length-1))return fail('交代する旅の仲間を選んでください。');
+      const mon=this.state.storage[storageIndex];
+      if(mon.hp<=0 && !this.state.party.some((m,i)=>i!==partyIndex && m.hp>0))return fail('動ける灯獣を一体以上、旅の仲間に残してください。');
+      [this.state.party[partyIndex],this.state.storage[storageIndex]]=[mon,this.state.party[partyIndex]];
+      return {ok:true,message:`${D.species[mon.species].name}と仲間を入れ替えた。`};
+    }
+    serialize() {
+      const state=clone(this.state);
+      // A save never traps the party mid-turn. Resume at this area's entrance, fully rested.
+      if(this.battle && !this.battle.result){const spawn=D.maps[state.map].spawn;state.x=spawn.x;state.y=spawn.y;state.party.forEach(m=>{m.hp=this.stats(m).hp;});}
+      return state;
+    }
+    validate(raw) {
+      const error=msg=>{throw new Error(`セーブデータを読み込めません。${msg}`);};
+      if(!raw || typeof raw!=='object' || Array.isArray(raw))error('形式が正しくありません。');
+      if(raw.version!==1 || raw.started!==true)error('対応していないバージョンです。');
+      if(!Object.hasOwn(D.maps,raw.map))error('場所の情報が正しくありません。');
+      const map=D.maps[raw.map];
+      if(!this.walkable(map,raw.x,raw.y))error('旅人の位置が正しくありません。');
+      if(!Object.hasOwn(directions,raw.facing))error('向きの情報が正しくありません。');
+      if(!Array.isArray(raw.party) || raw.party.length<1 || raw.party.length>3 || !Array.isArray(raw.storage) || raw.storage.length>MAX_STORAGE)error('仲間の人数が正しくありません。');
+      const ids=new Set();
+      const validateMonster=mon=>{
+        if(!mon || typeof mon!=='object' || !Object.hasOwn(D.species,mon.species) || typeof mon.uid!=='string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(mon.uid) || ids.has(mon.uid))error('灯獣の情報が正しくありません。');
+        ids.add(mon.uid);
+        if(!finiteInt(mon.level,1,MAX_LEVEL) || !finiteInt(mon.xp,0,mon.level===MAX_LEVEL?0:this.xpToNext(mon.level)-1) || !finiteInt(mon.hp,0,this.stats(mon).hp))error('灯獣の能力が正しくありません。');
+        return {uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp};
+      };
+      const party=raw.party.map(validateMonster),storage=raw.storage.map(validateMonster);
+      if(!party.some(m=>m.hp>0))error('動ける仲間がいません。');
+      if(!raw.inventory || typeof raw.inventory!=='object')error('道具の情報がありません。');
+      const inventory={};
+      for(const key of Object.keys(D.items)){if(!finiteInt(raw.inventory[key],0,999))error('道具の数が正しくありません。');inventory[key]=raw.inventory[key];}
+      if(!finiteInt(raw.coins,0,9999999)||!finiteInt(raw.steps,0,99999999)||!finiteInt(raw.playSeconds,0,315360000))error('記録の数値が正しくありません。');
+      const list=(value,valid,label)=>{
+        if(!Array.isArray(value)||value.length>valid.length||new Set(value).size!==value.length||value.some(v=>!valid.includes(v)))error(`${label}の情報が正しくありません。`);
+        return value.slice();
+      };
+      const seals=list(raw.seals,ORDER,'灯'),seen=list(raw.seen,Object.keys(D.species),'図鑑'),caught=list(raw.caught,Object.keys(D.species),'仲間');
+      if(seals.some((id,i)=>id!==ORDER[i]))error('灯を結んだ順番が正しくありません。');
+      if(caught.some(id=>!seen.includes(id)) || [...party,...storage].some(m=>!caught.includes(m.species)))error('図鑑と仲間の記録が一致しません。');
+      const locationIndex=['village','meadow','coast','forest','ruins'].indexOf(raw.map);
+      if(locationIndex>1 && seals.length<locationIndex-1)error('まだ開いていない場所の記録です。');
+      if(!raw.flags || typeof raw.flags!=='object' || Array.isArray(raw.flags))error('旅の記録が正しくありません。');
+      const flags={};
+      const validFlags=['endingShown',...Object.values(D.maps).flatMap(m=>m.npcs.filter(n=>n.kind==='cache').map(n=>n.id))];
+      for(const key of validFlags){if(Object.hasOwn(raw.flags,key)){if(typeof raw.flags[key]!=='boolean')error('小箱の記録が正しくありません。');flags[key]=raw.flags[key];}}
+      if(seals.length===ORDER.length)flags.completed=true;
+      return {version:1,started:true,map:raw.map,x:raw.x,y:raw.y,facing:raw.facing,party,storage,inventory,coins:raw.coins,seals,seen,caught,flags,steps:raw.steps,playSeconds:raw.playSeconds};
+    }
+  }
+  LT.Engine=Engine;
+})();
+
+</script>
+<script>
+/* art.js */
+/* 灯獣紀 — original procedural pixel artwork. No downloaded assets. */
+(() => {
+  'use strict';
+  const LT = globalThis.LT = globalThis.LT || {};
+  const TILE = 32;
+  const terrainCache = new Map(), creatureCache = new Map(), worldBuffers = new WeakMap();
+  const INK = '#253d48';
+  const palettes = {
+    village: {grass:'#80b990',grass2:'#8dc499',dark:'#599c78',light:'#bad39d',path:'#e4d7ab',path2:'#d3c394',water:'#61b9bd',deep:'#3d99a9',leaf:'#438771',leaf2:'#60a17a',leaf3:'#83ba84',tree:'#b6cc90',sky:'#b3d9cc'},
+    meadow: {grass:'#8ebe87',grass2:'#9ac58b',dark:'#669d70',light:'#c2d99b',path:'#e0d4a3',path2:'#c9bd8e',water:'#75c5c5',deep:'#459da6',leaf:'#4e8d70',leaf2:'#71ab7e',leaf3:'#9ac58b',tree:'#d0dfa1',sky:'#cee2c7'},
+    coast: {grass:'#95bea6',grass2:'#a3c8aa',dark:'#78a78d',light:'#d0d6a3',path:'#eee0bc',path2:'#dbcda8',water:'#66b9c0',deep:'#3e9eaf',leaf:'#428b84',leaf2:'#67ad96',leaf3:'#9bcbac',tree:'#d2dbad',sky:'#b4dbd7'},
+    forest: {grass:'#698f8e',grass2:'#739d98',dark:'#527775',light:'#98b9a2',path:'#bdbda0',path2:'#a7a98c',water:'#678da8',deep:'#4e6f91',leaf:'#365f68',leaf2:'#4f7e7c',leaf3:'#719892',tree:'#a1ba9c',sky:'#77979b'},
+    ruins: {grass:'#87a2a0',grass2:'#95aeaa',dark:'#6d8a87',light:'#c2ceb8',path:'#ccd2c0',path2:'#b4bfb3',water:'#77acb8',deep:'#578b9e',leaf:'#4f7e7c',leaf2:'#6b9a8f',leaf3:'#8fb1a0',tree:'#c2cdb2',sky:'#a9c1c0'}
+  };
+  const hash = (x,y,s=0) => { const z = Math.sin(x*127.1+y*311.7+s*73.91)*43758.5453123; return z-Math.floor(z); };
+  function rect(c,x,y,w,h,color) { c.fillStyle=color; c.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+  function poly(c,points,fill,stroke=null,width=1) {
+    c.beginPath(); points.forEach((p,i) => i ? c.lineTo(p[0],p[1]) : c.moveTo(p[0],p[1])); c.closePath();
+    if(fill){c.fillStyle=fill;c.fill();} if(stroke){c.strokeStyle=stroke;c.lineWidth=width;c.lineJoin='round';c.stroke();}
+  }
+  function oval(c,x,y,rx,ry,color) { c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill(); }
+  function line(c,pts,color,w=1) { c.beginPath();pts.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.strokeStyle=color;c.lineWidth=w;c.lineJoin='round';c.lineCap='round';c.stroke(); }
+  function surface(w,h) { const c=document.createElement('canvas');c.width=w;c.height=h;return c; }
+  function shade(hex,delta) {
+    if(!/^#[0-9a-f]{6}$/i.test(hex||''))return delta>0?'#d5e5d3':'#41696d';
+    return '#'+hex.slice(1).match(/../g).map(x=>Math.max(0,Math.min(255,parseInt(x,16)+delta)).toString(16).padStart(2,'0')).join('');
+  }
+  function tileAt(map,x,y) { return map.tiles[y]?.[x] || '#'; }
+  function tuft(c,x,y,col,seed) {
+    rect(c,x+2,y+3,2,3,col);rect(c,x+5,y+1,2,5,col);if(seed>.4)rect(c,x+8,y+3,2,3,col);
+  }
+  function flower(c,x,y,color='#f7e7c1') {
+    rect(c,x+2,y+3,2,5,'#568b72');rect(c,x,y+1,6,4,color);rect(c,x+2,y-1,2,8,color);rect(c,x+2,y+2,2,2,'#e4b67e');
+  }
+  function waterTile(c,x,y,p,gx,gy,map) {
+    rect(c,x,y,TILE,TILE,p.water);rect(c,x,y+16,TILE,2,shade(p.water,8));
+    const north=tileAt(map,gx,gy-1)!=='~',west=tileAt(map,gx-1,gy)!=='~',east=tileAt(map,gx+1,gy)!=='~',south=tileAt(map,gx,gy+1)!=='~';
+    if(north){rect(c,x,y,32,5,p.path2);rect(c,x,y+5,32,4,'#d8e8ca');rect(c,x,y+9,32,3,shade(p.water,25));}
+    if(west){rect(c,x,y,5,32,p.path2);rect(c,x+5,y,3,32,'#d8e8ca');}
+    if(east){rect(c,x+27,y,5,32,p.path2);rect(c,x+24,y,3,32,'#d8e8ca');}
+    if(south){rect(c,x,y+28,32,4,p.path2);rect(c,x,y+24,32,4,'#d8e8ca');}
+    const h=hash(gx,gy);rect(c,x+8+h*8,y+14,8,2,shade(p.water,25));
+    if(h>.6){rect(c,x+4,y+24,6,2,shade(p.water,-13));rect(c,x+20,y+7,6,2,shade(p.water,-9));}
+  }
+  function groundTile(c,x,y,ch,p,gx,gy,map) {
+    const h=hash(gx,gy);rect(c,x,y,TILE,TILE,p.grass);
+    if(h>.4){c.globalAlpha=.36;poly(c,[[x+4,y+3],[x+24,y+1],[x+31,y+12],[x+26,y+26],[x+6,y+29],[x+1,y+17]],p.grass2);c.globalAlpha=1;}
+    for(let i=0;i<8;i++){let xx=hash(gx,gy,i+3)*28,yy=hash(gy,gx,i+12)*28;rect(c,x+xx,y+yy,2+(i%2)*2,2,h>.5?shade(p.grass,5):p.grass2);}
+    if(ch==='~'){waterTile(c,x,y,p,gx,gy,map);return;}
+    if(ch==='='||ch==='D'||ch==='_'||ch==='b'){
+      const floor=ch==='_';rect(c,x,y,TILE,TILE,floor?shade(p.path,-4):p.path);
+      if(floor){
+        rect(c,x+2,y+2,28,26,shade(p.path,8));rect(c,x+16,y,1,32,p.path2);rect(c,x,y+16,32,1,p.path2);
+        if(map.theme==='ruins'&&h>.7){poly(c,[[x+16,y+6],[x+25,y+16],[x+16,y+26],[x+7,y+16]],p.path2);poly(c,[[x+16,y+9],[x+22,y+16],[x+16,y+23],[x+10,y+16]],shade(p.path,15));rect(c,x+15,y+14,3,4,'#8eaaa4');}
+      }
+      else {
+        rect(c,x+Math.floor(h*22)+3,y+8,4,2,p.path2);rect(c,x+7,y+23,2,2,p.path2);
+        if(map.theme==='village'&&ch==='='){
+          c.globalAlpha=.32;
+          for(let row=0;row<2;row++)for(let col=0;col<2;col++){
+            const xx=x+col*16+(row%2)*3,yy=y+row*16;
+            poly(c,[[xx+2,yy+3],[xx+12,yy+2],[xx+14,yy+8],[xx+12,yy+12],[xx+3,yy+13],[xx+1,yy+8]],shade(p.path,10));
+            rect(c,xx+3,yy+12,8,1,p.path2);
+          }c.globalAlpha=1;
+        }
+      }
+      for(const [dx,dy] of [[0,-1],[-1,0],[1,0],[0,1]]){
+        const adj=tileAt(map,gx+dx,gy+dy);
+        if('.:*'.includes(adj)){if(dy===-1){rect(c,x,y,32,2,p.path2);if(h>.4)rect(c,x+8,y,8,2,p.grass);}if(dy===1)rect(c,x,y+30,32,2,p.path2);if(dx===-1)rect(c,x,y,2,32,p.path2);if(dx===1)rect(c,x+30,y,2,32,p.path2);}
+      }
+      if(ch==='b'){rect(c,x,y,32,32,'#b99775');for(let j=1;j<32;j+=7){rect(c,x,y+j,32,2,'#866e5f');rect(c,x+3,y+j+2,26,1,'#d2b58a');}rect(c,x,y,3,32,'#715c50');rect(c,x+29,y,3,32,'#715c50');}
+      return;
+    }
+    if(ch===':'){
+      rect(c,x,y,32,32,p.dark);
+      for(let j=0;j<3;j++)for(let i=0;i<3;i++){const yy=y+j*10+1,xx=x+i*10+(j%2?2:0);tuft(c,xx,yy,p.grass2,hash(gx+i,gy+j));rect(c,xx+4,yy+1,2,3,p.light);}
+    } else if(ch==='*') {
+      flower(c,x+6,y+10,h>.4?'#fff0bd':'#f4c4b9');flower(c,x+20,y+21,h>.6?'#f4d3da':'#f4f1cf');tuft(c,x+18,y+3,p.dark,h);
+    } else if(ch==='o') {
+      oval(c,x+17,y+25,14,5,'#567f713d');poly(c,[[x+5,y+24],[x+3,y+15],[x+9,y+7],[x+21,y+6],[x+28,y+15],[x+27,y+24]],'#8ea297','#617e79',2);poly(c,[[x+7,y+14],[x+12,y+8],[x+21,y+8],[x+25,y+14]],'#bac4b1');rect(c,x+6,y+22,18,2,'#6d8b80');tuft(c,x+1,y+24,p.dark,h);
+    } else if(ch==='#') {
+      rect(c,x,y,32,32,p.dark);poly(c,[[x,y+10],[x+8,y+3],[x+25,y+3],[x+32,y+9],[x+32,y+32],[x,y+32]],'#7d9489');poly(c,[[x,y+10],[x+8,y+2],[x+25,y+2],[x+32,y+9],[x+26,y+14],[x+5,y+14]],'#aab6a0');rect(c,x+2,y+16,3,11,'#91a391');rect(c,x+24,y+19,3,12,'#627d76');rect(c,x,y+29,32,3,p.dark);if(h>.55)tuft(c,x+10,y+3,p.grass,h);
+    } else if(ch!== 'T' && ch!=='B') {
+      if(h>.55)tuft(c,x+5,y+10,p.dark,h);
+      if(h>.86){flower(c,x+22,y+19,map.theme==='forest'?'#b5d3cd':'#f4ebbd');rect(c,x+7,y+22,3,2,p.light);}
+      if(h<.06){rect(c,x+10,y+12,8,3,shade(p.grass,-7));rect(c,x+12,y+10,5,3,'#b6bc9d');rect(c,x+13,y+10,3,1,'#d4d7b7');}
+    }
+  }
+  function tree(c,x,y,p,seed,theme) {
+    const w=40+(seed>.7?4:0),h=52+(seed>.5?4:0);
+    oval(c,x+17,y+29,23,7,'#2b5c4c35');rect(c,x+12,y+16,9,15,'#705f50');rect(c,x+13,y+16,3,13,'#a68c66');rect(c,x+10,y+28,13,3,'#685d4d');
+    poly(c,[[x+11,y-h+26],[x+22,y-h+26],[x+22,y-h+29],[x+29,y-h+31],[x+31,y-h+37],[x+36,y-h+39],[x+36,y-h+47],[x+41,y-h+53],[x+39,y+16],[x+34,y+23],[x+5,y+24],[x-5,y+16],[x-6,y+5],[x-2,y-3],[x+1,y-h+38],[x+7,y-h+34],[x+7,y-h+29]],p.leaf,'#3d6e60',2);
+    poly(c,[[x+15,y-h+28],[x+26,y-h+32],[x+29,y-h+41],[x+36,y-h+46],[x+35,y+10],[x+29,y+18],[x+5,y+18],[x-2,y+10],[x,y-1],[x+5,y-h+40]],p.leaf2);
+    poly(c,[[x+14,y-h+30],[x+22,y-h+32],[x+26,y-h+41],[x+22,y-h+45],[x+29,y-h+48],[x+27,y+4],[x+10,y+8],[x+3,y+2],[x+5,y-h+42]],p.leaf3);
+    rect(c,x+11,y-h+35,8,3,p.tree);rect(c,x+5,y-h+25,6,3,p.leaf3);rect(c,x+27,y+12,5,3,p.leaf);rect(c,x+3,y+11,7,3,p.leaf);rect(c,x+18,y+9,6,2,p.leaf2);
+    if(seed>.82){flower(c,x+27,y-4,theme==='forest'?'#dbc7d8':'#f7d8b2');}
+    if(theme==='forest'&&seed>.6){rect(c,x+8,y+26,5,4,'#bdd2bb');rect(c,x+7,y+24,7,3,'#98d6ce');}
+  }
+  function findBuildings(map) {
+    const seen=new Set(),groups=[];
+    for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++){
+      if(tileAt(map,x,y)!=='B'||seen.has(x+','+y))continue;
+      const queue=[[x,y]],points=[];seen.add(x+','+y);
+      while(queue.length){const q=queue.pop();points.push(q);for(const d of [[1,0],[-1,0],[0,1],[0,-1]]){let a=q[0]+d[0],b=q[1]+d[1],key=a+','+b;if(tileAt(map,a,b)==='B'&&!seen.has(key)){seen.add(key);queue.push([a,b]);}}}
+      groups.push({x:Math.min(...points.map(p=>p[0])),y:Math.min(...points.map(p=>p[1])),w:Math.max(...points.map(p=>p[0]))-Math.min(...points.map(p=>p[0]))+1,h:Math.max(...points.map(p=>p[1]))-Math.min(...points.map(p=>p[1]))+1});
+    }return groups;
+  }
+  function building(c,b,p,index,theme) {
+    const x=b.x*TILE,y=b.y*TILE,w=b.w*TILE,h=b.h*TILE;
+    const roof=theme==='ruins'?'#718c92':index%3===0?'#be8976':index%3===1?'#6d9990':'#718b9b';
+    rect(c,x+5,y+h-2,w+6,12,'#35584d30');rect(c,x+3,y+20,w-6,h-18,'#6d7566');rect(c,x+6,y+22,w-12,h-26,'#e4d9b6');rect(c,x+7,y+h-13,w-14,7,'#c5b693');
+    rect(c,x+8,y+h-8,w-16,4,'#947e66');rect(c,x+10,y+34,5,h-46,'#bca580');rect(c,x+w-15,y+34,5,h-46,'#bca580');
+    // A stepped, shaded pitched roof with individual ceramic tiles.
+    poly(c,[[x-5,y+37],[x+8,y-2],[x+w-8,y-2],[x+w+5,y+37]],shade(roof,-30),INK,2);
+    poly(c,[[x-3,y+32],[x+9,y-4],[x+w-9,y-4],[x+w+3,y+32]],roof);
+    for(let r=0;r<5;r++){let yy=y+r*7-1,inset=9-r*2;rect(c,x+inset,yy,w-inset*2,2,shade(roof,17));for(let xx=x+inset+(r%2)*8;xx<x+w-inset;xx+=16)rect(c,xx,yy+2,1,4,shade(roof,-15));}
+    rect(c,x-4,y+33,w+8,4,shade(roof,-35));rect(c,x+11,y-5,w-22,3,shade(roof,35));
+    // Chimney and windows.
+    rect(c,x+w-28,y-14,13,25,'#8b8171');rect(c,x+w-29,y-15,15,5,'#b8ad93');rect(c,x+w-25,y-9,3,15,'#c5b59b');
+    const wy=y+Math.max(47,h-38),wx=[x+22,x+w-42];
+    for(const xx of wx){rect(c,xx-3,wy-3,26,25,'#ab967a');rect(c,xx,wy,20,17,'#506b73');rect(c,xx+2,wy+2,16,13,'#b7d4cb');rect(c,xx+10,wy,2,17,'#f2e4bd');rect(c,xx,wy+8,20,2,'#f2e4bd');rect(c,xx-2,wy+18,24,4,'#7f8f73');for(let f=0;f<3;f++)flower(c,xx+f*7,wy+16,index%2?'#fff0c4':'#eeb4a7');}
+    const doorX=x+w/2-12,doorY=y+h-31;rect(c,doorX-3,doorY-3,30,34,'#bba680');rect(c,doorX,doorY,24,31,'#4e6560');rect(c,doorX+3,doorY+3,18,25,'#7d9983');rect(c,doorX+17,doorY+17,3,3,'#eac78b');rect(c,doorX-4,y+h-1,32,5,'#a69d83');
+    if(theme==='village') {rect(c,x+w/2-15,y+38,30,12,'#f3e3bf');rect(c,x+w/2-12,y+41,24,2,roof);rect(c,x+w/2-8,y+45,16,2,roof);}
+  }
+  function buildTerrain(map) {
+    const p=palettes[map.theme]||palettes.meadow;
+    const ground=surface(map.width*TILE,map.height*TILE),c=ground.getContext('2d');c.imageSmoothingEnabled=false;
+    for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)groundTile(c,x*TILE,y*TILE,tileAt(map,x,y),p,x,y,map);
+    const objects=[];
+    for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)if(tileAt(map,x,y)==='T')objects.push({kind:'tree',x,y,depth:y*TILE+30,seed:hash(x,y,3)});
+    findBuildings(map).forEach((b,i)=>objects.push({kind:'building',b,i,depth:(b.y+b.h)*TILE-2}));
+    return {ground,objects,p};
+  }
+  function npcSprite(c,x,y,npc,time) {
+    const kind=npc.kind||'dialogue', seed=Array.from(npc.id||npc.name||'a').reduce((n,z)=>n+z.charCodeAt(0),0);
+    const colors={rest:'#d8c3a9',shop:'#d1a680',guardian:'#7b85a6',cache:'#d4b470',dialogue:['#a79bba','#dfb09b','#86a6ae','#bdb38b'][seed%4]};
+    if(kind==='guardian'){
+      oval(c,x+16,y+26,29,10,'#547a7435');
+      c.globalAlpha=.4;line(c,[[x-9,y+25],[x-3,y+16],[x+16,y+11],[x+35,y+16],[x+41,y+25],[x+33,y+34],[x+16,y+39],[x-2,y+34],[x-9,y+25]],'#d8deb6',2);c.globalAlpha=1;
+      poly(c,[[x-8,y+25],[x-11,y+15],[x-6,y+7],[x-1,y+16],[x-3,y+26]],'#afc8c0','#688b88',1);poly(c,[[x+35,y+25],[x+33,y+15],[x+38,y+7],[x+43,y+16],[x+41,y+26]],'#c2c8d0','#7c91a0',1);
+      rect(c,x-7,y+11,2,10,'#e3eacb');rect(c,x+37,y+11,2,10,'#e3eacb');
+    }
+    oval(c,x+16,y+28,10,4,'#304f4b35');
+    if(kind==='cache'){
+      rect(c,x+7,y+13,19,14,'#6f695b');rect(c,x+8,y+13,17,11,'#c3a777');rect(c,x+8,y+10,17,7,'#dbc18e');rect(c,x+8,y+16,17,2,'#836e57');rect(c,x+15,y+15,4,5,'#fff0b0');return;
+    }
+    const col=colors[kind]||colors.dialogue;
+    rect(c,x+10,y+21,5,9,'#4f5d62');rect(c,x+18,y+21,5,9,'#4f5d62');rect(c,x+9,y+28,7,3,'#384f57');rect(c,x+18,y+28,7,3,'#384f57');
+    poly(c,[[x+9,y+11],[x+22,y+11],[x+27,y+23],[x+22,y+26],[x+9,y+25],[x+6,y+21]],col,shade(col,-65),1);rect(c,x+12,y+14,8,9,shade(col,24));
+    rect(c,x+10,y+1,13,12,'#dbbca0');rect(c,x+9,y-2,15,6,'#5a6261');rect(c,x+8,y+1,3,7,'#5a6261');rect(c,x+22,y+1,3,7,'#5a6261');rect(c,x+13,y+6,2,2,'#344c54');rect(c,x+19,y+6,2,2,'#344c54');
+    if(kind==='rest'){rect(c,x+9,y-4,16,5,'#f0e1c0');rect(c,x+15,y-5,4,6,'#83aca0');}
+    if(kind==='shop'){rect(c,x+6,y-3,22,4,'#8a7662');rect(c,x+10,y-8,14,6,'#bda278');rect(c,x+22,y+17,5,9,'#806e5c');}
+    if(kind==='guardian'){
+      poly(c,[[x+7,y+10],[x+3,y+25],[x+11,y+28],[x+11,y+14]],'#687e97');poly(c,[[x+23,y+10],[x+28,y+25],[x+21,y+28],[x+21,y+14]],'#687e97');rect(c,x+8,y-4,17,4,'#d4bd88');rect(c,x+15,y-8,3,6,'#eaddaa');
+    }
+    if(kind!=='dialogue'){
+      const yy=y-19+Math.round(Math.sin(time*.002+seed)*2);rect(c,x+11,yy,11,11,'#f7efd5');rect(c,x+12,yy+1,9,9,kind==='guardian'?'#e0ad87':'#9db9a5');
+      if(kind==='guardian'){rect(c,x+16,yy+2,2,4,'#fff6d8');rect(c,x+16,yy+7,2,2,'#fff6d8');}
+      else if(kind==='rest'){rect(c,x+16,yy+2,2,7,'#fff6d8');rect(c,x+13,yy+4,7,2,'#fff6d8');}
+      else {rect(c,x+14,yy+3,5,5,'#fff6d8');}
+    }
+  }
+  function hero(c,x,y,facing,time,moving) {
+    const walk=moving?Math.sin(time*.025):0,step=Math.round(walk*2);
+    oval(c,x+16,y+29,10,4,'#304d4850');
+    rect(c,x+10,y+21,5,9+step,'#3c5760');rect(c,x+18,y+21,5,9-step,'#3c5760');rect(c,x+9,y+28+step,7,3,'#294954');rect(c,x+18,y+28-step,7,3,'#294954');
+    poly(c,[[x+10,y+10],[x+22,y+10],[x+26,y+21],[x+22,y+25],[x+10,y+25],[x+6,y+21]],'#386f73','#294d58',1);rect(c,x+12,y+13,8,9,'#75a69c');
+    rect(c,x+6,y+17-step,4,7,'#e0bca0');rect(c,x+23,y+17+step,4,7,'#e0bca0');
+    rect(c,x+10,y,12,12,'#e4c2a3');
+    rect(c,x+9,y-3,15,5,'#344e54');rect(c,x+8,y,4,7,'#344e54');rect(c,x+21,y,4,7,'#344e54');
+    rect(c,x+8,y-6,16,5,'#69978b');rect(c,x+6,y-3,22,3,'#bed2b0');rect(c,x+19,y-6,3,4,'#ead4a6');
+    if(facing==='down'){rect(c,x+12,y+5,2,2,'#304b53');rect(c,x+19,y+5,2,2,'#304b53');rect(c,x+15,y+9,4,1,'#b9837e');}
+    else if(facing==='left') {rect(c,x+10,y+5,2,2,'#304b53');rect(c,x+21,y+2,3,7,'#344e54');}
+    else if(facing==='right'){rect(c,x+20,y+5,2,2,'#304b53');rect(c,x+9,y+2,3,7,'#344e54');}
+    else {rect(c,x+10,y+2,13,7,'#344e54');rect(c,x+11,y+14,11,11,'#bd9d72');rect(c,x+13,y+16,7,5,'#ddc18c');}
+    rect(c,x+9,y+11,15,3,'#e3a58c');if(facing!=='up'){rect(c,x+20,y+13,4,7,'#c38476');rect(c,x+23,y+18,5,8,'#bda172');rect(c,x+24,y+19,3,3,'#eed3a0');}
+  }
+  function spark(c,x,y,color,scale=1) {rect(c,x-1*scale,y-4*scale,2*scale,8*scale,color);rect(c,x-4*scale,y-1*scale,8*scale,2*scale,color);}
+  function renderWorld(canvas,engine,time=0,options={}) {
+    if(!canvas||!engine?.state)return;
+    const map=engine.map||LT.DATA.maps[engine.state.map];if(!map)return;
+    let info=terrainCache.get(map.id);if(!info){info=buildTerrain(map);terrainCache.set(map.id,info);}
+    const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;
+    const W=canvas.width,H=canvas.height,px=Number.isFinite(options.playerX)?options.playerX:engine.state.x,py=Number.isFinite(options.playerY)?options.playerY:engine.state.y;
+    const cameraX=Math.round(Math.max(0,Math.min(map.width*TILE-W,(px+.5)*TILE-W/2))),cameraY=Math.round(Math.max(0,Math.min(map.height*TILE-H,(py+.5)*TILE-H/2+16)));
+    c.clearRect(0,0,W,H);c.fillStyle=info.p.grass;c.fillRect(0,0,W,H);c.drawImage(info.ground,-cameraX,-cameraY);
+    c.save();c.translate(-cameraX,-cameraY);
+    // Slow water glints make the world breathe, without scrolling texture noise.
+    for(let y=Math.max(0,Math.floor(cameraY/TILE));y<Math.min(map.height,Math.ceil((cameraY+H)/TILE));y++)for(let x=Math.max(0,Math.floor(cameraX/TILE));x<Math.min(map.width,Math.ceil((cameraX+W)/TILE));x++){
+      if(tileAt(map,x,y)==='~'&&hash(x,y,5)>.48){const t=(time*.00025+hash(x,y,8))%1;c.globalAlpha=.18+.35*Math.sin(t*Math.PI);rect(c,x*TILE+7+Math.floor(t*6),y*TILE+13,12,2,'#f0f9dd');rect(c,x*TILE+11+Math.floor(t*6),y*TILE+11,5,2,'#f0f9dd');c.globalAlpha=1;}
+    }
+    const objects=info.objects.filter(o=>o.kind==='building'||(o.x*TILE>cameraX-60&&o.x*TILE<cameraX+W+60&&o.y*TILE>cameraY-60&&o.y*TILE<cameraY+H+60));
+    for(const npc of map.npcs||[])objects.push({kind:'npc',npc,depth:npc.y*TILE+28});
+    objects.push({kind:'hero',depth:py*TILE+30});objects.sort((a,b)=>a.depth-b.depth);
+    for(const o of objects){if(o.kind==='tree')tree(c,o.x*TILE,o.y*TILE,info.p,o.seed,map.theme);else if(o.kind==='building')building(c,o.b,info.p,o.i,map.theme);else if(o.kind==='npc')npcSprite(c,o.npc.x*TILE,o.npc.y*TILE,o.npc,time);else hero(c,px*TILE,py*TILE,engine.state.facing,time,Math.abs(px-engine.state.x)+Math.abs(py-engine.state.y)>.02);}
+    for(const e of map.exits||[]){const locked=e.requires&&!engine.state.seals.includes(e.requires),x=e.x*TILE+16,y=e.y*TILE+15;const a=.5+Math.sin(time*.003)*.2;c.globalAlpha=a;poly(c,[[x-7,y],[x,y-7],[x+7,y],[x,y+7]],locked?'#d9b199':'#f9efbf');c.globalAlpha=1;rect(c,x-2,y-2,4,4,locked?'#8d7277':'#6c9e8e');}
+    c.restore();
+    // Warm drifting pollen / dusk fireflies.
+    const forest=map.theme==='forest';for(let i=0;i<(forest?17:11);i++){const xx=(hash(i,5)*W+time*(.002+(i%3)*.001))%(W+20)-10,yy=(hash(i,3)*H+Math.sin(time*.0005+i)*12);c.globalAlpha=(forest?.45:.25)+Math.sin(time*.001+i)*.17;rect(c,xx,yy,forest?3:2,forest?3:2,forest?'#e9efb6':'#fcf7ce');}c.globalAlpha=1;
+    // Gentle corners keep the field readable with small UI overlays.
+    const vignette=c.createRadialGradient(W/2,H/2,W*.26,W/2,H/2,W*.65);vignette.addColorStop(0,'#153b3100');vignette.addColorStop(1,forest?'#173b4238':'#315a401c');c.fillStyle=vignette;c.fillRect(0,0,W,H);
+  }
+  function world(canvas,engine,time=0,options={}) {
+    if(!canvas)return;
+    const zoom=Math.max(1,Math.min(2,options.zoom||1.25)),width=Math.round(canvas.width/zoom),height=Math.round(canvas.height/zoom);
+    let buffer=worldBuffers.get(canvas);
+    if(!buffer||buffer.width!==width||buffer.height!==height){buffer=surface(width,height);worldBuffers.set(canvas,buffer);}
+    renderWorld(buffer,engine,time,options);
+    const c=canvas.getContext('2d');c.imageSmoothingEnabled=false;c.clearRect(0,0,canvas.width,canvas.height);c.drawImage(buffer,0,0,canvas.width,canvas.height);
+  }
+
+  // CREATURE ATLAS ---------------------------------------------------------
+  // Every silhouette is hand-authored in a 64px canvas, then nearest-scaled.
+  function eye(c,x,y,large=false) {rect(c,x,y,large?4:3,large?5:4,INK);rect(c,x,y,1,2,'#fff6dc');}
+  function gem(c,x,y,col='#a9e2d9',s=1){poly(c,[[x,y-6*s],[x+4*s,y-1*s],[x+2*s,y+6*s],[x-2*s,y+6*s],[x-4*s,y-1*s]],col,INK,.7);poly(c,[[x,y-5*s],[x+3*s,y-1*s],[x,y+4*s]],shade(col,30));}
+  function leaf(c,x,y,rot,col) {c.save();c.translate(x,y);c.rotate(rot);poly(c,[[0,1],[-5,-3],[-5,-8],[0,-14],[5,-8],[4,-3]],col,shade(col,-45),1);line(c,[[0,-10],[0,0]],shade(col,22),1);c.restore();}
+  function body(c,points,col){poly(c,points,col,INK,1.6);}
+  function creatureSprite(id,phase=0) {
+    const data=LT.DATA?.species?.[id]||{id,element:'leaf',shape:'sprig',color:'#8bb393'},evolved=data.evolved||false;
+    const key=id+':'+phase;if(creatureCache.has(key))return creatureCache.get(key);
+    const cv=surface(64,64),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+    const base=data.color||({leaf:'#91bd91',tide:'#84c2cf',ember:'#e9ad85',wind:'#bdc8cb',crystal:'#c2b6d8'}[data.element])||'#a0c8ad';
+    const dark=shade(base,-32),light=shade(base,30),cream='#f6e6bc',warm='#dfb27d';
+    const lift=phase===1?1:0;c.save();c.translate(0,-lift);
+    switch(data.shape){
+      case 'sprig': {
+        // Moss hare with unfolding leaf antlers and a seed-pod tail.
+        body(c,[[46,35],[55,31],[58,36],[55,44],[48,46]],dark);leaf(c,52,36,.8,base);
+        body(c,[[17,38],[20,28],[34,25],[45,31],[48,44],[42,52],[22,52],[15,46]],base);oval(c,31,42,12,9,light);
+        body(c,[[17,30],[12,21],[13,7],[19,9],[24,24],[29,23],[30,8],[36,4],[39,11],[35,28],[32,36],[21,37]],base);
+        poly(c,[[16,12],[18,13],[21,25],[17,24]],'#bfd69c');poly(c,[[33,12],[36,8],[35,23],[32,26]],'#b9d39b');
+        oval(c,25,30,10,8,light);eye(c,18,27);eye(c,29,26);rect(c,24,32,3,2,INK);rect(c,16,32,3,2,'#d9aa9b');rect(c,32,31,3,2,'#d9aa9b');
+        body(c,[[18,48],[27,47],[27,53],[16,54]],dark);body(c,[[35,48],[43,47],[45,53],[34,54]],dark);
+        leaf(c,30,22,.45,'#74a885');leaf(c,22,19,-.55,'#9fc27f');gem(c,26,24,'#e9d79d',.45);break;
+      }
+      case 'stag': {
+        // Adult form: pale moss mantle, branching green crown, lantern seed.
+        body(c,[[18,33],[28,26],[43,29],[50,38],[44,46],[22,45]],base);poly(c,[[25,29],[44,32],[43,40],[24,38]],light);
+        body(c,[[19,42],[24,42],[23,56],[18,56]],dark);body(c,[[38,41],[44,41],[47,55],[42,56]],dark);rect(c,17,55,8,3,INK);rect(c,41,55,8,3,INK);
+        body(c,[[17,37],[12,26],[13,17],[21,12],[30,18],[29,27],[24,37]],light);
+        body(c,[[15,20],[6,16],[7,13],[17,15]],base);body(c,[[26,20],[36,13],[37,17],[28,24]],base);
+        line(c,[[16,15],[12,8],[13,2]],dark,3);line(c,[[25,14],[29,7],[28,1]],dark,3);line(c,[[12,9],[6,6],[5,2]],dark,2);line(c,[[29,8],[35,5],[35,1]],dark,2);
+        leaf(c,10,9,-.5,'#9abb7b');leaf(c,30,10,.7,'#b2cc86');leaf(c,24,40,.5,'#76a486');leaf(c,44,37,1.2,'#76a486');
+        eye(c,16,22);eye(c,25,21);rect(c,21,29,3,2,INK);gem(c,21,16,'#f4d48d',.5);body(c,[[47,34],[56,28],[58,31],[53,38],[48,40]],light);break;
+      }
+      case 'otter': {
+        body(c,[[42,44],[53,41],[59,45],[58,50],[47,54],[38,50]],dark);
+        body(c,[[20,31],[34,28],[44,36],[45,48],[38,55],[20,54],[15,46]],base);oval(c,29,43,10,12,cream);
+        body(c,[[14,22],[10,15],[14,11],[21,15],[31,14],[38,10],[42,15],[38,22],[39,31],[32,38],[19,36],[12,30]],base);oval(c,25,29,11,7,light);
+        eye(c,17,23);eye(c,30,22);rect(c,23,28,4,3,INK);line(c,[[24,32],[26,33],[28,31]],'#557f88',1);
+        body(c,[[16,36],[11,39],[13,47],[19,44]],dark);body(c,[[39,36],[45,39],[41,47],[36,43]],dark);body(c,[[20,51],[17,56],[27,56],[29,52]],dark);body(c,[[34,51],[34,56],[43,56],[40,51]],dark);
+        gem(c,29,42,'#bfe9df',evolved?1.3:1);line(c,[[25,40],[29,36],[33,40]],'#eef9dc',1);
+        if(evolved){poly(c,[[15,18],[15,7],[19,5],[22,15]],light,INK,1);poly(c,[[33,15],[37,3],[41,5],[39,19]],light,INK,1);gem(c,28,15,'#dff6df',.65);line(c,[[45,48],[54,45],[56,47]],light,2);}
+        break;
+      }
+      case 'fox': {
+        // A lantern plume, broad diamond ears and ink-dark stockings.
+        body(c,[[38,38],[45,26],[56,19],[60,27],[57,39],[51,48],[39,49]],dark);poly(c,[[45,32],[55,23],[57,28],[53,38],[46,42]],light);gem(c,52,30,data.element==='wind'?'#e3f0d6':'#f9db99',evolved?1:.7);
+        body(c,[[17,33],[30,29],[43,34],[44,46],[36,52],[20,49],[14,41]],base);poly(c,[[19,36],[31,34],[35,41],[30,48],[20,46]],cream);
+        body(c,[[14,25],[9,7],[16,10],[23,17],[28,15],[36,5],[39,9],[36,27],[32,35],[22,38],[13,33]],base);poly(c,[[12,12],[16,14],[20,20],[15,23]],dark);poly(c,[[35,10],[35,21],[31,21]],dark);
+        poly(c,[[15,28],[22,30],[30,27],[32,31],[25,36],[19,35]],cream);eye(c,16,24);eye(c,29,23);rect(c,23,31,3,2,INK);
+        body(c,[[17,44],[23,46],[23,55],[17,55]],dark);body(c,[[32,46],[38,46],[39,55],[32,55]],dark);
+        if(evolved){poly(c,[[15,35],[18,42],[13,44],[21,45],[26,43],[28,35]],light);poly(c,[[38,31],[46,16],[55,8],[53,18],[45,30]],light,INK,1);poly(c,[[43,44],[57,42],[61,48],[53,53],[44,50]],light,INK,1);gem(c,26,19,'#f9dcad',.65);line(c,[[45,39],[52,30]],'#fff0c5',1);}
+        if(data.id==='yorune'){gem(c,24,17,'#d9efdd',.55);spark(c,49,18,'#d2ebdf',.5);}
+        break;
+      }
+      case 'owl': {
+        body(c,[[18,24],[13,14],[19,12],[25,16],[37,14],[45,10],[46,21],[51,31],[48,45],[40,54],[24,54],[15,45],[13,32]],base);
+        body(c,[[16,28],[7,31],[4,43],[14,47],[20,38]],dark);body(c,[[46,27],[55,28],[61,39],[53,44],[45,38]],dark);
+        poly(c,[[18,25],[26,20],[32,24],[39,19],[46,24],[44,36],[36,41],[29,40],[21,35]],cream);
+        oval(c,26,29,6,7,light);oval(c,38,28,6,7,light);eye(c,24,27,true);eye(c,36,26,true);poly(c,[[30,33],[35,32],[33,37]],warm);
+        poly(c,[[23,41],[31,44],[39,40],[43,45],[38,51],[28,51]],light);rect(c,24,53,6,4,warm);rect(c,36,53,6,4,warm);
+        if(evolved){poly(c,[[14,19],[7,10],[17,12],[22,17]],cream,INK,1);poly(c,[[40,17],[49,3],[52,6],[47,21]],cream,INK,1);poly(c,[[8,34],[3,27],[9,28],[16,33]],light);gem(c,32,20,'#d7e9d8',.7);}
+        break;
+      }
+      case 'lantern': {
+        // Four glass moth wings surround an illuminated hanging abdomen.
+        const flap=phase?2:0;
+        body(c,[[29,25],[18,11+flap],[7,10+flap],[4,23],[12,32],[27,35]],base);body(c,[[35,25],[46,9+flap],[58,11+flap],[60,23],[52,32],[37,35]],base);
+        body(c,[[27,33],[11,35],[7,45],[15,50],[29,42]],dark);body(c,[[37,33],[52,33],[58,43],[51,49],[35,42]],dark);
+        poly(c,[[10,16+flap],[17,15+flap],[25,28],[14,27]],light);poly(c,[[39,27],[47,14+flap],[54,15+flap],[51,25]],light);
+        poly(c,[[13,38],[24,36],[23,43],[15,45]],cream);poly(c,[[40,36],[50,37],[50,43],[43,44]],cream);
+        body(c,[[28,24],[35,24],[39,38],[37,50],[31,56],[26,49],[25,37]],'#e4b97f');poly(c,[[30,33],[34,32],[35,46],[31,51],[28,46]],'#fff0b3');
+        oval(c,32,23,7,7,dark);eye(c,28,22);eye(c,35,22);line(c,[[29,17],[25,10],[23,9]],INK,1);line(c,[[35,17],[39,9],[42,8]],INK,1);rect(c,21,7,4,3,cream);rect(c,41,6,4,3,cream);
+        if(evolved){gem(c,15,22,'#f6d5a4',.7);gem(c,49,21,'#f6d5a4',.7);spark(c,32,8,'#f5ddb2',.7);line(c,[[30,50],[26,59]],warm,1);line(c,[[34,50],[38,59]],warm,1);}break;
+      }
+      case 'tortoise': {
+        body(c,[[12,40],[7,37],[4,42],[9,49],[16,48]],dark);body(c,[[16,47],[15,54],[24,55],[26,49]],dark);body(c,[[39,47],[40,55],[48,54],[47,47]],dark);
+        body(c,[[10,39],[15,24],[27,17],[42,20],[51,32],[49,45],[39,50],[22,48]],base);
+        poly(c,[[17,32],[23,23],[34,21],[43,28],[46,39],[38,46],[24,44],[16,38]],dark);poly(c,[[23,27],[32,24],[40,29],[37,37],[26,38]],light);line(c,[[16,37],[26,38],[24,44]],'#567e6b',1);line(c,[[37,37],[45,38]],'#567e6b',1);
+        body(c,[[42,40],[46,30],[54,29],[60,35],[59,44],[53,49],[46,46]],light);eye(c,53,34);rect(c,55,42,4,1,INK);
+        leaf(c,26,24,-.5,'#91bc7e');leaf(c,35,23,.5,'#bad499');
+        if(evolved){rect(c,28,6,4,17,'#8e9071');leaf(c,31,15,-.8,'#79a17c');leaf(c,32,14,.6,'#bed698');leaf(c,30,9,-.1,'#9abc7d');flower(c,23,16,'#f7d5b5');flower(c,35,20,'#f2e4bf');}break;
+      }
+      case 'manta': {
+        const lift=phase?3:0;
+        body(c,[[30,26],[17,23],[3,13+lift],[5,31],[14,42],[27,41],[33,37]],base);body(c,[[33,26],[45,22],[61,11+lift],[59,31],[50,41],[37,42],[30,37]],base);
+        poly(c,[[7,20+lift],[18,29],[27,31],[24,36],[14,36]],light);poly(c,[[37,31],[47,27],[57,18+lift],[53,35],[43,36]],light);
+        body(c,[[27,26],[31,20],[36,23],[39,34],[35,43],[31,47],[26,40],[24,32]],light);line(c,[[32,43],[32,50],[37,56],[45,55]],dark,3);line(c,[[33,48],[37,53],[44,52]],light,1);
+        eye(c,27,28);eye(c,34,27);rect(c,31,34,3,1,INK);gem(c,32,22,'#dce9cb',.55);
+        if(evolved){gem(c,15,30,'#d4ecdb',.8);gem(c,49,28,'#d4ecdb',.8);poly(c,[[24,26],[20,17],[24,13],[28,23]],cream,INK,1);poly(c,[[36,24],[39,12],[43,15],[40,28]],cream,INK,1);}break;
+      }
+      case 'jelly': {
+        line(c,[[20,39],[17,48],[22,53],[18,59]],dark,3);line(c,[[31,40],[29,49],[33,54],[30,60]],dark,3);line(c,[[41,39],[46,48],[42,54],[47,58]],dark,3);
+        line(c,[[20,40],[19,47],[24,52]],light,1);line(c,[[42,40],[44,47],[40,52]],light,1);
+        body(c,[[10,34],[13,22],[22,13],[33,10],[44,15],[52,26],[53,36],[46,42],[17,42]],base);poly(c,[[14,29],[21,18],[32,14],[41,18],[48,29],[46,34],[18,34]],light);
+        poly(c,[[13,34],[19,31],[25,35],[32,31],[40,35],[46,31],[52,35],[46,41],[18,41]],dark);eye(c,23,29);eye(c,37,29);rect(c,30,35,3,2,INK);gem(c,32,20,'#ebdfed',.7);
+        if(evolved){gem(c,19,19,'#d9ede7',.8);gem(c,45,20,'#d9ede7',.8);gem(c,32,10,'#f0e6f0',1);spark(c,9,13,'#d0ebde',.6);spark(c,55,12,'#e0d9ef',.6);}break;
+      }
+      case 'gecko': {
+        line(c,[[40,43],[51,47],[58,41],[54,32],[49,32]],INK,7);line(c,[[40,43],[51,47],[58,41],[54,32],[49,32]],base,5);
+        body(c,[[21,31],[35,29],[43,35],[42,46],[34,50],[24,46],[18,38]],base);
+        body(c,[[17,28],[15,20],[19,14],[31,12],[39,18],[38,29],[30,35],[20,34]],light);eye(c,20,22,true);eye(c,32,21,true);rect(c,26,29,4,1,INK);
+        line(c,[[23,38],[15,43],[12,41]],dark,4);line(c,[[33,42],[29,52],[25,53]],dark,4);line(c,[[37,36],[45,31],[49,33]],dark,4);leaf(c,28,20,.4,'#7ea580');leaf(c,35,36,.5,'#97bd8b');flower(c,39,40,'#f6dcaf');break;
+      }
+      case 'goat': {
+        body(c,[[17,34],[23,27],[42,27],[49,36],[45,47],[23,48],[16,43]],base);poly(c,[[25,30],[39,30],[43,37],[37,41],[25,40]],light);
+        body(c,[[21,44],[26,45],[25,56],[20,56]],dark);body(c,[[38,44],[44,44],[46,55],[40,56]],dark);
+        body(c,[[13,28],[14,18],[21,12],[29,15],[34,25],[29,35],[20,38]],light);poly(c,[[15,25],[7,22],[7,18],[16,20]],base,INK,1);poly(c,[[29,23],[39,17],[39,22],[32,28]],base,INK,1);
+        line(c,[[18,16],[14,9],[16,4],[20,5]],INK,4);line(c,[[27,16],[31,9],[29,4],[25,5]],INK,4);line(c,[[18,16],[14,9],[16,4]],warm,2);line(c,[[27,16],[31,9],[29,4]],warm,2);
+        eye(c,17,25);eye(c,27,24);rect(c,22,31,3,2,INK);poly(c,[[20,36],[23,43],[27,35]],cream);body(c,[[46,34],[52,26],[56,28],[53,36]],light);gem(c,24,19,'#ecdfb0',.5);break;
+      }
+      case 'dragon': {
+        const crystal=data.element==='crystal';
+        body(c,[[39,39],[51,36],[59,40],[58,49],[49,54],[39,50]],dark);poly(c,[[47,42],[54,41],[56,46],[49,50]],light);
+        body(c,[[21,28],[13,15],[5,10],[7,32],[17,39],[29,38]],dark);poly(c,[[10,18],[17,24],[23,33],[13,30]],light);
+        body(c,[[36,27],[46,14],[57,10],[55,31],[46,39],[35,38]],dark);poly(c,[[50,18],[43,26],[39,33],[51,30]],light);
+        body(c,[[24,29],[36,28],[42,39],[40,52],[32,57],[22,53],[18,41]],base);poly(c,[[27,34],[33,33],[37,40],[35,50],[29,53],[24,48],[23,40]],cream);
+        body(c,[[21,25],[19,16],[24,10],[35,9],[43,15],[44,25],[36,32],[25,31]],base);body(c,[[23,13],[20,4],[24,2],[28,10]],warm);body(c,[[35,11],[39,1],[42,4],[40,15]],warm);
+        eye(c,25,21);eye(c,37,20);poly(c,[[28,26],[38,25],[37,29],[31,30]],light);rect(c,33,27,3,1,INK);
+        body(c,[[21,47],[17,56],[27,57],[29,51]],dark);body(c,[[35,50],[35,57],[45,56],[41,47]],dark);
+        gem(c,31,16,crystal?'#e4e4f2':'#f7d59e',.8);if(crystal){gem(c,11,26,'#c6d9ed',1);gem(c,51,24,'#c6d9ed',1);gem(c,31,41,'#c8e5e7',.8);spark(c,5,42,'#d5e9df',.5);spark(c,56,5,'#e9dfef',.6);}break;
+      }
+      case 'golem': {
+        body(c,[[14,30],[8,31],[5,45],[11,50],[19,46],[21,36]],dark);body(c,[[45,28],[53,31],[58,43],[54,50],[46,47],[42,36]],dark);
+        body(c,[[19,25],[30,20],[43,26],[46,41],[40,51],[23,52],[16,41]],base);poly(c,[[24,27],[32,24],[40,29],[39,38],[32,42],[23,36]],light);
+        body(c,[[20,19],[25,10],[37,8],[45,17],[42,28],[27,30]],base);poly(c,[[26,14],[35,12],[40,17],[38,21],[25,22]],light);rect(c,26,23,5,3,'#f2e7b4');rect(c,36,22,5,3,'#f2e7b4');rect(c,31,29,5,1,INK);
+        body(c,[[21,48],[18,57],[28,58],[31,51]],dark);body(c,[[36,50],[36,57],[47,57],[43,47]],dark);gem(c,32,36,'#d3e9e0',1);gem(c,12,36,'#cbd3e2',.8);gem(c,50,35,'#cbd3e2',.8);gem(c,33,11,'#ded8ea',.9);break;
+      }
+      default: {
+        body(c,[[17,23],[29,13],[44,19],[50,34],[44,49],[23,51],[13,39]],base);oval(c,31,36,13,12,light);eye(c,23,29);eye(c,37,29);rect(c,30,37,3,2,INK);leaf(c,29,22,.2,dark);break;
+      }
+    }
+    c.restore();creatureCache.set(key,cv);return cv;
+  }
+  function creature(target,id,options={}) {
+    if(!target)return;const isCanvas=typeof target.getContext==='function',c=isCanvas?target.getContext('2d'):target;
+    const size=options.size||Math.min(c.canvas.width,c.canvas.height),x=options.x??(c.canvas.width-size)/2,y=options.y??(c.canvas.height-size)/2;
+    if(isCanvas)c.clearRect(0,0,c.canvas.width,c.canvas.height);c.save();c.imageSmoothingEnabled=false;c.globalAlpha=options.alpha??1;
+    const phase=options.time?Math.floor(options.time/700)%2:0,cv=creatureSprite(id,phase);
+    if(options.flip||options.back){c.translate(x+size,y);c.scale(-1,1);c.drawImage(cv,0,0,size,size);}else c.drawImage(cv,x,y,size,size);
+    c.restore();
+  }
+  function battle(canvas,engine,time=0) {
+    if(!engine.battle)return;const c=canvas.getContext('2d'),W=canvas.width,H=canvas.height,map=engine.map||{},p=palettes[map.theme]||palettes.meadow;
+    c.imageSmoothingEnabled=false;c.clearRect(0,0,W,H);
+    const sky=c.createLinearGradient(0,0,0,H);sky.addColorStop(0,p.sky);sky.addColorStop(.55,shade(p.sky,20));sky.addColorStop(1,p.grass);c.fillStyle=sky;c.fillRect(0,0,W,H);
+    // Atmospheric parallax landscape, free of text or UI-shaped decoration.
+    poly(c,[[0,H*.48],[W*.1,H*.3],[W*.23,H*.4],[W*.38,H*.21],[W*.56,H*.39],[W*.73,H*.27],[W*.9,H*.38],[W,H*.29],[W,H],[0,H]],shade(p.sky,-12));
+    poly(c,[[0,H*.53],[W*.2,H*.42],[W*.35,H*.5],[W*.52,H*.36],[W*.7,H*.44],[W*.9,H*.39],[W,H*.46],[W,H],[0,H]],shade(p.grass,10));
+    if(map.theme==='coast'){
+      rect(c,0,H*.43,W,H*.26,p.water);for(let j=0;j<5;j++){let yy=H*.47+j*18;rect(c,(j*139+Math.sin(time*.0005)*8)%W,yy,W*.3,2,shade(p.water,30));}poly(c,[[0,H*.73],[W*.22,H*.61],[W*.42,H*.69],[W*.68,H*.62],[W,H*.7],[W,H],[0,H]],p.path);
+    }else{
+      rect(c,0,H*.62,W,H*.38,p.grass);for(let i=0;i<28;i++){const xx=hash(i,5)*W,yy=H*.64+hash(i,9)*H*.34;tuft(c,xx,yy,p.dark,hash(i,3));if(i%6===0)flower(c,xx+8,yy-2,map.theme==='forest'?'#c8d9cf':'#f0dfaf');}
+    }
+    if(map.theme==='forest'){
+      for(let i=0;i<8;i++){c.save();c.globalAlpha=.33;c.translate(i*W/7-30,H*.25);c.scale(3,3);tree(c,0,0,p,hash(i,4),'forest');c.restore();}
+    } else if(map.theme==='ruins'){
+      for(let i=0;i<5;i++){let xx=(i*.23+.03)*W,yy=H*.36,hh=25+hash(i,3)*60;rect(c,xx,yy-hh,22,hh,'#91a9a2');rect(c,xx-4,yy-hh,30,8,'#bdc9b8');rect(c,xx+4,yy-hh+12,3,hh-12,'#c2cebd');}
+    } else {
+      for(let i=0;i<6;i++){c.save();c.globalAlpha=.45;c.translate(i*W/5-15,H*.39);c.scale(1.7,1.7);tree(c,0,0,p,hash(i,2),map.theme);c.restore();}
+    }
+    const enemyX=W*.60,enemyY=H*.16,enemySize=Math.min(W*.27,H*.47),allySize=Math.min(W*.34,H*.57),allyX=W*.14,allyY=H*.42;
+    oval(c,enemyX+enemySize*.5,enemyY+enemySize*.88,enemySize*.48,enemySize*.12,shade(p.grass,-16));oval(c,enemyX+enemySize*.5,enemyY+enemySize*.88,enemySize*.43,enemySize*.09,shade(p.grass,13));
+    oval(c,allyX+allySize*.5,allyY+allySize*.88,allySize*.48,allySize*.11,shade(p.grass,-19));oval(c,allyX+allySize*.5,allyY+allySize*.88,allySize*.43,allySize*.08,shade(p.grass,10));
+    const enemy=engine.battle.enemy,ally=engine.state.party[engine.battle.activeIndex];
+    if(enemy)creature(c,enemy.species,{x:enemyX,y:enemyY+Math.sin(time*.002)*3,size:enemySize,flip:true,time,alpha:enemy.hp<=0?.4:1});
+    if(ally)creature(c,ally.species,{x:allyX,y:allyY+Math.sin(time*.002+1)*2,size:allySize,time,alpha:ally.hp<=0?.45:1});
+    for(let i=0;i<10;i++){c.globalAlpha=.4+Math.sin(time*.002+i)*.25;rect(c,(hash(i,4)*W+time*.004)%W,hash(i,8)*H*.7,3,3,'#f4edc1');}c.globalAlpha=1;
+  }
+  LT.Art = {world,creature,battle,tileSize:TILE,clearCache(){terrainCache.clear();creatureCache.clear();}};
+})();
+
+</script>
+<script>
+/* app.js */
+/* 灯獣紀 — LUMINA TRAIL. Browser interface, input and original procedural audio. */
+(() => {
+  'use strict';
+  const { DATA, Engine, Art } = globalThis.LT;
+  const $ = id => document.getElementById(id);
+  const SAVE_KEY = 'lumina-trail-save-v1';
+  const BACKUP_KEY = 'lumina-trail-backup-v1';
+  const SETTINGS_KEY = 'lumina-trail-settings-v1';
+  const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
+  let engine = new Engine();
+  engine.newGame(DATA.starters[0]);
+  let playing = false, busy = false, activePane = '', toastTimer = 0, lastSave = 0;
+  let saveIssueShown = false, storedSave = null, lastStep = 0, lastFrame = 0, lastClock = 0;
+  let moveAnim = null, pressedDirection = null, directionSource = null;
+  let settings = { sound: false, reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches };
+  try { const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)); if (s && typeof s.sound === 'boolean') settings.sound = s.sound; if (s && typeof s.reducedMotion === 'boolean') settings.reducedMotion = s.reducedMotion; } catch (_) {}
+
+  class Soundscape {
+    constructor() { this.ctx = null; this.gain = null; this.enabled = false; this.beat = 0; this.next = 0; this.mode = 'field'; }
+    async setEnabled(enabled) {
+      this.enabled = enabled;
+      if (!enabled) { if (this.gain && this.ctx) this.gain.gain.setTargetAtTime(0, this.ctx.currentTime, .08); return; }
+      try {
+        if (!this.ctx) {
+          const Audio = window.AudioContext || window.webkitAudioContext;
+          if (!Audio) throw new Error('音声に対応していません');
+          this.ctx = new Audio(); this.gain = this.ctx.createGain();
+          this.gain.gain.value = .16; this.gain.connect(this.ctx.destination);
+        }
+        await this.ctx.resume();
+        this.gain.gain.setTargetAtTime(.16, this.ctx.currentTime, .08);
+        this.next = this.ctx.currentTime + .08;
+      } catch (_) { this.enabled = false; settings.sound = false; updateSound(); toast('この環境では音声を開始できませんでした。ゲームはそのまま遊べます。'); }
+    }
+    tone(midi, start, duration, volume = .25, type = 'sine') {
+      if (!this.ctx || !this.gain || !this.enabled) return;
+      const osc = this.ctx.createOscillator(), env = this.ctx.createGain();
+      osc.type = type; osc.frequency.value = 440 * 2 ** ((midi - 69) / 12);
+      env.gain.setValueAtTime(0, start); env.gain.linearRampToValueAtTime(volume, start + .012);
+      env.gain.exponentialRampToValueAtTime(.0001, start + duration);
+      osc.connect(env); env.connect(this.gain); osc.start(start); osc.stop(start + duration + .03);
+      osc.onended = () => { osc.disconnect(); env.disconnect(); };
+    }
+    tick() {
+      if (!this.enabled || !this.ctx || this.ctx.state !== 'running' || document.hidden) return;
+      const now = this.ctx.currentTime;
+      if (this.next < now - .3) this.next = now + .03;
+      const battle = playing && engine.battle && !engine.battle.result;
+      const interval = battle ? .205 : .37;
+      const notes = battle ? [0,7,12,3,10,7,14,12,0,7,15,12,10,5,7,3] : [12,7,14,16,19,14,12,7,9,12,16,14,7,9,12,4];
+      const roots = battle ? [45,41,43,40] : [48,53,45,55];
+      while (this.next < now + .25) {
+        const root = roots[Math.floor(this.beat / 16) % 4];
+        this.tone(root + notes[this.beat % notes.length], this.next, interval * 1.9, battle ? .18 : .16, 'triangle');
+        if (this.beat % 4 === 0) this.tone(root - 12, this.next, interval * 3.7, .22, 'sine');
+        if (this.beat % 8 === 0) this.tone(root + 7, this.next, interval * 6, .06, 'sine');
+        this.next += interval; this.beat++;
+      }
+    }
+    fx(kind) {
+      if (!this.enabled || !this.ctx) return;
+      const now = this.ctx.currentTime + .005;
+      const seq = ({ click: [76], hit: [48,43], heal:[64,69,76], capture:[72,76,79,84], win:[60,67,72,76,79,84], step:[40] })[kind] || [76];
+      seq.forEach((n,i) => this.tone(n, now + i * .085, .16, kind === 'step' ? .045 : .3, kind === 'hit' ? 'triangle' : 'sine'));
+    }
+  }
+  const sound = new Soundscape();
+  function saveSettings() { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {} }
+  function updateSound() {
+    $('sound-btn').setAttribute('aria-pressed', String(settings.sound));
+    $('sound-btn').setAttribute('aria-label', settings.sound ? 'サウンドをオフにする' : 'サウンドをオンにする');
+    $('sound-btn').title = settings.sound ? 'サウンド ON' : 'サウンド OFF';
+    $('sound-btn').innerHTML = settings.sound ? '<span aria-hidden="true">♫</span><span class="sound-label">ON</span>' : '<span aria-hidden="true">♫</span><span class="sound-label">OFF</span>';
+    document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
+  }
+  function toast(message) {
+    const el = $('toast'); el.textContent = message; el.hidden = false; el.classList.add('visible');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; el.classList.remove('visible'); }, 3600);
+  }
+  function loadStored() {
+    let bad = false;
+    for (const key of [SAVE_KEY, BACKUP_KEY]) {
+      try {
+        const raw = localStorage.getItem(key); if (!raw) continue;
+        const data = JSON.parse(raw); const checked = new Engine(data);
+        storedSave = checked.serialize();
+        $('continue-btn').hidden = false;
+        const state = checked.state;
+        $('title-status').textContent = `${DATA.maps[state.map].name} · 灯印 ${state.seals.length}/4 · ${state.caught.length}種の灯獣`;
+        if (key === BACKUP_KEY) $('title-status').textContent += ' · バックアップから復元';
+        return;
+      } catch (_) { bad = true; }
+    }
+    if (bad) $('title-status').textContent = '保存データを読み込めませんでした。新しい冒険か、手元のデータを読み込めます。';
+  }
+  function save(showMessage = false) {
+    if (!playing) return;
+    try {
+      const data = engine.serialize();
+      const old = localStorage.getItem(SAVE_KEY);
+      if (old) { try { new Engine(JSON.parse(old)); localStorage.setItem(BACKUP_KEY, old); } catch (_) {} }
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      storedSave = data; lastSave = performance.now();
+      if (showMessage) toast('冒険を記録しました。');
+    } catch (_) {
+      if (!saveIssueShown || showMessage) toast('端末に保存できません。「セーブ書き出し」で冒険を保存してください。');
+      saveIssueShown = true;
+    }
+  }
+  function begin(starter, data) {
+    try { engine = new Engine(data); if (!data) engine.newGame(starter); } catch (err) { toast(err.message || 'セーブデータを読み込めません。'); return; }
+    playing = true; busy = false; pressedDirection = null; moveAnim = null;
+    $('title-screen').hidden = true; document.body.classList.add('is-playing');
+    closeModal(); updateAll(); save();
+    if (settings.sound) sound.setEnabled(true);
+    $('game-canvas').focus({preventScroll:true});
+    if (!data) setTimeout(() => showDialogue('旅のはじまり', [
+      'かつて、島々の夜を照らしていた「星灯」。その光が消え、灯獣たちは静かな眠りにつきはじめた。',
+      'あなたは灯守見習い。選んだ相棒とともに四つの灯印を集め、星環の灯台にもう一度、光を届けよう。',
+      'まずは村の案内人に話しかけよう。矢印キー / WASDで移動、E / Enter / スペースで話す・調べる。スマホは画面下の十字キーと「A」を使う。'
+    ]), 160);
+  }
+  function paintPortraits(container = document) {
+    container.querySelectorAll('canvas[data-creature]').forEach(c => {
+      const id = c.dataset.creature; if (!DATA.species[id]) return;
+      Art.creature(c, id, { time: settings.reducedMotion ? 0 : performance.now() });
+    });
+  }
+  function typeBadge(element) {
+    const e = DATA.elements[element] || { name: '無', color: '#8a9992' };
+    return `<span class="type-badge" style="--type-color:${escape(e.color)}">${escape(e.name)}</span>`;
+  }
+  function portrait(id, size = 88) { return `<canvas class="creature-portrait" data-creature="${escape(id)}" width="${size*2}" height="${size*2}" style="width:${size}px;height:${size}px" aria-label="${escape(DATA.species[id].name)}の姿"></canvas>`; }
+  function hpBar(mon, id = '') {
+    const max = engine.stats(mon).hp, percent = Math.max(0, Math.min(100, mon.hp / max * 100));
+    return `<div class="hp-track"${id ? ` id="${id}"` : ''}><span class="hp-fill${percent < 25 ? ' low' : ''}" style="width:${percent}%"></span></div>`;
+  }
+  function updateAll() {
+    const s = engine.state;
+    $('location-name').textContent = engine.map.name;
+    $('location-subtitle').textContent = engine.map.subtitle;
+    $('world-label').textContent = engine.map.name;
+    $('objective-text').textContent = engine.objective();
+    $('seal-list').innerHTML = Object.values(DATA.guardians).map((g,i) => `<span class="seal${s.seals.includes(g.id) ? ' earned' : ''}" title="${escape(g.title || g.name)}" aria-label="${escape(g.title || g.name)}${s.seals.includes(g.id) ? '取得済み' : '未取得'}"><span>${['✿','≈','☾','✧'][i]}</span><small>${['芽吹き','潮騒','宵風','星環'][i]}</small></span>`).join('');
+    $('party-list').innerHTML = s.party.map((mon,i) => {
+      const species = DATA.species[mon.species];
+      return `<button class="party-card${i === 0 ? ' leader' : ''}" data-party="${i}" aria-label="${escape(species.name)} レベル${mon.level} 詳細">${portrait(mon.species,54)}<span class="party-meta"><span class="party-name">${escape(species.name)}${i===0 ? '<small class="lead-mark">先頭</small>' : ''}</span><span class="party-stats">Lv.${mon.level} <span>${mon.hp}/${engine.stats(mon).hp}</span></span>${hpBar(mon)}</span></button>`;
+    }).join('');
+    $('bag-summary').innerHTML = `<span>共鳴鈴 <strong>${s.inventory.chime}</strong></span><span>回復 <strong>${s.inventory.salve + s.inventory.tonic}</strong></span><span class="coin-count">灯貨 <strong>${s.coins.toLocaleString('ja-JP')}</strong></span>`;
+    $('world-hint').textContent = nearHint();
+    $('world-controls').hidden = !!engine.battle;
+    $('battle-ui').hidden = !engine.battle;
+    $('battle-panel').hidden = !engine.battle;
+    $('world-label').hidden = !!engine.battle;
+    $('world-hint').hidden = !!engine.battle;
+    document.body.classList.toggle('in-battle', !!engine.battle);
+    if (engine.battle) updateBattle();
+    paintPortraits($('party-list'));
+  }
+  function nearHint() {
+    const {x,y,facing} = engine.state;
+    const d = ({up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]})[facing] || [0,1];
+    const n = engine.map.npcs.find(n => Math.abs(n.x-x)+Math.abs(n.y-y) <= 1 || (n.x===x+d[0] && n.y===y+d[1]));
+    if (n) return `${n.name} · A / E で話す・調べる`;
+    if (engine.map.tiles[y]?.[x] === ':') return '草むらでは灯獣に出会えます';
+    return '道を歩いて探索 · 人や灯台の近くで A / E';
+  }
+  function updateBattle() {
+    const b = engine.battle; if (!b) return;
+    const ally = engine.state.party[b.activeIndex], enemy = b.enemy;
+    for (const [prefix,mon] of [['ally',ally],['enemy',enemy]]) {
+      const species = DATA.species[mon.species], max = engine.stats(mon).hp;
+      $(prefix+'-name').textContent = species.name;
+      $(prefix+'-level').textContent = `Lv.${mon.level}`;
+      $(prefix+'-type').innerHTML = typeBadge(species.element);
+      $(prefix+'-hp').style.width = `${Math.max(0,mon.hp/max*100)}%`;
+      $(prefix+'-hp').classList.toggle('low', mon.hp/max < .25);
+      $(prefix+'-hp-text').textContent = `${mon.hp} / ${max}`;
+    }
+    const nextXP = engine.xpToNext(ally.level);
+    $('ally-xp').textContent = '';
+    $('ally-xp').style.width = `${nextXP ? Math.min(100,ally.xp/nextXP*100) : 100}%`;
+    $('ally-xp').parentElement.title = nextXP ? `経験値 ${ally.xp} / ${nextXP}` : '最大レベル';
+    document.querySelector('.enemy-card .hp-label').textContent = b.guardian ? 'GUARDIAN' : 'WILD';
+    if (!busy) battleActions();
+  }
+  function battleActions(view = 'main') {
+    activePane = view;
+    const b = engine.battle; if (!b) return;
+    const box = $('battle-actions');
+    if (b.result) { box.innerHTML = '<button class="btn btn-primary battle-continue" data-battle="continue">冒険へ戻る <span>→</span></button>'; return; }
+    const mon = engine.state.party[b.activeIndex];
+    if (view === 'moves') {
+      box.innerHTML = engine.moves(mon).map((m,i) => `<button class="move-btn" data-move="${i}" style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : `威力 ${m.power} · 命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%`}</small></button>`).join('')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
+    } else if (view === 'switch') {
+      box.innerHTML = engine.state.party.map((m,i) => `<button class="btn" data-switch="${i}" ${i===b.activeIndex || m.hp===0 ? 'disabled' : ''}>${escape(DATA.species[m.species].name)} <small>Lv.${m.level} · HP ${m.hp}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
+    } else if (view === 'items') {
+      box.innerHTML = ['salve','tonic'].map(id => `<button class="btn" data-battle-item="${id}" ${engine.state.inventory[id] < 1 ? 'disabled' : ''}>${escape(DATA.items[id].name)} ×${engine.state.inventory[id]}<small>${escape(DATA.items[id].description)}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
+    } else {
+      box.innerHTML = '<button class="btn btn-primary" data-battle="moves"><span>✦</span> わざ</button>'+
+        `<button class="btn" data-battle="resonate" ${b.guardian || engine.state.inventory.chime===0 ? 'disabled' : ''}><span>♧</span> 共鳴 <small>鈴 ×${engine.state.inventory.chime}${b.guardian?'':` · ${Math.round(engine.resonanceChance()*100)}%`}</small></button>`+
+        '<button class="btn" data-battle="items">道具</button><button class="btn" data-battle="switch">交代</button>'+
+        `<button class="btn btn-quiet" data-battle="flee" ${b.guardian ? 'disabled' : ''}>にげる</button>`;
+    }
+    box.querySelectorAll('button').forEach(btn => { if(busy) btn.disabled = true; });
+  }
+  async function doBattle(action) {
+    if (busy || !engine.battle || engine.battle.result) return;
+    const result = engine.action(action);
+    if (!result.ok) { toast(result.message || '今はその行動を選べません。'); return; }
+    busy = true;
+    $('battle-actions').querySelectorAll('button').forEach(b => b.disabled = true);
+    const events = result.events || [];
+    const box = $('battle-log'); box.replaceChildren();
+    $('game-canvas').classList.toggle('battle-impact', !settings.reducedMotion && action.type==='move');
+    sound.fx(action.type==='resonate' ? 'capture' : action.type==='item' ? 'heal' : 'hit');
+    updateAll();
+    for (let i=0;i<events.length;i++) {
+      const event = events[i]; const p = document.createElement('p'); p.textContent = typeof event==='string' ? event : event.text; box.appendChild(p); box.scrollTop = box.scrollHeight;
+      if (!settings.reducedMotion) await new Promise(resolve => setTimeout(resolve, i===events.length-1 ? 200 : 320));
+    }
+    $('game-canvas').classList.remove('battle-impact');
+    busy = false; updateAll(); save();
+    if (['won','caught'].includes(result.ended)) sound.fx(result.ended==='caught' ? 'capture' : 'win');
+  }
+  function openBattle() {
+    pressedDirection = null; moveAnim = null;
+    $('battle-log').replaceChildren();
+    const b = engine.battle;
+    const p = document.createElement('p'); p.textContent = b.guardian ? `${DATA.guardians[b.guardian].name}との試練がはじまった！` : `${DATA.species[b.enemy.species].name}が姿をあらわした。`;
+    $('battle-log').appendChild(p);
+    updateAll(); sound.fx('click');
+    if (matchMedia('(max-width: 600px)').matches) $('battle-panel').scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+  function finishBattle() {
+    if (busy) return;
+    const complete = engine.state.flags.completed && !engine.state.flags.endingShown;
+    engine.finishBattle(); updateAll(); save();
+    if (complete) {
+      engine.state.flags.endingShown = true; save();
+      showDialogue('星灯が、ふたたび。', [
+        '四つの灯印がひとつにつながり、星環の灯台から暖かな光が広がった。眠っていた灯獣たちも、ゆっくりと目を覚ます。',
+        `「光を運ぶのは、強さだけじゃない。一緒に歩いてきた、その心だよ。」あなたと${DATA.species[engine.state.party[0].species].name}は、初めて出会った村を遠くに見つめた。`,
+        `物語クリア！ ${engine.state.caught.length}種の灯獣と出会いを結びました。これからも島を巡り、進化と全${Object.keys(DATA.species).length}種の図鑑完成を楽しめます。`
+      ]);
+    }
+  }
+  function openModal(title, html, pane = '') {
+    pressedDirection = null; activePane = pane;
+    $('modal-title').textContent = title; $('modal-content').innerHTML = html;
+    if (!$('modal').open) $('modal').showModal();
+    paintPortraits($('modal-content'));
+    $('modal-content').scrollTop = 0;
+  }
+  function closeModal() { if ($('modal').open) $('modal').close(); activePane = ''; pressedDirection = null; if(playing)$('game-canvas').focus({preventScroll:true}); }
+  function showDialogue(title, lines, after) {
+    let pos = 0;
+    const show = () => {
+      openModal(title, `<div class="dialogue-text"><p>${escape(lines[pos])}</p></div><div class="modal-actions"><small class="muted">${pos+1} / ${lines.length}</small><button class="btn btn-primary" id="dialogue-next">${pos===lines.length-1 ? 'わかった' : 'つづきを読む'} →</button></div>`, 'dialogue');
+      $('dialogue-next').onclick = () => { sound.fx('click'); if (++pos<lines.length) show(); else { closeModal(); if (after) after(); } };
+    }; show();
+  }
+  function chooseStarter() {
+    openModal('最初の相棒を、選ぼう。', '<p class="muted">星灯の旅を共にする、小さな命。どの相棒でも最後まで冒険できます。</p><div class="starter-grid">'+ DATA.starters.map(id => {
+      const s = DATA.species[id];
+      return `<button class="starter-card" data-starter="${id}">${portrait(id,132)}<span class="starter-name">${escape(s.name)}</span>${typeBadge(s.element)}<p>${escape(s.description)}</p><span class="starter-pick">この子と旅立つ →</span></button>`;
+    }).join('') + '</div>', 'starters');
+  }
+  function requestNew() {
+    if (storedSave) {
+      openModal('新しい旅をはじめる', '<p class="dialogue-text">現在の冒険記録を、新しい冒険で置き換えます。残したい場合は、先に書き出してください。</p><div class="modal-actions"><button class="btn" data-ui="export-stored">今の記録を書き出す</button><button class="btn btn-primary" data-ui="new-confirm">相棒を選ぶ →</button></div>');
+    } else chooseStarter();
+  }
+  function interact() {
+    if (!playing || busy || engine.battle || $('modal').open) return;
+    const result = engine.interact(); sound.fx('click');
+    if (!result) return;
+    if (result.kind === 'shop') showShop(result.title);
+    else if (result.kind === 'rest') {
+      engine.heal(); save(); updateAll(); sound.fx('heal');
+      showDialogue(result.title || '灯りの休憩所', [...(result.lines || []), '仲間たちのHPがすべて回復した。どうか、よい旅を。']);
+    } else if (result.kind === 'guardian') {
+      const g = DATA.guardians[result.id];
+      openModal(result.title || g.name, `<p class="dialogue-text">${escape((result.lines || g.lines || []).join(' '))}</p><div class="guardian-preview">${portrait(g.species,128)}<div><strong>${escape(DATA.species[g.species].name)}</strong><p>Lv.${g.level} ${typeBadge(DATA.species[g.species].element)}</p><p class="muted">試練では共鳴・逃走ができません。仲間のHPを整えて挑みましょう。</p></div></div><div class="modal-actions"><button class="btn btn-quiet" data-ui="close">準備してから</button><button class="btn btn-primary" data-guardian="${g.id}">試練に挑む →</button></div>`);
+    } else { showDialogue(result.title || '灯りの便り', result.lines?.length ? result.lines : ['風が静かに吹いている。']); save(); updateAll(); }
+  }
+  function showShop(title='旅の道具店') {
+    openModal(title, `<p class="notice">灯貨 <strong>${engine.state.coins}</strong>　·　道具は冒険とバトルで使えます。</p>`+Object.entries(DATA.items).map(([id,item]) => `<div class="item-row"><span class="item-symbol">${id==='chime'?'♧':id==='salve'?'✚':'✦'}</span><div class="item-info"><strong>${escape(item.name)}</strong><p>${escape(item.description)}</p><small>所持 ${engine.state.inventory[id]} 個</small></div><button class="btn btn-small" data-buy="${id}" ${engine.state.coins<item.price ? 'disabled' : ''}>${item.price} 灯貨<br>購入</button></div>`).join(''), 'shop');
+  }
+  function showBag() {
+    if (engine.battle) { toast('バトル中は「道具」から使用できます。'); return; }
+    openModal('旅のかばん', `<p class="notice">灯貨 <strong>${engine.state.coins}</strong>　·　共鳴鈴は野生の灯獣とのバトルで使います。</p>`+Object.entries(DATA.items).map(([id,item]) => `<div class="item-row"><span class="item-symbol">${id==='chime'?'♧':id==='salve'?'✚':'✦'}</span><div class="item-info"><strong>${escape(item.name)} <span class="badge">${engine.state.inventory[id]}</span></strong><p>${escape(item.description)}</p></div>${id!=='chime' ? `<button class="btn btn-small" data-use="${id}" ${engine.state.inventory[id]<1 ? 'disabled' : ''}>使う</button>` : ''}</div>`).join('')+'<p class="muted">道具店で補充できます。各地の休憩所では無料で全回復できます。</p>', 'bag');
+  }
+  function chooseHeal(id) {
+    openModal(`${DATA.items[id].name}を使う`, '<div class="switch-list">'+engine.state.party.map((m,i) => `<button class="party-card" data-heal="${i}" data-item="${id}" ${(id==='tonic' ? m.hp!==0 : m.hp===0 || m.hp>=engine.stats(m).hp) ? 'disabled' : ''}>${portrait(m.species,60)}<span class="party-meta"><strong>${escape(DATA.species[m.species].name)}</strong><span class="party-stats">HP ${m.hp} / ${engine.stats(m).hp}</span>${hpBar(m)}</span></button>`).join('')+'</div>');
+  }
+  function showParty(index=0) {
+    if (engine.battle) { toast('バトル中は「交代」から仲間を選べます。'); return; }
+    const mon = engine.state.party[index]; if (!mon) return;
+    const s = DATA.species[mon.species], stats = engine.stats(mon);
+    openModal(s.name, `<div class="creature-card">${portrait(mon.species,160)}<div><p class="muted">灯獣記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(s.name)} <small>Lv.${mon.level}</small></h3>${typeBadge(s.element)}<p>${escape(s.description)}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['ちから',stats.atk],['まもり',stats.def],['すばやさ',stats.speed]].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div class="move-list">${engine.moves(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">この灯獣は完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button></div>`, 'party');
+  }
+  function showStorage(slot = null) {
+    if (engine.battle) return;
+    const s = engine.state;
+    if (slot === null) {
+      openModal('灯獣のひかえ', '<p class="muted">入れ替えたい旅の仲間を選んでください。仲間は3体まで同行できます。</p><div class="switch-list">'+s.party.map((m,i) => `<button class="party-card" data-storage-slot="${i}">${portrait(m.species,64)}<span class="party-meta"><strong>${escape(DATA.species[m.species].name)}</strong><span>Lv.${m.level} · HP ${m.hp}</span></span><span>⇄</span></button>`).join('')+`</div><p class="notice">ひかえに ${s.storage.length} 体の灯獣がいます。</p>`, 'storage');
+    } else {
+      openModal('迎える灯獣を選ぶ', `<p class="muted">${escape(DATA.species[s.party[slot].species].name)}と交代します。</p><div class="dex-grid">`+s.storage.map((m,i) => `<button class="dex-card" data-exchange="${i}" data-slot="${slot}">${portrait(m.species,84)}<strong>${escape(DATA.species[m.species].name)}</strong><small>Lv.${m.level} · HP ${m.hp}</small>${typeBadge(DATA.species[m.species].element)}</button>`).join('')+`</div>${s.storage.length ? '' : '<p class="list-empty">まだ、ひかえの灯獣はいません。草むらで共鳴して、新しい仲間に出会いましょう。</p>'}`, 'storage');
+    }
+  }
+  function showDex(filter = 'all') {
+    const s = engine.state;
+    const species = Object.values(DATA.species).filter(c => filter==='all' || c.element===filter);
+    openModal('灯獣図鑑', `<div class="dex-header"><p>共鳴 <strong>${s.caught.length}</strong> / ${Object.keys(DATA.species).length}　·　発見 ${s.seen.length}</p><select id="dex-filter" aria-label="属性で絞り込み"><option value="all">すべての属性</option>${Object.entries(DATA.elements).map(([id,e]) => `<option value="${id}" ${filter===id?'selected':''}>${escape(e.name)}</option>`).join('')}</select></div><div class="dex-grid">`+species.map(c => {
+      const seen = s.seen.includes(c.id), caught = s.caught.includes(c.id);
+      return `<button class="dex-card${seen?'':' undiscovered'}" data-dex="${c.id}" ${seen?'':'disabled'}><span class="dex-number">No.${String(Object.keys(DATA.species).indexOf(c.id)+1).padStart(3,'0')} ${caught?'✦':''}</span>${seen ? portrait(c.id,92) : '<span class="unknown-creature">?</span>'}<strong>${seen?escape(c.name):'未発見'}</strong>${seen?typeBadge(c.element):'<small>旅のどこかで</small>'}</button>`;
+    }).join('')+'</div>', 'dex');
+    $('dex-filter').onchange = e => showDex(e.target.value);
+  }
+  function showDexEntry(id) {
+    const s = DATA.species[id]; if (!s || !engine.state.seen.includes(id)) return;
+    const habitats = Object.values(DATA.maps).filter(m => m.encounters.includes(id)).map(m=>m.name);
+    openModal(s.name, `<div class="creature-card">${portrait(id,180)}<div>${typeBadge(s.element)}<p>${escape(s.description)}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 共鳴済み':'未共鳴'}</p><p>生息地：${escape(habitats.length?habitats.join('・'):'進化・星環の地で出会う')}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div><div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
+  }
+  function showMap() {
+    const s = engine.state;
+    openModal('ルーメン諸島の旅路', '<p class="muted">村から草原、海岸、森、遺跡へ。守護者から灯印を受け取ると、次の道が開きます。</p><div class="map-list">'+Object.values(DATA.maps).map((m,i) => {
+      const guardian = Object.values(DATA.guardians).find(g=>g.map===m.id);
+      return `<div class="map-card${s.map===m.id?' selected':''}"><span class="map-number">0${i+1}</span><div><strong>${escape(m.name)}</strong>${s.map===m.id?'<span class="badge">現在地</span>':''}<p>${escape(m.subtitle)}</p>${guardian?`<small>${s.seals.includes(guardian.id)?'✦ 灯印取得済み':'◇ '+escape(guardian.name)+'の試練'}</small>`:'<small>旅のはじまり・無料回復・道具店</small>'}</div></div>`;
+    }).join('')+'</div><h3>いまいる場所</h3><canvas id="mini-map" width="640" height="420" aria-label="現在地の地図"></canvas><p class="map-legend">● あなた　◆ 守護者　＋ 休憩所　■ 道具店　○ 人・調べるもの　→ 出口</p>', 'map');
+    drawMiniMap();
+  }
+  function drawMiniMap() {
+    const c = $('mini-map'); if(!c)return;
+    const ctx=c.getContext('2d'), map=engine.map, size=Math.min((c.width-24)/map.width,(c.height-24)/map.height), ox=(c.width-map.width*size)/2, oy=(c.height-map.height*size)/2;
+    ctx.fillStyle='#e8ede2';ctx.fillRect(0,0,c.width,c.height);
+    const colors={'.':'#a3bb89',':':'#709b70','=':'#e5cf9c','~':'#68a7b5','T':'#416e5d','#':'#889593','_':'#b9b9a3','B':'#997d65','D':'#c8a775','*':'#a3bb89','b':'#c5a676','o':'#859489'};
+    map.tiles.forEach((row,y)=>[...row].forEach((t,x)=>{ctx.fillStyle=colors[t]||'#a3bb89';ctx.fillRect(ox+x*size,oy+y*size,Math.ceil(size),Math.ceil(size));}));
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`bold ${Math.max(12,size*.95)}px sans-serif`;
+    map.npcs.forEach(n=>{ctx.fillStyle=n.kind==='guardian'?'#ac4c45':n.kind==='rest'?'#fff8d6':'#2a4848';ctx.fillText(n.kind==='guardian'?'◆':n.kind==='rest'?'+':n.kind==='shop'?'■':'○',ox+(n.x+.5)*size,oy+(n.y+.5)*size);});
+    map.exits.forEach(e=>{ctx.fillStyle='#fff6cd';ctx.fillText('→',ox+(e.x+.5)*size,oy+(e.y+.5)*size);});
+    ctx.beginPath();ctx.arc(ox+(engine.state.x+.5)*size,oy+(engine.state.y+.5)*size,size*.35,0,Math.PI*2);ctx.fillStyle='#d75540';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  }
+  function showHelp() {
+    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>灯獣と共鳴する</h3><p>濃い草むらで野生の灯獣と出会います。HPを減らし「共鳴」を選ぶと共鳴鈴を1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高い灯獣が先に行動します。経験値でレベルアップし、一部の灯獣は進化します。仲間は3体、残りはひかえで待ちます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
+  }
+  function showSettings() {
+    openModal('旅の設定', `<div class="setting-row"><div><strong>オリジナルBGM・効果音</strong><p>やさしい電子音の島の旋律</p></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>画面の揺れや補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="modal-actions"><button class="btn" data-ui="help">遊び方</button><button class="btn" data-ui="import">セーブを読み込む</button></div><p class="muted">通信・登録なし。音声はこの画面やゲームの操作後に再生されます。</p>`, 'settings');
+  }
+  function showMenu() {
+    if (!playing) { showSettings(); return; }
+    openModal('旅のメニュー', `<div class="menu-grid"><button class="btn" data-ui="dex">灯獣図鑑</button><button class="btn" data-ui="map">島の地図</button><button class="btn" data-ui="bag">かばん</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn" data-ui="save">記録する</button><button class="btn" data-ui="export">セーブ書き出し</button><button class="btn" data-ui="import">セーブ読み込み</button><button class="btn" data-ui="settings">設定</button><button class="btn" data-ui="help">遊び方</button><button class="btn btn-quiet" data-ui="title">タイトルへ</button></div><p class="muted">冒険時間 ${Math.floor(engine.state.playSeconds/60)}分 · 歩数 ${engine.state.steps.toLocaleString('ja-JP')}<br>記録はブラウザごとに保存されます。</p>`, 'menu');
+  }
+  function exportSave(data) {
+    const content = data || (playing ? engine.serialize() : storedSave);
+    if (!content) { toast('書き出す冒険記録がありません。'); return; }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(content,null,2)],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='Lumina_Trail_Save.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('セーブデータを書き出しました。');
+  }
+  async function importSave(file) {
+    if (!file) return;
+    if (engine.battle && playing) { toast('バトルを終えてから読み込んでください。'); return; }
+    try {
+      if(file.size>524288)throw new Error('セーブデータのサイズが大きすぎます。');
+      const data=JSON.parse(await file.text()); const checked=new Engine(data); const state=checked.state;
+      openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(DATA.maps[state.map].name)} · 灯印 ${state.seals.length}/4 · ${state.caught.length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
+      $('confirm-import').onclick=()=>{begin(null,checked.serialize());toast('冒険記録を読み込みました。');};
+    } catch(err) { toast('読み込めません：'+(err.message || '有効な灯獣紀のセーブデータを選んでください。')); }
+  }
+  function goTitle() {
+    if (engine.battle) { toast('バトルを終えてからタイトルに戻れます。'); return; }
+    save();playing=false;closeModal();$('title-screen').hidden=false;document.body.classList.remove('is-playing');loadStored();paintPortraits($('title-screen'));
+  }
+  function walk(dx,dy) {
+    if (!playing || engine.battle || $('modal').open || busy) return;
+    const old={x:engine.state.x,y:engine.state.y,map:engine.state.map};
+    const result=engine.move(dx,dy);
+    if(result.message) { const now=performance.now(); if(!walk.lastToast || now-walk.lastToast>2200){toast(result.message);walk.lastToast=now;} }
+    if(result.ok) {
+      moveAnim=result.mapChanged?null:{x:old.x,y:old.y,time:performance.now()};
+      if(result.mapChanged) { toast(engine.map.name); updateAll(); save(); }
+      else { $('world-hint').textContent=nearHint(); if(performance.now()-lastSave>1800)save(); }
+      if(result.battleStarted || engine.battle)openBattle();
+    } else $('world-hint').textContent=nearHint();
+  }
+  const directions={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+  let sprint=false;
+  const keyDirs={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
+  window.addEventListener('keydown', e=>{
+    if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+    if(e.key==='Shift'){sprint=true;return;}
+    if($('modal').open){
+      if(['Enter',' '].includes(e.key) && activePane==='dialogue' && e.target.tagName!=='BUTTON'){e.preventDefault();$('dialogue-next')?.click();}
+      return;
+    }
+    if(!playing)return;
+    if(keyDirs[e.key] && !engine.battle){e.preventDefault();$('game-canvas').focus({preventScroll:true});pressedDirection=keyDirs[e.key];directionSource=e.key; if(!e.repeat){lastStep=performance.now();walk(...directions[pressedDirection]);}return;}
+    if(e.repeat)return;
+    if(['e','E','Enter',' '].includes(e.key)){if(e.target.tagName==='BUTTON' && !['e','E'].includes(e.key))return;e.preventDefault();if(engine.battle?.result)finishBattle();else interact();}
+    else if(e.key==='Escape'){e.preventDefault();showMenu();}
+    else if(['j','J'].includes(e.key))showDex();
+    else if(['m','M'].includes(e.key))showMap();
+    else if(['b','B'].includes(e.key))showBag();
+  });
+  window.addEventListener('keyup',e=>{if(e.key==='Shift')sprint=false;if(directionSource===e.key){pressedDirection=null;directionSource=null;}});
+  window.addEventListener('blur',()=>{pressedDirection=null;sprint=false;if(playing)save();});
+  document.addEventListener('visibilitychange',()=>{pressedDirection=null;if(document.hidden){if(playing)save();sound.ctx?.suspend();}else if(settings.sound)sound.setEnabled(true);});
+  window.addEventListener('pagehide',()=>{if(playing)save();});
+  document.querySelectorAll('[data-dir]').forEach(btn=>{
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open)return;pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
+    for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,()=>{if(directionSource==='touch'){pressedDirection=null;directionSource=null;}btn.classList.remove('pressed');});
+    btn.addEventListener('contextmenu',e=>e.preventDefault());
+  });
+  $('start-btn').onclick=requestNew;
+  document.querySelectorAll('a.brand').forEach(a => { a.href = 'index.html'; a.onclick=e=>{e.preventDefault();if(playing)goTitle();}; });
+  $('continue-btn').onclick=()=>storedSave && begin(null,storedSave);
+  $('title-settings-btn').onclick=showSettings;
+  $('interact-btn').onclick=interact;
+  $('touch-action').onclick=()=>{if(engine.battle?.result)finishBattle();else interact();};
+  $('touch-menu').onclick=showMenu;
+  $('menu-btn').onclick=showMenu;
+  $('journal-btn').onclick=()=>showDex();
+  $('save-btn').onclick=()=>save(true);
+  $('bag-btn').onclick=showBag;
+  $('map-btn').onclick=showMap;
+  $('sound-btn').onclick=()=>{settings.sound=!settings.sound;sound.setEnabled(settings.sound);saveSettings();updateSound();};
+  $('fullscreen-btn').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('このブラウザでは全画面に対応していません。');}catch(_){toast('この環境では全画面を開始できません。');}};
+  $('modal-close').onclick=closeModal;
+  $('modal').addEventListener('click',e=>{if(e.target===$('modal')){const r=$('modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeModal();}});
+  $('modal').addEventListener('close',()=>{pressedDirection=null;activePane='';});
+  $('import-input').onchange=e=>{importSave(e.target.files[0]);e.target.value='';};
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b || b.disabled)return;
+    const d=b.dataset;
+    if(d.starter){begin(d.starter);return;}
+    if(d.party!==undefined){showParty(Number(d.party));return;}
+    if(d.guardian){const result=engine.startGuardian(d.guardian);if(result.ok){closeModal();openBattle();}else toast(result.message);return;}
+    if(d.battle){if(busy)return;if(d.battle==='continue')finishBattle();else if(d.battle==='resonate'||d.battle==='flee')doBattle({type:d.battle});else battleActions(d.battle==='back'?'main':d.battle);return;}
+    if(d.move!==undefined){doBattle({type:'move',index:Number(d.move)});return;}
+    if(d.switch!==undefined){doBattle({type:'switch',index:Number(d.switch)});return;}
+    if(d.battleItem){doBattle({type:'item',id:d.battleItem});return;}
+    if(d.buy){const result=engine.buy(d.buy);toast(result.message || (result.ok?'購入しました。':'購入できません。'));if(result.ok){sound.fx('click');save();updateAll();showShop();}return;}
+    if(d.use){chooseHeal(d.use);return;}
+    if(d.heal!==undefined){const result=engine.useItem(d.item,Number(d.heal));toast(result.message || (result.ok?'回復しました。':'使用できません。'));if(result.ok){sound.fx('heal');updateAll();save();showBag();}return;}
+    if(d.lead!==undefined){const result=engine.setLead(Number(d.lead));if(result.ok){closeModal();updateAll();save();toast('先頭の仲間を入れ替えました。');}else toast(result.message);return;}
+    if(d.storageSlot!==undefined){showStorage(Number(d.storageSlot));return;}
+    if(d.exchange!==undefined){const result=engine.exchange(Number(d.slot),Number(d.exchange));if(result.ok){save();updateAll();showStorage();toast('仲間を入れ替えました。');}else toast(result.message);return;}
+    if(d.dex){showDexEntry(d.dex);return;}
+    if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
+    if(d.ui){sound.fx('click');const actions={close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,help:showHelp,title:goTitle,'new-confirm':chooseStarter};actions[d.ui]?.();}
+  });
+  function resize() {
+    const small=matchMedia('(max-width: 600px)').matches;
+    const landscape=matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
+    const c=$('game-canvas'); const w=small?480:768, h=small?(landscape?300:360):480;
+    if(c.width!==w || c.height!==h){c.width=w;c.height=h;}
+  }
+  window.addEventListener('resize',resize);
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if(document.hidden)return;
+    if(pressedDirection && now-lastStep>(sprint?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
+    if(now-lastClock>=1000){if(playing && !$('modal').open && !busy)engine.state.playSeconds++;lastClock=now;sound.tick();}
+    else sound.tick();
+    if(now-lastFrame<32)return;lastFrame=now;
+    let options={};
+    if(moveAnim && !settings.reducedMotion){const t=Math.min(1,(now-moveAnim.time)/120);options.playerX=moveAnim.x+(engine.state.x-moveAnim.x)*t;options.playerY=moveAnim.y+(engine.state.y-moveAnim.y)*t;if(t===1)moveAnim=null;}
+    if(engine.battle && playing)Art.battle($('game-canvas'),engine,settings.reducedMotion?0:now);
+    else Art.world($('game-canvas'),engine,settings.reducedMotion?0:now,options);
+  }
+  resize();updateSound();loadStored();updateAll();paintPortraits();requestAnimationFrame(frame);
+})();
+
+</script>
+</body>
+</html>
