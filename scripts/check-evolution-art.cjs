@@ -130,8 +130,8 @@ async function main() {
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
   const unchanged = species.filter(s => !children.has(s.id));
   const evolved = species.filter(s => children.has(s.id));
-  assert.equal(species.length, 257);
-  assert.equal(evolved.length, 126);
+  assert.equal(species.length, 260);
+  assert.equal(evolved.length, 129);
   assert.equal(unchanged.length, 131);
   assert.equal(art.status().evolutionRequested, 0, 'Startup must not download all evolution sheets');
   assert(!run.requests.some(x => x.includes('creatures-evolution-')), 'Evolution requests occurred before use');
@@ -149,6 +149,9 @@ async function main() {
   // lineage even when legacy destination shapes name a different animal.
   for (const [id, rootId, shape, stage] of [
     ['komorion', 'komori', 'sprig', 1],
+    ['komorizen', 'komori', 'sprig', 2],
+    ['shizunaria', 'shizuku', 'otter', 2],
+    ['akehomura', 'hibana', 'fox', 2],
     ['saikaju', 'tanemaru', 'flower', 2],
     ['caelum_3', 'caelum_1', 'cat', 2],
     ['futo', 'futo', 'futo', 0],
@@ -193,7 +196,7 @@ async function main() {
     }
     await settle();
   }
-  assert.deepEqual(stages, [83, 43]);
+  assert.deepEqual(stages, [83, 46]);
   assert.equal(await unchangedDigest(LT, unchanged.map(s => s.id)), baseline, 'Loading evolution atlases changed original forms');
   assert.equal(JSON.stringify(LT.DATA), before.data, 'Artwork changed species/gameplay data');
   assert.equal(JSON.stringify(engine.state), before.state, 'Artwork changed the save data');
