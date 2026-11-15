@@ -19,6 +19,7 @@
     scorpion:'tide',dragon:'ember',serpent:'tide',gecko:'leaf',lizard:'ember'
   };
   const cache = new Map(), sheets = new Map();
+  const futoRecord={image:null,loaded:false,failed:false};
   const root = new URL('.', document.currentScript?.src || document.baseURI);
   function hash(value) { let n=2166136261; for(const c of String(value)) n=Math.imul(n^c.charCodeAt(0),16777619); return n>>>0; }
   function canvas(w, h) { const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
@@ -62,9 +63,41 @@
       image.src=record.url;
     });
   }
+  function loadFuto(){
+    const image=futoRecord.image=new Image();
+    return new Promise(resolve=>{
+      let settled=false,finished=false;
+      const release=ok=>{if(settled)return;settled=true;clearTimeout(timer);resolve(ok);};
+      const finish=ok=>{
+        if(finished)return;finished=true;
+        const late=settled;futoRecord.loaded=ok;futoRecord.failed=!ok;
+        image.onload=null;image.onerror=null;release(ok);
+        if(ok&&late)document.dispatchEvent(new Event('pachi-art-ready'));
+      };
+      const timer=setTimeout(()=>{futoRecord.failed=true;release(false);},18000);
+      image.onload=()=>finish(image.naturalWidth>0&&image.naturalHeight>0);
+      image.onerror=()=>finish(false);
+      image.src=new URL('assets/futo.png',root).href;
+    });
+  }
+  function futoSprite(){
+    if(!futoRecord.loaded)return null;
+    if(cache.has('futo:original'))return cache.get('futo:original');
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d'),image=futoRecord.image;
+    const scale=Math.min((SIZE-24)/image.naturalWidth,(SIZE-24)/image.naturalHeight);
+    const w=Math.round(image.naturalWidth*scale),h=Math.round(image.naturalHeight*scale);
+    c.imageSmoothingEnabled=false;
+    // The supplied illustration is preserved for both battle positions. No
+    // fabricated rear view, recoloring, or editing of the uploaded pixels.
+    c.drawImage(image,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
+    cache.set('futo:original',cv);
+    if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
+    return cv;
+  }
   function get(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
+    if(id==='futo')return futoSprite();
     const key=`${id}:${back?1:0}`;
     if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
     const stage=d.visual?.stage??(d.evolved?1:0);
@@ -117,9 +150,9 @@
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true)]);
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto()]);
   LT.CreatureArt={ready,get,clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
-    status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,cached:cache.size,cacheLimit:CACHE_LIMIT};}
+    status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };
 })();
