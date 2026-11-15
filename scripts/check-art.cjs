@@ -125,11 +125,13 @@ async function runtime(mode = 'normal') {
 
 async function main() {
   const { LT, engine, beforeLoad, afterLoad } = await runtime();
-  const species = Object.values(LT.DATA.species), maps = Object.values(LT.DATA.maps);
+  const species = Object.values(LT.DATA.species).filter(s => !s.specialOnly), maps = Object.values(LT.DATA.maps);
   assert.equal(species.length, 256, 'Species count changed');
   assert.equal(maps.filter(m => !m.interior).length, 64, 'Outdoor map count changed');
   assert.equal(maps.filter(m => m.interior).length, 54, 'Interior map count changed');
   assert.equal(new Set(species.map(s => s.shape)).size, 29, 'Expected 29 creature forms');
+  assert(LT.CreatureArt.status().futoLoaded, 'Supplied Futo artwork did not load');
+  visible(LT.CreatureArt.get('futo'), 'Supplied Futo illustration', true);
   for (const module of ['CreatureArt', 'TravellerArt', 'FieldArt', 'BattleArt']) assert(LT[module], `${module} did not load`);
   assert.notEqual(beforeLoad, afterLoad, 'The field retained the procedural pre-load cache after artwork became ready');
 
@@ -225,7 +227,7 @@ async function main() {
   assert.equal(delayed.beforeLoad, delayed.afterLoad, 'Timed-out images should retain playable fallback graphics');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 0, 'Delayed downloads completed before the test released them');
   const recovered = await delayed.finishDelayedImages();
-  assert.equal(recovered.notifications, 11, 'Every late successful image should refresh the display');
+  assert.equal(recovered.notifications, 12, 'Every late successful image should refresh the display');
   assert.notEqual(recovered.hash, delayed.afterLoad, 'The late artwork left stale world caches on screen');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 4, 'Late creature atlases were not adopted');
   assert.equal(delayed.LT.CreatureArt.status().failed, 0, 'Recovered creature atlases still report failure');
