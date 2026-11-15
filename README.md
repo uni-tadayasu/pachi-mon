@@ -2,7 +2,7 @@
 
 通常259種のパチモンと出会い、64の街・探索エリアを旅する、ドット絵のブラウザーRPG。運営配布限定の特別なパチモン「フート」を加え、収録は全260種です。16の旅紋を集め、四境の守護者と星路の継承者に挑戦します。PC・スマートフォン・標準マッピング対応コントローラーで遊べます。
 
-**公開ページ：<https://uni-tadayasu.github.io/pachi-mon/>**
+**公開ページ：<https://www.kasai-solutions-inc.com/>**
 
 ## 収録内容
 
@@ -233,7 +233,7 @@ BGMはWeb Audioによるオリジナルのシンセサイザー楽曲です。�
 
 ページタイトル、説明、正規URL、OGP・Twitterカード、VideoGame/WebApplicationのJSON-LD、サイトマップを実装しています。遊び方・色違い・育成・主人公・名前の説明はJavaScriptなしでも読めるHTMLに含めます。JSON-LDと実際の遊べる機能を一致させ、架空の評価・レビューは入れません。
 
-GitHub PagesのプロジェクトURLは `/pachi-mon/` のため、このディレクトリに robots.txt を置いてもホスト全体の設定にはなりません。ページのrobotsメタ情報を使用し、ホストのルート設定は変更しません。検索結果への掲載や順位は検索エンジンが決定します。Search Consoleの所有権登録・サイトマップ送信は実施していません。
+正規URLは `https://www.kasai-solutions-inc.com/` です。canonical・OGP・Twitter画像・JSON-LDのURLとID・サイトマップをこのHTTPSのwwwドメインに統一しています。ルートの `robots.txt` はクロールを許可し、`https://www.kasai-solutions-inc.com/sitemap.xml` を案内します。`/index.html` でも正規URLは `/` を指し、サイト内のホームリンクも `/` に統一しています。検索結果への掲載や順位は検索エンジンが決定します。Search Consoleの所有権登録・サイトマップ送信は実施していません。
 
 参考: [Google 検索の基本](https://developers.google.com/search/docs/fundamentals/seo-starter-guide)、[robots.txtの配置規則](https://developers.google.com/crawling/docs/robots-txt/create-robots-txt)。
 
@@ -255,3 +255,14 @@ v12の追加検証: `node scripts/check-monster-identity.cjs`（成長・色違�
 
 
 v13の追加検証: `node scripts/check-starter-evolution.cjs`（Lv8・32の境界、旧セーブ・Lv100での進化、名前と色違いの継承）、`node scripts/check-facing.cjs`（全260種の1,040方向条件、ソロ・ダブル双方の描画）および `node scripts/check-evolution-art.cjs`（前後画像・進化前素材の維持）を実施します。
+
+
+## 独自ドメイン移行
+
+- 公開先: https://www.kasai-solutions-inc.com/ （GitHub Pages、CNAMEで設定）
+- 旧公開先: https://uni-tadayasu.github.io/pachi-mon/ 。旧URLから新URLへの転送、HTTPS、wwwなしの転送はホスティング・DNS側の設定です。canonicalはサーバーの転送の代わりにはなりません。
+- 通信サービスの本番環境変数 `ALLOWED_ORIGINS` に新しいオリジン `https://www.kasai-solutions-inc.com` を追加し、従来の許可元も維持します。変数を変更したら保存済みのサーバーバージョンを再デプロイして反映します。API URL・認証・運営プレイヤーIDは変更しません。
+- ドメインごとにブラウザーの保存領域は分かれます。手元の `Pachi_Monsters_Save.json` は「記録を読み込む」、`Pachi_Player_Identity.json` は設定の「プレイヤー情報を復元」から取り込みます。後者は運営権限・配布先IDの復元用です。旧ドメインの保存データを新ドメインから直接読むことはできません。
+- 検索側の残りの操作: Search Consoleで新サイトの所有権を確認し、新しいサイトマップを送信します。アカウント所有者の確認用DNS値やHTMLタグを推測して埋め込んではいけません。旧プロパティの移転ツールが使用できる場合は、対象と転送を確認して移転を申請します。
+
+移行仕様の参考: [GoogleのURL変更を伴うサイト移転](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes)、[GitHub Pagesの独自ドメイン](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site)。
