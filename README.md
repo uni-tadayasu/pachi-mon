@@ -266,3 +266,12 @@ v13の追加検証: `node scripts/check-starter-evolution.cjs`（Lv8・32の境�
 - 検索側の残りの操作: Search Consoleで新サイトの所有権を確認し、新しいサイトマップを送信します。アカウント所有者の確認用DNS値やHTMLタグを推測して埋め込んではいけません。旧プロパティの移転ツールが使用できる場合は、対象と転送を確認して移転を申請します。
 
 移行仕様の参考: [GoogleのURL変更を伴うサイト移転](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes)、[GitHub Pagesの独自ドメイン](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site)。
+
+
+## ドメイン変更後の運営再登録
+
+ドメインを変えると端末のプレイヤー識別情報が自動で移らないため、旧IDに運営権限が残る場合があります。通常はプレイヤー情報のバックアップを復元してください。今回の復旧では、新ドメインの設定に「ドメイン変更後の運営再登録」を一度だけ表示し、元の運営キーを入力した現在のプレイヤーIDへ権限を引き継げます。引き継ぎ成功時に旧IDの運営権限は外れ、復旧入力欄は非表示になります。
+
+サーバーの `ADMIN_RECOVERY_OWNER_ID` で対象の旧運営ID、`ADMIN_RECOVERY_ORIGIN` で新ドメインの完全一致オリジンを指定します。現在の運営ID・送信元・既存キー・プレイヤー認証がすべて一致した場合だけ許可します。設定値や既存配布を消さず、所有者を条件付きのトランザクションで置き換えるため同時に成功するのは1人です。完了後は旧ID条件が一致しなくなるため、設定値を残しても再度引き継ぐことはできません。
+
+新運営には保存済み能力の初期フートを1体だけ用意します。冒険のセーブそのものを復元する処理ではありません。再登録後は設定の「プレイヤー情報を書き出す」で新しい情報を保存してください。

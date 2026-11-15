@@ -12,9 +12,13 @@ const CONFIG={level:100,stats:{hp:500,atk:150,def:150,spAtk:180,spDef:150,speed:
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const response=data=>({ok:true,status:200,json:async()=>({ok:true,...data})});
 async function until(check){for(let i=0;i<100;i++){if(check())return;await Promise.resolve();}assert.fail('Expected asynchronous step was not reached');}
-function harness({storage=new Map(),handle=()=>null,bridge={}}={}){
+function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}){
   const calls=[],applied=[],updated=[];
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const serviceBody={dataset:{},innerHTML:''},statusLine={dataset:{},textContent:''},keyField={value:''};
+  const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
+  const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:null};
+  const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -22,7 +26,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={}}={}){
     setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     MutationObserver:class{observe(){}},
-    document:{getElementById:()=>null,addEventListener(){},hidden:false},
+    document:{getElementById:element,addEventListener(){},hidden:false},
     LT:{DATA:{moves:Object.fromEntries(CONFIG.moves.map(id=>[id,{name:id}]))},adminBridge:{
       getEngine:()=>null,getPlayerName:()=> 'Traveller',toast(){},
       grantFuto:g=>{applied.push(g);return{ok:true,alreadyReceived:true};},
@@ -37,7 +41,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={}}={}){
     }
   };
   ctx.window=ctx;vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'admin-console.js'});
-  return{ctx,api:ctx.__test,calls,applied,updated,storage};
+  return{ctx,api:ctx.__test,calls,applied,updated,storage,serviceBody,statusLine,keyField};
 }
 function adopt(h,token=TOKEN_A,player=PLAYER_A){h.api.adoptIdentity({token,id:player.id,name:player.name},player,true);}
 
@@ -109,4 +113,64 @@ test('one in-flight send, and an uncertain send survives reload with its origina
   const result=await restarted.api.submitPendingGrant();assert.equal(result.replayed,true);
   assert.equal(restarted.calls.find(c=>c.path==='/admin/grants').body.requestId,original);
   assert.equal(restarted.api.pendingGrant,null);assert.equal(storage.has('pachi-pending-distribution-v1'),false);
+});
+
+
+test('recovery status survives registration, paginated me reads and identity restoration',async()=>{
+  const h=harness({handle:c=>{
+    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:true});
+    if(c.path==='/register')return response({player:PLAYER_B,adminExists:true,adminRecoveryAvailable:true});
+    if(c.path==='/me')return response({player:PLAYER_B,adminExists:true,adminRecoveryAvailable:true,grants:[],nextCursor:null});
+  }});
+  await h.api.sync({register:true});
+  assert.equal(h.api.status.adminRecoveryAvailable,true);
+  h.api.adoptIdentity({token:TOKEN_A,id:PLAYER_A.id,name:PLAYER_A.name},PLAYER_A,true,false);
+  assert.equal(h.api.status.adminRecoveryAvailable,false,'Restored identity must use its fresh server flags');
+});
+
+test('an existing administrator hides the key except for explicit recovery availability',()=>{
+  const h=harness({settings:true});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();
+  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+  const oldSignature=h.serviceBody.dataset.signature;
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
+  assert.notEqual(h.serviceBody.dataset.signature,oldSignature);
+  assert(h.serviceBody.innerHTML.includes('type="password"'));
+  assert(h.serviceBody.innerHTML.includes('ドメイン変更後の運営再登録'));
+  assert(h.serviceBody.innerHTML.includes('以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します'));
+  assert(h.serviceBody.innerHTML.includes('運営を再登録'));
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();
+  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'),'Consumed recovery must remove the key');
+});
+
+test('successful recovery sends once, clears the key and consumes recovery UI',async()=>{
+  const claimed=deferred(),newAdmin={...PLAYER_B,isAdmin:true};let complete=false,consoleOpened=0;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/claim')return claimed.promise;
+    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:!complete});
+    if(c.path==='/me')return response({player:complete?newAdmin:PLAYER_B,adminExists:true,adminRecoveryAvailable:!complete,grants:[],nextCursor:null});
+  }});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
+  h.api.stubConsole(async()=>{consoleOpened++;});h.keyField.value='recovery-test-key';
+  const button={disabled:false,isConnected:true},first=h.api.claim(button);
+  await until(()=>h.calls.some(c=>c.path==='/admin/claim'));
+  await h.api.claim(button);assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);
+  assert.equal(h.api.claimBusy,true);assert.equal(h.calls.find(c=>c.path==='/admin/claim').body.key,'recovery-test-key');
+  complete=true;claimed.resolve(response({player:newAdmin,adminExists:true,adminRecoveryAvailable:false}));await first;
+  assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(h.api.status.adminRecoveryAvailable,false);
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert.equal(consoleOpened,1);assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+});
+
+test('failed recovery clears the password, releases busy state and refreshes availability',async()=>{
+  let available=true;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/claim'){available=false;return {ok:false,status:409,json:async()=>({ok:false,error:{code:'ALREADY_CLAIMED',message:'登録済みです。'}})};}
+    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:available});
+    if(c.path==='/me')return response({player:PLAYER_B,adminExists:true,adminRecoveryAvailable:available,grants:[],nextCursor:null});
+  }});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
+  h.keyField.value='recovery-test-key';const button={disabled:false,isConnected:true};await h.api.claim(button);
+  assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(button.disabled,false);
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(h.api.status.adminRecoveryAvailable,false);
+  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
 });

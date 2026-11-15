@@ -17,8 +17,12 @@
     if(identity?.token!==next.token){identityEpoch++;player=null;status=null;pending=0;registration=null;pendingGrant=null;}
     identity=next;
   }
-  function adoptIdentity(next,nextPlayer,adminExists){
-    persist(next);player=nextPlayer;status={adminExists};lastError='';revision=0;savedConfig=null;
+  function serviceStatus(data,previous=status){
+    return {adminExists:typeof data?.adminExists==='boolean'?data.adminExists:previous?.adminExists,
+      adminRecoveryAvailable:typeof data?.adminRecoveryAvailable==='boolean'?data.adminRecoveryAvailable:previous?.adminRecoveryAvailable===true};
+  }
+  function adoptIdentity(next,nextPlayer,adminExists,adminRecoveryAvailable=false){
+    persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;
     if(consoleDialog?.open)consoleDialog.close();
   }
   async function request(path, {method='GET',body,token=identity?.token,auth=true,guardIdentity=true}={}){
@@ -45,7 +49,7 @@
     const task=(async()=>{
       const data=await request('/register',{method:'POST',body:{token,name:identity.name||proposedName()},auth:false});
       if(epoch!==identityEpoch)throw staleIdentity();
-      player=data.player;status={adminExists:data.adminExists};persist({...identity,id:player.id,name:player.name});return player;
+      player=data.player;status=serviceStatus(data);persist({...identity,id:player.id,name:player.name});return player;
     })();
     registration=task;
     try{return await task;}finally{if(registration===task)registration=null;}
@@ -65,7 +69,7 @@
   async function syncOnce(register){
       let epoch=identityEpoch;
       try{
-        status=await request('/status',{auth:false});lastError='';
+        status=serviceStatus(await request('/status',{auth:false}));lastError='';
         if(!identity && !register && !LT.adminBridge?.getEngine?.()){refreshSettings();return;}
         if(!identity)persist({token:randomToken(),name:proposedName()});
         epoch=identityEpoch;await ensureIdentity();
@@ -76,7 +80,7 @@
           if(epoch!==identityEpoch)throw staleIdentity();
           const data=await request('/me?limit=50'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{token});
           if(epoch!==identityEpoch)throw staleIdentity();
-          player=data.player;status={adminExists:data.adminExists};
+          player=data.player;status=serviceStatus(data);
           for(const grant of data.grants||[]){
             const bridge=LT.adminBridge;if(!bridge){totalPending++;continue;}
             const outcome=bridge.grantFuto(grant);
@@ -103,10 +107,10 @@
   function refreshSettings(){
     const root=settingsRoot()?.querySelector('#pachi-service');if(!root)return;
     const body=root.querySelector('[data-service-body]');
-    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,pending].join('|');
+    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending].join('|');
     if(body.dataset.signature!==signature){
       body.dataset.signature=signature;
-      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':status?.adminExists===false?'<div data-claim><label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"></div><button class="btn btn-primary" data-admin-action="claim">運営になる</button></div><p>最初に登録した1人が運営になります。</p></div>':status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>未受領のフート：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
+      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>未受領のフート：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
     }
     const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
   }
@@ -114,9 +118,11 @@
   async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy)button.disabled=false;}}
   async function claim(button){
     if(claimBusy)return;const field=document.getElementById('pachi-admin-key'), key=field?.value || '';if(!key){say('運営キーを入力してください。',true);return;}
+    const recovering=status?.adminRecoveryAvailable===true;
     claimBusy=true;
-    await withButton(button,async()=>{try{await ensureIdentity();const data=await request('/admin/claim',{method:'POST',body:{key}});player=data.player;status={adminExists:true};say('運営に登録しました。フートを準備しています。');await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';}});
-    claimBusy=false;await sync();
+    try{
+      await withButton(button,async()=>{try{await ensureIdentity();const data=await request('/admin/claim',{method:'POST',body:{key}});player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートを準備しています。':'運営に登録しました。フートを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
+    }finally{claimBusy=false;refreshSettings();await sync();}
   }
   function readConfig(){
     const stats={};for(const [key,,max]of fields){const value=Number(consoleDialog.querySelector(`[name="${key}"]`).value);if(!Number.isInteger(value)||value<1||value>max)throw new Error('能力値を指定された範囲の整数で入力してください。');stats[key]=value;}
@@ -227,7 +233,7 @@
         const me=await request('/me',{token:data.token,guardIdentity:false});
         if(attempt!==restoreAttempt)throw staleIdentity();
         if(sendBusy)throw new Error('配布結果の確認が終わってから、プレイヤー情報を復元してください。');
-        adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists);
+        adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists,me.adminRecoveryAvailable);
         await sync({fresh:true});
         if(attempt===restoreAttempt)say('プレイヤー情報を復元しました。冒険の記録は変更していません。');
       }catch(err){if(!err.staleIdentity)say(err.message,true);}
@@ -239,7 +245,7 @@
     void withButton(button,async()=>{
       if(action==='console')await openConsole();
       if(action==='refresh'){await sync({register:true});if(!lastError)say(pending?'空き枠や冒険の開始を待っているお届けものがあります。':'お届けものを確認しました。');}
-      if(action==='name'){await ensureIdentity();const name=document.getElementById('pachi-player-name').value.trim();if(!name)throw new Error('名前を入力してください。');const data=await request('/me',{method:'PATCH',body:{name}});player=data.player;persist({...identity,name:player.name});say('プレイヤー名を保存しました。');}
+      if(action==='name'){await ensureIdentity();const name=document.getElementById('pachi-player-name').value.trim();if(!name)throw new Error('名前を入力してください。');const data=await request('/me',{method:'PATCH',body:{name}});player=data.player;status=serviceStatus(data);persist({...identity,name:player.name});refreshSettings();say('プレイヤー名を保存しました。');}
       if(action==='backup')backup();if(action==='restore')await restore();
     });
   });
