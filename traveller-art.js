@@ -9,7 +9,8 @@
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   const directions = ['down', 'left', 'right', 'up'];
-  const atlas = { hero: null, npcs: null };
+  const atlas = { hero: null, female: null, npcs: null };
+  const heights = {};
   const cache = new Map();
   const MAX_CACHE = 160;
   const sourceBase = new URL('.', document.currentScript?.src || document.baseURI);
@@ -72,7 +73,7 @@
       const timer = setTimeout(release, 12000);
       img.onload = () => {
         if (done) return;
-        try { atlas[name] = split(img, rows); stats.loaded++; finish(true); }
+        try { atlas[name] = split(img, rows); heights[name]=Math.max(...atlas[name].filter(Boolean).map(cell=>cell.h)); stats.loaded++; finish(true); }
         catch (error) { console.warn('Traveller art unavailable:', file, error); finish(false); }
       };
       img.onerror = () => finish(false);
@@ -103,20 +104,20 @@
   }
 
   function get(kind = 'hero', facing = 'down', frame = 0, id = 0) {
-    const hero = kind === 'hero', cells = atlas[hero ? 'hero' : 'npcs'];
+    const female = kind === 'hero-female', hero = kind === 'hero' || female, atlasName = hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
     if (!cells) return null;
     const direction = Math.max(0, directions.indexOf(facing));
     const pose = Math.max(0, Math.min(2, Number.isFinite(frame) ? Math.trunc(frame) : 0));
     const role = hero ? 0 : roleFor(kind);
     const variant = hero ? 0 : (Number(id) >>> 0) % 4;
-    const key = [hero ? 'hero' : role, direction, hero ? pose : 0, variant].join(':');
+    const key = [hero ? atlasName : role, direction, hero ? pose : 0, variant].join(':');
     if (cache.has(key)) return cache.get(key);
     const source = cells[(hero ? pose : role) * 4 + direction];
     if (!source) return null;
     const cv = surface(96, 128), ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     // Shared per-atlas scale preserves the authored walking stride proportions.
-    const scale = hero ? 112 / 372 : 112 / 295;
+    const scale = female ? Math.min(112 / (heights.female||372), 88 / Math.max(...cells.filter(Boolean).map(cell=>cell.w))) : hero ? 112 / 372 : 112 / 295;
     const w = Math.round(source.w * scale), h = Math.round(source.h * scale);
     const x = Math.round((96 - w) / 2), y = 122 - h;
     ctx.fillStyle = '#253f4938';
@@ -129,8 +130,8 @@
   }
 
   LT.TravellerArt = {
-    ready: Promise.all([load('hero', 'traveller-hero.webp', 3), load('npcs', 'traveller-npcs.webp', 4)]),
+    ready: Promise.all([load('hero', 'traveller-hero.webp', 3), load('female', 'traveller-female.webp', 3), load('npcs', 'traveller-npcs.webp', 4)]),
     get, stats, clearCache() { cache.clear(); },
-    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
+    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
   };
 })();

@@ -5,6 +5,8 @@
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   const TAU = Math.PI * 2;
+  // Fixed budgets keep the high-resolution passes bounded on touch devices.
+  const budgets = Object.freeze({low:Object.freeze({particles:12,ribbonSteps:14,corona:7}),balanced:Object.freeze({particles:20,ribbonSteps:20,corona:11}),high:Object.freeze({particles:28,ribbonSteps:26,corona:15})});
   const palettes = {
     leaf: ['#e5ffb1', '#8bdd71', '#328d70', '#fff6cd'],
     tide: ['#d9ffff', '#59dce9', '#287ec4', '#f1fdff'],
@@ -80,7 +82,8 @@
     const style=classify(move,event.kind),large=(move.power||0)>=40;
     const amount=Number.isFinite(event.amount)?event.amount:Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||/(?:体力が|HPが)(\d+)/.exec(event.text||'')?.[1]||0);
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
-      power:move.power||25,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
+      power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
+      releaseAt:.14,impactAt:.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
       amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),
       started:now,duration:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
       seed:hash((move.id||event.text||style)+':'+(event.side??'ally')+':'+(event.slot||0))};
@@ -107,7 +110,8 @@
     const e=event.style?event:{...event,style:classify(resolveMove(event)||{element:event.element},event.kind)};
     const {source,target}=anchors(w,h,e,options),p=movePalettes[e.move]||palettes[e.element]||palettes.neutral;
     const quality=options.quality||'balanced',low=quality==='low'||w<600;
-    const count=low?12:quality==='high'?28:20,seed=e.seed||hash(e.move||e.style);
+    const budget=budgets[low?'low':quality==='high'?'high':'balanced'];
+    const count=budget.particles,seed=e.seed||hash(e.move||e.style);
     const unit=Math.min(w/768,h/440),s=Math.max(.4,unit),size=(e.power>=40?1.28:1)*(e.critical?1.08:1);
     const fade=smooth(t/.1)*(1-smooth((t-.78)/.22)),travel=ease(phase(t,.12,.46)),burst=ease(phase(t,.42,1));
     const hitAlpha=Math.sin(phase(t,.4,1)*Math.PI),cx=target.x,cy=target.y;
@@ -155,6 +159,62 @@
     };
     const trail=(a,b,width=5)=>{stroke([[a.x,a.y],[b.x,b.y]],p[2],width*2,.24);stroke([[a.x,a.y],[b.x,b.y]],p[1],width,.75);stroke([[a.x,a.y],[b.x,b.y]],p[0],Math.max(1,width*.23),.95);};
 
+    // Soft filled ribbons provide continuous body and taper. The halo and
+    // bright spine use the same path, so fast projectiles stay readable.
+    const ribbon=(points,width,color,alpha=1)=>{
+      if(points.length<2||width<=0||alpha<=0)return;
+      const left=[],right=[];
+      for(let i=0;i<points.length;i++){
+        const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)];
+        const angle=Math.atan2(b[1]-a[1],b[0]-a[0])+Math.PI/2;
+        const taper=Math.sin(Math.PI*(i+.18)/(points.length-.64));
+        const r=width*s*Math.max(.035,taper);
+        left.push([points[i][0]+Math.cos(angle)*r,points[i][1]+Math.sin(angle)*r]);
+        right.push([points[i][0]-Math.cos(angle)*r,points[i][1]-Math.sin(angle)*r]);
+      }
+      poly(left.concat(right.reverse()),color,alpha);
+      stroke(points,p[0],Math.max(.7,width*.18),alpha*.7);
+    };
+    const curvedTrail=(a,b,bend,width,color=p[1],alpha=1)=>{
+      const points=[],angle=Math.atan2(b.y-a.y,b.x-a.x),nx=-Math.sin(angle),ny=Math.cos(angle);
+      for(let i=0;i<=budget.ribbonSteps;i++){
+        const u=i/budget.ribbonSteps,pt=mixPoint(a,b,u),bulge=Math.sin(u*Math.PI)*bend;
+        points.push([pt.x+nx*bulge,pt.y+ny*bulge]);
+      }
+      ribbon(points,width,color,alpha);
+    };
+    const mote=(x,y,r,color,alpha=1)=>{
+      if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.fillStyle=color;
+      c.beginPath();c.ellipse(x,y,r,r*.72,0,0,TAU);c.fill();c.restore();
+    };
+    const attack=!['healing','shield','ascension','capture','miss'].includes(e.style);
+    const charging=smooth(phase(t,0,.1))*(1-smooth(phase(t,.14,.34)));
+    const bloom=Math.sin(phase(t,.4,.93)*Math.PI);
+    const physical=e.category==='physical'||e.style==='fracture-punch'||e.style==='impact';
+
+    // Atmosphere is local to the two actors. No opaque or strobed full-screen
+    // flash: preserve the arena, creature silhouettes and motion throughout.
+    if(attack){
+      c.save();c.globalCompositeOperation='screen';
+      const lift=charging*.22+bloom*.16;
+      glow(source.x,source.y,68*s,charging*.15,p[2]);
+      glow(cx,cy,115*s*size,bloom*.13,p[2]);
+      ellipse(source.x,source.y+46*s,(30+charging*19)*s,8*s,p[1],4,lift);
+      ellipse(cx,cy+48*s,(36+bloom*27)*s,11*s,p[1],5,bloom*.22);
+      c.restore();
+      // A distinct charging motion for physical strikes and cast techniques.
+      for(let i=0;i<(low?4:7);i++){
+        const a=i*2.39996+random(seed,i+241)*.55;
+        const radius=(16+(1-charging)*44)*s;
+        const x=source.x+Math.cos(a)*radius,y=source.y+Math.sin(a)*radius*.7;
+        if(physical)curvedTrail({x,y},{x:source.x+Math.cos(a)*12*s,y:source.y+Math.sin(a)*9*s},6*s,1.3,p[1],charging*.55);
+        else {
+          mote(x,y,2*s,p[0],charging*.85);
+          curvedTrail({x:x+Math.cos(a+.5)*13*s,y:y+Math.sin(a+.5)*9*s},{x,y},3*s,.9,p[1],charging*.55);
+        }
+      }
+    }
+
     // Each technique has one smooth illumination envelope, never a strobing full-screen flash.
     if(!['healing','shield','ascension','capture','miss'].includes(e.style)) {
       const charge=(1-smooth(phase(t,.14,.36)))*smooth(t/.12);
@@ -193,11 +253,24 @@
         }ellipse(cx,cy+64*s,80*s*growth,18*s*growth,p[1],2,.75);impactRing();break;
       }
       case 'wave': {
-        const pos=mixPoint(source,target,travel);
-        for(let row=0;row<4;row++){
-          const points=[];for(let i=0;i<=30;i++){const x=(i/30-.5)*100*s*size,y=Math.sin(i/30*Math.PI*1.7+t*3+row*.35)*18*s;points.push([pos.x+x,pos.y+y+row*11*s-22*s]);}
-          stroke(points,p[row%3],8-row*1.3,.85-row*.15);
-        }for(let i=0;i<count;i++){const a=random(seed,i)*Math.PI,rr=burst*90*s;star(cx+Math.cos(a)*rr,cy-Math.sin(a)*rr+burst*30*s,3*s,p[0],0,hitAlpha);}
+        const pos=mixPoint(source,target,travel),surge=Math.sin(phase(t,.08,.9)*Math.PI);
+        const normal={x:-Math.sin(direction),y:Math.cos(direction)};
+        for(let row=3;row>=0;row--){
+          const points=[];
+          for(let i=0;i<=budget.ribbonSteps;i++){
+            const u=i/budget.ribbonSteps,across=(u-.5)*126*s*size;
+            const crest=Math.sin(u*Math.PI*1.8+t*2.4+row*.4)*(22+row*3)*s;
+            points.push([pos.x+normal.x*across+Math.cos(direction)*(crest-row*13*s),pos.y+normal.y*across+Math.sin(direction)*(crest-row*13*s)]);
+          }
+          ribbon(points,10-row*1.4,row%2?p[1]:p[2],surge*(.55-row*.08));
+          stroke(points,p[0],1.5,surge*.7);
+        }
+        for(let i=0;i<count;i++){
+          const a=random(seed,i)*Math.PI,rr=burst*(45+random(seed,i+51)*74)*s;
+          const xx=cx+Math.cos(a)*rr,yy=cy-Math.sin(a)*rr+burst*35*s;
+          mote(xx,yy,(1.5+random(seed,i+90)*2.3)*s,p[0],hitAlpha*.85);
+          if(i%3===0)curvedTrail({x:xx-6*s,y:yy-10*s},{x:xx,y:yy},2*s,1,p[1],hitAlpha*.45);
+        }
         impactRing(90*s);break;
       }
       case 'ripples':
@@ -236,6 +309,24 @@
           for(let i=0;i<6;i++){const a=i*TAU/6+t*.5,r=(24+energy*8)*s;shard(source.x+Math.cos(a)*r,source.y+Math.sin(a)*r,5*s,a+Math.PI/2,p[1],energy*.8);}
           star(end.x,end.y,22*s*energy,p[0],direction,.85);
         }
+        const current=Math.sin(phase(t,.1,.88)*Math.PI);
+        if(current>0){
+          c.save();c.globalCompositeOperation='screen';
+          for(let strand=0;strand<(low?2:4);strand++){
+            const points=[];
+            for(let j=0;j<=budget.ribbonSteps;j++){
+              const u=j/budget.ribbonSteps,pt=mixPoint(source,end,u);
+              const offset=Math.sin(u*Math.PI)*Math.sin(u*TAU*1.5-t*7+strand*Math.PI*.5)*(focused?9:15)*s;
+              points.push([pt.x-Math.sin(direction)*offset,pt.y+Math.cos(direction)*offset]);
+            }
+            ribbon(points,focused?1.8:2.5,strand%2?p[0]:p[1],current*.48);
+          }
+          c.restore();
+          for(let i=0;i<(low?3:5);i++){
+            const u=(t*1.6+i/5)%1,pt=mixPoint(source,end,u);
+            mote(pt.x,pt.y,2.1*s,p[3],current*Math.sin(u*Math.PI));
+          }
+        }
         impactRing(95*s);sparks(cx,cy);break;
       }
       case 'fracture-punch': {
@@ -267,18 +358,41 @@
       }
       case 'sunburst': {
         const rise=ease(phase(t,.08,.45)),radius=(12+rise*44)*s*size;
-        glow(cx,cy,radius*2.2,.42);ellipse(cx,cy,radius,radius,p[0],4,.85);ellipse(cx,cy,radius*.78,radius*.78,p[1],6,.7);
-        for(let i=0;i<(low?12:20);i++){const a=i*TAU/(low?12:20)+t*.4,r1=radius*(1+burst*.3),r2=radius*(1.25+burst);
-          stroke([[cx+Math.cos(a)*r1,cy+Math.sin(a)*r1],[cx+Math.cos(a)*r2,cy+Math.sin(a)*r2]],i%2?p[1]:p[0],2,1-burst*.7);
-        }impactRing(112*s);break;
+        const energy=1-smooth(phase(t,.69,1));
+        glow(cx,cy,radius*2.2,.38*energy);
+        for(let i=0;i<(low?9:15);i++){
+          const a=i*TAU/(low?9:15)+t*.15,reach=radius*(1.4+random(seed,i+90)*.45+burst*.4);
+          const start={x:cx+Math.cos(a)*radius*.6,y:cy+Math.sin(a)*radius*.6};
+          const end={x:cx+Math.cos(a+.14)*reach,y:cy+Math.sin(a+.14)*reach};
+          curvedTrail(start,end,12*s,3.6,p[i%2],energy*.5);
+        }
+        ellipse(cx,cy,radius,radius,p[0],3,.8*energy);
+        ellipse(cx,cy,radius*.78,radius*.78,p[1],7,.3*energy);
+        star(cx,cy,radius*.54,p[0],t*.2,.27*energy);
+        impactRing(112*s);break;
       }
       case 'fire-vortex':
       case 'vortex': {
-        const a=phase(t,.1,.8),r=65*s*size;
-        for(let layer=0;layer<4;layer++){
-          const points=[];for(let j=0;j<=40;j++){const g=j/40,angle=g*TAU*1.5+t*4+layer*.8,rr=r*(.2+.8*g)*smooth(a*4);points.push([cx+Math.cos(angle)*rr,cy+Math.sin(angle)*rr*.4+(g-.5)*90*s]);}
-          stroke(points,p[layer%3],layer===0?7:3,.7-layer*.1);
-        }for(let i=0;i<count;i++){const a=i*2.4+t*4,rr=(24+random(seed,i)*48)*s;shard(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr*.4-(i/count-.5)*100*s,5*s,a+Math.PI/2,p[0],.8);}
+        const growth=smooth(phase(t,.07,.32)),collapse=1-smooth(phase(t,.74,1)),r=66*s*size;
+        const flame=e.style==='fire-vortex';
+        glow(cx,cy-15*s,94*s,growth*collapse*.22,flame?p[1]:p[2]);
+        for(let layer=0;layer<(low?4:6);layer++){
+          const points=[];
+          for(let j=0;j<=budget.ribbonSteps;j++){
+            const g=j/budget.ribbonSteps,angle=g*TAU*1.5-t*4.2+layer*TAU/6;
+            const rr=r*(.2+.8*g)*growth;
+            points.push([cx+Math.cos(angle)*rr,cy+Math.sin(angle)*rr*.32+(g-.6)*118*s]);
+          }
+          ribbon(points,flame?5:3,layer%2?p[1]:p[2],collapse*(flame?.42:.32));
+          stroke(points,p[0],1,collapse*.62);
+        }
+        for(let i=0;i<count;i++){
+          const u=(t*.72+i/count)%1,a=i*2.4-t*4,rr=(15+u*58)*s;
+          const x=cx+Math.cos(a)*rr,y=cy+50*s-u*130*s+Math.sin(a)*rr*.22;
+          const alpha=Math.sin(u*Math.PI)*growth*collapse;
+          if(flame){mote(x,y,(1.5+random(seed,i)*2)*s,p[i%3],alpha);curvedTrail({x:x-5*s,y:y+12*s},{x,y},3*s,1.4,p[1],alpha*.7);}
+          else leaf(x,y,(3+random(seed,i)*3)*s,a,p[0],alpha*.7);
+        }
         impactRing(95*s);break;
       }
       case 'wind-blades':
@@ -341,12 +455,22 @@
         break;
       }
       case 'shield': {
-        const r=64*s*size*smooth(t/.2),alpha=1-smooth(phase(t,.8,1));glow(cx,cy,r,.18);
-        const vertices=[];for(let i=0;i<6;i++){const a=i*TAU/6-Math.PI/2;vertices.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}
-        poly(vertices,p[2],.14*alpha);stroke(vertices,p[0],3,alpha,true);
-        ellipse(cx,cy,r*1.14,r*.94,p[1],1,.5*alpha,-Math.PI/2+t,Math.PI+t);
-        for(let i=0;i<6;i++){const a=i*TAU/6-Math.PI/2;star(cx+Math.cos(a)*r,cy+Math.sin(a)*r,5*s,p[3],0,alpha);}
-        const inner=vertices.map(([x,y])=>[cx+(x-cx)*.77,cy+(y-cy)*.77]);stroke(inner,p[1],1,.5*alpha,true);break;
+        const r=66*s*size*smooth(t/.2),alpha=1-smooth(phase(t,.8,1));
+        if(r<=0)break;
+        c.save();c.globalAlpha*=alpha;c.translate(cx,cy);c.scale(.86,1.08);
+        const lens=c.createRadialGradient(-r*.2,-r*.3,r*.05,0,0,r);
+        lens.addColorStop(0,p[0]+'05');lens.addColorStop(.62,p[1]+'13');lens.addColorStop(.9,p[2]+'35');lens.addColorStop(1,p[0]+'68');
+        c.fillStyle=lens;c.beginPath();c.arc(0,0,r,0,TAU);c.fill();
+        c.strokeStyle=p[1];c.lineWidth=2*s;c.stroke();
+        c.beginPath();c.arc(-r*.05,-r*.02,r*.91,-2.85,-.65);c.strokeStyle=p[0];c.lineWidth=3*s;c.stroke();
+        c.beginPath();c.arc(0,0,r*.82,.18,1.2);c.strokeStyle=p[0]+'88';c.lineWidth=s;c.stroke();
+        c.restore();
+        ellipse(cx,cy+58*s,r*.83,r*.18,p[1],2,.55*alpha);
+        for(let i=0;i<(low?4:7);i++){
+          const a=i*2.39996+t*.4,x=cx+Math.cos(a)*r*.86,y=cy+Math.sin(a)*r*1.08;
+          star(x,y,(2.5+random(seed,i)*2)*s,p[0],0,alpha*.65);
+        }
+        break;
       }
       case 'capture': {
         const radius=(80-55*ease(t))*s;
@@ -362,6 +486,52 @@
         if(t>.22){const tt=ease(phase(t,.22,.58));
           for(let i=0;i<3;i++){const x=cx+(i-1)*14*s,y=cy+(i-1)*8*s;trail({x:x-28*s,y:y-38*s},{x:x-28*s+tt*58*s,y:y-38*s+tt*76*s},4);}
         }impactRing(78*s);sparks(cx,cy);break;
+      }
+    }
+    // Material-specific impact corona. Its deterministic, continuously
+    // animated curve avoids the repeated straight-starburst look across moves.
+    if(attack&&bloom>0&&t>=.4){
+      const expansion=ease(phase(t,.4,1)),radius=(18+expansion*94)*s*size;
+      const coronaAlpha=bloom*(1-expansion*.55);
+      for(let i=0;i<budget.corona;i++){
+        const a=i*TAU/budget.corona+random(seed,i+401)*.35;
+        const reach=radius*(.6+random(seed,i+431)*.45);
+        const x=cx+Math.cos(a)*reach,y=cy+Math.sin(a)*reach*.62;
+        const start={x:cx+Math.cos(a)*reach*.55,y:cy+Math.sin(a)*reach*.34};
+        if(e.element==='leaf'){
+          leaf(x,y,(3+random(seed,i+441)*4)*s,a+expansion,p[i%3],coronaAlpha*.8);
+          if(i%2===0)curvedTrail(start,{x,y},9*s,1,p[2],coronaAlpha*.4);
+        }else if(e.element==='tide'){
+          curvedTrail(start,{x,y:y+expansion*20*s},(i%2?1:-1)*12*s,2,p[1],coronaAlpha*.55);
+          mote(x,y+expansion*20*s,(2+random(seed,i+461)*2)*s,p[0],coronaAlpha);
+        }else if(e.element==='ember'){
+          curvedTrail(start,{x,y:y-expansion*14*s},(i%2?1:-1)*7*s,2.4,p[i%2],coronaAlpha*.55);
+          mote(x,y-expansion*20*s,1.5*s,p[3],coronaAlpha);
+        }else if(e.element==='wind'){
+          curvedTrail(start,{x,y},(i%2?1:-1)*22*s,1.4,p[0],coronaAlpha*.65);
+        }else if(e.element==='crystal'){
+          shard(x,y,(3+random(seed,i+451)*5)*s,a+expansion*.4,p[i%3],coronaAlpha*.8);
+          if(i%3===0)star(x,y,8*s*coronaAlpha,p[3],0,coronaAlpha*.65);
+        }else mote(x,y,3*s,p[1],coronaAlpha*.6);
+      }
+      if(physical){
+        for(let i=0;i<(low?2:3);i++){
+          const a=direction+(i-1)*.4,span=(33+expansion*61)*s;
+          const start={x:cx-Math.cos(a)*span,y:cy-Math.sin(a)*span*.65};
+          const end={x:cx+Math.cos(a)*span*.7,y:cy+Math.sin(a)*span*.45};
+          curvedTrail(start,end,(i%2?1:-1)*24*s,3-i*.5,p[0],coronaAlpha*.54);
+        }
+      }
+    }
+    if(['healing','ascension'].includes(e.style)){
+      const renewal=Math.sin(phase(t,.04,.96)*Math.PI);
+      for(let i=0;i<(low?2:3);i++){
+        const points=[];
+        for(let j=0;j<=budget.ribbonSteps;j++){
+          const u=j/budget.ribbonSteps,a=u*TAU-t*2+i*TAU/3,r=(29-u*9)*s;
+          points.push([cx+Math.cos(a)*r,cy+49*s-u*123*s]);
+        }
+        ribbon(points,e.style==='ascension'?2.6:1.7,p[i%2],renewal*.26);
       }
     }
     if(e.kind==='damage'||e.kind==='attack'||e.kind==='recoil') {
@@ -396,23 +566,33 @@
     if(!LT.Art?.battle||!LT.PixelSprites?.duel||LT.Art.battle._pachiVFX)return false;
     const battle=LT.Art.battle,duel=LT.PixelSprites.duel;
     const wrapped=function(canvas,engine,time=0,options={}) {
-      battle(canvas,engine,time,{...options,effect:null});
+      battle(canvas,engine,time,{...options,hideLegacyEffect:true});
       if(canvas&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,options.effect,options);
     };
     wrapped._pachiVFX=true;LT.Art.battle=wrapped;LT.PixelSprites.battle=wrapped;
     LT.PixelSprites.duel=function(canvas,value,side=0,time=0) {
-      duel(canvas,value,side,time);
-      const state=value?.state||value;if(!canvas||!state?.teams)return;
-      if(!time){onlineQueue=[];onlineKey=null;return;}
-      queueOnline(state,time);
-      if(time<lastOnlineTime){onlineQueue=[];onlineKey=null;return;}
+      const state=value?.state||value;
+      if(!canvas||!state?.teams)return duel(canvas,value,side,time);
+      if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;}
+      if(time)queueOnline(state,time);
       while(onlineQueue.length&&time>onlineQueue[0].started+onlineQueue[0].duration)onlineQueue.shift();
-      const e=onlineQueue[0];if(e)render(canvas.getContext('2d'),canvas.width,canvas.height,time,e,{...settings(),online:true,double:state.mode==='double',side});
+      const e=onlineQueue[0],options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
+      duel(canvas,value,side,time,options);
+      if(e&&time>=e.started&&!e.soundPlayed){
+        // Sound follows the event that actually becomes visible. Mark it in
+        // observer-only queue state, never in the synchronized duel snapshot.
+        e.soundPlayed=true;
+        const move=LT.DATA?.moves?.[e.move];
+        if(move&&typeof LT.playMoveSound==='function'){
+          try{LT.playMoveSound(move,e);}catch(_){} // audio must never stop battle drawing
+        }
+      }
+      if(e&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,e,options);
     };
     globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineQueue=[];}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,palettes,styles:[...new Set([...Object.values(direct),...Object.values(atlas).flat(),'healing','shield','capture','miss'])]};
+  const api={classify,fromEvent,anchors,render,install,palettes,budgets,styles:[...new Set([...Object.values(direct),...Object.values(atlas).flat(),'healing','shield','capture','miss'])]};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();

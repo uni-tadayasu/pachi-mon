@@ -16,6 +16,18 @@
     const state = LT.adminBridge?.getEngine?.()?.state;
     return [...(state?.party || []), ...(state?.storage || [])].find(mon => mon.species === 'futo' && typeof mon.grantId === 'string' && mon.grantId.length > 0) || null;
   }
+  function appearanceFor(ids){
+    const state=LT.adminBridge?.getEngine?.()?.state;
+    const party=[...(state?.party||[]),...(state?.storage||[])];
+    return ids.map(id=>{const mon=party.find(m=>m.species===id);return {nickname:mon?.nickname||'',shiny:mon?.shiny===true};});
+  }
+  function validAppearance(team){
+    if(team.appearance===undefined)return true;
+    return Array.isArray(team.appearance)&&team.appearance.length===team.ids?.length&&team.appearance.every(item=>{
+      if(!only(item,['nickname','shiny'])||typeof item.shiny!=='boolean'||typeof item.nickname!=='string')return false;
+      try{return LT.MonsterIdentity.normalizeNickname(item.nickname)===item.nickname;}catch(_){return false;}
+    });
+  }
   function rosterIds(base) {
     const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly);
     if (owned() && LT.DATA.species.futo) ids.push('futo');
@@ -52,6 +64,12 @@
         stats: clone(snapshot.stats), stages: LT.BattleStages.empty(), customMoves: snapshot.moves.slice(),
         pp: Object.fromEntries(snapshot.moves.map(id => [id, maxPP(LT.DATA.moves[id])])), guard: false };
     }));
+    // Cosmetics are carried separately from combat data. They can never alter
+    // rental stats, levels, PP or the server-authorized Futo snapshot.
+    config.appearance?.forEach((team,side)=>team?.forEach((look,index)=>{
+      const mon=duel.state.teams[side].monsters[index];
+      if(mon&&look){mon.shiny=look.shiny===true;if(look.nickname)mon.nickname=look.nickname;}
+    }));
     const baseMoves = duel.moves.bind(duel);
     duel.moves = mon => mon.species === 'futo' && Array.isArray(mon.customMoves)
       ? mon.customMoves.map(id => ({ ...LT.DATA.moves[id], pp: mon.pp[id], maxPP: maxPP(LT.DATA.moves[id]) })) : baseMoves(mon);
@@ -64,19 +82,30 @@
       this._futoChecking = false;
     }
     _validTeam(team) {
-      if (!team?.ids?.includes?.('futo')) return super._validTeam(team) && team.ids.every(id => !LT.DATA.species[id]?.specialOnly);
-      return only(team, ['name', 'ids', 'futo']) && team.name === cleanName(team.name) && !!team.name &&
+      if(!validAppearance(team||{}))return false;
+      const clean=plain(team)?{...team}:team;if(clean)delete clean.appearance;
+      if (!team?.ids?.includes?.('futo')) return super._validTeam(clean) && team.ids.every(id => !LT.DATA.species[id]?.specialOnly);
+      return only(clean, ['name', 'ids', 'futo']) && team.name === cleanName(team.name) && !!team.name &&
         Array.isArray(team.ids) && team.ids.length === (this.mode === 'single' ? 3 : 4) && new Set(team.ids).size === team.ids.length &&
         team.ids.every(id => typeof id === 'string' && id.length <= 80 && Object.hasOwn(LT.DATA.species, id) && (id === 'futo' || !LT.DATA.species[id].specialOnly)) &&
         only(team.futo, ['pass']) && typeof team.futo.pass === 'string' && team.futo.pass.length >= 32 && team.futo.pass.length <= 4096;
     }
     async setTeam(input = {}) {
-      if (!Array.isArray(input.ids) || !input.ids.includes('futo')) return super.setTeam(input);
+      if(!Array.isArray(input.ids))return fail('チームのパチモンを選んでください。');
+      if (!input.ids.includes('futo')) {
+        if(this._closed||!this._started||!this._connected||this.duel||this._teams[this.role]||this._futoChecking)return fail('現在は編成を変更できません。');
+        const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:appearanceFor(input.ids)};
+        if(!this._validTeam(team))return fail('異なる種類のパチモンでチームを編成してください。');
+        this._teams[this.role]=team;this._phase='ready';this._message='編成を確定しました。対戦相手の準備を待っています。';
+        this._arm(180000,'対戦相手の編成が時間内に完了しなかったため、中断しました。');
+        this._send({t:'ready',session:this.sessionId,team});if(!this._closed)this._beginIfReady();this._emit();
+        return this._closed?fail(this._message):{ok:true};
+      }
       if (this._closed || !this._started || !this._connected || this.duel || this._teams[this.role] || this._futoChecking) return fail('現在は編成を変更できません。');
       const local = owned();
       if (!local) return fail('フートを受け取ってから編成してください。');
       if (typeof LT.Admin?.requestDuelPass !== 'function' || typeof LT.Admin?.verifyDuelPass !== 'function') return fail('フートの所持確認サービスを読み込めません。');
-      const team = { name: cleanName(input.name) || `プレイヤー${this.role + 1}`, ids: input.ids.slice(), futo: { pass: '0'.repeat(32) } };
+      const team = { name: cleanName(input.name) || `プレイヤー${this.role + 1}`, ids: input.ids.slice(), appearance:appearanceFor(input.ids), futo: { pass: '0'.repeat(32) } };
       if (!this._validTeam(team)) return fail('異なる種類のパチモンでチームを編成してください。');
       this._futoChecking = true;
       const generation = this._generation;
@@ -87,7 +116,7 @@
         if (!this._validTeam(team)) throw new Error('フートの所持確認を発行できませんでした。');
         const verified = validateSnapshot(await LT.Admin.verifyDuelPass(this.sessionId, team.futo.pass, this.role), this.sessionId, this.role);
         if (verified.grantId !== local.grantId) throw new Error('フートの配布記録が一致しません。');
-        if (this._closed || this._generation !== generation) return fail(this._message);
+        if (this._closed || this._generation !== generation || this._teams[this.role] || this.duel) return fail(this._message);
         this._futoVerified[this.role] = { pass: team.futo.pass, snapshot: verified };
         this._teams[this.role] = team;
         this._phase = 'ready'; this._message = '編成を確定しました。対戦相手の準備を待っています。';
@@ -117,7 +146,6 @@
     }
     _beginIfReady() {
       if (this.duel || !this._teams.every(Boolean)) return;
-      if (!this._teams.some(team => team.ids.includes('futo'))) return super._beginIfReady();
       try {
         const verified = this._teams.map((team, side) => {
           if (!team.ids.includes('futo')) return null;
@@ -125,13 +153,13 @@
           if (!record || record.pass !== team.futo.pass) throw new Error('フートの所持確認が完了していません。');
           return validateSnapshot(record.snapshot, this.sessionId, side);
         });
-        this.duel = createVerifiedDuel({ mode: this.mode, teams: this._teams.map(team => team.ids), names: this._teams.map(team => team.name), seed: this.seed }, verified);
+        this.duel = createVerifiedDuel({ mode: this.mode, teams: this._teams.map(team => team.ids), names: this._teams.map(team => team.name), seed: this.seed, appearance:this._teams.map(team=>team.appearance) }, verified);
         this._beginSync(0);
       } catch (_) { this._fail('フートの編成確認に失敗しました。部屋を作り直してください。'); }
     }
   }
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':futo-server-pass-v1';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':futo-server-pass-v2-appearance';
   LT.DuelSession = FutoSession;
-  LT.OnlineFuto = { owned, rosterIds, validateSnapshot, version: 1 };
+  LT.OnlineFuto = { owned, rosterIds, validateSnapshot, version: 2 };
 })();
