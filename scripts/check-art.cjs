@@ -7,6 +7,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
+const settle = async () => {
+  global.gc?.();
+  // Native finalizers run after the current JS turn. GC alone inside a long
+  // synchronous rendering loop leaves native pixel buffers pending release.
+  await new Promise(setImmediate);
+  global.gc?.();
+  await new Promise(setImmediate);
+};
+const progress = async label => { await settle(); console.log(`${label} (RSS ${Math.round(process.memoryUsage().rss / 1048576)} MiB)`); };
 let canvas;
 for (const name of [process.env.CANVAS_MODULE, '@napi-rs/canvas', '/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/@napi-rs/canvas'].filter(Boolean)) {
   try { canvas = require(name); break; } catch (_) {}
@@ -125,6 +134,7 @@ async function runtime(mode = 'normal') {
 
 async function main() {
   const { LT, engine, beforeLoad, afterLoad } = await runtime();
+  await progress('Base artwork loaded');
   const species = Object.values(LT.DATA.species).filter(s => !s.specialOnly), maps = Object.values(LT.DATA.maps);
   assert.equal(species.length, 256, 'Species count changed');
   assert.equal(maps.filter(m => !m.interior).length, 64, 'Outdoor map count changed');
@@ -134,9 +144,15 @@ async function main() {
   visible(LT.CreatureArt.get('futo'), 'Supplied Futo illustration', true);
   for (const module of ['CreatureArt', 'TravellerArt', 'FieldArt', 'BattleArt']) assert(LT[module], `${module} did not load`);
   assert.notEqual(beforeLoad, afterLoad, 'The field retained the procedural pre-load cache after artwork became ready');
+  // Evolution art is intentionally lazy during startup. Load it explicitly so
+  // this comprehensive rendering pass checks the generated views, not fallbacks.
+  await LT.CreatureArt.preload(species.filter(s => LT.CreatureArt.lineage(s.id).stage > 0).map(s => s.id), { back: 'both' });
+  assert.equal(LT.CreatureArt.status().evolutionLoaded, 8, 'Evolution atlases did not all load');
+  await progress('Evolution artwork loaded; rendering 256 species');
 
   const snapshots = { data: JSON.stringify(LT.DATA), state: JSON.stringify(engine.state) };
   const fronts = new Set(), backs = new Set();
+  let creatureCount = 0;
   for (const monster of species) {
     const front = visible(LT.CreatureArt.get(monster.id, false), `${monster.id} front`, true);
     const back = visible(LT.CreatureArt.get(monster.id, true), `${monster.id} back`, true);
@@ -146,7 +162,10 @@ async function main() {
       const target = canvas.createCanvas(256, 256);
       LT.Art.creature(target, monster.id, { back: rear });
       visible(target, `${monster.id}: integrated creature renderer`, true);
+      target.width = target.height = 1;
     }
+    if (++creatureCount % 8 === 0) await settle();
+    if (creatureCount % 64 === 0) await progress(`Rendered ${creatureCount}/256 species`);
   }
   assert(fronts.size >= 200 && backs.size >= 200, 'Species artwork lost its individual visual variations');
 
@@ -159,6 +178,7 @@ async function main() {
       assert.equal(sprite?.width, 96, `${kind} ${direction}: unexpected width`);
       assert.equal(sprite?.height, 128, `${kind} ${direction}: unexpected height`);
       hashes.add(visible(sprite, `${kind} ${direction} ${frame}`, true).hash); personCount++;
+      if (personCount % 24 === 0) await settle();
     }
     if (kind === 'hero') assert(hashes.size > 1, `${direction}: walking animation is static`);
   }
@@ -171,6 +191,7 @@ async function main() {
     LT.FieldArt[name] = function (...args) { const result = original.apply(this, args); if (result) counters[name]++; return result; };
   }
   let fieldCount = 0;
+  await progress('Creature and traveller views passed; rendering maps');
   for (const map of maps) {
     const view = canvas.createCanvas(640, 480);
     const oldGround = counters.ground || 0;
@@ -179,13 +200,17 @@ async function main() {
     LT.Art.world(view, testEngine, 1200, { moving: true, dayPhase: 'day' });
     visible(view, `map ${map.id}`);
     assert((counters.ground || 0) > oldGround, `${map.id}: did not use the new ground artwork`);
+    view.width = view.height = 1;
     fieldCount++;
+    if (fieldCount % 4 === 0) await settle();
+    if (fieldCount % 24 === 0) await progress(`Rendered ${fieldCount}/118 maps`);
   }
   assert(counters.tree > 0, 'No generated tree was rendered');
   assert(counters.building > 0, 'No generated building was rendered');
   assert(counters.furniture > 0, 'No generated furniture was rendered');
 
   let battleCount = 0;
+  await progress('Maps passed; rendering battle views');
   const landscapes = new Set();
   for (const theme of LT.BattleArt.themes) {
     const painted = LT.BattleArt.get(theme, 768, 480);
@@ -200,29 +225,34 @@ async function main() {
     const map = maps.find(m => m.theme === theme);
     const testEngine = { map, state: engine.state, battle: { enemy: engine.makeMonster(species[15].id, 5), activeIndex: 0 } };
     LT.Art.battle(view, testEngine, 1000);
-    visible(view, `battle ${theme}`); battleCount++;
+    visible(view, `battle ${theme}`); view.width = view.height = 1; battleCount++; await settle();
   }
   for (const mode of ['single', 'double']) {
     const team = { active: mode === 'single' ? [0] : [0, 1], monsters: species.slice(0, 4).map(s => engine.makeMonster(s.id, 50)) };
     const view = canvas.createCanvas(768, 480);
     LT.PixelSprites.duel(view, { mode, teams: [team, team] }, 0, 1000);
     visible(view, `${mode} online battle renderer`);
+    view.width = view.height = 1; await settle();
   }
   assert.equal(JSON.stringify(LT.DATA), snapshots.data, 'Rendering modified gameplay data');
   assert.equal(JSON.stringify(engine.state), snapshots.state, 'Rendering modified the save state');
 
   console.log('Artwork rendering complete: 256 species, 118 maps, people, landscapes, and furniture. Checking fallbacks.');
   for (const mode of ['broken-assets', 'no-modules']) {
+    await progress(`Checking ${mode} fallback`);
     const fallback = await runtime(mode);
     const target = canvas.createCanvas(256, 256);
     for (const back of [false, true]) { fallback.LT.Art.creature(target, species[0].id, { back }); visible(target, `${mode}: creature`, true); }
     for (const facing of ['down', 'left', 'right', 'up']) {
       const person = canvas.createCanvas(96, 128);
       fallback.LT.Art.traveller(person, { facing, size: 128 }); visible(person, `${mode}: traveller ${facing}`, true);
+      person.width = person.height = 1;
     }
+    target.width = target.height = 1;
     assert.equal(fallback.beforeLoad, fallback.afterLoad, `${mode}: fallback unexpectedly changed after failed loading`);
     if (mode === 'broken-assets') assert(fallback.imageErrors.length > 0, 'Missing-image simulation did not run');
   }
+  await progress('Checking delayed artwork recovery');
   const delayed = await runtime('delayed-assets');
   assert.equal(delayed.beforeLoad, delayed.afterLoad, 'Timed-out images should retain playable fallback graphics');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 0, 'Delayed downloads completed before the test released them');
@@ -241,4 +271,11 @@ async function main() {
     battleThemes: battleCount, landscapeArtwork: landscapes.size, onlineModes: 2, fieldArtworkUses: counters, fallbackModes: 2, recoveredLateImages: recovered.notifications }, null, 2));
 }
 module.exports = { runtime, canvas, imageStats };
-if (require.main === module) main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+if (require.main === module) {
+  // V8 cannot see all native canvas allocations. Explicit collection keeps the
+  // exhaustive Node harness bounded without altering production renderer caches.
+  if (!global.gc) {
+    const child = require('node:child_process').spawnSync(process.execPath, ['--expose-gc', __filename], { stdio: 'inherit' });
+    process.exitCode = child.status ?? 1;
+  } else main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+}
