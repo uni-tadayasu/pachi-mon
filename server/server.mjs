@@ -2,9 +2,10 @@
 // ADMIN_CLAIM_KEY is a runtime secret. Never place it in client code or source.
 const BASE_ORIGIN = 'https://uni-tadayasu.github.io';
 const encoder = new TextEncoder();
-const DEFAULT_MOVES = ['supernova', 'atlas_crystal_4', 'starlight', 'shell'];
+const DEFAULT_MOVES = ['futo_breaker', 'futo_burst', 'futo_ascend', 'futo_restore'];
+const LEGACY_DEFAULT_MOVES = ['supernova', 'atlas_crystal_4', 'starlight', 'shell'];
 const BASIC_MOVES = 'sprout vine bloom wave surge mist spark blaze warmth gust storm shelter glint prism shell nudge lifeline evergreen thorn dew riptide ripple frost spring sunburst cinder phoenix heatveil tempest whisper feather sirocco supernova moonbeam facet starlight pulse focus restsong dawnstep'.split(' ');
-const MOVE_IDS = new Set([...BASIC_MOVES, ...['leaf', 'tide', 'ember', 'wind', 'crystal'].flatMap(type => Array.from({length:12}, (_, i) => `atlas_${type}_${i + 1}`))]);
+const MOVE_IDS = new Set([...DEFAULT_MOVES, ...BASIC_MOVES, ...['leaf', 'tide', 'ember', 'wind', 'crystal'].flatMap(type => Array.from({length:12}, (_, i) => `atlas_${type}_${i + 1}`))]);
 const STAT_LIMITS = {hp:99999, atk:9999, def:9999, spAtk:9999, spDef:9999, speed:9999, accuracy:300, evasion:300};
 export const DEFAULT_CONFIG = Object.freeze({level:100, stats:Object.freeze({hp:500, atk:150, def:150, spAtk:180, spDef:150, speed:160, accuracy:110, evasion:100}), moves:Object.freeze(DEFAULT_MOVES)});
 
@@ -73,7 +74,10 @@ export function validateConfig(input) {
     stats[key] = value;
   }
   if (!Array.isArray(input.moves) || input.moves.length !== 4 || new Set(input.moves).size !== 4 || input.moves.some(id => !MOVE_IDS.has(id))) fail(400, 'INVALID_MOVES', '異なる4つの使用可能な技を選んでください。');
-  return {level:input.level, stats, moves:[...input.moves]};
+  // Upgrade only the original default loadout. Preserve any chosen order or
+  // custom move, and leave persisted snapshots/hashes untouched during reads.
+  const moves = input.moves.every((id, index) => id === LEGACY_DEFAULT_MOVES[index]) ? DEFAULT_MOVES : input.moves;
+  return {level:input.level, stats, moves:[...moves]};
 }
 async function bodyJSON(request) {
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('Content-Type') || '')) fail(415, 'JSON_REQUIRED', 'JSON形式で送信してください。');
@@ -127,9 +131,12 @@ async function authenticate(env, request) {
 function requireAdmin(player) { if (!player.is_admin) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。'); }
 async function configRecord(env) {
   const row = await env.DB.prepare('SELECT config_json, revision FROM futo_config WHERE singleton = 1').first();
-  return row ? {config:JSON.parse(row.config_json), revision:row.revision} : {config:validateConfig(DEFAULT_CONFIG), revision:0};
+  return row ? {config:validateConfig(JSON.parse(row.config_json)), revision:row.revision} : {config:validateConfig(DEFAULT_CONFIG), revision:0};
 }
-function grantView(row) { return {grantId:row.grant_id, species:'futo', ...JSON.parse(row.config_json), createdAt:row.created_at}; }
+function grantView(row) { return {grantId:row.grant_id, species:'futo', ...validateConfig(JSON.parse(row.config_json)), createdAt:row.created_at}; }
+function sameGrantRequest(row, playerId, target, configJSON) {
+  return row?.creator_id === playerId && row.target === target && JSON.stringify(validateConfig(JSON.parse(row.config_json))) === configJSON;
+}
 async function playerGrants(env, playerId, cursor, limit) {
   const result = await env.DB.prepare('SELECT row_id, grant_id, config_json, created_at FROM grants WHERE player_id = ? AND row_id > ? ORDER BY row_id LIMIT ?').bind(playerId, cursor, limit + 1).all();
   const rows = result.results || [];
@@ -222,17 +229,24 @@ async function route(request, env, url) {
     let target = body.target === 'self' ? player.id : body.target;
     if (target !== 'all' && (typeof target !== 'string' || !/^P[0-9a-f]{16}$/.test(target))) fail(400, 'INVALID_TARGET', '配布先を選択してください。');
     if (target !== 'all' && !await env.DB.prepare('SELECT id FROM players WHERE id = ?').bind(target).first()) fail(404, 'PLAYER_NOT_FOUND', '配布先のプレイヤーが見つかりません。');
-    const config = validateConfig(body.config || (await configRecord(env)).config), configJSON = JSON.stringify(config);
-    const payloadHash = await digest(JSON.stringify({target, config})), batchId = body.requestId.toLowerCase();
-    const existing = await env.DB.prepare('SELECT payload_hash FROM grant_batches WHERE id = ?').bind(batchId).first();
-    if (existing && existing.payload_hash !== payloadHash) fail(409, 'REQUEST_ID_REUSED', '配布識別情報が別の操作に使われています。');
+    const batchId = body.requestId.toLowerCase();
+    const existing = await env.DB.prepare('SELECT payload_hash, creator_id, target, config_json FROM grant_batches WHERE id = ?').bind(batchId).first();
+    // A retry that omitted config still means its original stored snapshot,
+    // even if the administrator has changed the current defaults since then.
+    const config = validateConfig(body.config || (existing ? JSON.parse(existing.config_json) : (await configRecord(env)).config)), configJSON = JSON.stringify(config);
+    const payloadHash = await digest(JSON.stringify({target, config}));
+    if (existing && !sameGrantRequest(existing, player.id, target, configJSON)) fail(409, 'REQUEST_ID_REUSED', '配布識別情報が別の操作に使われています。');
+    // A legacy batch may have an older hash for the same effective loadout.
+    // Retain that hash and its recipient cutoff so retries neither conflict nor
+    // distribute a second gift to players who registered after first issuance.
+    const storedHash = existing?.payload_hash || payloadHash;
     if (!existing) await consumeLimit(env, request, 'grant-global', 60, 60000, true);
     await env.DB.batch([
       env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now()),
-      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ?").bind(batchId, payloadHash, player.id)
+      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ?").bind(batchId, storedHash, player.id)
     ]);
-    const actual = await env.DB.prepare('SELECT payload_hash FROM grant_batches WHERE id = ?').bind(batchId).first();
-    if (actual?.payload_hash !== payloadHash) fail(409, 'REQUEST_ID_REUSED', '配布識別情報が別の操作に使われています。');
+    const actual = await env.DB.prepare('SELECT payload_hash, creator_id, target, config_json FROM grant_batches WHERE id = ?').bind(batchId).first();
+    if (!sameGrantRequest(actual, player.id, target, configJSON)) fail(409, 'REQUEST_ID_REUSED', '配布識別情報が別の操作に使われています。');
     const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM grants WHERE batch_id = ?').bind(batchId).first();
     return {batchId, recipientCount:count.total, replayed:!!existing};
   }

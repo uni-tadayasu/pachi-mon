@@ -17,7 +17,8 @@ const clean=value=>JSON.parse(JSON.stringify(value));
 const engine=()=>{const e=new Engine();e.newGame(D.starters[0]);return e;};
 const stats={hp:5000,attack:420,defense:360,spAttack:520,spDefense:410,speed:260,accuracy:120,evasion:105};
 const canonical={hp:5000,atk:420,def:360,spAtk:520,spDef:410,speed:260,accuracy:120,evasion:105};
-const moves=['supernova','atlas_crystal_4','starlight','shell'];
+// A genuinely customized ordering must survive the default-moves migration.
+const moves=['supernova','atlas_crystal_4','shell','starlight'];
 const grant=(id,overrides={})=>({grantId:id,species:'futo',level:100,stats:{...stats},moves:[...moves],...overrides});
 assert.equal(D.limits.level,100);
 assert.equal(Object.values(D.species).filter(s=>!s.specialOnly).length,256);
