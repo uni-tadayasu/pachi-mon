@@ -19,7 +19,14 @@
     spark:'flame', blaze:'fire-vortex', sunburst:'sunburst', cinder:'fire-lance',
     gust:'wind-blades', storm:'feathers', tempest:'vortex', whisper:'feathers', sirocco:'wind-blades',
     glint:'crystals', prism:'star-rings', supernova:'starfall', moonbeam:'beam', facet:'crystals',
-    nudge:'impact', pulse:'ripples', struggle:'impact'
+    nudge:'impact', pulse:'ripples', struggle:'impact',
+    futo_breaker:'fracture-punch', futo_burst:'focus-beam', futo_ascend:'ascension', futo_restore:'healing'
+  };
+  const movePalettes = {
+    futo_breaker:['#fff1fb','#ff8bcf','#913eb7','#ffecbd'],
+    futo_burst:['#fff5ff','#ee7bda','#873ed4','#ffd6ed'],
+    futo_ascend:['#fff1fb','#ffa1db','#a050cb','#ffe6ae'],
+    futo_restore:['#fffaff','#efb7ed','#ab8ed1','#e2ffeb']
   };
   const atlas = {
     leaf:['seed','petals','roots','petals','seed','roots','roots','roots'],
@@ -48,6 +55,7 @@
     if(kind==='capture'||kind==='caught'||kind==='resonate')return 'capture';
     if(kind==='heal')return 'healing';
     if(kind==='guard')return 'shield';
+    if(kind==='boost')return 'ascension';
     if(kind==='recoil')return 'impact';
     if(direct[move.id])return direct[move.id];
     const a=/^atlas_(leaf|tide|ember|wind|crystal)_(\d+)$/.exec(move.id||'');
@@ -65,15 +73,16 @@
     return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
   }
   function fromEvent(event,fallback=null,now=globalThis.performance?.now?.()||0) {
-    if(!event||!['damage','attack','heal','guard','miss','capture','caught','resonate','recoil'].includes(event.kind))return null;
+    if(!event||!['damage','attack','heal','guard','boost','miss','capture','caught','resonate','recoil'].includes(event.kind))return null;
     if(event.kind==='heal' && (event.amount===0||/効果がなかった|満タン|満ちている/.test(event.text||'')))return null;
+    if(event.kind==='boost' && event.changed===false)return null;
     const move=resolveMove(event,fallback)||{element:event.element};
     const style=classify(move,event.kind),large=(move.power||0)>=40;
     const amount=Number.isFinite(event.amount)?event.amount:Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||/(?:体力が|HPが)(\d+)/.exec(event.text||'')?.[1]||0);
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
       power:move.power||25,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
       amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),
-      started:now,duration:event.kind==='miss'?720:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
+      started:now,duration:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
       seed:hash((move.id||event.text||style)+':'+(event.side??'ally')+':'+(event.slot||0))};
   }
   function anchors(width,height,e,options={}) {
@@ -83,7 +92,7 @@
       return {x:width*(doubled?(ours?(slot===1?.47:.19):(slot===1?.82:.57)):(ours?.28:.73)),
         y:height*(doubled?(ours?.75:.37):(ours?.71:.42))};
     }
-    const source=at(own,e.slot),self=['heal','guard','recoil'].includes(e.kind);
+    const source=at(own,e.slot),self=['heal','guard','boost','recoil'].includes(e.kind);
     return {source,target:self?source:at(!own,e.target),own};
   }
   function motionReduced(options) {
@@ -96,7 +105,7 @@
     const duration=clamp(Number(event.duration)||940,300,2400),t=(time-event.started)/duration;
     if(t<0||t>1)return false;
     const e=event.style?event:{...event,style:classify(resolveMove(event)||{element:event.element},event.kind)};
-    const {source,target}=anchors(w,h,e,options),p=palettes[e.element]||palettes.neutral;
+    const {source,target}=anchors(w,h,e,options),p=movePalettes[e.move]||palettes[e.element]||palettes.neutral;
     const quality=options.quality||'balanced',low=quality==='low'||w<600;
     const count=low?12:quality==='high'?28:20,seed=e.seed||hash(e.move||e.style);
     const unit=Math.min(w/768,h/440),s=Math.max(.4,unit),size=(e.power>=40?1.28:1)*(e.critical?1.08:1);
@@ -147,7 +156,7 @@
     const trail=(a,b,width=5)=>{stroke([[a.x,a.y],[b.x,b.y]],p[2],width*2,.24);stroke([[a.x,a.y],[b.x,b.y]],p[1],width,.75);stroke([[a.x,a.y],[b.x,b.y]],p[0],Math.max(1,width*.23),.95);};
 
     // Each technique has one smooth illumination envelope, never a strobing full-screen flash.
-    if(!['healing','shield','capture','miss'].includes(e.style)) {
+    if(!['healing','shield','ascension','capture','miss'].includes(e.style)) {
       const charge=(1-smooth(phase(t,.14,.36)))*smooth(t/.12);
       glow(source.x,source.y,35*s,charge*.38);
       ellipse(source.x,source.y,23*s*charge,14*s*charge,p[1],1,charge*.65);
@@ -210,12 +219,51 @@
         }impactRing(86*s);sparks(cx,cy);break;
       }
       case 'fire-lance':
+      case 'focus-beam':
       case 'beam': {
-        const end=mixPoint(source,target,travel),width=Math.sin(phase(t,.08,.9)*Math.PI)*(e.style==='beam'?21:15)*s*size;
+        const focused=e.style==='focus-beam';
+        const end=mixPoint(source,target,travel),width=Math.sin(phase(t,.08,.9)*Math.PI)*(focused?14:e.style==='beam'?21:15)*s*size;
         if(width>0){trail(source,end,width/s);glow(end.x,end.y,35*s,.45);}
         for(let i=0;i<3;i++){const tt=phase(t,.12+i*.08,.6+i*.08),pos=mixPoint(source,target,tt);
           ellipse(pos.x,pos.y,(13+tt*12)*s,(22+tt*16)*s,p[0],1,Math.sin(tt*Math.PI)*.7);
-        }impactRing(95*s);sparks(cx,cy);break;
+        }
+        if(focused){
+          const energy=Math.sin(phase(t,.08,.91)*Math.PI),perp={x:-Math.sin(direction),y:Math.cos(direction)};
+          for(const sign of [-1,1]){
+            const points=[];for(let j=0;j<=24;j++){const u=j/24,pos=mixPoint(source,end,u),offset=Math.sin(u*Math.PI)*13*s*sign;points.push([pos.x+perp.x*offset,pos.y+perp.y*offset]);}
+            stroke(points,p[1],2,energy*.8);
+          }
+          for(let i=0;i<6;i++){const a=i*TAU/6+t*.5,r=(24+energy*8)*s;shard(source.x+Math.cos(a)*r,source.y+Math.sin(a)*r,5*s,a+Math.PI/2,p[1],energy*.8);}
+          star(end.x,end.y,22*s*energy,p[0],direction,.85);
+        }
+        impactRing(95*s);sparks(cx,cy);break;
+      }
+      case 'fracture-punch': {
+        const flight=ease(phase(t,.13,.43)),pos=mixPoint(source,target,flight),strike=1-smooth(phase(t,.47,.67));
+        const dx=Math.cos(direction),dy=Math.sin(direction),scale=15*s*size;
+        const transform=(x,y)=>[pos.x+(x*dx-y*dy)*scale,pos.y+(x*dy+y*dx)*scale];
+        for(let i=-2;i<=2;i++){
+          const offset=i*8*s,tail=42*s*(1-Math.abs(i)*.14);
+          stroke([[pos.x-dx*tail-dy*offset,pos.y-dy*tail+dx*offset],[pos.x-dx*9*s-dy*offset,pos.y-dy*9*s+dx*offset]],i%2?p[1]:p[0],i===0?5:2,strike*.75);
+        }
+        const fist=[[-1.65,-.5],[-.6,-.5],[-.36,-.94],[.72,-.94],[1.04,-.65],[1.04,.45],[.65,.88],[-.25,.88],[-.55,.48],[-1.65,.48]].map(([x,y])=>transform(x,y));
+        glow(pos.x,pos.y,35*s,strike*.33);poly(fist,p[2],strike*.88);stroke(fist,p[1],3,strike,true);
+        stroke([transform(-.25,-.64),transform(.7,-.64),transform(.7,.35),transform(.45,.58)],p[0],2,strike);
+        for(let i=0;i<3;i++)stroke([transform(i*.27,-.65),transform(i*.27,-.22)],p[0],1,strike*.8);
+        if(t>.4){
+          const fracture=ease(phase(t,.4,.68)),opacity=1-smooth(phase(t,.69,1));
+          for(let i=0;i<(low?7:10);i++){
+            const a=i*TAU/(low?7:10)+.22,r=(47+random(seed,i)*47)*s*size*fracture;
+            const point=(rr,angle)=>[cx+Math.cos(angle)*rr,cy+Math.sin(angle)*rr*.76];
+            const middle=point(r*.56,a+.13),end=point(r,a-.06);
+            const crack=[point(12*s,a),middle,point(r*.76,a-.11),end];
+            stroke(crack,p[2],5,opacity*.28);stroke(crack,p[0],1.8,opacity*.9);
+            stroke([middle,point(r*.73,a+.35)],p[1],1,opacity*.8);
+            shard(end[0],end[1],5*s,a,p[i%3],opacity*.8);
+          }
+          star(cx,cy,24*s*(1-fracture*.55),p[0],direction,opacity*.85);
+        }
+        impactRing(106*s);sparks(cx,cy,Math.floor(count*.6),85*s,p[1]);break;
       }
       case 'sunburst': {
         const rise=ease(phase(t,.08,.45)),radius=(12+rise*44)*s*size;
@@ -269,6 +317,29 @@
         }
         const r=11*s;stroke([[cx-r,cy],[cx+r,cy]],p[0],5,.75);stroke([[cx,cy-r],[cx,cy+r]],p[0],5,.75);break;
       }
+      case 'ascension': {
+        const rise=ease(phase(t,.04,.72)),height=130*s,gather=1-smooth(phase(t,.78,1));
+        glow(cx,cy-14*s,84*s,.22*gather,p[1]);
+        ellipse(cx,cy+52*s,(38+rise*29)*s,(10+rise*9)*s,p[1],3,.7*gather);
+        ellipse(cx,cy+52*s,(31+rise*21)*s,(8+rise*6)*s,p[0],1,.8*gather);
+        for(let ribbon=0;ribbon<4;ribbon++){
+          const points=[];
+          for(let j=0;j<=30;j++){
+            const u=j/30*rise,a=u*Math.PI*2.2+t*1.5+ribbon*TAU/4,r=(39-u*20)*s;
+            points.push([cx+Math.cos(a)*r,cy+49*s-u*height]);
+          }
+          stroke(points,p[2],7,.11*gather);stroke(points,ribbon%2?p[1]:p[0],ribbon%2?2:1.5,.6*gather);
+        }
+        for(let i=0;i<(low?10:18);i++){
+          const progress=phase(t,.04+random(seed,i)*.3,.66+random(seed,i)*.25),a=i*2.39996,r=(25+random(seed,i+30)*34)*s;
+          const x=cx+Math.cos(a)*r*(1-progress*.35),y=cy+45*s-progress*145*s,alpha=Math.sin(progress*Math.PI)*gather;
+          shard(x,y,(4+random(seed,i+60)*4)*s,-Math.PI/2,p[i%3],alpha*.8);
+        }
+        const crown=smooth(phase(t,.32,.66))*gather;
+        star(cx,cy-88*s,14*s*crown,p[3],0,crown);
+        for(const sign of [-1,1])star(cx+sign*23*s,cy-76*s,6*s*crown,p[0],.1,crown*.8);
+        break;
+      }
       case 'shield': {
         const r=64*s*size*smooth(t/.2),alpha=1-smooth(phase(t,.8,1));glow(cx,cy,r,.18);
         const vertices=[];for(let i=0;i<6;i++){const a=i*TAU/6-Math.PI/2;vertices.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]);}
@@ -297,7 +368,7 @@
       if(e.critical&&t>.4){ellipse(cx,cy,95*s*burst,60*s*burst,p[3],3,hitAlpha*.6);}
     }
     // Damage labels are intentionally localized to their target, not screen-sized flashes.
-    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
+    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(e.move==='futo_ascend'?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
     if(label&&t>.42){const alpha=smooth(phase(t,.42,.53))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
       c.font=`900 ${Math.max(13,Math.round((e.critical?27:23)*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle='#19253d';
       c.fillStyle=e.kind==='heal'?'#d5ffad':e.kind==='miss'?'#e5e9f1':e.critical?'#ffe09c':'#ffffff';

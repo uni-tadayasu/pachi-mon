@@ -1674,12 +1674,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   if(Object.keys(D.species).length!==256||D.regionIds.length!==64||Object.keys(D.rivals).length!==128||Object.keys(D.guardians).length!==16)throw Error('Pachi Monsters content manifest mismatch');
   // Distribution-only companion. It is never inserted into encounter pools or
   // the standard rental roster, and is not required for ordinary dex completion.
+  Object.assign(D.moves,{
+    futo_breaker:{id:'futo_breaker',name:'裂空拳',element:'crystal',kind:'attack',category:'physical',power:100,accuracy:100,pp:15,description:'空間を震わせる拳で一撃。物理・威力100・命中100・PP15。'},
+    futo_burst:{id:'futo_burst',name:'星核砲',element:'crystal',kind:'attack',category:'special',power:100,accuracy:100,pp:15,description:'星核の光を束ねて放つ砲撃。特殊・威力100・命中100・PP15。'},
+    futo_ascend:{id:'futo_ascend',name:'全霊覚醒',element:'crystal',kind:'boost',category:'status',effect:'allStats',power:0,accuracy:100,pp:5,description:'攻撃・防御・特攻・特防・素早さ・命中・回避を1段階上げる（各最大6段階）。最大HPは変わらず、交代・戦闘不能・戦闘終了で解除。PP5。'},
+    futo_restore:{id:'futo_restore',name:'再生の光',element:'crystal',kind:'heal',category:'status',power:50,accuracy:100,pp:10,description:'最大HPの半分（端数切り上げ）を回復する。最大HPを超えない。PP10。'}
+  });
   D.species.futo={id:'futo',name:'フート',element:'crystal',shape:'cat',specialOnly:true,
     rarity:'gift',atlasNumber:257,color:'#ee7ba9',accent:'#f8e8ef',
     description:'運営から贈られる特別なパチモン。個体ごとに定められた能力と技で冒険をともにする。',
     base:{hp:200,atk:200,def:200,spAtk:200,spDef:200,speed:200,accuracy:100,evasion:100},
-    moves:['supernova','atlas_crystal_4','starlight','shell']};
-  D.content.specialSpecies=1; D.limits.level=100;
+    moves:['futo_breaker','futo_burst','futo_ascend','futo_restore']};
+  D.content.specialSpecies=1; D.content.moves=Object.keys(D.moves).length; D.limits.level=100;
 })();
 
 </script><script>
@@ -1701,6 +1707,17 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const GIFT_LIMIT=10000;
   const FUTO_STAT_LIMITS={hp:99999,atk:9999,def:9999,spAtk:9999,spDef:9999,speed:9999,accuracy:300,evasion:300};
   const FUTO_STAT_ALIASES={atk:'attack',def:'defense',spAtk:'spAttack',spDef:'spDefense'};
+  const LEGACY_FUTO_MOVES=['supernova','atlas_crystal_4','starlight','shell'];
+  const legacyFutoMoves=value=>Array.isArray(value)&&value.length===4&&value.every((id,i)=>id===LEGACY_FUTO_MOVES[i]);
+  const STAGE_KEYS=Object.freeze(['atk','def','spAtk','spDef','speed','accuracy','evasion']);
+  const stageValue=value=>Number.isInteger(value)?Math.max(-6,Math.min(6,value)):0;
+  const BattleStages=Object.freeze({
+    keys:STAGE_KEYS,
+    empty:()=>Object.fromEntries(STAGE_KEYS.map(key=>[key,0])),
+    factor(value,key){const n=stageValue(value),base=key==='accuracy'||key==='evasion'?3:2;return n>=0?(base+n)/base:base/(base-n);},
+    apply(base,stages={}){const result={...base};for(const key of STAGE_KEYS)result[key]=Math.max(1,Math.floor(base[key]*this.factor(stages[key],key)));return result;},
+    raiseAll(stages){let changed=false;for(const key of STAGE_KEYS){const n=stageValue(stages[key]),next=Math.min(6,n+1);if(next!==n)changed=true;stages[key]=next;}return changed;}
+  });
   function futoStats(raw){
     if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('フートの能力を8項目すべて指定してください。');
     const stats={};
@@ -1714,8 +1731,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   function futoMoves(raw){
     const values=raw??D.species.futo.moves;
     if(!Array.isArray(values)||values.length!==4||new Set(values).size!==4||values.some(id=>typeof id!=='string'||!Object.hasOwn(D.moves,id)))throw Error('フートの技は登録された異なる4つを指定してください。');
-    return values.slice();
+    return legacyFutoMoves(values)?D.species.futo.moves.slice():values.slice();
   }
+  const legacyFutoRecord=mon=>mon.species==='futo'&&(legacyFutoMoves(mon.customMoves)||(mon.customMoves===undefined&&mon.pp&&LEGACY_FUTO_MOVES.every(id=>Object.hasOwn(mon.pp,id))));
   const directions = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
   const STRUGGLE = {id:'struggle',name:'踏ん張り打ち',kind:'attack',power:22,accuracy:100,element:null,category:'physical',effect:'recoil',description:'技のPPがすべてなくなった時の最後の攻撃。最大HPの1/4の反動を受ける。'};
   // Keep the existing inventory key so every older save retains its capture tools.
@@ -1769,6 +1787,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         accuracy: s.base.accuracy ?? 100,
         evasion: s.base.evasion ?? 100 };
     }
+    battleStats(mon){
+      const base=this.stats(mon),b=this.battle;
+      if(!b||b.result)return base;
+      const side=mon===b.enemy?'enemy':mon===this.state.party[b.activeIndex]?'ally':null;
+      return side?BattleStages.apply(base,b.stages?.[side]||{}):base;
+    }
+    resetBattleStages(side){
+      if(!this.battle)return;
+      this.battle.stages??={ally:BattleStages.empty(),enemy:BattleStages.empty()};
+      if(side)this.battle.stages[side]=BattleStages.empty();
+      else this.battle.stages={ally:BattleStages.empty(),enemy:BattleStages.empty()};
+    }
     xpToNext(level) { return level >= MAX_LEVEL ? 0 : 24 + level * 12; }
     moves(mon) { return (mon.species==='futo'&&mon.customMoves!==undefined?futoMoves(mon.customMoves):D.species[mon.species].moves).map(id => D.moves[id]); }
     grantFuto(grant){
@@ -1795,7 +1825,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(typeof grantId!=='string'||!GIFT_ID.test(grantId))return fail('配布IDが正しくありません。');
       if(this.battle)return {...fail('バトルが終わると能力を反映します。'),pending:true};
       const mon=[...this.state.party,...this.state.storage].find(m=>m.species==='futo'&&m.grantId===grantId);
-      if(!mon)return {...fail('このフートはまだ受け取っていません。'),pending:true};
+      if(!mon){
+        if(this.state.giftReceipts?.includes(grantId))return {ok:true,released:true,grantId,message:'このフートは見送り済みです。'};
+        return {...fail('このフートはまだ受け取っていません。'),pending:true};
+      }
       let next;
       try{next=this.makeMonster('futo',config.level,futoStats(config.stats),futoMoves(config.moves));}
       catch(error){return fail(error.message);}
@@ -1809,13 +1842,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     maxPP(move) {
       if(typeof move==='string')move=D.moves[move];
       if(!move)return 0;
+      if(finiteInt(move.pp,1,99))return move.pp;
       if(move.kind==='heal')return 10;
       if(move.kind==='guard')return 15;
       return move.power>=42?10:move.power>=33?15:move.power>=27?20:30;
     }
     syncPP(mon) {
-      const previous=mon.pp || {}, next={};
-      for(const move of this.moves(mon))next[move.id]=finiteInt(previous[move.id],0,this.maxPP(move))?previous[move.id]:this.maxPP(move);
+      const previous=mon.pp || {}, next={},legacy=legacyFutoRecord(mon);
+      for(const [i,move]of this.moves(mon).entries()){
+        const oldId=legacy?LEGACY_FUTO_MOVES[i]:move.id,oldMax=legacy?this.maxPP(D.moves[oldId]):this.maxPP(move);
+        next[move.id]=finiteInt(previous[oldId],0,oldMax)?Math.min(previous[oldId],this.maxPP(move)):this.maxPP(move);
+      }
+      if(legacy)mon.customMoves=D.species.futo.moves.slice();
       mon.pp=next;return next;
     }
     movePP(mon,indexOrId) {
@@ -1996,6 +2034,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const activeIndex=this.state.party.findIndex(m=>m.hp>0);
       if(activeIndex<0){this.returnToVillage();return false;}
       this.battle={enemy:this.makeMonster(species,level),activeIndex,guardian,turn:0,log:[],result:null,allyGuard:false,enemyGuard:false,healCooldown:{ally:0,enemy:0},title:guardian?`${D.guardians[guardian].name}の試練`:'野生のモンスターとのバトル'};
+      this.resetBattleStages();
       this.markSeen(species);
       this.battle.log.push(guardian ? `${D.guardians[guardian].name}の${D.species[species].name}が、静かに構えた。` : `野生の${D.species[species].name}が現れた。`);
       return true;
@@ -2013,7 +2052,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         const xp=20+b.enemy.level*6;
         this.event(events,`仲間たちは、旅の経験 ${xp} を分かち合った。`,'reward');
         this.state.party.forEach(mon=>this.giveXP(mon,xp,events));
-        b.enemyIndex++;b.enemy=b.enemyTeam[b.enemyIndex];b.enemyGuard=false;b.healCooldown.enemy=0;
+        b.enemyIndex++;b.enemy=b.enemyTeam[b.enemyIndex];b.enemyGuard=false;b.healCooldown.enemy=0;this.resetBattleStages('enemy');
         this.markSeen(b.enemy.species);
         this.event(events,`${D.species[b.enemy.species].name}が次に登場！ 相手の残り ${b.enemyTeam.length-b.enemyIndex} 体。`,'switch');
       }else this.endBattle('won',events);
@@ -2068,7 +2107,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       b.turn++;
       if(command.type==='switch') {
         const forced=ally.hp<=0;
-        b.activeIndex=command.index;b.allyGuard=false;b.healCooldown.ally=0;
+        b.activeIndex=command.index;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');
         ally=this.state.party[b.activeIndex];
         this.event(events,`${D.species[ally.species].name}が前に出た。`,'switch');
         if(!forced)this.enemyTurn(events);
@@ -2090,7 +2129,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       } else if(command.type==='flee') {
         this.event(events,'互いの距離を取り、草むらへ戻った。','flee');this.endBattle('fled',events);
       } else {
-        const faster=this.stats(ally).speed>=this.stats(b.enemy).speed || move.kind==='guard';
+        const faster=this.battleStats(ally).speed>=this.battleStats(b.enemy).speed || move.kind==='guard';
         const originalEnemy=b.enemy;
         if(faster){this.applyMove(ally,b.enemy,move,'ally',events);if(b.enemy.hp>0)this.enemyTurn(events);}
         else {this.enemyTurn(events);if(!b.result && b.enemy===originalEnemy && this.state.party[b.activeIndex]===ally && ally.hp>0)this.applyMove(ally,b.enemy,move,'ally',events);}
@@ -2114,13 +2153,20 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         b[`${side}Guard`]=true;b.healCooldown[side]=0;
         this.event(events,`${name}の「${move.name}」。次の一撃をやわらげる。`,'guard',{side,element:move.element});return;
       }
+      if(move.kind==='boost'&&move.effect==='allStats'){
+        b.stages??={ally:BattleStages.empty(),enemy:BattleStages.empty()};
+        const changed=BattleStages.raiseAll(b.stages[side]);
+        b.healCooldown[side]=0;
+        this.event(events,changed?`${name}の「${move.name}」！ 攻撃・防御・特攻・特防・素早さ・命中・回避が1段階上がった。`:`${name}の「${move.name}」。能力はすでに上限まで高まっている。`,'boost',{side,slot:0,moveId:move.id,moveName:move.name,element:move.element,effect:'allStats',category:'status',changed});
+        return;
+      }
       if(move.kind==='heal') {
         const max=this.stats(attacker).hp,amount=Math.min(max-attacker.hp,Math.ceil(max*move.power/100));
         attacker.hp+=amount;b.healCooldown[side]=1;
         this.event(events,amount>0?`${name}の「${move.name}」。体力が${amount}回復した。`:`${name}の「${move.name}」。体力が満ちているので効果がなかった。`,'heal',{side,element:move.element});return;
       }
       b.healCooldown[side]=0;
-      const atk=this.stats(attacker),def=this.stats(defender);
+      const atk=this.battleStats(attacker),def=this.battleStats(defender);
       const hitChance=Math.min(100,Math.max(20,move.accuracy*atk.accuracy/Math.max(1,def.evasion)));
       if(this.rng()*100>=hitChance){this.event(events,`${name}の「${move.name}」は、すれ違った。`,'miss',{side,element:move.element});return;}
       const effect=this.effectiveness(move.element,D.species[defender.species].element);
@@ -2137,18 +2183,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const extra=effect>1?' 強く響いた！':effect<1?' 響きは控えめだ。':'';
       this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}`,'damage',{side,element:move.element,category:special?'special':'physical'});
       if(move.effect==='drain' && attacker.hp>0){const amount=Math.min(this.stats(attacker).hp-attacker.hp,Math.max(1,Math.floor(damage*.25)));attacker.hp+=amount;if(amount>0)this.event(events,`${name}は灯を分けてもらい、体力が${amount}戻った。`,'heal',{side,element:move.element});}
-      if(defender.hp<=0)this.event(events,`${D.species[defender.species].name}は戦闘不能になった。`,'faint',{side:opp,element:D.species[defender.species].element});
+      if(defender.hp<=0){this.resetBattleStages(opp);this.event(events,`${D.species[defender.species].name}は戦闘不能になった。`,'faint',{side:opp,element:D.species[defender.species].element});}
       if(move.effect==='recoil') {
         const recoil=Math.max(1,Math.floor(this.stats(attacker).hp/4));attacker.hp=Math.max(0,attacker.hp-recoil);
         this.event(events,`${name}は反動で${recoil}のダメージを受けた。`,'recoil',{side});
-        if(attacker.hp<=0)this.event(events,`${name}は戦闘不能になった。`,'faint',{side});
+        if(attacker.hp<=0){this.resetBattleStages(side);this.event(events,`${name}は戦闘不能になった。`,'faint',{side});}
       }
     }
     resolveAllyFaint(events) {
       const b=this.battle;if(!b || b.result || this.state.party[b.activeIndex].hp>0)return;
       const next=this.state.party.findIndex(m=>m.hp>0);
       if(next<0)this.endBattle('lost',events);
-      else {b.activeIndex=next;b.allyGuard=false;b.healCooldown.ally=0;this.event(events,`${D.species[this.state.party[next].species].name}が、仲間の想いをつないだ。`,'switch');}
+      else {b.activeIndex=next;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');this.event(events,`${D.species[this.state.party[next].species].name}が、仲間の想いをつないだ。`,'switch');}
     }
     enemyTurn(events) {
       const b=this.battle;if(!b || b.result || b.enemy.hp<=0)return;
@@ -2162,14 +2208,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!move){
         const attacks=choices.filter(m=>m.kind==='attack');
         if (this.isTrainerBattle() && this.rng()<(b.elite || b.champion ? .9 : .65)) {
-          const own=this.stats(b.enemy),opponent=this.stats(ally);
+          const own=this.battleStats(b.enemy),opponent=this.battleStats(ally);
           const score=m=>{const special=(m.category || (m.element?'special':'physical'))==='special';return m.power*m.accuracy*this.effectiveness(m.element,D.species[ally.species].element)*(special?own.spAtk/Math.max(1,opponent.spDef):own.atk/Math.max(1,opponent.def));};
           move=attacks.slice().sort((a,c)=>score(c)-score(a))[0];
         } else move=attacks[Math.floor(this.rng()*attacks.length)];
       }
       // Remaining defensive techniques can still be spent; after all PP is gone,
       // both trainers and wild monsters use the same finite-HP fallback.
-      move=move || choices.find(m=>m.kind==='guard') || choices.find(m=>m.kind==='heal') || STRUGGLE;
+      move=move || choices.find(m=>m.kind==='guard') || choices.find(m=>m.kind==='heal') || choices.find(m=>m.kind==='boost') || STRUGGLE;
       this.applyMove(b.enemy,ally,move,'enemy',events);
       this.resolveAllyFaint(events);
       if(!b.result && b.enemy.hp<=0)this.defeatOpponent(events);
@@ -2205,6 +2251,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     endBattle(result,events) {
       const b=this.battle;if(b.result)return;b.result=result;
+      this.resetBattleStages();
       if(result==='won' || result==='caught') {
         if(result==='won')this.state.stats.wins++;
         const guardian=b.guardian?D.guardians[b.guardian]:null;
@@ -2326,6 +2373,15 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const [mon]=this.state.storage.splice(storageIndex,1);
       return {ok:true,message:`${D.species[mon.species].name}を故郷へ見送った。出会いの記録は図鑑に残ります。`};
     }
+    releaseParty(index){
+      if(this.battle)return fail('バトルを終えてから、旅の仲間を見送りましょう。');
+      if(!finiteInt(index,0,this.state.party.length-1))return fail('見送る旅の仲間を選んでください。');
+      if(this.state.party.length<=1)return fail('最後の旅の仲間は見送れません。');
+      if(!this.state.party.some((mon,i)=>i!==index&&mon.hp>0))return fail('動ける仲間を一体以上残してください。');
+      const [mon]=this.state.party.splice(index,1);
+      if(this.state.party[0].hp<=0){const lead=this.state.party.findIndex(m=>m.hp>0);this.state.party.unshift(this.state.party.splice(lead,1)[0]);}
+      return {ok:true,message:`${D.species[mon.species].name}を故郷へ見送った。出会いと受け取りの記録は残ります。`};
+    }
     visit(mapId) { if(!this.state.visited.includes(mapId))this.state.visited.push(mapId); }
     fastTravel(mapId) {
       if(this.battle)return fail('試練を終えてから灯渡りを使いましょう。');
@@ -2395,12 +2451,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           if(mon.grantId!==undefined){if(typeof mon.grantId!=='string'||!GIFT_ID.test(mon.grantId))error('配布IDが正しくありません。');special.grantId=mon.grantId;}
         }
         if(!finiteInt(mon.level,1,MAX_LEVEL) || !finiteInt(mon.xp,0,mon.level===MAX_LEVEL?0:this.xpToNext(mon.level)-1) || !finiteInt(mon.hp,0,this.stats(mon).hp))error('モンスターの能力が正しくありません。');
-        const pp={};
+        const pp={},legacy=legacyFutoRecord(mon);
         if(mon.pp!==undefined && (!mon.pp || typeof mon.pp!=='object' || Array.isArray(mon.pp)))error('技のPPが正しくありません。');
-        for(const move of this.moves(mon)) {
-          if(mon.pp!==undefined && !finiteInt(mon.pp[move.id],0,this.maxPP(move)))error('技のPPが正しくありません。');
-          pp[move.id]=mon.pp===undefined?this.maxPP(move):mon.pp[move.id];
+        for(const [i,move]of this.moves(mon).entries()) {
+          const previousId=legacy?LEGACY_FUTO_MOVES[i]:move.id,previousMax=legacy?this.maxPP(D.moves[previousId]):this.maxPP(move);
+          if(mon.pp!==undefined && !finiteInt(mon.pp[previousId],0,previousMax))error('技のPPが正しくありません。');
+          pp[move.id]=mon.pp===undefined?this.maxPP(move):Math.min(mon.pp[previousId],this.maxPP(move));
         }
+        if(legacy)special.customMoves=D.species.futo.moves.slice();
         return {uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp,pp,...special};
       };
       const party=raw.party.map(validateMonster),storage=raw.storage.map(validateMonster);
@@ -2450,7 +2508,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
   }
   LT.Engine=Engine;
-  LT.FutoRules=Object.freeze({statLimits:Object.freeze({...FUTO_STAT_LIMITS}),defaultMoves:Object.freeze(D.species.futo.moves.slice()),maxLevel:MAX_LEVEL});
+  LT.normalizeFutoMoves=futoMoves;
+  LT.BattleStages=BattleStages;
+  LT.FutoRules=Object.freeze({statLimits:Object.freeze({...FUTO_STAT_LIMITS}),defaultMoves:Object.freeze(D.species.futo.moves.slice()),normalizeMoves:futoMoves,maxLevel:MAX_LEVEL});
 })();
 
 </script>
@@ -3907,7 +3967,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const mon = engine.state.party[b.activeIndex];
     const restricted=!!(b.guardian || b.rival || b.towerFloor || b.elite || b.champion);
     if (view === 'moves') {
-      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : `${m.category==='special'?'特殊':'物理'} · 威力 ${m.power} · 命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
+      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : m.kind==='boost' ? '自分の能力を強化' : `${m.category==='special'?'特殊':'物理'} · 威力 ${m.power} · 命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
     } else if (view === 'switch') {
       box.innerHTML = engine.state.party.map((m,i) => `<button class="btn" data-switch="${i}" ${i===b.activeIndex || m.hp===0 ? 'disabled' : ''}>${escape(DATA.species[m.species].name)} <small>Lv.${m.level} · HP ${m.hp}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
     } else if (view === 'items') {
@@ -4020,7 +4080,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (engine.battle) { toast('バトル中は「交代」から仲間を選べます。'); return; }
     const mon = engine.state.party[index]; if (!mon) return;
     const s = DATA.species[mon.species], stats = engine.stats(mon);
-    openModal(s.name, `<div class="creature-card">${portrait(mon.species,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(s.name)} <small>Lv.${mon.level}</small></h3>${typeBadge(s.element)}<p>${escape(s.description)}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button></div>`, 'party');
+    const releaseBlocked = engine.state.party.length <= 1 ? '最後の1体は逃がせません。' : !engine.state.party.some((other,i)=>i!==index && other.hp>0) ? '動ける仲間を1体以上残してください。' : '';
+    openModal(s.name, `<div class="creature-card">${portrait(mon.species,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(s.name)} <small>Lv.${mon.level}</small></h3>${typeBadge(s.element)}<p>${escape(s.description)}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div><div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
   }
   function showStorage(slot = null) {
     if (engine.battle) return;
@@ -4029,13 +4090,47 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       openModal('モンスターのひかえ', '<p class="muted">入れ替えたい旅の仲間を選んでください。仲間は6体まで同行できます。</p><div class="switch-list">'+s.party.map((m,i) => `<button class="party-card" data-storage-slot="${i}">${portrait(m.species,64)}<span class="party-meta"><strong>${escape(DATA.species[m.species].name)}</strong><span>Lv.${m.level} · HP ${m.hp}</span></span>${ico('switch')}</button>`).join('')+`${s.party.length<6&&s.storage.length?`<button class="btn" data-storage-slot="${s.party.length}">${ico('resonate')} 空き枠に仲間を迎える</button>`:''}</div><p class="notice">ひかえ ${s.storage.length} / ${DATA.limits?.storage||120} 体</p><button class="btn" data-storage-slot="-2">${ico('storage')} ひかえを確認・管理する</button>`, 'storage');
     } else {
       const adding=slot===s.party.length, managing=slot===-2;
-      openModal(managing?'ひかえのモンスター':'迎えるモンスターを選ぶ', `<p class="muted">${managing?'図鑑の記録を残したまま、ひかえのモンスターを野に帰せます。':adding?'空き枠へ、旅の仲間を迎えます。':`${escape(DATA.species[s.party[slot].species].name)}と交代します。`}</p><div class="dex-grid">`+s.storage.map((m,i) => `<article class="dex-card storage-card">${portrait(m.species,84)}<strong>${escape(DATA.species[m.species].name)}</strong><small>Lv.${m.level} · HP ${m.hp}</small>${typeBadge(DATA.species[m.species].element)}${!managing?`<button class="btn btn-small" data-exchange="${i}" data-slot="${slot}">${adding?'迎える':'入れ替える'}</button>`:''}<button class="btn btn-quiet btn-small" data-release="${i}">野に帰す</button></article>`).join('')+`</div>${s.storage.length ? '' : '<p class="list-empty">まだ、ひかえのモンスターはいません。草むらで捕まえて、新しい仲間に出会いましょう。</p>'}`, 'storage');
+      openModal(managing?'ひかえのモンスター':'迎えるモンスターを選ぶ', `<p class="muted">${managing?'図鑑の記録を残したまま、ひかえのモンスターを野に帰せます。':adding?'空き枠へ、旅の仲間を迎えます。':`${escape(DATA.species[s.party[slot].species].name)}と交代します。`}</p><div class="dex-grid">`+s.storage.map((m,i) => `<article class="dex-card storage-card">${portrait(m.species,84)}<strong>${escape(DATA.species[m.species].name)}</strong><small>Lv.${m.level} · HP ${m.hp}</small>${typeBadge(DATA.species[m.species].element)}${!managing?`<button class="btn btn-small" data-exchange="${i}" data-slot="${slot}">${adding?'迎える':'入れ替える'}</button>`:''}<button class="btn btn-quiet btn-small" data-release="${i}" data-release-source="storage">逃がす</button></article>`).join('')+`</div>${s.storage.length ? '' : '<p class="list-empty">まだ、ひかえのモンスターはいません。草むらで捕まえて、新しい仲間に出会いましょう。</p>'}`, 'storage');
     }
   }
-  function confirmRelease(index){
-    const mon=engine.state.storage[index];if(!mon||engine.battle)return;
-    openModal('このモンスターを野に帰しますか？',`<div class="creature-card">${portrait(mon.species,130)}<div><h3>${escape(DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体をひかえから外します。この操作は元に戻せません。図鑑の発見・捕獲済みの記録は残ります。</p></div></div><div class="modal-actions"><button class="btn" data-ui="storage">やめる</button><button class="btn" id="release-confirm">野に帰す</button></div>`,'release');
-    $('release-confirm').onclick=()=>{if(engine.state.storage[index]?.uid!==mon.uid){toast('仲間の一覧が変わったため、操作を中止しました。');return;}const r=engine.release(index);toast(r.message);if(r.ok){save();updateAll();showStorage(-2);}};
+  function persistRelease(index, source, uid, expectedEngine) {
+    if (!playing || busy || engine.battle || LT.onlineActive) return {ok:false,message:'バトルや通信を終えてから、仲間を逃がしてください。'};
+    if (!['party','storage'].includes(source) || engine!==expectedEngine || !uid || engine.state[source][index]?.uid!==uid) return {ok:false,message:'仲間の一覧が変わったため、操作を中止しました。'};
+    try {
+      // Keep the current party, storage and gift receipts intact until the
+      // replacement save has been written successfully.
+      const candidate = new Engine(engine.serialize());
+      const result = source==='party' ? candidate.releaseParty(index) : candidate.release(index);
+      if (!result.ok) return result;
+      const data = candidate.serialize();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      engine.state = candidate.state; storedSave = data; lastSave = performance.now();
+      return result;
+    } catch (_) {
+      return {ok:false,message:'端末に保存できないため、逃がす操作を中止しました。仲間はそのまま残っています。空き容量を確認して再度お試しください。'};
+    }
+  }
+  function confirmRelease(index, source='storage') {
+    if (!['party','storage'].includes(source)) return;
+    const mon=engine.state[source][index]; if(!mon || engine.battle || !playing)return;
+    const uid=mon.uid, expectedEngine=engine;
+    const returnToSource=()=>{
+      if(source==='party'){
+        const current=engine.state.party.findIndex(other=>other.uid===uid);
+        showParty(current<0?Math.min(index,engine.state.party.length-1):current);
+      } else showStorage(-2);
+    };
+    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon.species,130)}<div><h3>${escape(DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から永久に外します。一度逃がすと元には戻せません。図鑑の発見・捕獲済みの記録は残ります。</p>${mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
+    $('release-cancel').onclick=returnToSource;
+    const button=$('release-confirm');
+    button.onclick=()=>{
+      if(button.disabled)return;
+      button.disabled=true;
+      const result=persistRelease(index,source,uid,expectedEngine);
+      if(result.ok){moveAnim=null;updateAll();returnToSource();toast(result.message);}
+      else {const status=$('release-result');status.textContent=result.message;status.hidden=false;button.disabled=false;}
+    };
+    $('release-cancel').focus({preventScroll:true});
   }
   function showDex(filter = 'all') {
     const s = engine.state;
@@ -4235,7 +4330,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.heal!==undefined){const result=engine.useItem(d.item,Number(d.heal));toast(result.message || (result.ok?'回復しました。':'使用できません。'));if(result.ok){sound.fx('heal');updateAll();save();showBag();}return;}
     if(d.lead!==undefined){const result=engine.setLead(Number(d.lead));if(result.ok){closeModal();updateAll();save();toast('先頭の仲間を入れ替えました。');}else toast(result.message);return;}
     if(d.storageSlot!==undefined){showStorage(Number(d.storageSlot));return;}
-    if(d.release!==undefined){confirmRelease(Number(d.release));return;}
+    if(d.release!==undefined){confirmRelease(Number(d.release),d.releaseSource||'storage');return;}
     if(d.exchange!==undefined){const result=engine.exchange(Number(d.slot),Number(d.exchange));if(result.ok){save();updateAll();showStorage();toast('仲間を入れ替えました。');}else toast(result.message);return;}
     if(d.dex){showDexEntry(d.dex);return;}
     if(d.travel){const r=engine.fastTravel(d.travel);if(r.ok){closeModal();moveAnim=null;updateAll();save();sound.fx('travel');}toast(r.message||'移動しました。');return;}
@@ -4753,12 +4848,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 (() => {
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {}, D = LT.DATA;
+  const STAGES = LT.BattleStages;
   const clone = value => JSON.parse(JSON.stringify(value));
   const integer = (n, lo, hi) => Number.isSafeInteger(n) && n >= lo && n <= hi;
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
   const fail = error => ({ ok: false, error });
   const STRUGGLE = Object.freeze({ id: 'struggle', name: '踏ん張り打ち', kind: 'attack', power: 22, accuracy: 100, element: null, category: 'physical', effect: 'recoil' });
-  const RULES = Object.freeze({ version: 1, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'first-healthy-bench-at-turn-end', tiebreak: 'sum-of-remaining-HP-ratios' });
+  const RULES = Object.freeze({ version: 2, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'first-healthy-bench-at-turn-end', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint' });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
     if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
@@ -4776,7 +4872,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       spAtk: (b.spAtk ?? b.atk) + level * 3, spDef: (b.spDef ?? b.def) + level * 2,
       speed: b.speed + level * 2, accuracy: b.accuracy ?? 100, evasion: b.evasion ?? 100 };
   }
-  function maxPP(move) { return move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
+  function maxPP(move) { return integer(move.pp, 1, 99) ? move.pp : move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
   function effectiveness(element, defender) {
     if (!element) return 1;
     if (element === defender) return .8;
@@ -4802,7 +4898,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     static rulesFingerprint() {
       return checksum({ rules: RULES, elements: D.elements,
         species: Object.keys(D.species).sort().map(id => ({ id, element: D.species[id].element, base: D.species[id].base, moves: D.species[id].moves })),
-        moves: Object.keys(D.moves).sort().map(id => { const m = D.moves[id]; return { id, kind: m.kind, power: m.power, accuracy: m.accuracy, category: m.category || null, effect: m.effect || null, element: m.element || null }; }) });
+        moves: Object.keys(D.moves).sort().map(id => { const m = D.moves[id]; return { id, kind: m.kind, power: m.power, accuracy: m.accuracy, pp: maxPP(m), category: m.category || null, effect: m.effect || null, element: m.element || null }; }) });
     }
     constructor(config) {
       if (!config || !['single', 'double'].includes(config.mode)) throw new Error('対戦形式を選んでください。');
@@ -4812,12 +4908,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const slots = config.mode === 'double' ? 2 : 1;
       this.state = { version: RULES.version, mode: config.mode, turn: 1, seed: config.seed, rng: config.seed,
         teams: config.teams.map((team, side) => ({ name: cleanName(config.names?.[side], `プレイヤー${side + 1}`),
-          monsters: team.map(species => { const s = stats(species); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s,
+          monsters: team.map(species => { const s = stats(species); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, stages: STAGES.empty(),
             pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false }; }),
           active: Array.from({ length: slots }, (_, slot) => slot) })), winner: null, reason: null, log: [], events: [] };
     }
     snapshot() { return clone(this.state); }
     fingerprint() { return checksum(this.state); }
+    effectiveStats(mon) { return STAGES.apply(mon.stats, mon.stages); }
+    resetStages(mon) { mon.stages = STAGES.empty(); }
     moves(mon) { return D.species[mon.species].moves.map(id => ({ ...D.moves[id], pp: mon.pp[id], maxPP: maxPP(D.moves[id]) })); }
     canStruggle(mon) { return this.moves(mon).every(move => move.pp <= 0); }
     active(side) { return this.state.teams[side].active.map(index => this.state.teams[side].monsters[index]); }
@@ -4866,7 +4964,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if (!moves.length) return [{ type: 'struggle', slot, target: target.slot }];
         let move = mon.hp / mon.maxHp < .3 ? moves.find(move => move.kind === 'heal') : null;
         if (!move) move = moves.filter(move => move.kind === 'attack').sort((a, b) => {
-          const score = m => m.power * m.accuracy * effectiveness(m.element, D.species[target.mon.species].element) * ((m.category || (m.element ? 'special' : 'physical')) === 'special' ? mon.stats.spAtk / target.mon.stats.spDef : mon.stats.atk / target.mon.stats.def);
+          const actorStats = this.effectiveStats(mon), targetStats = this.effectiveStats(target.mon);
+          const score = m => m.power * m.accuracy * effectiveness(m.element, D.species[target.mon.species].element) * ((m.category || (m.element ? 'special' : 'physical')) === 'special' ? actorStats.spAtk / targetStats.spDef : actorStats.atk / targetStats.def);
           return score(b) - score(a) || a.i - b.i;
         })[0];
         move ||= moves[0];
@@ -4890,7 +4989,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const actions = allOrders.flatMap((orders, side) => orders.slice().sort((a, b) => a.slot - b.slot).map(order => {
         const actor = this.state.teams[side].active[order.slot], mon = this.state.teams[side].monsters[actor];
         const move = order.type === 'move' ? this.moves(mon)[order.move] : order.type === 'struggle' ? STRUGGLE : null;
-        return { ...order, side, actor, technique: move, speed: mon.stats.speed,
+        return { ...order, target: move && move.kind !== 'attack' ? order.slot : order.target, side, actor, technique: move, speed: this.effectiveStats(mon).speed,
           priority: order.type === 'switch' ? 3 : move?.kind === 'guard' ? 2 : 1, tie: this._random() };
       }));
       actions.sort((a, b) => b.priority - a.priority || b.speed - a.speed || a.tie - b.tie || a.side - b.side || a.slot - b.slot);
@@ -4900,7 +4999,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const team = this.state.teams[action.side], mon = team.monsters[action.actor];
         if (mon.hp <= 0 || team.active[action.slot] !== action.actor) continue;
         if (action.type === 'switch') {
-          mon.guard = false; team.active[action.slot] = action.index; team.monsters[action.index].guard = false;
+          mon.guard = false; this.resetStages(mon); team.active[action.slot] = action.index; team.monsters[action.index].guard = false; this.resetStages(team.monsters[action.index]);
           this._event(`${this._name(action.side, team.monsters[action.index])}が登場。`, 'switch', { side: action.side, slot: action.slot, index: action.index });
         } else this._apply(action, mon);
       }
@@ -4930,10 +5029,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const amount = Math.min(mon.maxHp - mon.hp, Math.ceil(mon.maxHp * move.power / 100)); mon.hp += amount;
         this._event(`${name}の「${move.name}」。${amount > 0 ? `HPが${amount}回復した。` : 'HPは満タンだった。'}`, 'heal', { ...meta, amount }); return;
       }
-      const hitChance = Math.min(100, Math.max(20, move.accuracy * mon.stats.accuracy / Math.max(1, target.stats.evasion)));
+      if (move.kind === 'boost' && move.effect === 'allStats') {
+        mon.stages ||= STAGES.empty();
+        const changed = STAGES.raiseAll(mon.stages);
+        this._event(`${name}の「${move.name}」。${changed ? 'HP以外の7つの能力が1段階上がった。' : '能力はすでに最大まで上がっている。'}`, 'boost', { ...meta, changed, stages: clone(mon.stages) });
+        return;
+      }
+      const actorStats = this.effectiveStats(mon), targetStats = this.effectiveStats(target);
+      const hitChance = Math.min(100, Math.max(20, move.accuracy * actorStats.accuracy / Math.max(1, targetStats.evasion)));
       if (this._random() * 100 >= hitChance) { this._event(`${name}の「${move.name}」は外れた。`, 'miss', { ...meta, target: targetSlot }); return; }
       const special = (move.category || (move.element ? 'special' : 'physical')) === 'special';
-      const offense = special ? mon.stats.spAtk : mon.stats.atk, defense = special ? target.stats.spDef : target.stats.def;
+      const offense = special ? actorStats.spAtk : actorStats.atk, defense = special ? targetStats.spDef : targetStats.def;
       const effect = effectiveness(move.element, D.species[target.species].element), same = move.element && move.element === D.species[mon.species].element ? 1.15 : 1;
       const critical = this._random() < .07, variance = .9 + this._random() * .2;
       const guarded = move.effect !== 'pierce' && target.guard;
@@ -4945,20 +5051,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const amount = Math.min(mon.maxHp - mon.hp, Math.max(1, Math.floor(dealt * .25))); mon.hp += amount;
         if (amount > 0) this._event(`${name}のHPが${amount}戻った。`, 'heal', { ...meta, amount });
       }
-      if (target.hp === 0) this._event(`${this._name(1 - side, target)}は戦闘不能。`, 'faint', { side: 1 - side, slot: targetSlot });
+      if (target.hp === 0) { this.resetStages(target); this._event(`${this._name(1 - side, target)}は戦闘不能。`, 'faint', { side: 1 - side, slot: targetSlot }); }
       if (move.effect === 'recoil') {
         const amount = Math.min(mon.hp, Math.max(1, Math.floor(mon.maxHp / 4))); mon.hp -= amount;
         this._event(`${name}は反動で${amount}ダメージ。`, 'recoil', { side, slot, amount });
-        if (mon.hp === 0) this._event(`${name}は戦闘不能。`, 'faint', { side, slot });
+        if (mon.hp === 0) { this.resetStages(mon); this._event(`${name}は戦闘不能。`, 'faint', { side, slot }); }
       }
     }
     _replaceFainted() {
       this.state.teams.forEach((team, side) => team.active.forEach((index, slot) => {
         if (team.monsters[index].hp > 0) return;
-        team.monsters[index].guard = false;
+        team.monsters[index].guard = false; this.resetStages(team.monsters[index]);
         const next = team.monsters.findIndex((mon, i) => mon.hp > 0 && !team.active.includes(i));
         if (next < 0) return;
-        team.active[slot] = next; team.monsters[next].guard = false;
+        team.active[slot] = next; team.monsters[next].guard = false; this.resetStages(team.monsters[next]);
         this._event(`${this._name(side, team.monsters[next])}が、仲間の想いをつないだ。`, 'switch', { side, slot, index: next, forced: true });
       }));
     }
@@ -5407,9 +5513,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261116-v8"></script>
-<script src="admin-console.js?v=20261116-v8"></script>
-<script src="online-futo.js?v=20261116-v8"></script>
+<script src="battle-vfx.js?v=20261116-v10"></script>
+<script src="admin-console.js?v=20261116-v10"></script>
+<script src="online-futo.js?v=20261116-v10"></script>
 <script src="mobile-screen.js?v=20261116"></script>
 </body>
 </html>

@@ -30,10 +30,10 @@
       snapshot.moves.some(id => typeof id !== 'string' || !Object.hasOwn(LT.DATA.moves, id))) {
       throw new Error('フートの所持確認が無効または期限切れです。部屋を作り直してください。');
     }
-    return { grantId: snapshot.grantId, species: 'futo', level: snapshot.level, stats: clone(snapshot.stats), moves: snapshot.moves.slice(),
+    return { grantId: snapshot.grantId, species: 'futo', level: snapshot.level, stats: clone(snapshot.stats), moves: LT.normalizeFutoMoves(snapshot.moves),
       sessionId, side, expiresAt: snapshot.expiresAt };
   }
-  function maxPP(move) { return move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
+  function maxPP(move) { return integer(move.pp, 1, 99) ? move.pp : move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
   function createVerifiedDuel(config, verified) {
     const originalTeams = config.teams;
     const substituteTeams = originalTeams.map((team, side) => {
@@ -49,7 +49,7 @@
       if (species !== 'futo') return;
       const snapshot = verified[side];
       duel.state.teams[side].monsters[index] = { species: 'futo', level: snapshot.level, hp: snapshot.stats.hp, maxHp: snapshot.stats.hp,
-        stats: clone(snapshot.stats), customMoves: snapshot.moves.slice(),
+        stats: clone(snapshot.stats), stages: LT.BattleStages.empty(), customMoves: snapshot.moves.slice(),
         pp: Object.fromEntries(snapshot.moves.map(id => [id, maxPP(LT.DATA.moves[id])])), guard: false };
     }));
     const baseMoves = duel.moves.bind(duel);

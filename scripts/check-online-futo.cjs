@@ -47,9 +47,9 @@ function setup() {
     },
   };
   vm.runInContext(fs.readFileSync(path.join(root, 'online-futo.js'), 'utf8'), context);
-  function pair() {
+  function pair(mode = 'single') {
     const queue = [];
-    const sessions = [0, 1].map(role => new LT.DuelSession({ role, mode: 'single', send: message => { queue.push({ from: role, message }); return true; } }));
+    const sessions = [0, 1].map(role => new LT.DuelSession({ role, mode, send: message => { queue.push({ from: role, message }); return true; } }));
     const flush = async () => {
       let count = 0;
       while (queue.length) {
@@ -64,6 +64,118 @@ function setup() {
     setFailure(value) { failure = value; }, setExpiry(value) { expiry = value; },
     dispose() { for (const timer of timers) clearTimeout(timer); } };
 }
+async function combatScenarios(env) {
+  const { LT, normal, custom } = env;
+  const moveIds = ['futo_breaker','futo_burst','futo_ascend','futo_restore'];
+  assert.deepEqual(JSON.parse(JSON.stringify(LT.DATA.species.futo.moves)), moveIds, 'Futo default quartet');
+  const legacy = ['supernova','atlas_crystal_4','starlight','shell'];
+  const snapshot = { ok:true, grantId:'legacy', species:'futo', level:88, stats:custom, moves:legacy, sessionId:'legacy-session', side:0, expiresAt:Date.now()+60000 };
+  assert.deepEqual(JSON.parse(JSON.stringify(LT.OnlineFuto.validateSnapshot(snapshot,'legacy-session',0).moves)), moveIds, 'Legacy exact default migrates');
+  const customMoves = [legacy[1],legacy[0],legacy[2],legacy[3]];
+  assert.deepEqual(JSON.parse(JSON.stringify(LT.OnlineFuto.validateSnapshot({...snapshot,moves:customMoves},'legacy-session',0).moves)), customMoves, 'Customized quartet is preserved');
+  const pair = env.pair(); await pair.start();
+  assert((await pair.sessions[0].setTeam({ name:'Futo combat', ids:['futo',...normal.slice(0,2)] })).ok);
+  assert((await pair.sessions[1].setTeam({ name:'Opponent', ids:normal.slice(2,5) })).ok);
+  await pair.flush();
+  assert(pair.sessions.every(s=>s.snapshot().phase==='choosing'));
+  const duel=pair.sessions[0].duel, initial=JSON.stringify(duel.state), dataBefore=JSON.stringify(LT.DATA);
+  await Promise.all([
+    pair.sessions[0].submit([{type:'move',slot:0,move:2,target:0}]),
+    pair.sessions[1].submit(pair.sessions[1].duel.legalOrders(1))
+  ]);
+  await pair.flush();
+  assert.equal(duel.fingerprint(),pair.sessions[1].duel.fingerprint(),'Real commit/reveal and sync agree after boosting');
+  assert(Object.values(duel.state.teams[0].monsters[0].stages).every(v=>v===1));
+  const reset=()=>{duel.state=JSON.parse(initial);duel._random=()=>.5;return [duel.state.teams[0].monsters[0],duel.state.teams[1].monsters[0]];};
+  const apply=(id,side=0)=>{const mon=duel.state.teams[side].monsters[duel.state.teams[side].active[0]];duel._apply({side,slot:0,target:0,technique:LT.DATA.moves[id]},mon);};
+  let [actor,target]=reset();
+  assert.deepEqual(duel.moves(actor).map(m=>m.maxPP),[15,15,5,10]);
+  assert.equal(duel.moves(actor)[0].category,'physical');assert.equal(duel.moves(actor)[1].category,'special');
+  assert.equal(duel.moves(actor)[0].power,100);assert.equal(duel.moves(actor)[1].power,100);
+  assert.equal(duel.moves(actor)[0].accuracy,100);assert.equal(duel.moves(actor)[1].accuracy,100);
+  const hpBefore=[actor.hp,actor.maxHp,target.hp];
+  apply('futo_ascend');
+  assert(Object.values(actor.stages).every(v=>v===1));
+  assert.deepEqual([actor.hp,actor.maxHp,target.hp],hpBefore,'Boost targets self and never changes HP');
+  assert.equal(actor.pp.futo_ascend,4);
+  const effective=duel.effectiveStats(actor);
+  assert.equal(effective.atk,Math.floor(custom.atk*1.5));assert.equal(effective.def,Math.floor(custom.def*1.5));
+  assert.equal(effective.spAtk,Math.floor(custom.spAtk*1.5));assert.equal(effective.spDef,Math.floor(custom.spDef*1.5));
+  assert.equal(effective.speed,Math.floor(custom.speed*1.5));assert.equal(effective.accuracy,Math.floor(custom.accuracy*4/3));
+  assert.equal(effective.evasion,Math.floor(custom.evasion*4/3));assert.equal(effective.hp,custom.hp);
+  assert.equal(duel.state.events.at(-1).kind,'boost');assert.equal(duel.state.events.at(-1).side,0);
+  for(const key of Object.keys(actor.stages))actor.stages[key]=5;
+  apply('futo_ascend');apply('futo_ascend');
+  assert(Object.values(actor.stages).every(v=>v===6),'All seven stage values cap at six');
+  assert.equal(duel.state.events.at(-1).changed,false);
+
+  function damage(move,offenseKey,defenseKey,boostActor,boostDefender){
+    const [a,t]=reset();t.hp=t.maxHp=99999;a.stages[offenseKey]=boostActor;t.stages[defenseKey]=boostDefender;
+    apply(move);return duel.state.events.find(e=>e.kind==='damage').amount;
+  }
+  for(const [move,offense,defense] of [['futo_breaker','atk','def'],['futo_burst','spAtk','spDef']]){
+    const baseline=damage(move,offense,defense,0,0);
+    assert(damage(move,offense,defense,1,0)>baseline,`${offense} boost increases real damage`);
+    assert(damage(move,offense,defense,0,1)<baseline,`${defense} boost lowers real damage`);
+  }
+  [actor,target]=reset();target.stats.evasion=300;apply('futo_breaker');
+  assert.equal(duel.state.events[0].kind,'miss','Unboosted accuracy can miss');
+  [actor,target]=reset();target.stats.evasion=300;actor.stages.accuracy=1;apply('futo_breaker');
+  assert.equal(duel.state.events[0].kind,'damage','Accuracy stage changes hit outcome');
+  [actor,target]=reset();actor.stats.accuracy=target.stats.evasion=130;duel._random=()=>.9;apply('futo_breaker');
+  assert.equal(duel.state.events[0].kind,'damage');
+  [actor,target]=reset();actor.stats.accuracy=target.stats.evasion=130;target.stages.evasion=1;duel._random=()=>.9;apply('futo_breaker');
+  assert.equal(duel.state.events[0].kind,'miss','Evasion stage changes hit outcome');
+
+  function actionOrder(speedStage){
+    const [a,t]=reset();a.stats.speed=100;t.stats.speed=120;a.stages.speed=speedStage;a.hp=a.maxHp=t.hp=t.maxHp=99999;
+    const enemyAttack=duel.moves(t).findIndex(m=>m.kind==='attack');assert(enemyAttack>=0);
+    duel.resolve([[{type:'move',slot:0,move:0,target:0}],[{type:'move',slot:0,move:enemyAttack,target:0}]]);
+    return duel.state.events.find(e=>e.kind==='damage'||e.kind==='miss').side;
+  }
+  assert.equal(actionOrder(0),1);assert.equal(actionOrder(1),0,'Speed stages determine next-turn action order');
+  [actor,target]=reset();for(const key of Object.keys(actor.stages))actor.stages[key]=2;
+  const enemyAttack=duel.moves(target).findIndex(m=>m.kind==='attack');
+  duel.resolve([[{type:'switch',slot:0,index:1}],[{type:'move',slot:0,move:enemyAttack,target:0}]]);
+  assert(Object.values(actor.stages).every(v=>v===0),'Switching out clears stages');
+  assert(Object.values(duel.state.teams[0].monsters[1].stages).every(v=>v===0),'Switching in starts neutral');
+  [actor,target]=reset();for(const key of Object.keys(target.stages))target.stages[key]=2;target.hp=1;apply('futo_breaker');
+  assert.equal(target.hp,0);assert(Object.values(target.stages).every(v=>v===0),'Fainting clears stages immediately');
+  duel._replaceFainted();assert.notEqual(duel.state.teams[1].active[0],0);
+  assert(Object.values(duel.state.teams[1].monsters[duel.state.teams[1].active[0]].stages).every(v=>v===0));
+
+  [actor,target]=reset();actor.hp=100;apply('futo_restore');
+  assert.equal(actor.hp,100+Math.ceil(actor.maxHp*.5));assert.equal(actor.pp.futo_restore,9);
+  actor.hp=actor.maxHp-10;apply('futo_restore');assert.equal(actor.hp,actor.maxHp,'Healing clamps to max HP');
+  assert.equal(duel.state.events.at(-1).amount,10);
+  [actor,target]=reset();const hash=duel.fingerprint();actor.stages.atk=1;
+  assert.notEqual(duel.fingerprint(),hash,'Stages participate in synchronization checksum');
+  assert.equal(duel.snapshot().teams[0].monsters[0].stages.atk,1);
+  assert.equal(JSON.stringify(LT.DATA),dataBefore,'Combat does not mutate species or move definitions');
+  pair.close();
+  const doubles=env.pair('double');await doubles.start();
+  assert((await doubles.sessions[0].setTeam({name:'Double Futo',ids:[normal[0],'futo',...normal.slice(1,3)]})).ok);
+  assert((await doubles.sessions[1].setTeam({name:'Double opponent',ids:normal.slice(3,7)})).ok);
+  await doubles.flush();
+  await Promise.all([
+    doubles.sessions[0].submit([{type:'switch',slot:0,index:2},{type:'move',slot:1,move:2,target:0}]),
+    doubles.sessions[1].submit([{type:'switch',slot:0,index:2},{type:'switch',slot:1,index:3}])
+  ]);
+  await doubles.flush();
+  const doubleDuel=doubles.sessions[0].duel,boost=doubleDuel.state.events.find(e=>e.kind==='boost');
+  assert.equal(boost.side,0);assert.equal(boost.slot,1);assert.equal(boost.move,'futo_ascend');
+  assert(Object.values(doubleDuel.state.teams[0].monsters[1].stages).every(v=>v===1),'Doubles slot 1 boosts itself');
+  assert(Object.values(doubleDuel.state.teams[0].monsters[2].stages).every(v=>v===0),'Doubles ally is unaffected');
+  assert.equal(doubleDuel.fingerprint(),doubles.sessions[1].duel.fingerprint());
+  doubles.close();
+  const mismatch=env.pair();mismatch.sessions.forEach(s=>s.start());
+  mismatch.queue.forEach(item=>{item.message.rules='previous-rules';});await mismatch.flush();
+  assert(mismatch.sessions.every(s=>s.snapshot().phase==='error'));
+  assert(mismatch.sessions.some(s=>s.snapshot().message.includes('バージョンが一致しません')),'Older rules fail clearly before team selection');
+  mismatch.close();
+  return ['default quartet and PP','exact legacy migration','seven-stat boost and cap','physical/special damage and defenses','accuracy/evasion hit outcomes','speed order','switch/faint stage reset','50-percent healing and cap','stage checksum and commit/reveal synchronization','double slot self-target','old rules rejected clearly'];
+}
+
 (async () => {
   const env = setup(), { LT, normal, custom, moves, state } = env;
   try {
@@ -98,8 +210,8 @@ function setup() {
     assert.equal(JSON.stringify(state), savedState, 'Online play modified adventure ownership/save');
     pair.close();
 
-    state.party = [];
-    assert(!LT.OnlineFuto.rosterIds(normal).includes('futo'));
+    state.party = []; state.giftReceipts = ['gift-test-001'];
+    assert(!LT.OnlineFuto.rosterIds(normal).includes('futo'),'A released Futo is absent from the roster even when its receipt remains');
     const unauth = env.pair(); await unauth.start();
     assert(!(await unauth.sessions[0].setTeam({ name: 'No grant', ids: ['futo', ...normal.slice(0, 2)] })).ok);
     unauth.close(); state.party = JSON.parse(savedState).party;
@@ -125,6 +237,7 @@ function setup() {
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, stats: { ...custom, hp: Infinity } }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, moves: ['missing', ...moves.slice(1)] }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, level: 101 }, 's', 0));
-    console.log(JSON.stringify({ ok: true, scenarios: ['normal rentals unchanged', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
+    const combat = await combatScenarios(env);
+    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rentals unchanged', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
