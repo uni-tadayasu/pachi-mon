@@ -1,0 +1,109 @@
+{
+  "generator": "Built-in image_gen",
+  "copyright": "© 2026 KASAI SOLUTIONS INC.",
+  "description": "Stage-specific derivative artwork for the 83 evolution families (126 evolved species). Each family retains its root body form and coat palette. Atlases provide 29 body designs at two growth stages in front and rear views; designs are shared across families with inherited color variation, not individually illustrated species.",
+  "grid": {
+    "columns": 4,
+    "rows": 4
+  },
+  "groups": {
+    "a": [
+      "sprig",
+      "rabbit",
+      "fox",
+      "wolf",
+      "cat",
+      "otter",
+      "bear",
+      "stag",
+      "goat",
+      "owl",
+      "crane",
+      "phoenix",
+      "gryphon",
+      "lantern",
+      "bat",
+      "beetle"
+    ],
+    "b": [
+      "tortoise",
+      "golem",
+      "manta",
+      "whale",
+      "jelly",
+      "flower",
+      "seahorse",
+      "crab",
+      "scorpion",
+      "dragon",
+      "serpent",
+      "gecko",
+      "lizard",
+      "reserved-tortoise",
+      "reserved-dragon",
+      "reserved-serpent"
+    ]
+  },
+  "atlases": [
+    {
+      "group": "a",
+      "stage": 1,
+      "view": "front",
+      "file": "creatures-evolution-a-1-front.webp"
+    },
+    {
+      "group": "b",
+      "stage": 1,
+      "view": "front",
+      "file": "creatures-evolution-b-1-front.webp"
+    },
+    {
+      "group": "a",
+      "stage": 1,
+      "view": "back",
+      "file": "creatures-evolution-a-1-back.webp"
+    },
+    {
+      "group": "b",
+      "stage": 1,
+      "view": "back",
+      "file": "creatures-evolution-b-1-back.webp"
+    },
+    {
+      "group": "a",
+      "stage": 2,
+      "view": "front",
+      "file": "creatures-evolution-a-2-front.webp"
+    },
+    {
+      "group": "b",
+      "stage": 2,
+      "view": "front",
+      "file": "creatures-evolution-b-2-front.webp"
+    },
+    {
+      "group": "a",
+      "stage": 2,
+      "view": "back",
+      "file": "creatures-evolution-a-2-back.webp"
+    },
+    {
+      "group": "b",
+      "stage": 2,
+      "view": "back",
+      "file": "creatures-evolution-b-2-back.webp"
+    }
+  ],
+  "assetPreparation": "Original 1254-square generated alpha retained; WebP format encoding only. Measured sprite source rectangles in creature-art.js avoid truncating silhouettes at grid boundaries. Tiny crop gutters exclude adjacent sprites. Runtime retains the family root coat palette and normalizes sprite bounds.",
+  "prompts": {
+    "a1": "Use case: identity-preserve. Asset type: production transparent sprite atlas for original Japanese RPG Pachi Monsters.\nInput image is the existing BASE form sprite sheet. Generate their FIRST EVOLUTION (adolescent champion forms), clear structural growth while preserving each original character's exact identity, recognizable face, palette and motif. NOT merely scaled or recolored. Elegant premium finely detailed pixel-art illustration, crisp colored ink outline, carefully shaded fur/feathers, excellent expressive anatomy.\nOne square 4 columns x 4 rows atlas, exactly16 separate full-body creatures, equal square cells, ALL face front three-quarter toward lower right. Each body entirely within its cell with 10% empty margin; no shadows, floor, labels, text, panels, frames, glow halos or particles. Genuinely transparent alpha background.\nExact row-major order and evolution:\n1 ivory leaf-eared seed spirit grown into agile four-legged woodland guardian, original round face and upright leaf ears preserved, sweeping leafy ruff, small budding branch horns and longer paws.\n2 mint hare, longer athletic hindlegs, original white chest and folded leaf ears, leafy shoulder mantle and braided stem tail.\n3 coral flame fox, original cream face/chest preserved, THREE distinct sweeping flame-tipped tails, longer legs, layered fiery cheek fur.\n4 teal silver-maned wolf, broader silver shoulder mane, swept ear crests, strong long legs.\n5 lavender crescent cat, original crescent ears and pearl chest preserved, long elegant body, two broad plumelike tail lobes and crescent brow.\n6 turquoise river otter, original cream face/belly and blue chest droplet, sleek upright swimmer body, enlarged crescent paddle tail and fin-edged forearms.\n7 moss bear, original honey chest and friendly face, larger shoulders, overlapping leaf shoulder pads, thicker floral back mantle.\n8 emerald deer, taller silhouette, copper antlers branching twice with fresh leaves, cream neck and vine chest markings.\n9 sky-blue goat with cream spiral horns, taller nimble body, second subtle horn ridges, flowing snowy beard and cloud ankle tufts.\n10 blue cream owl, noticeably taller chest, ear-like feather horns, wings half-spread showing layered cloud feathers and long tail.\n11 turquoise crane, longer curved neck, long white secondary wing plumes, gold crest curling backward.\n12 crimson gold phoenix, longer fiery tail fan, three sweeping head feathers, wings in powerful raised V pose.\n13 teal silver griffin, fuller eagle mane, stronger lion hindquarters, raised layered wings.\n14 amber lantern moth, original lantern-shaped glowing wing panels now FOUR broad lobed wings, fuzzy ivory body, long feathery antennae.\n15 violet bat, larger scalloped wings, plumage collar, original friendly face and bright eyes, elongated ears and crescent wing tips.\n16 purple crystal rhinoceros beetle, tall forward branching crystal horn, layered carapace and six sturdy articulated legs.\nMaintain all original species colors, character identity, highly polished coherent sprite style. Evolved silhouettes noticeably different from input in every cell.",
+    "b1": "Use case: identity-preserve. Production transparent sprite atlas for original RPG Pachi Monsters.\nInput image is BASE sprite atlas. Produce FIRST EVOLUTION forms, clearly grown and structurally transformed yet exact original face, color and motif retained. NOT scaling/recolor alone. Exquisite finely detailed high-resolution pixel illustration, clean dark colored outlines, thoughtful shading, expressive readable creatures.\nOne square atlas, 4 columns x4 rows, exactly16 separate full-body creatures in equal square cells, front three-quarter toward lower right, 10% empty margin EACH side in EACH cell. Genuinely transparent alpha, no floor, shadow, glow, particles, labels, text, frames.\nRow-major exact order:\n1 moss tortoise with cream friendly head, original woody shell now a SMALL GROVE of branching trees, fern skirt and stout tree-root legs.\n2 purple crystal golem, original amber hexagon chest gem and eyes, taller articulated body, broad angular shoulder crystals and prominent forearm gauntlets.\n3 turquoise gold-marked manta ray, broader fork-tipped fins, double crest and two flowing ribbon tails, original gentle face and cream belly.\n4 blue cream whale, enlarged wave-arched fins, two layered sail dorsal fins and a double-lobed curl tail, still the same friendly whale.\n5 violet crystal jellyfish, original star suspended under dome, double tiered faceted bell and long well-separated ribbon tentacles.\n6 ivory gold flower spirit, original green face and cream petals, double blossom collar, tall vine body, leafy arm cuffs and root feet.\n7 azure coral-crested seahorse, broader coral crown, long curled segmented body, two fan-shaped translucent side fins and pearly armor plates.\n8 blue coral crab, larger asymmetrical sculpted claws, coral fan crown, layered rounded shell and six jointed legs.\n9 bronze teal crystal scorpion, original gem pincers, larger armored body, segmented upcurled tail with diamond blade and extra shoulder ridges.\n10 red gold dragon, original face and ivory horns, longer body, four legs, more developed wings and layered gold chest armor.\n11 turquoise sea serpent, original cream face and pearl mane, longer double coil, crownlike short antlers and flowing translucent fins.\n12 emerald leaf-tailed gecko, original smiling face, athletic longer legs with wide toe pads, leaf fan collar and THREE large tail leaves.\n13 amber scaled lizard, original turquoise throat fan, broadened folded fan, segmented longer curled tail and layered amber back spines.\n14 reserved mature tortoise, larger oak-canopy shell and rooted legs.\n15 reserved mature ruby dragon, broad golden membrane wings and long gold horns.\n16 reserved mature jade serpent, branching pearl horns and long cascading pale mane.\nSame palette/identity per cell as input; mature body design without changing species.",
+    "a1back": "Use case: identity-preserve. Create matching BACK view sprite atlas of these exact16 first-evolution characters. Preserve all identity, color, body proportions and distinguishing features from input. Every creature must turn around180 degrees; BACK THREE-QUARTER view, facing away upper-left. Show backs of heads, backs of bodies and tails; NO front-facing portraits. Real anatomy change, NOT mirror/flip. Keep precise4x4 equal-cell order. Row1 leaf-eared woodland sprig with branch buds, leaf-eared hare, THREE-tailed fire fox, silver-maned teal wolf. Row2 lavender crescent cat, blue paddle-tailed otter, moss bear, leaf-antlered deer. Row3 cloud goat, blue cream owl, turquoise crane, red gold phoenix. Row4 silver teal griffin, FOUR-winged amber moth, violet bat, purple horned beetle. Premium finely detailed pixel illustration, clean dark ink contours, nuanced shading, consistent overhead-left light. GENUINE TRANSPARENT alpha background. Very important: shrink each creature to fit central76% of its own square cell, leaving12% TRANSPARENT EMPTY MARGIN ON ALL FOUR SIDES. No body part may touch cell edge! Exactly16 whole creatures, no text, frames, floor, shadows, particles or glow. Square atlas.",
+    "b1back": "Use case: identity-preserve. Create matching BACK view sprite atlas of these exact16 first-evolution characters. Preserve all identity, color, body proportions and distinguishing features from input. Every creature must turn around180 degrees; BACK THREE-QUARTER view, facing away upper-left. Show backs of heads, backs of bodies and tails; NO front-facing portraits. Real anatomy change, NOT mirror/flip. Keep precise4x4 equal-cell order. Row1 grove-shell tortoise, purple crystal golem, turquoise manta ray, blue whale. Row2 violet star jellyfish, ivory flower spirit (green sepals from behind), blue seahorse, blue coral crab. Row3 bronze teal scorpion, ruby dragon, blue sea serpent, green leaf-tailed gecko. Row4 amber lizard, oak tortoise, gold-winged ruby dragon, jade pearl serpent. Premium finely detailed pixel illustration, clean dark ink contours, nuanced shading, consistent overhead-left light. GENUINE TRANSPARENT alpha background. Very important: shrink each creature to fit central76% of its own square cell, leaving12% TRANSPARENT EMPTY MARGIN ON ALL FOUR SIDES. No body part may touch cell edge! Exactly16 whole creatures, no text, frames, floor, shadows, particles or glow. Square atlas.",
+    "a2": "Use case: identity-preserve. Input is FIRST evolution creature atlas. Create SECOND and FINAL evolution atlas of same16 lineages, preserve each face/color/core motif. Mature guardian forms with genuinely stronger DIFFERENT SILHOUETTES than input, not just larger. Ornate but biologically coherent HD PIXEL-ART illustration, clean dark contour, nuanced shading. ALL front three-quarter toward lower-right. Square4x4 equal grid, exactly16 separate full-body sprites. Make each fit CENTRAL74% of its equal square cell with13% blank transparent margin on ALL FOUR SIDES. No clipping, shared silhouettes, ground shadow, text, borders, effects, aura, particles, floor or background. GENUINE TRANSPARENCY.\nRow1: ivory woodland spirit now noble long-legged quadruped, tall branching living-tree antlers among original leaf ears, layered oak mantle and blossom tassels; mint hare now tall athletic woodland hare with sweeping antlerlike leaf ears, layered leaf chest armor, giant furred hindlegs and three braided leafy streamers; coral THREE-tailed fire fox now regal low-leaping six-legged-looking? no exactly FOUR legs, three extra-long distinct tails curling around body like flames, swept cheek crests and layered gold chest blaze; dark teal wolf with immense silver mane forming jagged crown, armored-looking layered fur and curled broad tail.\nRow2: lavender cat with sweeping crescent ear horns, regal long limbs and three streaming plume-tail lobes; turquoise otter with original blue chest droplet, large twin fin shoulder mantle, long sea-lionlike streamlined body, powerful short limbs and giant crescent paddle tail; moss bear now huge upright broad guardian with leafy forearm gauntlets, tree-bark shoulder plates and flower-lined honey bib; emerald deer with vast copper antler crown bearing many leaves and blossom buds, long ornate neck mantle.\nRow3: sky-blue goat with four curling ivory horns, grand flowing beard and cloud mane, long strong hooves; blue cream owl with huge radial feather crown, fully open wing cape and layered trailing tail feathers; turquoise crane with great plume head crown and flowing long feather sleeves, long elegant legs; red gold phoenix in soaring curved pose with extremely ornate layered wings and three long fiery tail streams.\nRow4: silver teal griffin with sweeping eagle crown, vast fully open wings, large lion paws and branched feather tail; amber lantern moth with six wide scalloped luminous-pattern wings and thick feathery antennae; violet bat with six long wing-finger silhouettes, large crescent-tipped ears, midnight fur mantle and flowing split tail; amethyst beetle with large TRIDENT crystal horn, broad layered crystal shell, six muscular armored legs.\nKeep root identities unmistakable and same per-cell color palette. No weapons or humanoid clothing.",
+    "b2": "Use case: identity-preserve. Input FIRST evolution atlas. Draw SECOND FINAL evolutions of the same16 original lineages, preserve identities and palettes but introduce distinctly mature GUARDIAN SILHOUETTES. Gorgeous finely detailed HD pixel-art illustration, clean dark colored outline and nuanced shading. Front three-quarter facing lower-right. Square4x4 regular grid16full-body sprites. Each sprite must fit central74% of its equal cell,13% EMPTY transparent margin ALL FOUR SIDES. No clipping, text, grid, floor, shadows, glow, aura or particles. GENUINELY TRANSPARENT.\nRow1: ancient grove tortoise with massive tiered bonsai forest shell, curled bark towers and root legs, familiar cream head; towering purple crystal golem with detached floating shoulder crystals, long articulated limbs, giant amber hexagon heart and crown of three prism horns; turquoise manta with double-layer swept great wings, ornate gold constellation markings, four trailing fin ribbons; great blue whale with four broad wave-fin lobes, tall fan sail and curled split fluke, cream belly.\nRow2: violet star jellyfish with THREE stacked crystal bells and eight cascading long segmented ribbon tentacles, large star within; ivory gold flower spirit with THREE tiers of blossom petals forming mantle and crown, tall twisted vine body and long leafy arms; azure seahorse with enormous branching coral antler crown, ribbed pearl armor and four fan fins along curved tail; blue crab with towerlike coral garden shell, enormous asymmetrical ornate claws, eight sturdy jointed legs.\nRow3: bronze teal scorpion with broad crystal armor, TRIDENT tail blade curled over back, enormous prismatic pincers; ruby dragon with golden horn crown, six broad membrane wing lobes, four legs and long blade tail; turquoise sea serpent with branching pearl antlers, broad white flowing mane, three elegant body coils, long translucent fin ribbons; emerald gecko with four wide splayed feet, giant LEAF-WING pair along shoulders, leafy crown and long branched leaf tail, still recognizable gecko.\nRow4: amber lizard with huge open circular turquoise throat frill, heavy interlocking back plates, long curled hammer tail and robust legs; reserved ancient forest tortoise with massive tiered oak shell; reserved elder ruby dragon with broad gold wing cape; reserved jade serpent with huge pearl antler crown and sweeping white mane.\nKeep original species colors/face signatures. Do not merely redraw first-stage bodies at bigger size.",
+    "a2back": "Use case: identity-preserve. Asset type: REAR battle sprite atlas for original RPG Pachi Monsters.\nThe supplied sheet is the FINAL evolution front artwork. Re-render ALL16 EXACT same characters viewed from BEHIND, facing AWAY upper-left. Preserve all evolved horns, wings, tails, mantles, original character identity, palettes, detailed pixel illustration finish and per-cell order. These are final-evolution rear sprites, NOT younger characters. Show rear skull, nape, back, tail; no full face or chest visible. Do not simply horizontally flip.\nKeep a square4x4 grid of exactly16 full bodies. Place each entire sprite in central76% of its equal square cell with12% empty margins ALL sides, no body cut off. Transparent alpha background, NO floor, shadows, text, lines, frames, particle halos or background. Crisp contours, coherent anatomy, nuanced material shading, matching light upper-left.\nExact order row1: ivory leaf-eared forest spirit with huge tree antlers, mint leaf-eared guardian hare, red THREE flame-tailed fox, teal silver-maned wolf. row2: lavender crescent cat with plume tails, blue fin-mantled otter with enormous crescent paddle tail, moss bear with bark plates and leaf gauntlets, forest deer with flowered antlers. row3: sky-blue FOUR-horned cloud goat, blue cream owl with full feather crown and cape wings, blue crane with long feather sleeves, red gold phoenix with three tail streams. row4: silver-teal griffin with big open wings and eagle crest, amber lantern moth with SIX ornate wings, violet bat with fingered wings and split tail, purple TRIDENT-horned crystal beetle.",
+    "b2back": "Use case: identity-preserve. Asset type: REAR battle sprite atlas for original RPG Pachi Monsters.\nThe supplied sheet is the FINAL evolution front artwork. Re-render ALL16 EXACT same characters viewed from BEHIND, facing AWAY upper-left. Preserve all evolved horns, wings, tails, mantles, original character identity, palettes, detailed pixel illustration finish and per-cell order. These are final-evolution rear sprites, NOT younger characters. Show rear skull, nape, back, tail; no full face or chest visible. Do not simply horizontally flip.\nKeep a square4x4 grid of exactly16 full bodies. Place each entire sprite in central76% of its equal square cell with12% empty margins ALL sides, no body cut off. Transparent alpha background, NO floor, shadows, text, lines, frames, particle halos or background. Crisp contours, coherent anatomy, nuanced material shading, matching light upper-left.\nExact order row1: ancient moss tortoise with three-tier grove shell, tall purple crystalline golem with prism crown and floating shoulder gems, turquoise double-winged manta with four trailing ribbons, blue grand whale with wave fins. row2: violet star jellyfish with layered bell and ribbons, tall vine flower with triple tier blossom crown seen from back with green sepals, blue seahorse with huge coral crown, blue crab with coral garden shell. row3: bronze teal scorpion with trident tail blade, red gold mature dragon, turquoise many-coiled pearl-horned sea serpent, emerald gecko with large leaf wing pair and branched tail. row4: amber lizard with huge turquoise throat frill and hammer tail, oak tortoise, grand golden-wing ruby dragon, jade pearl-maned serpent.",
+    "b2backCleanup": "Use case: background-extraction and precise-object-edit. Input1 is the final evolved BACK-view16-character sprite atlas to CLEAN. Preserve its EXACT16 creatures, their pixel-art designs, poses, orientation, colors, horns, fur, wings and tails. Do NOT change their evolution designs.\nClean ALL detached colored speckles/colored background residue surrounding silhouettes. Areas outside the actual creatures must be PURE transparent alpha with zero opacity. Do not keep any red/yellow/magenta/blue spray or fringes outside contours. Crystal golem's deliberate shoulder crystals may remain, but no noise. Do not add glow, shadows, particles, background, checkerboard.\nRepack these exact16 complete creatures into a clean4-column4-row square SPRITE ATLAS of equal square cells. Reduce EACH creature to about70% of its cell width/height, leaving ample15% pure transparent empty border at all four sides of each cell. All16 full bodies intact, preserve exact row-major order, no silhouette can cross cell edge. Blank separation is CRITICAL for game-engine cropping. Match input original finished pixel art, do not smear, do not flatten shading. Genuine transparent background."
+  }
+}
