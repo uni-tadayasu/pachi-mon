@@ -10,6 +10,7 @@ class LocalD1 {
   prepare(sql) {
     const database = this;
     return {
+      sql,
       values:[],
       bind(...values) { this.values = values; return this; },
       execute() {
@@ -30,6 +31,7 @@ class LocalD1 {
   }
 }
 const ORIGIN = 'https://uni-tadayasu.github.io';
+const RECOVERY_ORIGIN = 'https://www.kasai-solutions-inc.com';
 const SECRET = 'test-only-not-production-admin-password';
 function setup() {
   const env = {DB:new LocalD1(), ADMIN_CLAIM_KEY:SECRET, DUEL_SIGNING_KEY:'test-only-duel-signing-secret-at-least-thirty-two-chars'};
@@ -61,6 +63,11 @@ const changedConfig = () => ({...DEFAULT_CONFIG, stats:{...DEFAULT_CONFIG.stats,
 const LEGACY_MOVES = ['supernova', 'atlas_crystal_4', 'starlight', 'shell'];
 const FUTO_MOVES = ['futo_breaker', 'futo_burst', 'futo_ascend', 'futo_restore'];
 const legacyConfig = () => ({level:73, stats:{hp:76543, atk:213, def:321, spAtk:654, spDef:456, speed:345, accuracy:121, evasion:109}, moves:[...LEGACY_MOVES]});
+function enableRecovery(env, oldOwner) {
+  env.ADMIN_RECOVERY_OWNER_ID = oldOwner.id;
+  env.ADMIN_RECOVERY_ORIGIN = RECOVERY_ORIGIN;
+  env.ALLOWED_ORIGINS = RECOVERY_ORIGIN;
+}
 function seedLegacyAllBatch(env, owner, config = legacyConfig()) {
   const id = crypto.randomUUID(), json = JSON.stringify(config), now = Date.now();
   const payloadHash = createHash('sha256').update(JSON.stringify({target:'all', config})).digest('hex');
@@ -307,4 +314,161 @@ test('stored and already signed legacy duel snapshots expose the new defaults bu
   const custom = {...old, moves:['futo_breaker', 'shell', 'supernova', 'starlight']};
   const customPass = await signFixture(env, {v:1, ...body, config:custom, expiresAt:Date.now() + 600000});
   assert.deepEqual((await call('/api/duel-pass/verify', {method:'POST', body:{sessionId, side, pass:customPass}})).moves, custom.moves);
+});
+
+test('recovery availability is origin-scoped and keeps the existing administrator visible', async () => {
+  const {call, admin, register, env} = setup();
+  const empty = await call('/api/status');
+  assert.equal(empty.adminExists, false);
+  assert.equal(empty.adminRecoveryAvailable, false);
+  const oldOwner = await admin(), candidate = await register();
+  assert.equal((await call('/api/status')).adminRecoveryAvailable, false);
+  enableRecovery(env, oldOwner);
+  const status = await call('/api/status', {origin:RECOVERY_ORIGIN});
+  assert.equal(status.adminExists, true);
+  assert.equal(status.adminRecoveryAvailable, true);
+  assert(!JSON.stringify(status).includes(oldOwner.id));
+  assert.equal((await call('/api/status')).adminRecoveryAvailable, false);
+  assert.equal((await call('/api/status', {origin:null})).adminRecoveryAvailable, false);
+  assert.equal((await call('/api/me', {origin:RECOVERY_ORIGIN, token:candidate.token})).adminRecoveryAvailable, true);
+  assert.equal((await call('/api/register', {method:'POST', origin:RECOVERY_ORIGIN, body:{token:candidate.token, name:candidate.name}})).adminRecoveryAvailable, true);
+  env.ADMIN_RECOVERY_OWNER_ID = candidate.id;
+  assert.equal((await call('/api/status', {origin:RECOVERY_ORIGIN})).adminRecoveryAvailable, false);
+});
+
+test('recovery rejects missing configuration, wrong origin, wrong key and missing authentication', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register();
+  env.ALLOWED_ORIGINS = RECOVERY_ORIGIN;
+  const request = {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}};
+  assert.equal((await call('/api/admin/claim', request)).status, 409);
+  env.ADMIN_RECOVERY_OWNER_ID = oldOwner.id;
+  assert.equal((await call('/api/admin/claim', request)).status, 409);
+  delete env.ADMIN_RECOVERY_OWNER_ID;
+  env.ADMIN_RECOVERY_ORIGIN = RECOVERY_ORIGIN;
+  assert.equal((await call('/api/admin/claim', request)).status, 409);
+  enableRecovery(env, oldOwner);
+  assert.equal((await call('/api/admin/claim', {...request, origin:ORIGIN})).status, 409);
+  assert.equal((await call('/api/admin/claim', {...request, origin:null})).status, 409);
+  assert.equal((await call('/api/admin/claim', {...request, body:{key:'incorrect-key'}})).status, 403);
+  assert.equal((await call('/api/admin/claim', {...request, token:undefined})).status, 401);
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id, oldOwner.id);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants').get().n, 1);
+  assert.equal(env.ADMIN_CLAIM_KEY, SECRET);
+});
+
+test('recovery transfers ownership once, preserves data and grants the current Futo configuration', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register('新ドメイン'), recipient = await register('配布済み');
+  const custom = {...legacyConfig(), moves:['shell', 'supernova', 'futo_breaker', 'starlight']};
+  assert.equal((await call('/api/admin/config', {method:'PUT', token:oldOwner.token, body:{config:custom}})).status, 200);
+  const requestId = crypto.randomUUID();
+  assert.equal((await call('/api/admin/grants', {method:'POST', token:oldOwner.token, body:{requestId, target:recipient.id}})).status, 200);
+  const priorConfig = {...env.DB.sqlite.prepare('SELECT * FROM futo_config').get()};
+  const priorGrants = env.DB.sqlite.prepare('SELECT * FROM grants ORDER BY row_id').all().map(row => ({...row}));
+  const priorPlayers = env.DB.sqlite.prepare('SELECT * FROM players ORDER BY row_id').all().map(row => ({...row}));
+  enableRecovery(env, oldOwner);
+  const recoverRequest = {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}};
+  const restored = await call('/api/admin/claim', recoverRequest);
+  assert.equal(restored.status, 200);
+  assert.equal(restored.player.isAdmin, true);
+  assert.equal(restored.adminExists, true);
+  assert.equal(restored.adminRecoveryAvailable, false);
+  assert.equal(restored.grants.length, 1);
+  assert.equal(restored.grants[0].grantId, `admin-initial:${candidate.id}`);
+  assert.deepEqual(restored.grants[0].stats, custom.stats);
+  assert.deepEqual(restored.grants[0].moves, custom.moves);
+  assert.equal(restored.grants[0].level, custom.level);
+  assert.deepEqual({...env.DB.sqlite.prepare('SELECT * FROM futo_config').get()}, priorConfig);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants WHERE player_id != ? ORDER BY row_id').all(candidate.id).map(row => ({...row})), priorGrants);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM players ORDER BY row_id').all().map(row => ({...row})), priorPlayers);
+  assert.equal((await call('/api/me', {token:oldOwner.token})).player.isAdmin, false);
+  assert.equal((await call('/api/admin/config', {token:oldOwner.token})).status, 403);
+  assert.equal((await call('/api/admin/grants', {method:'POST', token:oldOwner.token, body:{requestId:crypto.randomUUID(), target:'all'}})).status, 403);
+  assert.equal((await call('/api/admin/config', {token:candidate.token, origin:RECOVERY_ORIGIN})).status, 200);
+  const retry = await call('/api/admin/claim', recoverRequest);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.grants.length, 1);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id = ?').get(candidate.id).n, 1);
+  assert.equal((await call('/api/status', {origin:RECOVERY_ORIGIN})).adminRecoveryAvailable, false);
+  assert.equal((await call('/api/admin/claim', {...recoverRequest, token:recipient.token})).status, 409);
+  assert.equal((await call('/api/admin/claim', {...recoverRequest, token:oldOwner.token})).status, 409);
+});
+
+test('concurrent recovery claims select only one new administrator', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), applicants = await Promise.all([register('候補A'), register('候補B')]);
+  enableRecovery(env, oldOwner);
+  const results = await Promise.all(applicants.map(candidate => call('/api/admin/claim', {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}})));
+  assert.deepEqual(results.map(row => row.status).sort(), [200, 409]);
+  const winner = applicants[results.findIndex(row => row.status === 200)], loser = applicants[results.findIndex(row => row.status === 409)];
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id, winner.id);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_owner').get().n, 1);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id = ?').get(winner.id).n, 1);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id = ?').get(loser.id).n, 0);
+  assert.equal((await call('/api/status', {origin:RECOVERY_ORIGIN})).adminRecoveryAvailable, false);
+});
+
+test('recovery refreshes an existing initial grant without duplicating it', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register();
+  const previous = legacyConfig(), active = changedConfig();
+  const historicalBatch = `admin-initial:${candidate.id}`;
+  env.DB.sqlite.prepare('INSERT INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) VALUES (?, ?, ?, ?, ?, 2, 1234)').run(historicalBatch, candidate.id, candidate.id, 'historical-fixture', JSON.stringify(previous));
+  env.DB.sqlite.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) VALUES (?, ?, ?, ?, ?)').run(`admin-initial:${candidate.id}`, historicalBatch, candidate.id, JSON.stringify(previous), 1234);
+  await call('/api/admin/config', {method:'PUT', token:oldOwner.token, body:{config:active}});
+  enableRecovery(env, oldOwner);
+  const result = await call('/api/admin/claim', {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}});
+  assert.equal(result.status, 200);
+  assert.equal(result.grants.length, 1);
+  assert.deepEqual(result.grants[0].stats, active.stats);
+  assert.deepEqual(result.grants[0].moves, active.moves);
+  assert.equal(result.grants[0].createdAt, 1234);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id = ?').get(candidate.id).n, 1);
+  assert.equal(env.DB.sqlite.prepare('SELECT batch_id FROM grants WHERE grant_id = ?').get(`admin-initial:${candidate.id}`).batch_id, historicalBatch);
+});
+
+test('simultaneous retries from the same recovery player grant only one initial Futo', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register();
+  enableRecovery(env, oldOwner);
+  const request = {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}};
+  const results = await Promise.all([call('/api/admin/claim', request), call('/api/admin/claim', request)]);
+  assert(results.every(result => result.status === 200 && result.grants.length === 1));
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id = ?').get(candidate.id).n, 1);
+  assert.equal(env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM grant_batches WHERE id LIKE 'admin-recovery:%'").get().n, 1);
+});
+
+test('initial registration also preserves a pre-existing Futo configuration', async () => {
+  const {call, register, env} = setup(), candidate = await register(), config = legacyConfig();
+  env.DB.sqlite.prepare('INSERT INTO futo_config (singleton, config_json, revision, updated_at) VALUES (1, ?, 9, 12345)').run(JSON.stringify(config));
+  const result = await call('/api/admin/claim', {method:'POST', token:candidate.token, body:{key:SECRET}});
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.grants[0].stats, config.stats);
+  assert.equal(result.grants[0].level, config.level);
+  assert.deepEqual(result.grants[0].moves, FUTO_MOVES);
+  assert.equal(env.DB.sqlite.prepare('SELECT revision FROM futo_config').get().revision, 9);
+});
+
+for (const operation of ['config', 'grants']) test(`a former administrator cannot finish a queued ${operation} write after recovery`, async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register();
+  enableRecovery(env, oldOwner);
+  const originalBatch = env.DB.batch.bind(env.DB);
+  let release, started;
+  const gate = new Promise(resolve => { release = resolve; }), atGate = new Promise(resolve => { started = resolve; });
+  env.DB.batch = async statements => {
+    const sql = statements[0].sql;
+    if ((operation === 'config' && sql.startsWith('UPDATE futo_config')) || (operation === 'grants' && sql.startsWith('INSERT OR IGNORE INTO grant_batches'))) { started(); await gate; }
+    return originalBatch(statements);
+  };
+  const requestId = crypto.randomUUID();
+  const pending = call(`/api/admin/${operation}`, {method:operation === 'config' ? 'PUT' : 'POST', token:oldOwner.token, body:operation === 'config' ? {config:changedConfig()} : {requestId, target:'all'}});
+  await atGate;
+  const recovered = await call('/api/admin/claim', {method:'POST', token:candidate.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}});
+  assert.equal(recovered.status, 200);
+  release();
+  assert.equal((await pending).status, 403);
+  assert.equal(JSON.parse(env.DB.sqlite.prepare('SELECT config_json FROM futo_config').get().config_json).stats.hp, DEFAULT_CONFIG.stats.hp);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grant_batches WHERE id = ?').get(requestId).n, 0);
 });

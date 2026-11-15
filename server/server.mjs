@@ -117,7 +117,19 @@ async function consumeLimit(env, request, action, max, milliseconds, global = fa
   // Bounded cleanup of expired counters; no migration-owned table creation here.
   await env.DB.prepare('DELETE FROM rate_limits WHERE key IN (SELECT key FROM rate_limits WHERE expires_at < ? LIMIT 20)').bind(now - 86400000).run();
 }
-async function ownerExists(env) { return !!await env.DB.prepare('SELECT player_id FROM admin_owner WHERE singleton = 1').first(); }
+async function ownerRecord(env) { return env.DB.prepare('SELECT player_id FROM admin_owner WHERE singleton = 1').first(); }
+function recoveryAllowed(env, request, owner) {
+  // The configured old owner is the one-time latch: a successful CAS changes
+  // that ID, which disables recovery without editing secrets or deleting data.
+  return !!owner && typeof env.ADMIN_RECOVERY_OWNER_ID === 'string' &&
+    /^P[0-9a-f]{16}$/.test(env.ADMIN_RECOVERY_OWNER_ID) && owner.player_id === env.ADMIN_RECOVERY_OWNER_ID &&
+    typeof env.ADMIN_RECOVERY_ORIGIN === 'string' && /^https:\/\/[^/?#]+$/.test(env.ADMIN_RECOVERY_ORIGIN) &&
+    request.headers.get('Origin') === env.ADMIN_RECOVERY_ORIGIN;
+}
+async function adminState(env, request) {
+  const owner = await ownerRecord(env);
+  return {adminExists:!!owner, adminRecoveryAvailable:recoveryAllowed(env, request, owner)};
+}
 async function playerByToken(env, token) {
   if (!tokenValid(token)) fail(401, 'UNAUTHORIZED', 'プレイヤー登録をやり直してください。');
   const row = await env.DB.prepare('SELECT p.id, p.name, p.row_id, p.created_at, EXISTS (SELECT 1 FROM admin_owner a WHERE a.player_id = p.id) AS is_admin FROM players p WHERE p.token_hash = ?').bind(await digest(token)).first();
@@ -128,7 +140,9 @@ async function authenticate(env, request) {
   const match = /^Bearer ([A-Za-z0-9_-]+)$/.exec(request.headers.get('Authorization') || '');
   return playerByToken(env, match?.[1]);
 }
-function requireAdmin(player) { if (!player.is_admin) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。'); }
+async function requireAdmin(env, player) {
+  if (!player.is_admin || (await ownerRecord(env))?.player_id !== player.id) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。');
+}
 async function configRecord(env) {
   const row = await env.DB.prepare('SELECT config_json, revision FROM futo_config WHERE singleton = 1').first();
   return row ? {config:validateConfig(JSON.parse(row.config_json)), revision:row.revision} : {config:validateConfig(DEFAULT_CONFIG), revision:0};
@@ -145,7 +159,7 @@ async function playerGrants(env, playerId, cursor, limit) {
 
 async function route(request, env, url) {
   const path = url.pathname.replace(/\/$/, '') || '/', method = request.method;
-  if (path === '/api/status' && method === 'GET') return {adminExists:await ownerExists(env)};
+  if (path === '/api/status' && method === 'GET') return adminState(env, request);
   if (path === '/api/register' && method === 'POST') {
     const body = await bodyJSON(request), name = safeName(body.name), token = body.token;
     if (!tokenValid(token)) fail(400, 'INVALID_TOKEN', '安全なプレイヤー識別情報を生成できませんでした。');
@@ -156,7 +170,7 @@ async function route(request, env, url) {
       const id = `P${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`, now = Date.now();
       await env.DB.prepare('INSERT OR IGNORE INTO players (id, token_hash, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind(id, hash, name, now, now).run();
     }
-    return {player:playerView(await playerByToken(env, token)), adminExists:await ownerExists(env)};
+    return {player:playerView(await playerByToken(env, token)), ...await adminState(env, request)};
   }
   if (path === '/api/duel-pass/verify' && method === 'POST') {
     await consumeLimit(env, request, 'duel-verify', 120, 60000);
@@ -165,13 +179,13 @@ async function route(request, env, url) {
   const player = await authenticate(env, request);
   if (path === '/api/me' && method === 'GET') {
     const {cursor, limit} = paging(url);
-    return {player:playerView(player), adminExists:await ownerExists(env), ...await playerGrants(env, player.id, cursor, limit)};
+    return {player:playerView(player), ...await adminState(env, request), ...await playerGrants(env, player.id, cursor, limit)};
   }
   if (path === '/api/me' && method === 'PATCH') {
     const name = safeName((await bodyJSON(request)).name);
     await consumeLimit(env, request, `rename:${player.id}`, 30, 60000, true);
     await env.DB.prepare('UPDATE players SET name = ?, updated_at = ? WHERE id = ?').bind(name, Date.now(), player.id).run();
-    return {player:{...playerView(player), name}};
+    return {player:{...playerView(player), name}, ...await adminState(env, request)};
   }
   if (path === '/api/duel-pass' && method === 'POST') {
     const body = await bodyJSON(request), session = sessionId(body.sessionId), side = sideId(body.side);
@@ -185,36 +199,41 @@ async function route(request, env, url) {
     return {pass:`${encodeURL(payload)}.${encodeURL(signature)}`, expiresAt};
   }
   if (path === '/api/admin/claim' && method === 'POST') {
-    if (player.is_admin) return {player:playerView(player), adminExists:true, ...await playerGrants(env, player.id, 0, 100)};
-    if (await ownerExists(env)) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
+    const previousOwner = await ownerRecord(env), recovering = recoveryAllowed(env, request, previousOwner);
+    if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100)};
+    if (previousOwner && !recovering) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
     if (typeof env.ADMIN_CLAIM_KEY !== 'string' || env.ADMIN_CLAIM_KEY.length < 12) fail(503, 'ADMIN_NOT_CONFIGURED', '運営登録は準備中です。');
     await consumeLimit(env, request, 'claim-ip', 8, 900000);
     await consumeLimit(env, request, 'claim-global', 100, 900000, true);
     const body = await bodyJSON(request);
     if (typeof body.key !== 'string' || body.key.length > 256 || !await sameSecret(body.key, env.ADMIN_CLAIM_KEY)) fail(403, 'INVALID_ADMIN_KEY', '運営キーが正しくありません。');
-    const now = Date.now(), config = JSON.stringify(validateConfig(DEFAULT_CONFIG));
-    const batchId = 'admin-initial', payloadHash = await digest(config);
+    const now = Date.now(), config = JSON.stringify((await configRecord(env)).config);
+    const batchId = recovering ? `admin-recovery:${previousOwner.player_id}:${player.id}` : `admin-initial:${player.id}`;
+    const payloadHash = await digest(config);
+    const claimOwner = recovering ?
+      env.DB.prepare('UPDATE admin_owner SET player_id = ?, claimed_at = ? WHERE singleton = 1 AND player_id = ?').bind(player.id, now, previousOwner.player_id) :
+      env.DB.prepare('INSERT OR IGNORE INTO admin_owner (singleton, player_id, claimed_at) VALUES (1, ?, ?)').bind(player.id, now);
     await env.DB.batch([
-      env.DB.prepare('INSERT OR IGNORE INTO admin_owner (singleton, player_id, claimed_at) VALUES (1, ?, ?)').bind(player.id, now),
+      claimOwner,
       env.DB.prepare('INSERT OR IGNORE INTO futo_config (singleton, config_json, revision, updated_at) SELECT 1, ?, 1, ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(config, now, player.id),
-      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, player.id, payloadHash, config, player.row_id, now, player.id),
-      env.DB.prepare('INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(`${batchId}:${player.id}`, batchId, player.id, config, now, player.id)
+      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, player.id, payloadHash, player.row_id, now, player.id),
+      env.DB.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?) ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json').bind(`admin-initial:${player.id}`, batchId, player.id, now, player.id)
     ]);
-    const owner = await env.DB.prepare('SELECT player_id FROM admin_owner WHERE singleton = 1').first();
+    const owner = await ownerRecord(env);
     if (owner?.player_id !== player.id) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
-    return {player:{...playerView(player), isAdmin:true}, adminExists:true, ...await playerGrants(env, player.id, 0, 100)};
+    return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100)};
   }
-  requireAdmin(player);
+  await requireAdmin(env, player);
   if (path === '/api/admin/config' && method === 'GET') return configRecord(env);
   if (path === '/api/admin/config' && method === 'PUT') {
     const body = await bodyJSON(request), config = validateConfig(body.config), current = await configRecord(env);
     if (body.expectedRevision !== undefined && body.expectedRevision !== current.revision) fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。');
     const results = await env.DB.batch([
-      env.DB.prepare('UPDATE futo_config SET config_json = ?, revision = revision + 1, updated_at = ? WHERE singleton = 1 AND revision = ? RETURNING revision').bind(JSON.stringify(config), Date.now(), current.revision),
-      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = ? AND player_id = ?").bind(`admin-initial:${player.id}`, player.id)
+      env.DB.prepare('UPDATE futo_config SET config_json = ?, revision = revision + 1, updated_at = ? WHERE singleton = 1 AND revision = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?) RETURNING revision').bind(JSON.stringify(config), Date.now(), current.revision, player.id),
+      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = ? AND player_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(`admin-initial:${player.id}`, player.id, player.id)
     ]);
     const result = results[0]?.results?.[0];
-    if (!result) fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。');
+    if (!result) { await requireAdmin(env, player); fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。'); }
     return {config, revision:result.revision};
   }
   if (path === '/api/admin/players' && method === 'GET') {
@@ -242,9 +261,10 @@ async function route(request, env, url) {
     const storedHash = existing?.payload_hash || payloadHash;
     if (!existing) await consumeLimit(env, request, 'grant-global', 60, 60000, true);
     await env.DB.batch([
-      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now()),
-      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ?").bind(batchId, storedHash, player.id)
+      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now(), player.id),
+      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(batchId, storedHash, player.id, player.id)
     ]);
+    await requireAdmin(env, player);
     const actual = await env.DB.prepare('SELECT payload_hash, creator_id, target, config_json FROM grant_batches WHERE id = ?').bind(batchId).first();
     if (!sameGrantRequest(actual, player.id, target, configJSON)) fail(409, 'REQUEST_ID_REUSED', '配布識別情報が別の操作に使われています。');
     const count = await env.DB.prepare('SELECT COUNT(*) AS total FROM grants WHERE batch_id = ?').bind(batchId).first();
