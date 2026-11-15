@@ -147,14 +147,14 @@
     const scale=Math.min((SIZE-24)/image.naturalWidth,(SIZE-24)/image.naturalHeight);
     const w=Math.round(image.naturalWidth*scale),h=Math.round(image.naturalHeight*scale);
     c.imageSmoothingEnabled=false;
-    // The supplied illustration is preserved for both battle positions. No
-    // fabricated rear view, recoloring, or editing of the uploaded pixels.
+    // Futo currently has only the supplied front illustration. Keep that
+    // illustration intact; supportsBack() explicitly reports this limitation.
     c.drawImage(image,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
     cache.set('futo:original',cv);
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
-  function get(id, back=false) {
+  function getBase(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
     if(id==='futo')return futoSprite();
@@ -226,8 +226,35 @@
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
+  // Shiny coats are an instance property, never a change to shared species
+  // data. A family keeps one alternate palette through every evolution/view.
+  function alternate(source,id){
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d',{willReadFrequently:true});
+    c.drawImage(source,0,0);
+    const im=c.getImageData(0,0,SIZE,SIZE),p=im.data;
+    const turn=130+hash(lineage(id)?.rootId||id)%91;
+    for(let i=0;i<p.length;i+=4){
+      if(p[i+3]<12)continue;
+      const [h,s,v]=hsv(p[i],p[i+1],p[i+2]);
+      // Preserve dark ink, white clothing and eye glints. The alternate
+      // colored materials retain their authored luminance and shading.
+      if(v<.16||(s<.13&&v>.84))continue;
+      const color=rgb(h+turn,clamp(s<.18?s+.16:s*.92+.08,0,1),clamp(v*1.025,0,1));
+      p[i]=color[0];p[i+1]=color[1];p[i+2]=color[2];
+    }
+    c.putImageData(im,0,0);return cv;
+  }
+  function get(id,back=false,options={}){
+    if(!options.shiny)return getBase(id,back);
+    const key=`${id}:${back?1:0}:shiny`;
+    if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
+    const original=getBase(id,back);if(!original)return null;
+    const cv=alternate(original,id);cache.set(key,cv);
+    if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
+    return cv;
+  }
   const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto()]);
-  LT.CreatureArt={ready,get,preload,lineage,clearCache(){cache.clear();},spriteSize:SIZE,
+  LT.CreatureArt={ready,get,preload,lineage,alternate,supportsBack:id=>id!=='futo',clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}

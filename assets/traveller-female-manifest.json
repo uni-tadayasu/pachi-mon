@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "asset": "traveller-female.webp",
+  "generator": "OpenAI built-in image generation",
+  "sourceReference": "traveller-hero.webp",
+  "layout": {
+    "columns": [
+      "front",
+      "left",
+      "right",
+      "back"
+    ],
+    "rows": [
+      "idle",
+      "leftStride",
+      "rightStride"
+    ]
+  },
+  "prompt": "Use case: stylized-concept. Asset type: production pixel-art RPG traveller sprite atlas on true transparent background.\nInput image 1 is a style, scale, camera and costume-quality reference ONLY (existing male traveller), not an edit target. Generate the NEW FEMALE selectable protagonist for the same original game.\nExactly 12 full-body sprites, evenly spaced in a precise 4-column by 3-row grid, no text, no borders, no background, no shadows extending into adjacent cells. Columns left to right: facing forward/down, facing left in full side profile, facing right in full side profile, facing backwards/up. Rows top to bottom: neutral standing, walking left leg forward, walking right leg forward. All views show the SAME female young adult adventurer, chestnut hair in a neat long braid, small ochre travel cap, teal long adventure coat with ivory piping, rust-red scarf, dark trousers, brown lace-up boots and olive travel backpack. Friendly confident face, clearly distinct from male reference while matching its illustrated fine pixel-art style. Modest practical travelling clothes. In back views show braid, backpack and back of hat, no face or eyes. Natural opposite arm/leg swing in walking poses and visible coat/scarf motion. Same proportions and scale for every cell, feet aligned within corresponding rows. Crisp detailed pixel clusters, rich color shading, polished premium 2D game sprite production. Entire figures including hat, boots, hair, backpack fit well within their own cells with generous transparent gutters; each sprite occupies at most 78% of cell width and 90% height. No duplicates, no extra sprites, no clipped feet, no text, no watermark. Genuinely transparent alpha everywhere outside sprites.",
+  "copyright": "© 2026 KASAI SOLUTIONS INC."
+}

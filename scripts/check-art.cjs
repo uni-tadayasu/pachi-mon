@@ -169,7 +169,7 @@ async function main() {
   }
   assert(fronts.size >= 200 && backs.size >= 200, 'Species artwork lost its individual visual variations');
 
-  const kinds = [...new Set(['hero', ...maps.flatMap(m => (m.npcs || []).map(n => n.kind || 'dialogue'))])].filter(k => k !== 'cache');
+  const kinds = [...new Set(['hero', 'hero-female', ...maps.flatMap(m => (m.npcs || []).map(n => n.kind || 'dialogue'))])].filter(k => k !== 'cache');
   let personCount = 0;
   for (const kind of kinds) for (const direction of ['down', 'left', 'right', 'up']) {
     const hashes = new Set();
@@ -180,7 +180,7 @@ async function main() {
       hashes.add(visible(sprite, `${kind} ${direction} ${frame}`, true).hash); personCount++;
       if (personCount % 24 === 0) await settle();
     }
-    if (kind === 'hero') assert(hashes.size > 1, `${direction}: walking animation is static`);
+    if (kind === 'hero' || kind === 'hero-female') assert(hashes.size > 1, `${direction}: walking animation is static`);
   }
 
   const counters = {};
@@ -257,11 +257,11 @@ async function main() {
   assert.equal(delayed.beforeLoad, delayed.afterLoad, 'Timed-out images should retain playable fallback graphics');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 0, 'Delayed downloads completed before the test released them');
   const recovered = await delayed.finishDelayedImages();
-  assert.equal(recovered.notifications, 12, 'Every late successful image should refresh the display');
+  assert.equal(recovered.notifications, 13, 'Every late successful image should refresh the display');
   assert.notEqual(recovered.hash, delayed.afterLoad, 'The late artwork left stale world caches on screen');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 4, 'Late creature atlases were not adopted');
   assert.equal(delayed.LT.CreatureArt.status().failed, 0, 'Recovered creature atlases still report failure');
-  assert.equal(delayed.LT.TravellerArt.stats.loaded, 2, 'Late traveller atlases were not adopted');
+  assert.equal(delayed.LT.TravellerArt.stats.loaded, 3, 'Late traveller atlases were not adopted');
   visible(delayed.LT.CreatureArt.get(species[0].id), 'Late creature recovery', true);
   visible(delayed.LT.TravellerArt.get('hero'), 'Late traveller recovery', true);
   visible(delayed.LT.FieldArt.tree('village'), 'Late tree recovery', true);

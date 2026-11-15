@@ -27,7 +27,7 @@ function setup() {
   const normal = Object.keys(LT.DATA.species).filter(id => !LT.DATA.species[id].specialOnly);
   const custom = { hp: 1300, atk: 220, def: 190, spAtk: 410, spDef: 305, speed: 276, accuracy: 130, evasion: 115 };
   const moves = LT.DATA.species.futo.moves.slice();
-  const state = { party: [{ species: 'futo', level: 88, grantId: 'gift-test-001' }], storage: [] };
+  const state = { party: [{ species: 'futo', level: 99, grantId: 'gift-test-001', nickname: 'フーちゃん', shiny:false, customStatsLevel:88, customStats:{hp:99999,spAtk:9999} }, {species:normal[0],level:100,nickname:'きらり',shiny:true}], storage: [] };
   let issueCount = 0, verifyCount = 0, failure = '', expiry = 600000;
   const passes = new Map();
   LT.adminBridge = { getEngine: () => ({ state }) };
@@ -190,15 +190,22 @@ async function combatScenarios(env) {
     assert.equal(env.counts.issueCount, 0, 'Ordinary rentals must not call Futo service');
     assert.equal(env.counts.verifyCount, 0);
     assert(rentals.sessions[0].duel.state.teams.every(t => t.monsters.every(m => m.level === 50)));
+    const rentalMon=rentals.sessions[0].duel.state.teams[0].monsters[0];
+    assert.equal(rentalMon.nickname,'きらり');assert.equal(rentalMon.shiny,true);assert.equal(rentalMon.level,50);
+    assert.equal(rentals.sessions[0].duel.fingerprint(),rentals.sessions[1].duel.fingerprint());
+    assert(!rentals.sessions[0]._validTeam({name:'bad',ids:normal.slice(0,3),appearance:[{nickname:'あいうえおか',shiny:false},{nickname:'',shiny:false},{nickname:'',shiny:false}]}));
+    assert(!rentals.sessions[0]._validTeam({name:'bad',ids:normal.slice(0,3),appearance:[{nickname:'',shiny:false,stats:{hp:999999}},{nickname:'',shiny:false},{nickname:'',shiny:false}]}));
     rentals.close();
 
     const pair = env.pair(); await pair.start();
-    assert((await pair.sessions[0].setTeam({ name: '運営', ids: ['futo', ...normal.slice(0, 2)] })).ok);
+    const pendingFuto=pair.sessions[0].setTeam({ name: '運営', ids: ['futo', ...normal.slice(0, 2)] });
+    assert(!(await pair.sessions[0].setTeam({name:'Competing request',ids:normal.slice(0,3)})).ok,'Pending authorization locks both normal and Futo team changes');
+    assert((await pendingFuto).ok);
     assert((await pair.sessions[1].setTeam({ name: '一般', ids: normal.slice(2, 5) })).ok);
     await pair.flush();
     assert(pair.sessions.every(s => s.snapshot().phase === 'choosing'));
     const duel = pair.sessions[0].duel, mon = duel.state.teams[0].monsters[0];
-    assert.equal(mon.species, 'futo'); assert.equal(mon.level, 88);
+    assert.equal(mon.species, 'futo'); assert.equal(mon.level, 88, 'Local solo growth does not override signed rental level');assert.equal(mon.nickname,'フーちゃん');assert.equal(mon.shiny,false);
     assert.deepEqual(JSON.parse(JSON.stringify(mon.stats)), custom);
     assert.deepEqual(JSON.parse(JSON.stringify(duel.moves(mon).map(m => m.id))), JSON.parse(JSON.stringify(moves)));
     assert.equal(mon.hp, custom.hp); assert.equal(mon.maxHp, custom.hp);
@@ -238,6 +245,6 @@ async function combatScenarios(env) {
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, moves: ['missing', ...moves.slice(1)] }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, level: 101 }, 's', 0));
     const combat = await combatScenarios(env);
-    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rentals unchanged', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
+    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rental stats unchanged, owned cosmetics retained', 'invalid cosmetic metadata denied', 'local growth cannot override signed Futo', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
