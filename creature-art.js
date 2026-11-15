@@ -11,6 +11,23 @@
     ['tortoise', 'golem', 'manta', 'whale', 'jelly', 'flower', 'seahorse', 'crab', 'scorpion', 'dragon', 'serpent', 'gecko', 'lizard', 'tortoise-mature', 'dragon-mature', 'serpent-mature']
   ];
   const lookup = new Map(groups.flatMap((row, group) => row.map((shape, cell) => [shape, {group, cell}])));
+  // Audited against the 12 authored sheets, in the same cell order as groups.
+  // +1 faces screen-right, -1 faces screen-left; 0 is a neutral/radial pose.
+  // Rear views have their own gaze: mirroring a front view is never a rear view.
+  const authoredDirections=Object.freeze({
+    '0:0:0':Object.freeze([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]),
+    '0:0:1':Object.freeze([-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,-1]),
+    '1:0:0':Object.freeze([1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1]),
+    '1:0:1':Object.freeze([-1,-1,-1,-1,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]),
+    '0:1:0':Object.freeze([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]),
+    '0:1:1':Object.freeze([-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1]),
+    '1:1:0':Object.freeze([1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1]),
+    '1:1:1':Object.freeze([-1,-1,-1,-1,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]),
+    '0:2:0':Object.freeze([1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]),
+    '0:2:1':Object.freeze([-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,-1]),
+    '1:2:0':Object.freeze([1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1]),
+    '1:2:1':Object.freeze([-1,-1,-1,-1,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1])
+  });
   // EVOLUTION_FRAMES_START
   // Measured source rectangles retain entire figures when generated atlas
   // positions differ slightly from the nominal grid. Optional crop-local
@@ -253,8 +270,22 @@
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
+  function orientation(id,back=false){
+    const d=LT.DATA?.species?.[id];if(!d)return {direction:0,source:'unavailable',authoredBack:false};
+    // The retained Futo front fallback still faces right even when drawn in an
+    // ally's rear-view position. Report the view actually present, not requested.
+    if(id==='futo')return {direction:1,source:'futo-front',authoredBack:false,stage:0};
+    const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
+    const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
+    let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
+    const candidate=lookup.get(shape),wanted=family?.stage||0;
+    if(wanted&&candidate&&evolutionSheets.get(evolutionKey(candidate,wanted,back))?.loaded){stage=wanted;location=candidate;}
+    if(!location)return {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
+    const key=`${location.group}:${stage}:${back?1:0}`;
+    return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
+  }
   const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto()]);
-  LT.CreatureArt={ready,get,preload,lineage,alternate,supportsBack:id=>id!=='futo',clearCache(){cache.clear();},spriteSize:SIZE,
+  LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>id!=='futo',clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}

@@ -136,7 +136,7 @@ async function main() {
   const { LT, engine, beforeLoad, afterLoad } = await runtime();
   await progress('Base artwork loaded');
   const species = Object.values(LT.DATA.species).filter(s => !s.specialOnly), maps = Object.values(LT.DATA.maps);
-  assert.equal(species.length, 256, 'Species count changed');
+  assert.equal(species.length, 259, 'Species count changed');
   assert.equal(maps.filter(m => !m.interior).length, 64, 'Outdoor map count changed');
   assert.equal(maps.filter(m => m.interior).length, 54, 'Interior map count changed');
   assert.equal(new Set(species.map(s => s.shape)).size, 29, 'Expected 29 creature forms');
@@ -148,7 +148,7 @@ async function main() {
   // this comprehensive rendering pass checks the generated views, not fallbacks.
   await LT.CreatureArt.preload(species.filter(s => LT.CreatureArt.lineage(s.id).stage > 0).map(s => s.id), { back: 'both' });
   assert.equal(LT.CreatureArt.status().evolutionLoaded, 8, 'Evolution atlases did not all load');
-  await progress('Evolution artwork loaded; rendering 256 species');
+  await progress(`Evolution artwork loaded; rendering ${species.length} species`);
 
   const snapshots = { data: JSON.stringify(LT.DATA), state: JSON.stringify(engine.state) };
   const fronts = new Set(), backs = new Set();
@@ -165,7 +165,7 @@ async function main() {
       target.width = target.height = 1;
     }
     if (++creatureCount % 8 === 0) await settle();
-    if (creatureCount % 64 === 0) await progress(`Rendered ${creatureCount}/256 species`);
+    if (creatureCount % 64 === 0) await progress(`Rendered ${creatureCount}/${species.length} species`);
   }
   assert(fronts.size >= 200 && backs.size >= 200, 'Species artwork lost its individual visual variations');
 
@@ -237,7 +237,7 @@ async function main() {
   assert.equal(JSON.stringify(LT.DATA), snapshots.data, 'Rendering modified gameplay data');
   assert.equal(JSON.stringify(engine.state), snapshots.state, 'Rendering modified the save state');
 
-  console.log('Artwork rendering complete: 256 species, 118 maps, people, landscapes, and furniture. Checking fallbacks.');
+  console.log(`Artwork rendering complete: ${species.length} species, ${maps.length} maps, people, landscapes, and furniture. Checking fallbacks.`);
   for (const mode of ['broken-assets', 'no-modules']) {
     await progress(`Checking ${mode} fallback`);
     const fallback = await runtime(mode);

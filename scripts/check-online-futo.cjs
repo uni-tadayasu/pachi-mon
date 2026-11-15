@@ -18,13 +18,15 @@ function setup() {
     setTimeout(fn, ms) { const id = setTimeout(fn, ms); id.unref(); timers.add(id); return id; },
     clearTimeout(id) { timers.delete(id); clearTimeout(id); },
   });
-  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas']) vm.runInContext(select(marker), context);
-  // game_data's special species registration is in the engine script.
+  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas', 'two-stage starter lineages, retaining every existing species ID']) vm.runInContext(select(marker), context);
+  // Special species registration precedes the starter-final-form extension.
   vm.runInContext(select('deterministic combat, interiors, league and versioned saves'), context);
   assert(context.LT.DATA.species.futo, 'Futo production species must exist');
   for (const marker of ['deterministic, save-independent rental-team duels', 'peer-to-peer casual duel protocol']) vm.runInContext(select(marker), context);
   const LT = context.LT;
   const normal = Object.keys(LT.DATA.species).filter(id => !LT.DATA.species[id].specialOnly);
+  assert.equal(normal.length,259,'Online test must load the full production species data');
+  for(const id of ['komorizen','shizunaria','akehomura'])assert(normal.includes(id),`Missing starter final form ${id}`);
   const custom = { hp: 1300, atk: 220, def: 190, spAtk: 410, spDef: 305, speed: 276, accuracy: 130, evasion: 115 };
   const moves = LT.DATA.species.futo.moves.slice();
   const state = { party: [{ species: 'futo', level: 99, grantId: 'gift-test-001', nickname: 'フーちゃん', shiny:false, customStatsLevel:88, customStats:{hp:99999,spAtk:9999} }, {species:normal[0],level:100,nickname:'きらり',shiny:true}], storage: [] };
