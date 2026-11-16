@@ -9,8 +9,9 @@ async function main(){
  const finals=['komorizen','shizunaria','akehomura'];
  const bat=all.find(id=>art.lineage(id).shape==='bat'&&art.lineage(id).stage===1);
  if(bat)assert.equal(art.orientation(bat,true).stage,0,'Loading fallback orientation must describe the actual original sheet');
- assert.equal(art.orientation('futo',true).direction,1,'Futo uses its right-facing front fallback');
- assert.equal(art.orientation('futo',true).authoredBack,false);
+ assert.equal(art.orientation('futo',false).direction,-1,'Futo front faces toward the player');
+ assert.equal(art.orientation('futo',true).direction,1,'Futo rear faces toward the opponent');
+ assert.equal(art.orientation('futo',true).authoredBack,true);
  assert.equal(art.orientation('arvelion',false).direction,-1,'Legendary front looks toward the player');
  assert.equal(art.orientation('arvelion',true).direction,1,'Legendary rear looks toward the opponent');
  assert.equal(art.orientation('arvelion',true).authoredBack,true);
@@ -49,7 +50,7 @@ async function main(){
  LT.Art.creature(target,'komori',{back:true,time:0});assert.equal(trace[0].a,1,'Portrait rear view must keep its authored orientation');trace.length=0;
  art.get=get;c.drawImage=draw;
  // The world follower must use the source-aware facing path as well. Its new
- // front artwork faces left, while the retained fallback and Futo face right.
+ // front artwork faces left, including Futo's dedicated two-view artwork.
  const drawFollower=LT.PixelSprites.creature,followerCalls=[];
  LT.PixelSprites.creature=(context,id,options)=>{
   const drawImage=context.drawImage.bind(context);let scale;
@@ -77,7 +78,7 @@ async function main(){
  LT.PixelSprites.creature=drawFollower;
  const output=process.argv[2];
  if(output){
-  const width=768,height=480,labels=['Starter finale: komorizen','Starter finale: shizunaria','Starter finale: akehomura','Doubles: starter finales / Futo front fallback','Doubles: reversed player viewpoint'];
+  const width=768,height=480,labels=['Starter finale: komorizen','Starter finale: shizunaria','Starter finale: akehomura','Doubles: starter finales / Futo authored rear','Doubles: reversed player viewpoint'];
   const contact=canvas.createCanvas(width*2,(height+34)*3),cc=contact.getContext('2d');cc.fillStyle='#142331';cc.fillRect(0,0,contact.width,contact.height);
   for(let i=0;i<labels.length;i++){
    await art.preload([...finals,'futo'],{back:'both'});

@@ -219,7 +219,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="stylesheet" href="admin-console.css?v=20261116-v8">
 <style>
 /* Companion identity and traveller choice */
-.avatar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.avatar-card{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0;padding:18px 12px;border:1px solid #7cbaaa88;border-radius:18px;background:linear-gradient(160deg,#e6f5e7,#cce6df);color:#254b49;cursor:pointer}.avatar-card:hover,.avatar-card:focus-visible{outline:3px solid #bd9854;outline-offset:2px}.avatar-card canvas{display:block;width:min(100%,180px);height:auto;image-rendering:pixelated}.avatar-card strong{font-size:18px}.avatar-card span{font-size:12px}.creature-view{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}.creature-view-controls{display:flex;gap:5px}.creature-view-controls .btn{padding:6px 9px;min-height:34px;font-size:12px}.creature-view-controls .selected{background:#dcece4;border-color:#518879}.nickname-summary{display:flex;align-items:center;gap:16px}.nickname-label{display:block;font-weight:700;margin:14px 0 8px}.nickname-input{width:100%;min-width:0;padding:13px;border:1px solid #72948a;border-radius:10px;background:#fffdf4;color:#253c39;font:inherit;font-size:18px;user-select:text;-webkit-user-select:text;touch-action:manipulation}.nickname-input[aria-invalid=true]{border-color:#bb5454}.nickname-input:focus{outline:2px solid #5b9c8c;outline-offset:2px}.shiny-badge{display:inline-block;padding:3px 8px;margin:4px 6px 4px 0;border-radius:20px;background:#f8edb8;color:#76560d;font-size:12px;font-weight:800}.shiny-mark{color:#b48216;margin-left:4px}.is-shiny{color:#b48530}.species-name{color:#678079;font-size:12px;margin:4px 0}.shiny-portrait{filter:drop-shadow(0 0 5px #eec76066)}
+.player-name-entry{margin:10px 0}.player-name-entry .nickname-label{margin:8px 0 5px;font-size:13px}.player-name-entry .nickname-input{padding:9px 11px;min-height:44px;font-size:16px}.player-name-entry small{display:block;margin-top:5px;overflow-wrap:anywhere}.player-profile-setting p,#player-journal-name{overflow-wrap:anywhere;word-break:normal}.player-profile-setting .btn{flex-shrink:0}.avatar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.avatar-card{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0;padding:18px 12px;border:1px solid #7cbaaa88;border-radius:18px;background:linear-gradient(160deg,#e6f5e7,#cce6df);color:#254b49;cursor:pointer}.avatar-card:hover,.avatar-card:focus-visible{outline:3px solid #bd9854;outline-offset:2px}.avatar-card canvas{display:block;width:min(100%,180px);height:auto;image-rendering:pixelated}.avatar-card strong{font-size:18px}.avatar-card span{font-size:12px}.creature-view{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}.creature-view-controls{display:flex;gap:5px}.creature-view-controls .btn{padding:6px 9px;min-height:34px;font-size:12px}.creature-view-controls .selected{background:#dcece4;border-color:#518879}.nickname-summary{display:flex;align-items:center;gap:16px}.nickname-label{display:block;font-weight:700;margin:14px 0 8px}.nickname-input{width:100%;min-width:0;padding:13px;border:1px solid #72948a;border-radius:10px;background:#fffdf4;color:#253c39;font:inherit;font-size:18px;user-select:text;-webkit-user-select:text;touch-action:manipulation}.nickname-input[aria-invalid=true]{border-color:#bb5454}.nickname-input:focus{outline:2px solid #5b9c8c;outline-offset:2px}.shiny-badge{display:inline-block;padding:3px 8px;margin:4px 6px 4px 0;border-radius:20px;background:#f8edb8;color:#76560d;font-size:12px;font-weight:800}.shiny-mark{color:#b48216;margin-left:4px}.is-shiny{color:#b48530}.species-name{color:#678079;font-size:12px;margin:4px 0}.shiny-portrait{filter:drop-shadow(0 0 5px #eec76066)}
 @media(max-width:600px){.avatar-grid{gap:10px;margin:12px 0}.avatar-card{padding:12px 6px;gap:8px}.avatar-card canvas{width:min(100%,130px)}.avatar-card strong{font-size:15px}.avatar-card span{font-size:11px}.creature-view-controls .btn{padding:5px 7px}.nickname-input{font-size:16px}}
 </style>
 </head>
@@ -435,7 +435,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         <div class="field-caption"><span><svg><use href="#i-lantern"/></svg> きみと相棒の、次の一歩。</span><span>PACHI MONSTERS · PIXEL EDITION</span></div>
       </section>
       <aside class="journal" aria-label="冒険の手帳">
-        <div class="journal-heading"><div><span class="eyebrow">EXPLORER PASS / 冒険パス</span><h2>きみの冒険記録</h2></div><span class="journal-seal" aria-hidden="true"><svg class="journal-icon"><use href="#i-lantern"/></svg><i></i></span></div>
+        <div class="journal-heading"><div><span class="eyebrow">EXPLORER PASS / 冒険パス</span><h2 id="player-journal-name">きみの冒険記録</h2></div><span class="journal-seal" aria-hidden="true"><svg class="journal-icon"><use href="#i-lantern"/></svg><i></i></span></div>
         <section class="quest-section"><div class="section-kicker"><svg><use href="#i-travel"/></svg><h2>次の目的</h2><span class="section-note">OBJECTIVE</span></div><p id="objective-text">最初の相棒を選んで、16の旅紋を目指そう。</p><div id="seal-list" class="seal-list" aria-label="集めた旅紋"></div></section>
         <section class="party-section"><div class="section-kicker"><svg><use href="#i-leaf"/></svg><h2>旅の仲間</h2><span class="section-note">COMPANIONS</span></div><div id="party-list" class="party-list"></div></section>
         <div id="bag-summary" class="bag-summary"><span>旅の支度</span><span>—</span></div>
@@ -510,7 +510,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         <div class="game-info-heading"><p class="eyebrow">BEFORE YOUR FIRST EXPEDITION</p><h3 id="faq-title">冒険をはじめる前に。</h3></div>
         <details><summary>伝説のアルヴェリオンにはどう出会えますか？</summary><p>街・室内を含む全118マップで、移動が成功する1歩ごとに700分の1の確率で出現します。野生のレベルは70固定。捕獲率はHP満タン時1%、残り1HP時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。</p></details>
         <details><summary>色違いのパチモンはどうやって出会えますか？</summary><p>野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、捕獲後も進化後も色違いを引き継ぎます。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。</p></details>
-        <details><summary>パチモンの名前や主人公は選べますか？</summary><p>冒険を始めるときに男性・女性の主人公を選び、その後に最初の相棒を選びます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。</p></details>
+        <details><summary>パチモンの名前や主人公は選べますか？</summary><p>冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。</p></details>
         <details><summary>レベル上限とフートの成長について教えてください。</summary><p>すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。</p></details>
         <details><summary>登録やインストールは必要ですか？</summary><p>アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。ページの読み込みにはインターネット接続が必要です。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
         <details><summary>冒険の記録を引き継ぐには？</summary><p>同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。</p></details>
@@ -1907,6 +1907,20 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     if(countNickname(name)>5)throw Error('ニックネームは5文字までで入力してください。');
     return name;
   }
+  const DEFAULT_PLAYER_NAME='プレイヤー',MAX_PLAYER_NAME=12;
+  function normalizePlayerName(value){
+    if(typeof value!=='string'||value.length>512||/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(value))throw Error('主人公の名前に使えない文字が含まれています。');
+    const name=value.normalize('NFC').trim(),length=countNickname(name);
+    if(length>MAX_PLAYER_NAME)throw Error('主人公の名前は12文字までで入力してください。');
+    return name&&length?name:DEFAULT_PLAYER_NAME;
+  }
+  function playerOnlineName(value){
+    let name;try{name=normalizePlayerName(value);}catch(_){name=DEFAULT_PLAYER_NAME;}
+    const parts=nicknameSegments?[...nicknameSegments.segment(name)].map(part=>part.segment):[];
+    if(!nicknameSegments){let join=false,regional=0;for(const char of name){const cp=char.codePointAt(0),mark=/\p{Mark}/u.test(char)||(cp>=0xfe00&&cp<=0xfe0f)||(cp>=0x1f3fb&&cp<=0x1f3ff),flag=cp>=0x1f1e6&&cp<=0x1f1ff;if(parts.length&&(mark||join||char==='\u200d'||(flag&&regional%2)))parts[parts.length-1]+=char;else parts.push(char);join=char==='\u200d';regional=flag?regional+1:0;}}
+    let result='';for(const part of parts){if(result.length+part.length>16)break;result+=part;}
+    return result||DEFAULT_PLAYER_NAME;
+  }
   function displayName(mon){return mon?.nickname||D.species[mon?.species]?.name||'パチモン';}
   function grownFutoStats(mon){
     const base=futoStats(mon.customStats),reference=mon.customStatsLevel??mon.level;
@@ -1924,17 +1938,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if (savedState !== undefined && savedState !== null) this.state = this.validate(savedState);
     }
     emptyState() {
-      return { version: 3, started: false, map: 'village', x: 20, y: 18, facing: 'down', avatar: 'male',
+      return { version: 3, started: false, map: 'village', x: 20, y: 18, facing: 'down', avatar: 'male', playerName:DEFAULT_PLAYER_NAME,
         party: [], storage: [], giftReceipts: [], inventory: { salve: 5, tonic: 2, chime: 8 }, coins: 120,
         seals: [], leagueWins: [], seen: [], caught: [], flags: {}, steps: 0, playSeconds: 0,
         visited:['village'], questsClaimed:[], stats:{wins:0,captures:0,towerBest:0,rivalWins:0,evolutions:0} };
     }
     get map() { return D.maps[this.state.map]; }
-    newGame(starterId,avatar='male') {
+    newGame(starterId,avatar='male',playerName=DEFAULT_PLAYER_NAME) {
       if (!D.starters.includes(starterId)) return fail('最初の相棒を三体の中から選んでください。');
       if(!['male','female'].includes(avatar))return fail('主人公を選んでください。');
+      let name;try{name=normalizePlayerName(playerName);}catch(error){return fail(error.message);}
       this.state = this.emptyState();
-      this.state.avatar=avatar;
+      this.state.avatar=avatar;this.state.playerName=name;
       this.state.started = true;
       this.state.party = [this.makeMonster(starterId, 5)];
       this.state.seen = [starterId]; this.state.caught = [starterId];
@@ -1963,6 +1978,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         evasion: s.base.evasion ?? 100 };
     }
     displayName(mon){return displayName(mon);}
+    renamePlayer(value){
+      if(!this.state.started)return fail('冒険を始めてから名前を変更してください。');
+      if(this.battle)return fail('バトルを終えてから主人公の名前を変更してください。');
+      let name;try{name=normalizePlayerName(value);}catch(error){return fail(error.message);}
+      this.state.playerName=name;
+      return {ok:true,message:`主人公の名前を「${name}」にしました。`};
+    }
     renameMonster(uid,value){
       if(this.battle)return fail('バトルを終えてからニックネームを変更してください。');
       const mon=[...this.state.party,...this.state.storage].find(m=>m.uid===uid);
@@ -2010,12 +2032,20 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const id=entitlement?.grantId;
       if(typeof id!=='string'||!GIFT_ID.test(id)||!/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(id)||entitlement.species!==D.legendary.species||entitlement.level!==D.legendary.adminLevel)return fail('運営の初期メンバー情報が正しくありません。');
       const receipts=this.state.giftReceipts||[];
-      if(receipts.includes(id))return {ok:true,alreadyReceived:true,grantId:id,message:'初期メンバーは受け取り済みです。'};
+      if(receipts.includes(id)){
+        const owned=[...this.state.party,...this.state.storage].find(mon=>mon.species===D.legendary.species&&mon.grantId===id);
+        if(owned&&!owned.shiny){
+          if(this.battle)return {...fail('バトルが終わると運営の色違いを反映します。'),pending:true};
+          owned.shiny=true;
+          return {ok:true,alreadyReceived:true,appearanceUpdated:true,grantId:id,message:'運営のアルヴェリオンを色違いにしました。'};
+        }
+        return {ok:true,alreadyReceived:true,grantId:id,message:'初期メンバーは受け取り済みです。'};
+      }
       if(this.battle)return {...fail('バトルが終わると初期メンバーを迎えられます。'),pending:true};
       if(receipts.length>=GIFT_LIMIT)return {...fail('受け取り記録が上限に達しました。'),pending:true};
       if(this.state.party.length>=MAX_PARTY&&this.state.storage.length>=MAX_STORAGE)return {...fail('仲間とひかえが満員です。空きを作ると初期メンバーを迎えられます。'),pending:true};
       const mon=this.makeMonster(D.legendary.species,D.legendary.adminLevel);
-      mon.grantId=id;
+      mon.grantId=id;mon.shiny=true;
       const destination=this.state.party.length<MAX_PARTY?'party':'storage';
       this.state[destination].push(mon);this.state.giftReceipts=[...receipts,id];
       this.markCaught(mon.species);
@@ -2704,6 +2734,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           if(typeof mon.grantId!=='string'||!GIFT_ID.test(mon.grantId))error('受け取りIDが正しくありません。');
           if(mon.species!=='futo'&&!(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId)))error('初期メンバーの情報が正しくありません。');
           special.grantId=mon.grantId;
+          if(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))special.shiny=true;
         }
         if(!finiteInt(mon.level,1,MAX_LEVEL) || !finiteInt(mon.xp,0,mon.level===MAX_LEVEL?0:this.xpToNext(mon.level)-1) || !finiteInt(mon.hp,0,this.stats(mon).hp))error('モンスターの能力が正しくありません。');
         const pp={},legacy=legacyFutoRecord(mon);
@@ -2760,11 +2791,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         stats={};for(const key of statKeys){if(!finiteInt(raw.stats[key],0,key==='towerBest'?50:99999999))error('旅の戦績の数値が正しくありません。');stats[key]=raw.stats[key];}
       }
       const avatar=raw.avatar??'male';if(!['male','female'].includes(avatar))error('主人公の情報が正しくありません。');
-      return {version:3,started:true,avatar,map:raw.map,x:position.x,y:position.y,facing:raw.facing,party,storage,giftReceipts:giftReceipts.slice(),inventory,coins:raw.coins,seals,leagueWins,seen,caught,flags,steps:raw.steps,playSeconds:raw.playSeconds,visited,questsClaimed,stats};
+      let playerName;try{playerName=normalizePlayerName(raw.playerName===undefined?DEFAULT_PLAYER_NAME:raw.playerName);}catch(_){error('主人公の名前が正しくありません。');}
+      return {version:3,started:true,avatar,playerName,map:raw.map,x:position.x,y:position.y,facing:raw.facing,party,storage,giftReceipts:giftReceipts.slice(),inventory,coins:raw.coins,seals,leagueWins,seen,caught,flags,steps:raw.steps,playSeconds:raw.playSeconds,visited,questsClaimed,stats};
     }
   }
   LT.Engine=Engine;
   LT.MonsterIdentity=Object.freeze({normalizeNickname,countNickname,displayName,maxNicknameLength:5,shinyOdds:SHINY_ODDS});
+  LT.PlayerIdentity=Object.freeze({normalizeName:normalizePlayerName,countName:countNickname,onlineName:playerOnlineName,defaultName:DEFAULT_PLAYER_NAME,maxLength:MAX_PLAYER_NAME});
   LT.displayName=displayName;
   LT.normalizeFutoMoves=futoMoves;
   LT.BattleStages=BattleStages;
@@ -2772,7 +2805,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 })();
 
 </script>
-<script src="creature-art.js?v=20261116-legendary-lion"></script>
+<script src="creature-art.js?v=20261116-futo-views-v2"></script>
 <script src="assets/creatures-individual-catalog.js?v=20261116-individual"></script>
 <script src="individual-creature-art.js?v=20261116-individual"></script>
 <script src="traveller-art.js?v=20261116-v12"></script>
@@ -4326,7 +4359,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let playing = false, busy = false, activePane = '', toastTimer = 0, lastSave = 0;
   let saveIssueShown = false, storedSave = null, lastStep = 0, lastFrame = 0, lastClock = 0;
   let moveAnim = null, pressedDirection = null, directionSource = null;
-  let shopQuantity = 1, selectedAvatar = 'male', lastPortraitFrame = 0;
+  let shopQuantity = 1, selectedAvatar = 'male', selectedPlayerName = LT.PlayerIdentity.defaultName, lastPortraitFrame = 0;
   let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
   let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches };
   try {
@@ -4377,7 +4410,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         storedSave = checked.serialize();
         $('continue-btn').hidden = false;
         const state = checked.state;
-        $('title-status').textContent = `${DATA.maps[state.map].name} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種のモンスター`;
+        $('title-status').textContent = `${state.playerName} · ${DATA.maps[state.map].name} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種のモンスター`;
         if (key === BACKUP_KEY) $('title-status').textContent += ' · バックアップから復元';
         return;
       } catch (_) { bad = true; }
@@ -4399,7 +4432,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
   }
   function begin(starter, data) {
-    try { engine = new Engine(data); if (!data) engine.newGame(starter, selectedAvatar); } catch (err) { toast(err.message || 'セーブデータを読み込めません。'); return; }
+    try { const candidate = new Engine(data); if (!data) { const result=candidate.newGame(starter, selectedAvatar, selectedPlayerName);if(!result.ok)throw Error(result.message); } engine=candidate; } catch (err) { toast(err.message || 'セーブデータを読み込めません。'); return; }
     playing = true; busy = false; pressedDirection = null; moveAnim = null; endingActive=false;
     $('title-screen').hidden = true; document.body.classList.add('is-playing');window.scrollTo({top:0,behavior:'instant'});
     closeModal(); updateAll(); save();
@@ -4407,7 +4440,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (settings.sound) sound.setEnabled(true);
     $('game-canvas').focus({preventScroll:true});
     if (!data) setTimeout(() => showDialogue('旅のはじまり', [
-      '海を越え、地下へ潜り、まだ知らない相棒に出会う。パチモンの世界には伝説を含む260種のパチモンと64の街・探索エリアが広がっている。',
+      `${engine.state.playerName}、パチモンの世界へようこそ。海を越え、地下へ潜り、まだ知らない相棒に出会おう。伝説を含む260種のパチモンと64の街・探索エリアが広がっている。`,
       '16人の紋章守に挑み、旅紋を集めよう。その先には四境の守護者と、頂点に立つ星路の継承者が待っている。建物の入口へ進むと、中へ入れる。',
       'まずは村の案内人に話しかけよう。矢印キー / WASDで移動、E / Enter / スペースで話す・調べる。スマホは画面下の十字キーと「A」を使う。'
     ]), 160);
@@ -4486,7 +4519,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     updateFacing();
     const s = engine.state;
     $('location-name').textContent = engine.map.name;
-    $('location-subtitle').textContent = engine.map.subtitle;
+    $('location-subtitle').textContent = `${s.playerName} · ${engine.map.subtitle}`;
+    if($('player-journal-name'))$('player-journal-name').textContent=`${s.playerName}の冒険記録`;
     $('world-label').textContent = engine.map.name;
     $('objective-text').textContent = engine.objective();
     $('seal-list').innerHTML = Object.values(DATA.guardians).map((g,i) => `<span class="seal${s.seals.includes(g.id) ? ' earned' : ''}" title="${escape(g.title || g.name)}" aria-label="${escape(g.title || g.name)}${s.seals.includes(g.id) ? '取得済み' : '未取得'}"><span>${ico(['leaf','tide','wind','crystal','ember','crystal','ember','star'][i]||'star')}</span><small>${escape(g.seal?.replace('の灯','') || g.name)}</small></span>`).join('');
@@ -4625,21 +4659,57 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       $('dialogue-next').onclick = () => { sound.fx('click'); if (++pos<lines.length) show(); else { closeModal(); if (after) after(); } };
     }; show();
   }
-  function chooseAvatar() {
+  function bindPlayerNameInput(id,onInput,buttons){
+    const input=$(id),counter=$(id+'-count');let composing=false;
+    const update=()=>{
+      const value=input.value.normalize('NFC').trim(),length=LT.PlayerIdentity.countName(value);
+      let error='';try{LT.PlayerIdentity.normalizeName(input.value);}catch(problem){error=problem.message;}
+      counter.textContent=error||`${length} / 12文字 · 空欄は「プレイヤー」`;
+      input.setAttribute('aria-invalid',String(!!error));
+      for(const button of buttons())button.disabled=!!error||composing;
+      onInput(input.value);
+    };
+    input.addEventListener('input',update);
+    input.addEventListener('compositionstart',()=>{composing=true;update();});
+    input.addEventListener('compositionend',()=>{composing=false;update();});
+    input.addEventListener('keydown',event=>{if(event.key==='Enter'&&(composing||event.isComposing||event.keyCode===229))event.preventDefault();});
+    update();return {isComposing:()=>composing};
+  }
+  function chooseAvatar(resetName=false) {
     selectedAvatar='male';
-    openModal('主人公を、選ぼう。',`<p class="muted">きみの分身となる旅人を選んでください。どちらも同じ冒険・能力で遊べます。</p><div class="avatar-grid">${[['male','男性の主人公'],['female','女性の主人公']].map(([id,label])=>`<button type="button" class="avatar-card" data-avatar="${id}"><canvas width="240" height="320" data-avatar-preview="${id}" aria-label="${label}の姿"></canvas><strong>${label}</strong><span>この主人公で進む →</span></button>`).join('')}</div>`, 'avatars');
+    if(resetName)selectedPlayerName=LT.PlayerIdentity.defaultName;
+    openModal('主人公を、選ぼう。',`<p class="muted">きみの分身となる旅人を選んでください。名前は冒険の途中でも変更できます。</p><div class="player-name-entry"><label class="nickname-label" for="new-player-name">主人公の名前</label><input id="new-player-name" class="nickname-input" type="text" value="${escape(selectedPlayerName)}" placeholder="プレイヤー" autocomplete="off" spellcheck="false" aria-describedby="new-player-name-count"><small id="new-player-name-count" class="muted" aria-live="polite"></small></div><div class="avatar-grid">${[['male','男性の主人公'],['female','女性の主人公']].map(([id,label])=>`<button type="button" class="avatar-card" data-avatar="${id}"><canvas width="240" height="320" data-avatar-preview="${id}" aria-label="${label}の姿"></canvas><strong>${label}</strong><span>この主人公で進む →</span></button>`).join('')}</div>`, 'avatars');
+    bindPlayerNameInput('new-player-name',value=>{selectedPlayerName=value;},()=>document.querySelectorAll('[data-avatar]'));
     paintAnimatedPortraits(performance.now()+100);
   }
   function chooseStarter() {
     openModal('最初の相棒を、選ぼう。', '<p class="muted">大陸を共に旅する、最初のパートナー。3体ともレベル8・32で進化し、最後まで一緒に冒険できます。</p><div class="starter-grid">'+ DATA.starters.map(id => {
       const s = DATA.species[id];
       return `<button class="starter-card" data-starter="${id}">${portrait(id,132)}<span class="starter-name">${escape(s.name)}</span>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><span class="starter-pick">この子と旅立つ →</span></button>`;
-    }).join('') + `<\/div><div class="modal-actions"><button class="btn btn-quiet" data-ui="avatar-back">← 主人公を選び直す</button><span class="muted">${selectedAvatar==='female'?'女性':'男性'}の主人公</span></div>`, 'starters');
+    }).join('') + `<\/div><div class="modal-actions"><button class="btn btn-quiet" data-ui="avatar-back">← 主人公を選び直す</button><span class="muted">${escape(LT.PlayerIdentity.normalizeName(selectedPlayerName))} · ${selectedAvatar==='female'?'女性':'男性'}の主人公</span></div>`, 'starters');
   }
   function requestNew() {
     if (storedSave) {
       openModal('新しい旅をはじめる', '<p class="dialogue-text">現在の冒険記録を、新しい冒険で置き換えます。残したい場合は、先に書き出してください。</p><div class="modal-actions"><button class="btn" data-ui="export-stored">今の記録を書き出す</button><button class="btn btn-primary" data-ui="new-confirm">主人公を選ぶ →</button></div>');
-    } else chooseAvatar();
+    } else chooseAvatar(true);
+  }
+  function showPlayerName(){
+    if(!playing||busy||engine.battle||LT.onlineActive){toast('冒険中の移動できるときに名前を変更できます。');return;}
+    const expectedEngine=engine;
+    openModal('主人公の名前を変更',`<form id="player-name-form"><label class="nickname-label" for="player-name-input">主人公の名前（12文字まで）</label><input id="player-name-input" class="nickname-input" type="text" value="${escape(engine.state.playerName)}" autocomplete="off" spellcheck="false" aria-describedby="player-name-input-count player-name-help player-name-result"><p id="player-name-input-count" class="muted" aria-live="polite"></p><p id="player-name-help" class="muted">この冒険の主人公名を変更します。仲間のニックネームや育成記録はそのままです。</p><p id="player-name-result" class="notice" role="status" hidden></p><div class="modal-actions"><button class="btn" type="button" id="player-name-cancel">やめる</button><button class="btn btn-primary" type="submit" id="player-name-save">この名前で保存</button></div></form>`,'player-name');
+    const input=$('player-name-input'),button=$('player-name-save'),binding=bindPlayerNameInput('player-name-input',()=>{},()=>[button]);
+    $('player-name-cancel').onclick=showSettings;
+    $('player-name-form').onsubmit=event=>{
+      event.preventDefault();if(button.disabled||binding.isComposing())return;
+      const status=$('player-name-result');
+      try{
+        if(engine!==expectedEngine||!playing||busy||engine.battle||LT.onlineActive)throw Error('冒険の状態が変わりました。もう一度開いてください。');
+        const candidate=new Engine(engine.serialize()),result=candidate.renamePlayer(input.value);
+        if(!result.ok)throw Error(result.message);
+        const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+        engine.state=candidate.state;storedSave=data;lastSave=performance.now();updateAll();showSettings();toast(result.message);
+      }catch(error){status.textContent=error?.message||'端末に保存できません。名前は変更されていません。';status.hidden=false;}
+    };
   }
   function interact() {
     if (!playing || busy || engine.battle || $('modal').open) return;
@@ -4800,7 +4870,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。HPを減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさ・めいちゅう・かいひがバトルに影響します。物理わざはこうげきとぼうぎょ、特殊わざはとくこうととくぼうで威力が決まり、めいちゅうとかいひで当たりやすさが変わります。</p><h3>建物と星路評議会</h3><p>建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。道具店・宿・研究所には係員がいます。16の旅紋を順番に集め、星路評議会最終会場で四境の守護者4人、星路の継承者1人に挑みましょう。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手のHPを減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所でHPとPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||LT.onlineActive?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();
   }
   function bindVolume(){
@@ -4831,8 +4901,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 
   function showMenu() {
     if(!playing){showSettings();return;}
-    const list=[['online','gamepad','オンライン対戦'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','星路評議会手帳'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
-    openModal('冒険のメニュー','<div class="menu-grid">'+list.map(([id,icon,label])=>`<button class="btn" data-ui="${id}">${ico(icon)}<span>${label}</span></button>`).join('')+`</div><p class="muted">冒険時間 ${Math.floor(engine.state.playSeconds/60)}分 · ${engine.state.steps.toLocaleString('ja-JP')}歩 · 旅紋 ${engine.state.seals.length}/${sealCount}<br>記録はこの端末のブラウザに保存されています。</p>`,'menu');
+    const list=[['online','gamepad','オンライン対戦'],['player-name','lantern','主人公の名前'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','星路評議会手帳'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
+    openModal('冒険のメニュー',`<p class="notice">主人公：${escape(engine.state.playerName)}</p><div class="menu-grid">`+list.map(([id,icon,label])=>`<button class="btn" data-ui="${id}">${ico(icon)}<span>${label}</span></button>`).join('')+`</div><p class="muted">冒険時間 ${Math.floor(engine.state.playSeconds/60)}分 · ${engine.state.steps.toLocaleString('ja-JP')}歩 · 旅紋 ${engine.state.seals.length}/${sealCount}<br>記録はこの端末のブラウザに保存されています。</p>`,'menu');
   }
 
   function openOnlineFromMenu(){
@@ -4856,7 +4926,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     try {
       if(file.size>524288)throw new Error('セーブデータのサイズが大きすぎます。');
       const data=JSON.parse(await file.text()); const checked=new Engine(data); const state=checked.state;
-      openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(DATA.maps[state.map].name)} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
+      openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(state.playerName)} · ${escape(DATA.maps[state.map].name)} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
       $('confirm-import').onclick=()=>{begin(null,checked.serialize());toast('冒険記録を読み込みました。');};
     } catch(err) { toast('読み込めません：'+(err.message || '有効なパチモンのセーブデータを選んでください。')); }
   }
@@ -4946,7 +5016,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b || b.disabled)return;
     const d=b.dataset;
-    if(d.avatar){selectedAvatar=d.avatar==='female'?'female':'male';chooseStarter();return;}
+    if(d.avatar){try{selectedPlayerName=LT.PlayerIdentity.normalizeName(selectedPlayerName);}catch(error){toast(error.message);return;}selectedAvatar=d.avatar==='female'?'female':'male';chooseStarter();return;}
     if(d.nickname){showNickname(d.nickname);return;}
     if(d.storageDetail){showStorageDetail(d.storageDetail);return;}
     if(d.creatureView){const panel=b.closest('.creature-view'),canvas=panel?.querySelector('canvas[data-creature]');if(canvas){canvas.dataset.back=String(d.creatureView==='back');canvas.setAttribute('aria-label',`${DATA.species[canvas.dataset.creature].name}${canvas.dataset.shiny==='true'?'・色違い':''}の${d.creatureView==='back'?'後ろ':'前'}の姿`);for(const btn of panel.querySelectorAll('[data-creature-view]')){const active=btn===b;btn.classList.toggle('selected',active);btn.setAttribute('aria-pressed',String(active));}portraitLoader.invalidate();}return;}
@@ -4974,7 +5044,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
-    if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,help:showHelp,title:goTitle,'new-confirm':chooseAvatar,'avatar-back':chooseAvatar,new:requestNew};actions[d.ui]?.();}
+    if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
   function resize() {
     const small=matchMedia('(max-width: 600px)').matches;
@@ -5057,8 +5127,16 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     try{
       const candidate=new Engine(JSON.parse(JSON.stringify(source)));
       const result=candidate[method](...args);
-      if(!result.ok||result.alreadyReceived)return result;
+      if(!result.ok)return result;
       const data=candidate.serialize(),serialized=JSON.stringify(data);
+      if(result.alreadyReceived){
+        // Validation migrates old operator gifts before receiveAdminLegendary
+        // runs. Compare that appearance change, ignoring harmless object-key
+        // reordering so unchanged duplicate receipts never write again.
+        const prior=[...source.party,...source.storage];
+        const migrated=method==='receiveAdminLegendary'&&[...data.party,...data.storage].some(mon=>mon.species==='arvelion'&&mon.grantId===result.grantId&&mon.shiny===true&&prior.some(old=>old.uid===mon.uid&&old.shiny!==true));
+        if(!migrated&&!result.appearanceUpdated)return result;
+      }
       // Write the new save first. If storage fails, both the in-memory state and
       // server receipt remain untouched and a later retry is safe.
       localStorage.setItem(SAVE_KEY,serialized);
@@ -5073,7 +5151,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   LT.playMoveSound=(move,event,effect)=>sound.move?.(move,event,effect);
   LT.adminBridge={
     getEngine:()=>playing?engine:storedSave?new Engine(storedSave):null,
-    getPlayerName:()=>{try{return localStorage.getItem('pachi-link-name')||'トラベラー';}catch(_){return 'トラベラー';}},
+    getPlayerName:()=>playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName,
     isPlaying:()=>playing,
     grantFuto:grant=>persistGiftMutation('grantFuto',grant),
     receiveAdminLegendary:companion=>persistGiftMutation('receiveAdminLegendary',companion),
@@ -6031,8 +6109,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const dialog=$('online-modal'),body=$('online-content');
   const ids=Object.keys(D.species).filter(id=>!D.species[id].specialOnly),defaults=[...D.starters,ids.find(id=>!D.starters.includes(id))];
   let peer=null,session=null,view=null,mode='single',room='',status='',error='',connecting=false,leaving=false;
-  let selected=[...defaults],orders=[],orderTurn=0,name='トラベラー',joinCode='',generation=0,queue=[],lastDraw=0,animation=0,returnToMenu=false;
-  try{name=localStorage.getItem('pachi-link-name')||name;}catch(_){}
+  let selected=[...defaults],orders=[],orderTurn=0,name='トラベラー',explicitName=false,joinCode='',generation=0,queue=[],lastDraw=0,animation=0,returnToMenu=false;
+  try{const saved=localStorage.getItem('pachi-link-name');if(saved?.trim()){name=saved;explicitName=true;}}catch(_){}
   const species=id=>D.species[id],label=id=>species(id)?.name||id;
   const monLabel=mon=>(mon?.shiny?'✦ ':'')+(LT.MonsterIdentity?.displayName(mon)||label(mon.species));
   const modeName=()=>mode==='double'?'ダブルバトル':'シングルバトル';
@@ -6099,7 +6177,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   function loop(now){if(!dialog.open)return;if(now-lastDraw>70&&!document.hidden){lastDraw=now;draw();}animation=requestAnimationFrame(loop);}
   function reset(){generation++;const oldSession=session,oldPeer=peer;session=null;peer=null;view=null;queue=[];oldSession?.close('対戦を終了しました');oldPeer?.close('退出しました');room='';status='';error='';connecting=false;leaving=false;orders=[];orderTurn=0;render();}
   function failure(err){error=err?.message||String(err||'接続できませんでした。');connecting=false;render();}
-  function open(options={}){if(dialog.open)return;returnToMenu=options.returnToMenu===true;LT.onlineActive=true;dialog.showModal();render();cancelAnimationFrame(animation);animation=requestAnimationFrame(loop);}
+  function open(options={}){if(dialog.open)return;if(!explicitName)name=LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);returnToMenu=options.returnToMenu===true;LT.onlineActive=true;dialog.showModal();render();cancelAnimationFrame(animation);animation=requestAnimationFrame(loop);}
   function close(){reset();dialog.close();cancelAnimationFrame(animation);notify();}
   function requestClose(){if(peer&&peer.state!=='closed'&&(peer.connected||room)&&!['ended','error'].includes(view?.phase)&&!view?.outcomeConfirmed){leaving=true;$('online-leave-confirm').hidden=false;$('link-stay').focus();}else close();}
   function setupSession(role){
@@ -6120,7 +6198,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
   dialog.addEventListener('input',e=>{
     const t=e.target;
-    if(t.id==='link-name'){name=t.value.slice(0,16);try{localStorage.setItem('pachi-link-name',name);}catch(_){}}
+    if(t.id==='link-name'){name=t.value.slice(0,16);explicitName=!!name.trim();try{if(explicitName)localStorage.setItem('pachi-link-name',name);else localStorage.removeItem('pachi-link-name');}catch(_){}}
     if(t.id==='link-code-input'){joinCode=t.value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);t.value=joinCode;}
   });
   dialog.addEventListener('change',e=>{
@@ -6136,7 +6214,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       case 'link-host':await connect(true);break;
       case 'link-join':if(joinCode.length!==6){error='6文字のルームコードを入力してください。';render();}else await connect(false);break;
       case 'link-copy':try{await navigator.clipboard.writeText(room);announce('ルームコードをコピーしました。');}catch(_){announce('コピーできませんでした。表示された6文字を相手に伝えてください。');}break;
-      case 'link-ready':{b.disabled=true;try{const result=await session?.setTeam({name:name.trim()||'トラベラー',ids:selected.slice(0,mode==='double'?4:3)});if(!result?.ok)failure(result?.error||'チームを確認してください。');else error='';}catch(err){failure(err);}finally{render();}break;}
+      case 'link-ready':{b.disabled=true;try{const result=await session?.setTeam({name:name.trim()||LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName),ids:selected.slice(0,mode==='double'?4:3)});if(!result?.ok)failure(result?.error||'チームを確認してください。');else error='';}catch(err){failure(err);}finally{render();}break;}
       case 'link-submit':{const result=await session?.submit(orders);if(result&&!result.ok)failure(result.error);else{error='';render();}break;}
       case 'link-reset':reset();break;
       case 'online-close':requestClose();break;
@@ -6156,7 +6234,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 </script>
 <script src="battle-vfx.js?v=20261116-lamp-moves"></script>
-<script src="admin-console.js?v=20261116-legendary"></script>
+<script src="admin-console.js?v=20261116-futo-views-v2"></script>
 <script src="online-futo.js?v=20261116-legendary"></script>
 <script src="mobile-screen.js?v=20261116"></script>
 </body>
