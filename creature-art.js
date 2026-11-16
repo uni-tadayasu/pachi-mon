@@ -51,7 +51,7 @@
     tortoise:'leaf',golem:'crystal',manta:'tide',whale:'tide',jelly:'crystal',flower:'leaf',seahorse:'tide',crab:'tide',
     scorpion:'tide',dragon:'ember',serpent:'tide',gecko:'leaf',lizard:'ember'
   };
-  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map();
+  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map();
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
   function lineage(id) {
@@ -84,6 +84,7 @@
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
+      if(id==='arvelion'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
@@ -171,10 +172,31 @@
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
+  function arvelionSprite(back){
+    const record=uniqueSheets.get('arvelion');if(!record?.loaded)return null;
+    const key=`arvelion:${back?1:0}`;
+    if(cache.has(key))return cache.get(key);
+    const image=record.image,half=Math.floor(image.naturalWidth/2),sx=back?half:0;
+    const raw=canvas(half,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
+    rc.drawImage(image,sx,0,half,image.naturalHeight,0,0,half,image.naturalHeight);
+    const pixels=rc.getImageData(0,0,raw.width,raw.height).data;
+    let left=raw.width,right=-1,top=raw.height,bottom=-1;
+    for(let i=3;i<pixels.length;i+=4)if(pixels[i]>12){const p=(i-3)/4,x=p%raw.width,y=Math.floor(p/raw.width);left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+    if(right<left||bottom<top)return null;
+    const sw=right-left+1,sh=bottom-top+1,scale=Math.min((SIZE-24)/sw,(SIZE-24)/sh),w=Math.round(sw*scale),h=Math.round(sh*scale);
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+    // Each half is an independently authored view; only transparent margins
+    // are cropped. No recoloring, mirrored substitute, or body-form borrowing.
+    c.drawImage(raw,left,top,sw,sh,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
+    raw.width=raw.height=1;
+    cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
+    return cv;
+  }
   function getBase(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
     if(id==='futo')return futoSprite();
+    if(id==='arvelion')return arvelionSprite(back);
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -275,6 +297,9 @@
     // The retained Futo front fallback still faces right even when drawn in an
     // ally's rear-view position. Report the view actually present, not requested.
     if(id==='futo')return {direction:1,source:'futo-front',authoredBack:false,stage:0};
+    if(id==='arvelion')return uniqueSheets.get(id)?.loaded
+      ? {direction:back?1:-1,source:'arvelion-original',authoredBack:!!back,stage:0}
+      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
     const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
     const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
     let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
@@ -284,10 +309,10 @@
     const key=`${location.group}:${stage}:${back?1:0}`;
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto()]);
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href)]);
   LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>id!=='futo',clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
-      futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
+      futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };
 })();

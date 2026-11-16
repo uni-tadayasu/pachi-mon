@@ -110,6 +110,78 @@ test('registration is idempotent and only hashed tokens are stored', async () =>
   assert.equal((await call('/api/register', {method:'POST', body:{token:'weak', name:'x'}})).status, 400);
 });
 
+const legendaryEntitlement = player => [{grantId:`admin-legendary:${player.id}`, species:'arvelion', level:70}];
+
+test('only the current administrator receives a stable initial legendary companion, without creating gifts', async () => {
+  const {call, register, env} = setup();
+  const owner = await register('運営候補'), visitor = await register('訪問者');
+  assert.deepEqual((await call('/api/me', {token:owner.token})).initialCompanions, []);
+  const claim = await call('/api/admin/claim', {method:'POST', token:owner.token, body:{key:SECRET}});
+  assert.equal(claim.status, 200);
+  assert.deepEqual(claim.initialCompanions, legendaryEntitlement(owner));
+  const before = env.DB.sqlite.prepare('SELECT * FROM grants ORDER BY row_id').all();
+  const batchesBefore = env.DB.sqlite.prepare('SELECT * FROM grant_batches ORDER BY id').all();
+  for (const path of ['/api/me', '/api/me?limit=1', '/api/me?limit=1&cursor=9999']) {
+    const response = await call(path, {token:owner.token});
+    assert.deepEqual(response.initialCompanions, legendaryEntitlement(owner));
+    assert(response.grants.every(grant => grant.species === 'futo'));
+  }
+  const replay = await call('/api/admin/claim', {method:'POST', token:owner.token, body:{key:SECRET}});
+  assert.deepEqual(replay.initialCompanions, legendaryEntitlement(owner));
+  assert.deepEqual((await call('/api/me', {token:visitor.token})).initialCompanions, []);
+  assert.equal((await call('/api/me')).status, 401);
+  assert.equal((await call('/api/status')).initialCompanions, undefined);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants ORDER BY row_id').all(), before);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grant_batches ORDER BY id').all(), batchesBefore);
+});
+
+test('an administrator predating legendary support receives the initial companion on the next profile read', async () => {
+  const {call, register, env} = setup();
+  const owner = await register();
+  // Simulate an already deployed owner row with no legendary migration or claim.
+  env.DB.sqlite.prepare('INSERT INTO admin_owner (singleton, player_id, claimed_at) VALUES (1, ?, 1234)').run(owner.id);
+  const profile = await call('/api/me', {token:owner.token});
+  assert.equal(profile.player.isAdmin, true);
+  assert.deepEqual(profile.initialCompanions, legendaryEntitlement(owner));
+  assert.deepEqual(profile.grants, []);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants').get().n, 0);
+});
+
+test('domain recovery moves the initial legendary entitlement to the new owner only', async () => {
+  const {call, admin, register, env} = setup();
+  const previous = await admin(), replacement = await register('新ドメイン');
+  enableRecovery(env, previous);
+  assert.deepEqual((await call('/api/me', {token:previous.token})).initialCompanions, legendaryEntitlement(previous));
+  assert.deepEqual((await call('/api/me', {token:replacement.token})).initialCompanions, []);
+  const recovered = await call('/api/admin/claim', {method:'POST', token:replacement.token, origin:RECOVERY_ORIGIN, body:{key:SECRET}});
+  assert.equal(recovered.status, 200);
+  assert.deepEqual(recovered.initialCompanions, legendaryEntitlement(replacement));
+  const oldProfile = await call('/api/me', {token:previous.token});
+  assert.equal(oldProfile.player.isAdmin, false);
+  assert.deepEqual(oldProfile.initialCompanions, []);
+  assert.deepEqual((await call('/api/me', {token:replacement.token})).initialCompanions, legendaryEntitlement(replacement));
+});
+
+test('legendary initial companions cannot be distributed to another player or all players', async () => {
+  const {call, admin, register, env} = setup();
+  const owner = await admin(), recipient = await register();
+  const countBefore = env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants').get().n;
+  for (const target of [recipient.id, 'all', 'self']) {
+    const result = await call('/api/admin/grants', {method:'POST', token:owner.token, body:{requestId:crypto.randomUUID(), target, species:'arvelion'}});
+    assert.equal(result.status, 400);
+    assert.equal(result.error.code, 'SPECIES_NOT_DISTRIBUTABLE');
+  }
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants').get().n, countBefore);
+  assert.deepEqual((await call('/api/me', {token:recipient.token})).initialCompanions, []);
+  assert.deepEqual((await call('/api/me', {token:recipient.token})).grants, []);
+  const futo = await call('/api/admin/grants', {method:'POST', token:owner.token, body:{requestId:crypto.randomUUID(), target:recipient.id, species:'futo'}});
+  assert.equal(futo.status, 200);
+  const delivered = await call('/api/me', {token:recipient.token});
+  assert.equal(delivered.grants.length, 1);
+  assert.equal(delivered.grants[0].species, 'futo');
+  assert.deepEqual(delivered.initialCompanions, []);
+});
+
 test('CORS, malformed requests and data bounds are enforced', async () => {
   const {call, register} = setup();
   assert.equal((await call('/api/status', {origin:'https://attacker.example'})).status, 403);

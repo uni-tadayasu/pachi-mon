@@ -6,7 +6,7 @@ async function main(){
  const {LT,engine}=await runtime();
  const byShape=new Map();
  for(const s of Object.values(LT.DATA.species)){const family=LT.CreatureArt.lineage(s.id);if(!byShape.has(family.shape))byShape.set(family.shape,s.id);}
- const ids=[...new Set([...byShape.values(),'futo','komorion','saikaju'])];
+ const ids=[...new Set([...byShape.values(),'futo','arvelion','komorion','saikaju'])];
  await LT.CreatureArt.preload(ids,{back:'both'});
  const before=JSON.stringify(engine.state),profiles=new Set();let views=0;
  const cv=canvas.createCanvas(200,200);
@@ -33,6 +33,8 @@ async function main(){
  assert.equal(profiles.size,5,'All five family motion rigs must be used');
  assert.equal(LT.CreatureArt.supportsBack('futo'),false,'Futo has no authored rear illustration');
  assert.equal(LT.CreatureArt.supportsBack('komori'),true);
+ assert.equal(LT.CreatureArt.supportsBack('arvelion'),true);
+ assert.equal(LT.PixelSprites.motionProfile('arvelion'),'breath','The legendary lion stands on the ground');
  const pose=LT.PixelSprites.battlePose;
  assert.equal(pose({side:'ally',slot:0,target:0,kind:'damage',category:'physical',started:100,duration:1000},600,'ally').action,'attack');
  assert.equal(pose({side:'ally',slot:0,target:0,kind:'damage',category:'physical',started:100,duration:1000},600,'enemy').action,'hit');

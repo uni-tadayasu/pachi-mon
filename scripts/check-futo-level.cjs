@@ -21,7 +21,7 @@ const canonical={hp:5000,atk:420,def:360,spAtk:520,spDef:410,speed:260,accuracy:
 const moves=['supernova','atlas_crystal_4','shell','starlight'];
 const grant=(id,overrides={})=>({grantId:id,species:'futo',level:100,stats:{...stats},moves:[...moves],...overrides});
 assert.equal(D.limits.level,100);
-assert.equal(Object.values(D.species).filter(s=>!s.specialOnly).length,259);
+assert.equal(Object.values(D.species).filter(s=>!s.specialOnly).length,260);
 assert.equal(D.species.futo.specialOnly,true);
 assert(Object.values(D.maps).every(m=>!m.encounters?.includes('futo')),'Futo is distribution-only');
 let e=engine(),m=e.state.party[0];e.battle={log:[],result:'won'};
@@ -86,7 +86,7 @@ e.applyMove(m,defender,D.moves.supernova,'ally',[]);const strong=100000-defender
 m.customStats.spAtk=1;defender.hp=100000;
 e.applyMove(m,defender,D.moves.supernova,'ally',[]);const weak=100000-defender.hp;
 assert(strong>weak*2,'Configured special attack must affect actual damage');
-const quest=e.quests().find(q=>q.id==='all-voices');assert.equal(quest.target,259);assert.equal(quest.progress,1);
+const quest=e.quests().find(q=>q.id==='all-voices');assert.equal(quest.target,260);assert.equal(quest.progress,1);
 const duelScript=scripts.find(s=>s[2].includes('class Duel {'));
 if(duelScript){vm.runInContext(duelScript[2],context);assert.equal(context.LT.Duel.validateTeam(['futo',...D.starters.slice(0,2)],'single').ok,false);}
 // Exercise the real browser bridge with failing storage: no in-memory grant or

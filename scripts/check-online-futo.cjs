@@ -18,14 +18,14 @@ function setup() {
     setTimeout(fn, ms) { const id = setTimeout(fn, ms); id.unref(); timers.add(id); return id; },
     clearTimeout(id) { timers.delete(id); clearTimeout(id); },
   });
-  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas', 'two-stage starter lineages, retaining every existing species ID']) vm.runInContext(select(marker), context);
+  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas', 'two-stage starter lineages, retaining every existing species ID', 'Arvelion, the original roaming legendary']) vm.runInContext(select(marker), context);
   // Special species registration precedes the starter-final-form extension.
   vm.runInContext(select('deterministic combat, interiors, league and versioned saves'), context);
   assert(context.LT.DATA.species.futo, 'Futo production species must exist');
   for (const marker of ['deterministic, save-independent rental-team duels', 'peer-to-peer casual duel protocol']) vm.runInContext(select(marker), context);
   const LT = context.LT;
   const normal = Object.keys(LT.DATA.species).filter(id => !LT.DATA.species[id].specialOnly);
-  assert.equal(normal.length,259,'Online test must load the full production species data');
+  assert.equal(normal.length,260,'Online test must load the full production species data');
   for(const id of ['komorizen','shizunaria','akehomura'])assert(normal.includes(id),`Missing starter final form ${id}`);
   const custom = { hp: 1300, atk: 220, def: 190, spAtk: 410, spDef: 305, speed: 276, accuracy: 130, evasion: 115 };
   const moves = LT.DATA.species.futo.moves.slice();
@@ -183,6 +183,9 @@ async function combatScenarios(env) {
   try {
     assert(!LT.Duel.validateTeam(['futo', ...normal.slice(0, 2)], 'single').ok, 'Unverified direct Duel must remain denied');
     assert(LT.OnlineFuto.rosterIds(normal).includes('futo'));
+    assert(normal.includes('arvelion'),'Legendary production data must be loaded');
+    assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'),'Unowned legendary is not a free rental');
+    assert.equal(LT.OnlineFuto.rosterIds(normal).filter(id=>id!=='futo').length,259);
     const savedState = JSON.stringify(state);
     const rentals = env.pair(); await rentals.start();
     assert((await rentals.sessions[0].setTeam({ name: 'A', ids: normal.slice(0, 3) })).ok);
@@ -198,6 +201,29 @@ async function combatScenarios(env) {
     assert(!rentals.sessions[0]._validTeam({name:'bad',ids:normal.slice(0,3),appearance:[{nickname:'あいうえおか',shiny:false},{nickname:'',shiny:false},{nickname:'',shiny:false}]}));
     assert(!rentals.sessions[0]._validTeam({name:'bad',ids:normal.slice(0,3),appearance:[{nickname:'',shiny:false,stats:{hp:999999}},{nickname:'',shiny:false},{nickname:'',shiny:false}]}));
     rentals.close();
+
+    const unownedLegendary=env.pair();await unownedLegendary.start();
+    assert(!(await unownedLegendary.sessions[0].setTeam({name:'Unowned legend',ids:['arvelion',...normal.slice(0,2)]})).ok);
+    assert(!(await unownedLegendary.sessions[0].setTeam({name:'Unowned legend and Futo',ids:['arvelion','futo',normal[0]]})).ok);
+    assert.equal(env.counts.issueCount,0,'Unowned legendary is rejected before any Futo request');
+    assert.equal(unownedLegendary.sessions[0]._teams[0],null);unownedLegendary.close();
+    state.storage.push({species:'arvelion',level:100,nickname:'ほしおう',shiny:true});
+    assert(LT.OnlineFuto.rosterIds(normal).includes('arvelion'),'An owned reserve legendary is selectable');
+    const legendaryPair=env.pair();await legendaryPair.start();
+    assert((await legendaryPair.sessions[0].setTeam({name:'Legend owner',ids:['arvelion',...normal.slice(0,2)]})).ok);
+    // The opponent need not own a legendary to receive and play this team.
+    state.storage=[];
+    assert((await legendaryPair.sessions[1].setTeam({name:'Opponent',ids:normal.slice(2,5)})).ok);
+    await legendaryPair.flush();
+    assert(legendaryPair.sessions.every(s=>s.snapshot().phase==='choosing'));
+    const legendaryMon=legendaryPair.sessions[0].duel.state.teams[0].monsters[0];
+    assert.equal(legendaryMon.species,'arvelion');assert.equal(legendaryMon.level,50);
+    assert.equal(legendaryMon.nickname,'ほしおう');assert.equal(legendaryMon.shiny,true);
+    assert.equal(legendaryPair.sessions[0].duel.fingerprint(),legendaryPair.sessions[1].duel.fingerprint());
+    assert.equal(env.counts.issueCount,0,'Legendary uses fixed normal combat rules, not Futo passes');
+    assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'),'Released legendary leaves the local roster');
+    assert.equal(JSON.stringify(state),savedState,'Legendary online selection must not alter adventure progress');
+    legendaryPair.close();
 
     const pair = env.pair(); await pair.start();
     const pendingFuto=pair.sessions[0].setTeam({ name: '運営', ids: ['futo', ...normal.slice(0, 2)] });
@@ -247,6 +273,6 @@ async function combatScenarios(env) {
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, moves: ['missing', ...moves.slice(1)] }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, level: 101 }, 's', 0));
     const combat = await combatScenarios(env);
-    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rental stats unchanged, owned cosmetics retained', 'invalid cosmetic metadata denied', 'local growth cannot override signed Futo', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
+    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rental stats unchanged, owned cosmetics retained', 'legendary requires current local ownership and uses Lv50 fixed rules', 'opponents can face owned legendary without owning it', 'invalid cosmetic metadata denied', 'local growth cannot override signed Futo', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
