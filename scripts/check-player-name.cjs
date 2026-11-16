@@ -39,7 +39,7 @@ for(const name of ['あ'.repeat(13),'bad\n',false,null]){const bad=e.serialize()
 const elements=new Map(),avatarButtons=[{disabled:false},{disabled:false}],writes=[];let failWrite=false;
 const esc=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const decode=value=>value.replace(/&(amp|lt|gt|quot|#39);/g,(_,entity)=>({amp:'&',lt:'<',gt:'>',quot:'"','#39':"'"}[entity]));
-const ui=vm.createContext({console,Engine,DATA,LT:{...LT,onlineActive:false},engine:e,playing:true,busy:false,storedSave:e.serialize(),lastSave:0,
+const ui=vm.createContext({tradeLocked:()=>false,console,Engine,DATA,LT:{...LT,onlineActive:false},engine:e,playing:true,busy:false,storedSave:e.serialize(),lastSave:0,
   selectedPlayerName:I.defaultName,selectedAvatar:'male',performance:{now:()=>123},SAVE_KEY:'test-adventure',escape:esc,
   document:{querySelectorAll:selector=>selector==='[data-avatar]'?avatarButtons:[]},$:id=>elements.get(id),
   paintAnimatedPortraits(){},portrait:()=>'',typeBadge:()=>'',creatureDescription:species=>species.description,

@@ -14,7 +14,7 @@ for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
 const {Engine,DATA}=model.LT;
 const fresh=()=>{const e=new Engine();e.newGame(DATA.starters[0]);e.state.party.push(e.makeMonster(DATA.starters[1],5));e.state.seen.push(DATA.starters[1]);e.state.caught.push(DATA.starters[1]);return e;};
 const writes=new Map(),elements=new Map();let storageFails=false;
-const c=vm.createContext({Engine,DATA,LT:{onlineActive:false},engine:fresh(),playing:true,busy:false,storedSave:null,lastSave:0,moveAnim:{},
+const c=vm.createContext({tradeLocked:()=>false,Engine,DATA,LT:{onlineActive:false},engine:fresh(),playing:true,busy:false,storedSave:null,lastSave:0,moveAnim:{},
   SAVE_KEY:'release-save',performance:{now:()=>123},escape:s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'),
   portrait:(id,size)=>`<canvas data-creature="${id}" data-size="${size}"></canvas>`,creatureView:()=>'<canvas></canvas>',nameOf:mon=>model.LT.displayName(mon),shinyBadge:()=>'',creatureDescription:species=>species.description,typeBadge:()=>'',hpBar:()=>'',
   localStorage:{setItem(key,value){if(storageFails)throw Error('Quota exceeded');writes.set(key,value);}},

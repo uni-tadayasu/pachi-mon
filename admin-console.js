@@ -239,6 +239,7 @@
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Pachi_Player_Identity.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say('プレイヤー情報を書き出しました。このファイルを他の人へ渡さないでください。冒険の記録は別に書き出してください。');
   }
   async function restore(){
+    if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
     if(sendBusy)throw new Error('配布結果の確認が終わってから、プレイヤー情報を復元してください。');
     const file=document.createElement('input');file.type='file';file.accept='.json,application/json';
     file.onchange=async()=>{
@@ -251,6 +252,7 @@
         const me=await request('/me',{token:data.token,guardIdentity:false});
         if(attempt!==restoreAttempt)throw staleIdentity();
         if(sendBusy)throw new Error('配布結果の確認が終わってから、プレイヤー情報を復元してください。');
+        if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
         adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists,me.adminRecoveryAvailable);
         await sync({fresh:true});
         if(attempt===restoreAttempt)say('プレイヤー情報を復元しました。冒険の記録は変更していません。');
@@ -272,6 +274,12 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync();});
   setInterval(()=>{if(!document.hidden)void sync();},30000);
   LT.Admin={sync,open:openConsole,get player(){return player;},get pending(){return pending;},
+    async tradeIdentity(){const current=await ensureIdentity();return {...current};},
+    async tradeRequest(path,options={}){
+      if(typeof path!=='string'||!/^\/trades(?:\/(?:active|join|[a-zA-Z0-9-]+)(?:\/(?:offer|confirm|cancel|ack))?)?$/.test(path))throw new Error('交換先の指定が正しくありません。');
+      await ensureIdentity();
+      return request(path,{method:options.method||'GET',...(options.body!==undefined?{body:options.body}:{})});
+    },
     async authorizeSecretEncounter(){
       await ensureIdentity();const epoch=identityEpoch,data=await request('/me?limit=1');
       if(epoch!==identityEpoch)throw staleIdentity();

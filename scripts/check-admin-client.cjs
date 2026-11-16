@@ -147,7 +147,7 @@ test('initial companion receipt survives reload only after its save succeeds',()
   }
   const engine=new ctx.LT.Engine();engine.newGame(ctx.LT.DATA.starters[0]);
   let failWrite=true,saved=null,writes=0,events=0;
-  Object.assign(ctx,{Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
+  Object.assign(ctx,{tradeLocked:()=>false,Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
     localStorage:{setItem:(key,value)=>{if(failWrite)throw Error('Storage full');saved=value;writes++;}},
     performance:{now:()=>100},updateAll(){},loadStored(){},
     CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},

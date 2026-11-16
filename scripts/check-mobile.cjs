@@ -92,6 +92,7 @@ function makeButton(dir) {
 const right = makeButton('right'), up = makeButton('up');
 const walked = [], modal = { open: false };
 const game = vm.createContext({
+  tradeLocked: () => false,
   window: { addEventListener: gameListen },
   document: { hidden: false, addEventListener: gameListen, querySelectorAll: () => [right, up] },
   $: () => modal, LT: { onlineActive: false }, engine: { battle: null }, playing: true,

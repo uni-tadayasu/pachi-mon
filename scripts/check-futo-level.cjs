@@ -96,12 +96,13 @@ if(duelScript){vm.runInContext(duelScript[2],context);assert.equal(context.LT.Du
 // receipt may commit before persistence succeeds, even when the API retries.
 const bridgeSource=html.slice(html.indexOf('  function persistGiftMutation('),html.indexOf('  resize();updateSound();loadStored();'));
 const persisted=new Map();let failStorage=true;
-const bridgeContext=vm.createContext({LT:{...context.LT},performance:{now:()=>123},
+const bridgeContext=vm.createContext({tradeLocked:()=>false,LT:{...context.LT},performance:{now:()=>123},
   localStorage:{getItem:key=>persisted.get(key)||null,setItem:(key,value)=>{if(failStorage)throw Error('Quota exceeded');persisted.set(key,value);}},
   document:{dispatchEvent(){}},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}}});
 vm.runInContext(`const Engine=LT.Engine;let engine=new Engine();engine.newGame(LT.DATA.starters[0]);
   let playing=true,busy=false,storedSave=null,lastSave=0;const SAVE_KEY='test-save';
-  function updateAll(){}function loadStored(){}function toast(){}
+  function updateAll(){}function loadStored(){}function toast(){}function rememberTradeSave(){}
+  ${html.slice(html.indexOf('  function commitTrade('),html.indexOf('  function showCredits()',html.indexOf('  function commitTrade(')))}
   ${bridgeSource}`,bridgeContext);
 const bridge=bridgeContext.LT.adminBridge;
 assert.equal(bridge.grantFuto(grant('persisted')).pending,true);

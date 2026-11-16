@@ -22,7 +22,8 @@ async function main(){
   assert.equal(api.fromEvent({kind:'damage',text:`敵の「${sample.name}」。30のダメージ。`,side:'enemy'},LT.DATA.moves.spark,100).style,'ice');
   assert.equal(api.fromEvent({kind:'miss',text:'攻撃は外れた。',side:'enemy'},null,100).style,'miss');
   assert.equal(api.fromEvent({kind:'heal',amount:0,side:'ally'},null,100),null);
-  assert.equal(api.fromEvent({kind:'switch',side:'ally'},null,100),null);
+  assert.equal(api.fromEvent({kind:'switch',side:'ally'},null,100).style,'arrival');
+  assert.equal(api.fromEvent({kind:'faint',side:'enemy'},null,100).style,'faint');
   assert.equal(api.fromEvent({kind:'damage',move:'spark',amount:34,critical:true,side:1,slot:1,target:1},null,100).amount,34);
   const a=api.anchors(1000,500,{side:1,slot:1,target:1,kind:'damage'},{online:true,double:true,side:1});
   assert.deepEqual(a.source,{x:470,y:375});assert.deepEqual(a.target,{x:820,y:185});

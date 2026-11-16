@@ -93,7 +93,7 @@ assert.deepEqual(copy(e.state.party.find(m=>m.uid===wildSaved.uid)),wildSaved);
 // state before it calls the engine, even if handed an otherwise valid owner.
 const start=html.indexOf('    startSecretEncounter:'),end=html.indexOf('    getPlayerName:',start);assert(start>0&&end>start);
 function bridge(overrides={}){
- const context=vm.createContext({engine:make(),playing:true,busy:false,LT:{onlineActive:false,Admin:{player:copy(owner)}},closed:0,opened:0,closeModal(){context.closed++;},openBattle(){context.opened++;},...overrides});
+ const context=vm.createContext({tradeLocked:()=>false,engine:make(),playing:true,busy:false,LT:{onlineActive:false,Admin:{player:copy(owner)}},closed:0,opened:0,closeModal(){context.closed++;},openBattle(){context.opened++;},...overrides});
  vm.runInContext('globalThis.bridge={'+html.slice(start,end)+'};',context);return context;
 }
 for(const override of [{playing:false},{busy:true},{LT:{onlineActive:true,Admin:{player:copy(owner)}}},{LT:{Admin:{player:{id:owner.id,isAdmin:false}}}},{LT:{Admin:{player:{id:'Paaaaaaaaaaaaaaaa',isAdmin:true}}}}]){

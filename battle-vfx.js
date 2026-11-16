@@ -59,6 +59,8 @@
     return event?.side==='enemy'||typeof event?.side==='number'?null:fallback;
   }
   function classify(move={},kind=move.kind) {
+    if(kind==='faint')return 'faint';
+    if(kind==='switch')return 'arrival';
     if(kind==='miss')return 'miss';
     if(kind==='capture'||kind==='caught'||kind==='resonate')return 'capture';
     if(move.id?.startsWith('arvelion_')&&direct[move.id]&&['attack','damage','boost','heal'].includes(kind))return direct[move.id];
@@ -82,17 +84,17 @@
     return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
   }
   function fromEvent(event,fallback=null,now=globalThis.performance?.now?.()||0) {
-    if(!event||!['damage','attack','heal','guard','boost','miss','capture','caught','resonate','recoil'].includes(event.kind))return null;
+    if(!event||!['damage','attack','heal','guard','boost','miss','capture','caught','resonate','recoil','faint','switch'].includes(event.kind))return null;
     if(event.kind==='heal' && (event.amount===0||/効果がなかった|満タン|満ちている/.test(event.text||'')))return null;
     if(event.kind==='boost' && event.changed===false)return null;
-    const move=resolveMove(event,fallback)||{element:event.element};
+    const move=['faint','switch'].includes(event.kind)?{element:event.element}:resolveMove(event,fallback)||{element:event.element};
     const style=classify(move,event.kind),large=(move.power||0)>=40;
     const amount=Number.isFinite(event.amount)?event.amount:Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||/(?:体力が|HPが)(\d+)/.exec(event.text||'')?.[1]||0);
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
       raised:event.raised,power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
       releaseAt:.14,impactAt:.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
       amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),
-      started:now,duration:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
+      started:now,duration:event.kind==='faint'?950:event.kind==='switch'?650:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
       seed:hash((move.id||event.text||style)+':'+(event.side??'ally')+':'+(event.slot||0))};
   }
   function anchors(width,height,e,options={}) {
@@ -102,7 +104,7 @@
       return {x:width*(doubled?(ours?(slot===1?.47:.19):(slot===1?.82:.57)):(ours?.28:.73)),
         y:height*(doubled?(ours?.75:.37):(ours?.71:.42))};
     }
-    const source=at(own,e.slot),self=['heal','guard','boost','recoil'].includes(e.kind);
+    const source=at(own,e.slot),self=['heal','guard','boost','recoil','faint','switch'].includes(e.kind);
     return {source,target:self?source:at(!own,e.target),own};
   }
   function motionReduced(options) {
@@ -242,6 +244,25 @@
       ellipse(source.x,source.y,23*s*charge,14*s*charge,p[1],1,charge*.65);
     }
     switch(e.style) {
+      case 'faint': {
+        const outward=ease(t),alpha=1-smooth(phase(t,.32,1));
+        ellipse(cx,cy+38*s,(22+outward*45)*s,(7+outward*11)*s,p[1],2,alpha*.7);
+        for(let i=0;i<(low?8:14);i++){
+          const a=TAU*i/(low?8:14),r=(12+outward*(24+random(seed,i)*26))*s;
+          mote(cx+Math.cos(a)*r,cy+18*s+Math.sin(a)*r*.4-outward*34*s,(2+random(seed,i+20)*2)*s,p[i%3],alpha);
+        }
+        break;
+      }
+      case 'arrival': {
+        const expand=ease(t),alpha=Math.sin(t*Math.PI);
+        glow(cx,cy,45*s,alpha*.35);
+        ellipse(cx,cy+38*s,(12+expand*46)*s,(5+expand*14)*s,p[1],2,alpha);
+        for(let i=0;i<(low?6:10);i++){
+          const a=TAU*i/(low?6:10),r=(12+expand*42)*s;
+          star(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.7,3*s,p[3],a,alpha);
+        }
+        break;
+      }
       case 'astral-rend': {
         // Keep the stable choreography key while showing three golden flame
         // talons: tapered trails with rising embers and a single impact bloom.
@@ -658,16 +679,42 @@
     c.restore();return true;
   }
 
-  // Observer state is separate from game snapshots and never enters battle checksums.
-  let onlineKey=null,onlineQueue=[],lastOnlineTime=0;
+  // Playback snapshots remain separate from gameplay state. The event visuals
+  // contain only team data, so they cannot recursively include their own queue.
+  let onlineKey=null,onlineSeed=null,onlineQueue=[],lastOnlineTime=0,onlineEnd=0;
   function queueOnline(state,now) {
-    const events=state?.events||[],key=JSON.stringify([state?.seed,state?.turn,state?.winner,events]);
+    const events=state?.events||[],key=JSON.stringify([state?.seed,state?.round,state?.turn,state?.winner,events.map(item=>[item.kind,item.side,item.slot,item.index,item.move,item.text])]);
     if(key===onlineKey)return;
-    onlineKey=key;onlineQueue=[];
-    let start=now;
-    for(const item of events){const e=fromEvent(item,null,start);if(!e)continue;onlineQueue.push(e);start+=e.duration+35;}
-    // Current engine emits at most 8 technique/drain events for a doubles turn.
-    onlineQueue=onlineQueue.slice(0,12);lastOnlineTime=now;
+    const continuing=onlineSeed===state?.seed&&now<onlineEnd;
+    onlineKey=key;onlineSeed=state?.seed;
+    if(!continuing){onlineQueue=[];onlineEnd=now;}
+    let start=continuing?onlineEnd:now,previous=events.find(item=>item.visual?.teams)?.visual||{teams:state?.teams};
+    const reduced=motionReduced(settings());
+    for(const item of events){
+      const after=item.visual?.teams?item.visual:previous,e=fromEvent(item,null,start);
+      if(e){
+        if(reduced)e.duration=Math.min(e.duration,180);
+        e.before=previous;e.after=after;onlineQueue.push(e);start+=e.duration+75;
+      }
+      previous=after;
+    }
+    onlineEnd=onlineQueue.length?start+180:now;lastOnlineTime=now;
+  }
+  function onlineBusy(state,now=globalThis.performance?.now?.()||0){
+    if(!state?.teams)return false;
+    queueOnline(state,now);return now<onlineEnd;
+  }
+  function onlineFrame(state,now){
+    queueOnline(state,now);
+    while(onlineQueue.length&&now>=onlineQueue[0].started+onlineQueue[0].duration+75)onlineQueue.shift();
+    return onlineQueue[0];
+  }
+  function onlineView(state,now=globalThis.performance?.now?.()||0){
+    if(!state?.teams)return state;
+    const e=onlineFrame(state,now);
+    if(!e)return state;
+    const visual=e.kind==='switch'||now>=e.started+e.duration?e.after:e.before;
+    return visual?.teams?{...state,teams:visual.teams}:state;
   }
   function settings() {
     let value={};try{value=JSON.parse(globalThis.localStorage?.getItem('lumina-trail-settings-v1')||'{}');}catch(_){}
@@ -684,26 +731,23 @@
     LT.PixelSprites.duel=function(canvas,value,side=0,time=0) {
       const state=value?.state||value;
       if(!canvas||!state?.teams)return duel(canvas,value,side,time);
-      if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;}
-      if(time)queueOnline(state,time);
-      while(onlineQueue.length&&time>onlineQueue[0].started+onlineQueue[0].duration)onlineQueue.shift();
-      const e=onlineQueue[0],options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
-      duel(canvas,value,side,time,options);
+      if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;onlineSeed=null;onlineEnd=0;}
+      const e=time?onlineFrame(state,time):undefined,shown=time?onlineView(state,time):state;
+      const options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
+      duel(canvas,shown,side,time,options);
       if(e&&time>=e.started&&!e.soundPlayed){
-        // Sound follows the event that actually becomes visible. Mark it in
-        // observer-only queue state, never in the synchronized duel snapshot.
         e.soundPlayed=true;
         const move=LT.DATA?.moves?.[e.move];
         if(move&&typeof LT.playMoveSound==='function'){
-          try{LT.playMoveSound(move,e);}catch(_){} // audio must never stop battle drawing
+          try{LT.playMoveSound(move,e);}catch(_){}
         }
       }
       if(e&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,e,options);
     };
-    globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineQueue=[];}});
+    globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,palettes,budgets,styles:[...new Set([...Object.values(direct),...Object.values(atlas).flat(),'healing','shield','capture','miss'])]};
+  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,palettes,budgets,styles:[...new Set([...Object.values(direct),...Object.values(atlas).flat(),'healing','shield','capture','miss','faint','arrival'])]};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();
