@@ -1,0 +1,50 @@
+/* Pachi Monsters — an intentional operator-only secret, not a security bypass. */
+(() => {
+  'use strict';
+  const LT=globalThis.LT;if(!LT?.DATA)return;
+  let taps=0,lastTap=0,dialog=null,working=false;
+  const notify=message=>LT.adminBridge?.toast?.(message);
+  async function authorize(){
+    if(typeof LT.Admin?.authorizeSecretEncounter!=='function')throw Error('運営確認を読み込めません。再読み込みしてください。');
+    const owner=await LT.Admin.authorizeSecretEncounter();
+    if(owner?.isAdmin!==true||!/^P[0-9a-f]{16}$/.test(owner.id||''))throw Error('運営専用の裏技です。');
+    return owner;
+  }
+  async function open(){
+    if(working)return;working=true;
+    try{
+      await authorize();
+      if(!LT.adminBridge?.isPlaying?.())throw Error('冒険を再開してから使ってください。');
+      if(!dialog){
+        dialog=document.createElement('dialog');dialog.className='pachi-console';dialog.setAttribute('aria-labelledby','secret-title');
+        dialog.innerHTML='<header class="pachi-console-head"><h2 id="secret-title">裏技・幻の草むら</h2><button type="button" class="btn" data-secret-close>閉じる</button></header><div class="pachi-console-body"><p>全パチモンから1体を選んで野生バトルへ。パチカプセル1個で必ず仲間になります。カプセルがない場合は1個補充します。</p><form id="secret-form"><label for="secret-species">出現させるパチモン</label><select id="secret-species" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"></select><label for="secret-level">レベル（1〜100）</label><input id="secret-level" type="number" min="1" max="100" step="1" value="70" inputmode="numeric" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"><button type="submit" class="btn btn-primary">野生で出現させる</button><p id="secret-status" role="status"></p></form><small>運営専用。通常の出現率・一般プレイヤーの入手範囲は変わりません。</small></div>';
+        const select=dialog.querySelector('#secret-species');
+        for(const species of Object.values(LT.DATA.species)){
+          const option=document.createElement('option');option.value=species.id;option.textContent=species.name+' / '+LT.DATA.elements[species.element].name;select.append(option);
+        }
+        document.body.append(dialog);
+        dialog.querySelector('[data-secret-close]').onclick=()=>{if(!working)dialog.close();};
+        dialog.addEventListener('cancel',event=>{if(working)event.preventDefault();});
+        dialog.querySelector('#secret-form').onsubmit=async event=>{
+          event.preventDefault();if(working)return;
+          const level=Number(dialog.querySelector('#secret-level').value),species=select.value,status=dialog.querySelector('#secret-status'),button=dialog.querySelector('[type="submit"]');
+          if(!Number.isInteger(level)||level<1||level>100){status.textContent='レベルは1〜100の整数で入力してください。';return;}
+          working=true;button.disabled=true;status.textContent='運営権限を確認しています…';
+          try{
+            const owner=await authorize();
+            const result=LT.adminBridge.startSecretEncounter(species,level,owner);
+            if(!result?.ok)throw Error(result?.message||'出現できませんでした。');
+            dialog.close();
+            for(const pane of document.querySelectorAll('dialog.pachi-console[open]'))pane.close();
+          }catch(error){status.textContent=error.message;}finally{working=false;button.disabled=false;}
+        };
+      }
+      dialog.querySelector('#secret-status').textContent='';if(!dialog.open)dialog.showModal();
+    }catch(error){notify(error.message);}finally{working=false;}
+  }
+  document.addEventListener('click',event=>{
+    if(!event.target.closest?.('#pachi-console-title'))return;
+    const now=Date.now();taps=now-lastTap<2500?taps+1:1;lastTap=now;
+    if(taps===7){taps=0;void open();}
+  });
+})();

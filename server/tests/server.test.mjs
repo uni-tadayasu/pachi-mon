@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import worker, {DEFAULT_CONFIG, validateConfig} from '../server.mjs';
+import worker, {DEFAULT_CONFIG, MYTHICAL_CONFIG, validateConfig} from '../server.mjs';
 
 class LocalD1 {
   constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON;'); this.sqlite.exec(readFileSync(new URL('../drizzle/0000_admin.sql', import.meta.url), 'utf8')); }
@@ -110,7 +110,7 @@ test('registration is idempotent and only hashed tokens are stored', async () =>
   assert.equal((await call('/api/register', {method:'POST', body:{token:'weak', name:'x'}})).status, 400);
 });
 
-const legendaryEntitlement = player => [{grantId:`admin-legendary:${player.id}`, species:'arvelion', level:70}];
+const legendaryEntitlement = player => [{grantId:`admin-legendary:${player.id}`, species:'arvelion', level:70},{grantId:`admin-mythical:${player.id}`,species:'floravelle',level:70}];
 
 test('only the current administrator receives a stable initial legendary companion, without creating gifts', async () => {
   const {call, register, env} = setup();
@@ -166,8 +166,8 @@ test('legendary initial companions cannot be distributed to another player or al
   const {call, admin, register, env} = setup();
   const owner = await admin(), recipient = await register();
   const countBefore = env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants').get().n;
-  for (const target of [recipient.id, 'all', 'self']) {
-    const result = await call('/api/admin/grants', {method:'POST', token:owner.token, body:{requestId:crypto.randomUUID(), target, species:'arvelion'}});
+  for (const target of [recipient.id, 'all', 'self']) for(const species of ['arvelion','floravelle']) {
+    const result = await call('/api/admin/grants', {method:'POST', token:owner.token, body:{requestId:crypto.randomUUID(), target, species}});
     assert.equal(result.status, 400);
     assert.equal(result.error.code, 'SPECIES_NOT_DISTRIBUTABLE');
   }
@@ -543,4 +543,22 @@ for (const operation of ['config', 'grants']) test(`a former administrator canno
   assert.equal((await pending).status, 403);
   assert.equal(JSON.parse(env.DB.sqlite.prepare('SELECT config_json FROM futo_config').get().config_json).stats.hp, DEFAULT_CONFIG.stats.hp);
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grant_batches WHERE id = ?').get(requestId).n, 0);
+});
+
+
+test('mythical proof is owner-only, fixed, session-bound and revoked on ownership transfer', async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),other=await register();
+  const sessionId='c'.repeat(32),side=0,grantId=`admin-mythical:${owner.id}`;
+  const issued=await call('/api/duel-pass',{method:'POST',token:owner.token,body:{sessionId,side,grantId,config:changedConfig()}});
+  assert.equal(issued.status,200);
+  const verified=await call('/api/duel-pass/verify',{method:'POST',body:{sessionId,side,pass:issued.pass}});
+  assert.equal(verified.status,200);assert.equal(verified.species,'floravelle');assert.equal(verified.level,50);
+  assert.deepEqual(verified.stats,MYTHICAL_CONFIG.stats);assert.deepEqual(verified.moves,MYTHICAL_CONFIG.moves);
+  for(const id of [grantId,`admin-mythical:${other.id}`])assert.equal((await call('/api/duel-pass',{method:'POST',token:other.token,body:{sessionId,side,grantId:id}})).status,403);
+  for(const extra of [{sessionId:'d'.repeat(32)},{side:1},{pass:issued.pass.slice(0,-4)+'AAAA'}])assert.equal((await call('/api/duel-pass/verify',{method:'POST',body:{sessionId,side,pass:issued.pass,...extra}})).status,403);
+  enableRecovery(env,owner);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:other.token,origin:RECOVERY_ORIGIN,body:{key:SECRET}})).status,200);
+  assert.equal((await call('/api/duel-pass/verify',{method:'POST',body:{sessionId,side,pass:issued.pass}})).status,403,'An old owner proof is invalid immediately on verification');
+  assert.equal((await call('/api/duel-pass',{method:'POST',token:owner.token,body:{sessionId,side,grantId}})).status,403);
+  assert.equal((await call('/api/duel-pass',{method:'POST',token:other.token,body:{sessionId,side,grantId:`admin-mythical:${other.id}`}})).status,200);
 });

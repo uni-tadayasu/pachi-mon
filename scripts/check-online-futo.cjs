@@ -18,7 +18,7 @@ function setup() {
     setTimeout(fn, ms) { const id = setTimeout(fn, ms); id.unref(); timers.add(id); return id; },
     clearTimeout(id) { timers.delete(id); clearTimeout(id); },
   });
-  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas', 'two-stage starter lineages, retaining every existing species ID', 'Arvelion, the original roaming legendary']) vm.runInContext(select(marker), context);
+  for (const marker of ['original world and game data', 'Original creature atlas and optional journeys', 'the Meridian Accord, an original 256-species atlas', 'two-stage starter lineages, retaining every existing species ID', 'Arvelion, the original roaming legendary', 'owner-only leaf mythical, outside all ordinary acquisition pools']) vm.runInContext(select(marker), context);
   // Special species registration precedes the starter-final-form extension.
   vm.runInContext(select('deterministic combat, interiors, league and versioned saves'), context);
   assert(context.LT.DATA.species.futo, 'Futo production species must exist');
@@ -38,7 +38,8 @@ function setup() {
       issueCount++;
       if (failure) throw Error(failure);
       const pass = `pass-${side}-${sessionId}-${String(issueCount).padStart(16, '0')}`;
-      passes.set(pass, { ok: true, grantId, species: 'futo', level: 88, stats: custom, moves, sessionId, side, expiresAt: Date.now() + expiry });
+      const mythical=grantId.startsWith('admin-mythical:');
+      passes.set(pass, { ok: true, grantId, species: mythical?'floravelle':'futo', level: mythical?50:88, stats: mythical?new LT.Engine().stats({species:'floravelle',level:50}):custom, moves: mythical?LT.DATA.species.floravelle.moves:moves, sessionId, side, expiresAt: Date.now() + expiry });
       return { ok: true, pass };
     },
     async verifyDuelPass(sessionId, pass, side) {
@@ -272,7 +273,40 @@ async function combatScenarios(env) {
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, stats: { ...custom, hp: Infinity } }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, moves: ['missing', ...moves.slice(1)] }, 's', 0));
     assert.throws(() => LT.OnlineFuto.validateSnapshot({ ...validSnapshot, level: 101 }, 's', 0));
+    // Owner-only mythical proof coexists with Futo, including both active doubles slots.
+    const noMyth=env.pair();await noMyth.start();
+    for(const ids of ['floravelle',{},null,42])assert.equal(noMyth.sessions[0]._validTeam({name:'Malformed',ids}),false);
+    assert(!LT.OnlineFuto.rosterIds(normal).includes('floravelle'));
+    assert(!(await noMyth.sessions[0].setTeam({name:'No mythical',ids:['floravelle',...normal.slice(0,2)]})).ok);noMyth.close();
+    state.storage.push({species:'floravelle',grantId:'admin-mythical:owner-test',level:100,nickname:'はな',shiny:false});
+    const mythSaved=JSON.stringify(state);
+    assert(LT.OnlineFuto.rosterIds(normal).includes('floravelle'));
+    for(const mode of ['single','double']){
+      const myth=env.pair(mode);await myth.start();
+      assert((await myth.sessions[0].setTeam({name:'Owner',ids:['floravelle','futo',...normal.slice(0,mode==='single'?1:2)]})).ok);
+      assert((await myth.sessions[1].setTeam({name:'Visitor',ids:normal.slice(4,mode==='single'?7:8)})).ok);
+      await myth.flush();assert(myth.sessions.every(s=>s.snapshot().phase==='choosing'));
+      const d=myth.sessions[0].duel,m=d.state.teams[0].monsters[0];
+      assert.equal(m.species,'floravelle');assert.equal(m.level,50);assert.equal(m.nickname,'はな');
+      assert.deepEqual(JSON.parse(JSON.stringify(m.stats)),JSON.parse(JSON.stringify(new LT.Engine().stats({species:'floravelle',level:50}))));
+      assert.equal(d.state.teams[0].monsters[1].species,'futo');
+      assert.deepEqual(JSON.parse(JSON.stringify(d.moves(m).map(x=>x.id))),JSON.parse(JSON.stringify(LT.DATA.species.floravelle.moves)));
+      await Promise.all(myth.sessions.map(s=>s.submit(s.duel.legalOrders(s.role))));await myth.flush();
+      assert.equal(d.fingerprint(),myth.sessions[1].duel.fingerprint());myth.close();
+    }
+    assert.equal(JSON.stringify(state),mythSaved);
+    // A forged local save is only a roster hint; the real service can still deny it.
+    env.setFailure('Not current owner');const denied=env.pair();await denied.start();
+    assert(!(await denied.sessions[0].setTeam({name:'Forged owner',ids:['floravelle',...normal.slice(0,2)]})).ok);assert.equal(denied.sessions[0].duel,null);denied.close();env.setFailure('');
+    const forgedMyth=env.pair();await forgedMyth.start();
+    await forgedMyth.sessions[1].receive({v:1,t:'ready',session:forgedMyth.sessions[1].sessionId,team:{name:'Forged mythical',ids:['floravelle',...normal.slice(0,2)],mythical:{pass:'forged-'.repeat(12)}}});
+    assert.equal(forgedMyth.sessions[1].snapshot().phase,'error');forgedMyth.close();
+    const mythSnapshot={...validSnapshot,species:'floravelle',grantId:'admin-mythical:test',level:50,stats:new LT.Engine().stats({species:'floravelle',level:50}),moves:LT.DATA.species.floravelle.moves};
+    assert.throws(()=>LT.OnlineFuto.validateSnapshot({...mythSnapshot,stats:{...mythSnapshot.stats,hp:9999}},'s',0,Date.now(),'floravelle'));
+    assert.throws(()=>LT.OnlineFuto.validateSnapshot({...mythSnapshot,moves:LT.DATA.species.futo.moves},'s',0,Date.now(),'floravelle'));
+    assert.throws(()=>LT.OnlineFuto.validateSnapshot({...mythSnapshot,level:100},'s',0,Date.now(),'floravelle'));
+    state.storage=[];
     const combat = await combatScenarios(env);
-    console.log(JSON.stringify({ ok: true, combat, scenarios: ['normal rental stats unchanged, owned cosmetics retained', 'legendary requires current local ownership and uses Lv50 fixed rules', 'opponents can face owned legendary without owning it', 'invalid cosmetic metadata denied', 'local growth cannot override signed Futo', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
+    console.log(JSON.stringify({ ok: true, combat, scenarios: ['mythical + Futo single/double verified teams and deterministic combat', 'forged mythical ownership, proof and snapshot denied', 'normal rental stats unchanged, owned cosmetics retained', 'legendary requires current local ownership and uses Lv50 fixed rules', 'opponents can face owned legendary without owning it', 'invalid cosmetic metadata denied', 'local growth cannot override signed Futo', 'verified Futo level/stats/moves', 'identical deterministic turn', 'no save mutation', 'unowned denied', 'forged denied', 'side reflection denied', 'expired denied', 'invalid snapshot denied'], counts: env.counts }, null, 2));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

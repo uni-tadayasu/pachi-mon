@@ -8,7 +8,7 @@ function runtime({automatic=false}={}){
  for(let i=0;i<32;i++){
   const id=`species${i}`;species[id]={id};entries[id]={file:`assets/sheet-${Math.floor(i/2)}.webp`,size:[512,512],front:[16,24,100,120],back:[240,32,130,140],frontDirection:-1,backDirection:1};
  }
- for(const id of ['futo','arvelion']){species[id]={id};entries[id]=entries.species0;}
+ for(const id of ['futo','arvelion','floravelle']){species[id]={id};entries[id]=entries.species0;}
  const fallback={fallback:true},art={spriteSize:320,get:(...args)=>{legacyCalls.push(args);return fallback;},
   preload:async ids=>ids.map(()=>true),orientation:()=>({direction:1,source:'legacy',authoredBack:false,stage:0}),
   status:()=>({loaded:4}),lineage:()=>({stage:1}),clearCache(){},alternate:(base,id)=>({shiny:true,base,id})};
@@ -68,14 +68,14 @@ async function main(){
  const front=art.get('species0'),back=art.get('species0',true);
  assert.notEqual(front,stalled.fallback);assert.notEqual(front,back);
  assert.equal(art.orientation('species0').direction,-1);assert.equal(art.orientation('species0',true).direction,1);
- assert.deepEqual(Array.from(stalled.events[0].speciesIds).filter(id=>!['futo','arvelion'].includes(id)),['species0','species1']);
+ assert.deepEqual(Array.from(stalled.events[0].speciesIds).filter(id=>!['futo','arvelion','floravelle'].includes(id)),['species0','species1']);
  assert.equal(front.calls[0][1],16);assert.equal(back.calls[0][1],240,'Rear view borrowed the front cell');
  const shiny=art.get('species0',false,{shiny:true});assert.equal(shiny.base,front);assert(shiny.shiny);
  images[1].fail();images[2].succeed();
  for(let i=0;i<10;i++){assert.equal(art.get('species2'),stalled.fallback);await api.preload('species2');}
  assert.equal(images.length,3,'Failed assets were retried on every paint');
  assert.equal(api.status().failed,1);assert.equal(api.status().peakActive,2);assert.equal(api.status().active,0);
- assert.equal(art.get('futo',true),stalled.fallback);assert.equal(art.get('arvelion'),stalled.fallback);
+ assert.equal(art.get('futo',true),stalled.fallback);assert.equal(art.get('arvelion'),stalled.fallback);assert.equal(art.get('floravelle',true),stalled.fallback);
  assert.equal(images.length,3,'Special species requested ordinary artwork');
  stalled.advance(29999);art.get('species2');assert.equal(images.length,3,'Failure cooldown ended early');
  stalled.advance(1);art.get('species2');assert.equal(images.length,4,'A temporary failure remained pinned after cooldown');

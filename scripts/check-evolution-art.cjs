@@ -131,11 +131,11 @@ async function main() {
   const run = await runtime(), { LT } = run, art = LT.CreatureArt;
   const species = Object.values(LT.DATA.species);
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
-  // The two special monsters have their own authored art and dedicated tests;
+  // The special monsters have their own authored art and dedicated tests;
   // retain the exact snapshot of the 130 unchanged normal roots/singles.
-  const unchanged = species.filter(s => !children.has(s.id)&&!['arvelion','futo'].includes(s.id));
+  const unchanged = species.filter(s => !children.has(s.id)&&!['arvelion','futo','floravelle'].includes(s.id));
   const evolved = species.filter(s => children.has(s.id));
-  assert.equal(species.length, 261);
+  assert.equal(species.length, 262);
   assert.equal(evolved.length, 129);
   assert.equal(unchanged.length, 130);
   assert(art.status().arvelionLoaded,'Original legendary atlas did not load');

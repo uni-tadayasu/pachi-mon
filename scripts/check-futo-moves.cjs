@@ -19,7 +19,8 @@ function fight(foeStats={}){
   return {e,ally:e.state.party[0],enemy:e.battle.enemy};
 }
 function cast(e,attacker,target,id,side='ally'){const events=[];e.applyMove(attacker,target,D.moves[id],side,events);return events;}
-assert.equal(D.content.moves,108);assert.equal(Object.keys(D.moves).length,108);
+// The full production catalog includes the four owner-only mythical moves.
+assert.equal(Object.keys(D.moves).length,112);assert.equal(D.content.moves,Object.keys(D.moves).length);
 assert.deepEqual(plain(D.species.futo.moves),defaults);
 assert.deepEqual(plain(FutoRules.defaultMoves),defaults);
 const values=defaults.map(id=>D.moves[id]);

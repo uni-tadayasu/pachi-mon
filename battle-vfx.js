@@ -16,6 +16,7 @@
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff']
   };
   const direct = {
+    verdant_lance:'beam',root_drain:'roots',forest_crown:'ascension',genesis_bloom:'healing',
     sprout:'seed', vine:'petals', lifeline:'roots', evergreen:'roots', thorn:'roots',
     wave:'water-orbs', surge:'wave', riptide:'wave', ripple:'ripples', frost:'ice',
     spark:'flame', blaze:'fire-vortex', sunburst:'sunburst', cinder:'fire-lance',
@@ -648,7 +649,7 @@
       if(e.critical&&t>.4){ellipse(cx,cy,95*s*burst,60*s*burst,p[3],3,hitAlpha*.6);}
     }
     // Damage labels are intentionally localized to their target, not screen-sized flashes.
-    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(e.move==='arvelion_crown'?(e.raised===false?'護炎':'全能力↑・護炎'):e.move==='futo_ascend'?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
+    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(e.move==='arvelion_crown'?(e.raised===false?'護炎':'全能力↑・護炎'):e.move==='forest_crown'?(e.raised===false?'葉の結界':'全能力↑・結界'):e.move==='futo_ascend'?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
     if(label&&t>.42){const alpha=smooth(phase(t,.42,.53))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
       c.font=`900 ${Math.max(13,Math.round((e.critical?27:23)*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle='#19253d';
       c.fillStyle=e.kind==='heal'?'#d5ffad':e.kind==='miss'?'#e5e9f1':e.critical?'#ffe09c':'#ffffff';
