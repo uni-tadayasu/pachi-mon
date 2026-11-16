@@ -79,14 +79,17 @@ e.state.storage.pop();assert.equal(e.grantFuto(grant('full')).ok,true);
 const empty=new Engine();assert.equal(empty.grantFuto(grant('not-started')).pending,true);
 
 // The gift uses configured battle strength, rather than the shared template.
-e=engine();e.grantFuto(grant('combat',{level:50}));m=e.state.party[1];e.rng=()=>.5;
+e=engine();const questBeforeGift=e.quests().find(q=>q.id==='all-voices');
+e.grantFuto(grant('combat',{level:50}));m=e.state.party[1];e.rng=()=>.5;
 const defender=e.makeMonster(D.starters[0],100);defender.hp=100000;
 e.battle={healCooldown:{ally:0,enemy:0},log:[]};
 e.applyMove(m,defender,D.moves.supernova,'ally',[]);const strong=100000-defender.hp;
 m.customStats.spAtk=1;defender.hp=100000;
 e.applyMove(m,defender,D.moves.supernova,'ally',[]);const weak=100000-defender.hp;
 assert(strong>weak*2,'Configured special attack must affect actual damage');
-const quest=e.quests().find(q=>q.id==='all-voices');assert.equal(quest.target,260);assert.equal(quest.progress,1);
+// A special gift must not change the attainable collection or its progress.
+const quest=e.quests().find(q=>q.id==='all-voices');
+assert.equal(quest.target,questBeforeGift.target);assert.equal(quest.progress,questBeforeGift.progress);assert.equal(quest.progress,1);
 const duelScript=scripts.find(s=>s[2].includes('class Duel {'));
 if(duelScript){vm.runInContext(duelScript[2],context);assert.equal(context.LT.Duel.validateTeam(['futo',...D.starters.slice(0,2)],'single').ok,false);}
 // Exercise the real browser bridge with failing storage: no in-memory grant or

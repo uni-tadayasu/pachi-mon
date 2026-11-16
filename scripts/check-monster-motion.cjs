@@ -7,11 +7,11 @@ async function main(){
  const byShape=new Map();
  for(const s of Object.values(LT.DATA.species)){const family=LT.CreatureArt.lineage(s.id);if(!byShape.has(family.shape))byShape.set(family.shape,s.id);}
  const ids=[...new Set([...byShape.values(),'futo','arvelion','komorion','saikaju'])];
- await LT.CreatureArt.preload(ids,{back:'both'});
  const before=JSON.stringify(engine.state),profiles=new Set();let views=0;
  const cv=canvas.createCanvas(200,200);
  function frame(id,options){LT.Art.creature(cv,id,options);return imageStats(cv);}
  for(const id of ids){
+  await LT.CreatureArt.preload([id],{back:'both'});
   profiles.add(LT.PixelSprites.motionProfile(id));
   for(const back of [false,true]){
    const normal=frame(id,{back,time:0}),shiny=frame(id,{back,time:0,shiny:true});
