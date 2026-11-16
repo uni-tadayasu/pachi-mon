@@ -62,7 +62,7 @@ actor.hp=1;const enemy=d.active(1)[0],hp=enemy.hp;apply(ids[3]);assert.equal(act
 const start=html.indexOf('  function persistGiftMutation(method,...args){'),end=html.indexOf('  LT.playMoveSound=',start);
 for(const playing of [true,false]){
  const source=make(),original=JSON.stringify(source.state);let failWrite=true,writes=0,stored;
- const bridge=vm.createContext({Engine,engine:source,playing,busy:false,storedSave:copy(source.state),SAVE_KEY:'mythical-save',lastSave:0,performance:{now:()=>1},updateAll(){},loadStored(){},localStorage:{setItem(key,value){if(failWrite)throw Error('Storage full');writes++;stored=JSON.parse(value);}},CustomEvent:class{},document:{dispatchEvent(){}}});
+ const bridge=vm.createContext({tradeLocked:()=>false,Engine,engine:source,playing,busy:false,storedSave:copy(source.state),SAVE_KEY:'mythical-save',lastSave:0,performance:{now:()=>1},updateAll(){},loadStored(){},localStorage:{setItem(key,value){if(failWrite)throw Error('Storage full');writes++;stored=JSON.parse(value);}},CustomEvent:class{},document:{dispatchEvent(){}}});
  vm.runInContext(html.slice(start,end),bridge);
  assert(bridge.persistGiftMutation('receiveAdminMythical',grant).pending);assert.equal(JSON.stringify(source.state),original);assert.equal(writes,0);
  failWrite=false;assert(bridge.persistGiftMutation('receiveAdminMythical',grant).ok);assert.equal(writes,1);assert(stored.giftReceipts.includes(grant.grantId));

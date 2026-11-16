@@ -6,7 +6,7 @@ const model=vm.createContext({console});
 for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(script[1]))continue;vm.runInContext(script[2],model);if(model.LT?.Engine)break;}
 const {Engine,DATA}=model.LT,engine=new Engine();engine.newGame(DATA.starters[0],'female');engine.state.party[0].shiny=true;
 let writes=0,failWrite=false;const elements=new Map();
-const c=vm.createContext({console,Engine,DATA,LT:{...model.LT,onlineActive:false,CreatureArt:{supportsBack:()=>true}},engine,playing:true,storedSave:null,lastSave:0,lastPortraitFrame:0,selectedAvatar:'male',selectedPlayerName:'プレイヤー',settings:{reducedMotion:false},performance:{now:()=>123},SAVE_KEY:'test',
+const c=vm.createContext({tradeLocked:()=>false,console,Engine,DATA,LT:{...model.LT,onlineActive:false,CreatureArt:{supportsBack:()=>true}},engine,playing:true,storedSave:null,lastSave:0,lastPortraitFrame:0,selectedAvatar:'male',selectedPlayerName:'プレイヤー',settings:{reducedMotion:false},performance:{now:()=>123},SAVE_KEY:'test',
  document:{querySelectorAll:()=>[]},Art:{},escape:value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),
  $:id=>elements.get(id),typeBadge:()=>'',creatureDescription:species=>species.description,
  showParty:index=>{c.returned=index;},updateAll:()=>{},toast:message=>{c.toast=message;},

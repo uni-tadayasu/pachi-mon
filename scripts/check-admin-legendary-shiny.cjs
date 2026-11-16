@@ -85,7 +85,7 @@ assert(bridgeStart>0&&bridgeEnd>bridgeStart);
 for(const playing of [true,false]){
   const {e:source}=legacy('storage'),original=JSON.stringify(source.state),stored=copy(source.state);
   let failWrite=true,writes=0,events=0,saved=null;
-  const bridge=vm.createContext({Engine,engine:source,playing,busy:false,storedSave:stored,SAVE_KEY:'shiny-save',lastSave:0,
+  const bridge=vm.createContext({tradeLocked:()=>false,Engine,engine:source,playing,busy:false,storedSave:stored,SAVE_KEY:'shiny-save',lastSave:0,
     performance:{now:()=>100},updateAll(){},loadStored(){},
     localStorage:{setItem(key,value){if(failWrite)throw Error('Storage full');writes++;saved=value;}},
     CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},

@@ -144,7 +144,8 @@ async function combatScenarios(env) {
   assert(Object.values(duel.state.teams[0].monsters[1].stages).every(v=>v===0),'Switching in starts neutral');
   [actor,target]=reset();for(const key of Object.keys(target.stages))target.stages[key]=2;target.hp=1;apply('futo_breaker');
   assert.equal(target.hp,0);assert(Object.values(target.stages).every(v=>v===0),'Fainting clears stages immediately');
-  duel._replaceFainted();assert.notEqual(duel.state.teams[1].active[0],0);
+  duel._replaceFainted();assert.equal(duel.state.teams[1].active[0],0);assert.equal(duel.state.phase,'replacement');
+  duel.resolve([[],[{type:'switch',slot:0,index:2}]]);assert.equal(duel.state.teams[1].active[0],2);
   assert(Object.values(duel.state.teams[1].monsters[duel.state.teams[1].active[0]].stages).every(v=>v===0));
 
   [actor,target]=reset();actor.hp=100;apply('futo_restore');
@@ -253,13 +254,13 @@ async function combatScenarios(env) {
     unauth.close(); state.party = JSON.parse(savedState).party;
 
     const spoof = env.pair(); await spoof.start();
-    await spoof.sessions[1].receive({ v: 1, t: 'ready', session: spoof.sessions[1].sessionId,
+    await spoof.sessions[1].receive({ v: LT.DuelSession.VERSION, t: 'ready', session: spoof.sessions[1].sessionId,
       team: { name: 'Forged', ids: ['futo', ...normal.slice(0, 2)], futo: { pass: 'forged-'.repeat(12) } } });
     assert.equal(spoof.sessions[1].snapshot().phase, 'error'); spoof.close();
 
     const reflected = env.pair(); await reflected.start();
     const issued = await LT.Admin.requestDuelPass(reflected.sessions[0].sessionId, 'gift-test-001', 0);
-    await reflected.sessions[0].receive({ v: 1, t: 'ready', session: reflected.sessions[0].sessionId,
+    await reflected.sessions[0].receive({ v: LT.DuelSession.VERSION, t: 'ready', session: reflected.sessions[0].sessionId,
       team: { name: 'Reflected', ids: ['futo', ...normal.slice(0, 2)], futo: { pass: issued.pass } } });
     assert.equal(reflected.sessions[0].snapshot().phase, 'error'); reflected.close();
 
@@ -299,7 +300,7 @@ async function combatScenarios(env) {
     env.setFailure('Not current owner');const denied=env.pair();await denied.start();
     assert(!(await denied.sessions[0].setTeam({name:'Forged owner',ids:['floravelle',...normal.slice(0,2)]})).ok);assert.equal(denied.sessions[0].duel,null);denied.close();env.setFailure('');
     const forgedMyth=env.pair();await forgedMyth.start();
-    await forgedMyth.sessions[1].receive({v:1,t:'ready',session:forgedMyth.sessions[1].sessionId,team:{name:'Forged mythical',ids:['floravelle',...normal.slice(0,2)],mythical:{pass:'forged-'.repeat(12)}}});
+    await forgedMyth.sessions[1].receive({v:LT.DuelSession.VERSION,t:'ready',session:forgedMyth.sessions[1].sessionId,team:{name:'Forged mythical',ids:['floravelle',...normal.slice(0,2)],mythical:{pass:'forged-'.repeat(12)}}});
     assert.equal(forgedMyth.sessions[1].snapshot().phase,'error');forgedMyth.close();
     const mythSnapshot={...validSnapshot,species:'floravelle',grantId:'admin-mythical:test',level:50,stats:new LT.Engine().stats({species:'floravelle',level:50}),moves:LT.DATA.species.floravelle.moves};
     assert.throws(()=>LT.OnlineFuto.validateSnapshot({...mythSnapshot,stats:{...mythSnapshot.stats,hp:9999}},'s',0,Date.now(),'floravelle'));
