@@ -1807,10 +1807,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.legendary=Object.freeze({species:'arvelion',encounterOdds:700,minLevel:70,maxLevel:70,adminLevel:70,
     captureMin:0.01,captureMax:0.06,rollUnit:'successful-walking-step'});
   Object.assign(D.moves,{
-    arvelion_rend:{id:'arvelion_rend',name:'星環裂爪',element:'crystal',kind:'attack',category:'physical',power:135,accuracy:95,pp:8,description:'星環の光をまとった爪で切り裂く。物理・威力135・命中95・PP8。'},
-    arvelion_nova:{id:'arvelion_nova',name:'創星の奔流',element:'crystal',kind:'attack',category:'special',power:150,accuracy:90,pp:5,description:'胸の星核から圧縮した光の奔流を解き放つ。特殊・威力150・命中90・PP5。'},
-    arvelion_crown:{id:'arvelion_crown',name:'天穹の戴冠',element:'crystal',kind:'boost',category:'status',effect:'allStats',power:0,accuracy:100,pp:3,description:'攻撃・防御・特攻・特防・素早さ・命中・回避を1段階上げる（各最大6段階）。最大HPは変わらず、交代・戦闘不能・戦闘終了で解除。PP3。'},
-    arvelion_renewal:{id:'arvelion_renewal',name:'星命の回帰',element:'crystal',kind:'heal',category:'status',power:50,accuracy:100,pp:5,description:'星の光を集め、最大HPの半分（端数切り上げ）を回復する。最大HPを超えない。PP5。'}
+    arvelion_rend:{id:'arvelion_rend',name:'灯皇裂爪',element:'ember',kind:'attack',category:'physical',effect:'pierce',power:140,accuracy:95,pp:8,description:'金色の灯焔を宿した三連の爪で一撃。相手の防御技によるダメージ軽減を無視する。灯・物理・威力140・命中95・PP8。'},
+    arvelion_nova:{id:'arvelion_nova',name:'暁天の焔',element:'ember',kind:'attack',category:'special',power:160,accuracy:90,pp:5,description:'たてがみに集めた灯を灼熱の奔流に変え、相手の周囲で大きな火柱を咲かせる。灯・特殊・威力160・命中90・PP5。'},
+    arvelion_crown:{id:'arvelion_crown',name:'万灯の戴冠',element:'ember',kind:'boost',category:'status',effect:'allStatsGuard',power:0,accuracy:100,pp:3,description:'七つの灯を王冠に結び、攻撃・防御・特攻・特防・素早さ・命中・回避を1段階上げる（各最大6段階）。護炎で次に受ける一撃を半減する（貫通技は除く）。最大HPは変わらず、交代・戦闘不能・戦闘終了で解除。灯・PP3。'},
+    arvelion_renewal:{id:'arvelion_renewal',name:'命灯再燃',element:'ember',kind:'heal',category:'status',power:65,accuracy:100,pp:5,description:'消えかけた命の灯を温かな黄金の炎で燃え立たせ、最大HPの65%（端数切り上げ）を回復する。最大HPを超えない。灯・PP5。'}
   });
   D.species.arvelion={id:'arvelion',name:'アルヴェリオン',element:'ember',shape:'wolf',
     rarity:'legendary',atlasNumber:261,color:'#b7783c',accent:'#ffd166',
@@ -2383,11 +2383,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         b[`${side}Guard`]=true;b.healCooldown[side]=0;
         this.event(events,`${name}の「${move.name}」。次の一撃をやわらげる。`,'guard',{side,element:move.element,moveId:move.id});return;
       }
-      if(move.kind==='boost'&&move.effect==='allStats'){
+      if(move.kind==='boost'&&['allStats','allStatsGuard'].includes(move.effect)){
         b.stages??={ally:BattleStages.empty(),enemy:BattleStages.empty()};
-        const changed=BattleStages.raiseAll(b.stages[side]);
+        const raised=BattleStages.raiseAll(b.stages[side]),protect=move.effect==='allStatsGuard',guardAdded=protect&&!b[`${side}Guard`];
+        if(protect)b[`${side}Guard`]=true;
+        const changed=raised||guardAdded;
         b.healCooldown[side]=0;
-        this.event(events,changed?`${name}の「${move.name}」！ 攻撃・防御・特攻・特防・素早さ・命中・回避が1段階上がった。`:`${name}の「${move.name}」。能力はすでに上限まで高まっている。`,'boost',{side,slot:0,moveId:move.id,moveName:move.name,element:move.element,effect:'allStats',category:'status',changed});
+        const growth=raised?'攻撃・防御・特攻・特防・素早さ・命中・回避が1段階上がった。':'能力はすでに上限まで高まっている。';
+        this.event(events,`${name}の「${move.name}」！ ${growth}${protect?' 護炎が次に受ける一撃を半減する。':''}`,'boost',{side,slot:0,moveId:move.id,moveName:move.name,element:move.element,effect:move.effect,category:'status',changed,raised,guard:protect});
         return;
       }
       if(move.kind==='heal') {
@@ -5663,10 +5666,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const amount = Math.min(mon.maxHp - mon.hp, Math.ceil(mon.maxHp * move.power / 100)); mon.hp += amount;
         this._event(`${name}の「${move.name}」。${amount > 0 ? `HPが${amount}回復した。` : 'HPは満タンだった。'}`, 'heal', { ...meta, amount }); return;
       }
-      if (move.kind === 'boost' && move.effect === 'allStats') {
+      if (move.kind === 'boost' && ['allStats','allStatsGuard'].includes(move.effect)) {
         mon.stages ||= STAGES.empty();
-        const changed = STAGES.raiseAll(mon.stages);
-        this._event(`${name}の「${move.name}」。${changed ? 'HP以外の7つの能力が1段階上がった。' : '能力はすでに最大まで上がっている。'}`, 'boost', { ...meta, changed, stages: clone(mon.stages) });
+        const raised = STAGES.raiseAll(mon.stages), protect = move.effect === 'allStatsGuard', guardAdded = protect && !mon.guard;
+        if (protect) mon.guard = true;
+        const changed = raised || guardAdded;
+        this._event(`${name}の「${move.name}」。${raised ? 'HP以外の7つの能力が1段階上がった。' : '能力はすでに最大まで上がっている。'}${protect ? ' 護炎が次に受ける一撃を半減する。' : ''}`, 'boost', { ...meta, changed, raised, guard: protect, stages: clone(mon.stages) });
         return;
       }
       const actorStats = this.effectiveStats(mon), targetStats = this.effectiveStats(target);
@@ -6150,7 +6155,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261116-legendary"></script>
+<script src="battle-vfx.js?v=20261116-lamp-moves"></script>
 <script src="admin-console.js?v=20261116-legendary"></script>
 <script src="online-futo.js?v=20261116-legendary"></script>
 <script src="mobile-screen.js?v=20261116"></script>

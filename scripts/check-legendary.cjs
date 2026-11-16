@@ -32,6 +32,8 @@ for(const species of Object.values(D.species).filter(species=>species.id!=='arve
   assert(D.species.arvelion.base[stat]>=value,`Strongest fixed base ${stat}: ${species.id}`);
 }
 assert.equal(new Set(D.species.arvelion.moves).size,4);
+assert.equal(D.species.arvelion.element,'ember');
+assert(D.species.arvelion.moves.every(id=>D.moves[id].element==='ember'),'All four legendary techniques are lamp type');
 assert.equal(D.moves.arvelion_rend.category,'physical');assert.equal(D.moves.arvelion_nova.category,'special');
 
 // A successful step rolls on all maps, even indoors and during grass cooldown.
@@ -120,8 +122,8 @@ for(const id of ['arvelion_rend','arvelion_nova']){
   e.applyMove(mon,e.battle.enemy,D.moves[id],'ally',[]);assert(e.battle.enemy.hp<before);assert.equal(mon.pp[id],pp-1);
 }
 e.applyMove(mon,e.battle.enemy,D.moves.arvelion_crown,'ally',[]);
-assert(Object.values(e.battle.stages.ally).every(stage=>stage===1));
-mon.hp=1;e.applyMove(mon,e.battle.enemy,D.moves.arvelion_renewal,'ally',[]);assert.equal(mon.hp,1+Math.ceil(e.stats(mon).hp/2));
+assert(Object.values(e.battle.stages.ally).every(stage=>stage===1));assert.equal(e.battle.allyGuard,true);
+mon.hp=1;e.applyMove(mon,e.battle.enemy,D.moves.arvelion_renewal,'ally',[]);assert.equal(mon.hp,1+Math.ceil(e.stats(mon).hp*.65));
 e.battle={log:[],result:'won'};e.giveXP(mon,1000000,[]);assert.equal(mon.level,100);assert.equal(mon.species,'arvelion');assert.equal(mon.xp,0);
 e.battle=null;assert.equal(new Engine(e.serialize()).state.party[1].level,100);
 

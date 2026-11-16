@@ -30,10 +30,10 @@
     futo_burst:['#fff5ff','#ee7bda','#873ed4','#ffd6ed'],
     futo_ascend:['#fff1fb','#ffa1db','#a050cb','#ffe6ae'],
     futo_restore:['#fffaff','#efb7ed','#ab8ed1','#e2ffeb'],
-    arvelion_rend:['#f1ffff','#7aeee1','#8a61d8','#fff5cf'],
-    arvelion_nova:['#faffff','#a8f7ef','#9469e7','#fff2c6'],
-    arvelion_crown:['#f5ffff','#8ef7e3','#9a71db','#fff3b7'],
-    arvelion_renewal:['#f5ffff','#9affdc','#8d85e4','#fff1c9']
+    arvelion_rend:['#fff4ca','#ffc34c','#e65e24','#fff8e3'],
+    arvelion_nova:['#fff3bd','#ffae32','#d94416','#fff8df'],
+    arvelion_crown:['#fff2b2','#ffd159','#dc7c22','#fff8de'],
+    arvelion_renewal:['#fff4ca','#ffc963','#e08a32','#fff9e9']
   };
   const atlas = {
     leaf:['seed','petals','roots','petals','seed','roots','roots','roots'],
@@ -88,7 +88,7 @@
     const style=classify(move,event.kind),large=(move.power||0)>=40;
     const amount=Number.isFinite(event.amount)?event.amount:Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||/(?:体力が|HPが)(\d+)/.exec(event.text||'')?.[1]||0);
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
-      power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
+      raised:event.raised,power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
       releaseAt:.14,impactAt:.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
       amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),
       started:now,duration:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
@@ -193,6 +193,19 @@
       if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.fillStyle=color;
       c.beginPath();c.ellipse(x,y,r,r*.72,0,0,TAU);c.fill();c.restore();
     };
+    // Rounded, tapering tongues distinguish Arvelion's living lamp-fire from
+    // crystalline shards. The same deterministic path serves all four moves.
+    const lampFlame=(x,y,r,lean=0,color=p[1],alpha=1)=>{
+      if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);
+      c.fillStyle=color;c.beginPath();c.moveTo(x,y+r*.45);
+      c.quadraticCurveTo(x-r,y+r*.16,x-r*.55,y-r*.6);
+      c.quadraticCurveTo(x-r*.15,y-r*.35,x+lean*r,y-r*1.7);
+      c.quadraticCurveTo(x+r*.9,y-r*.6,x+r*.55,y+r*.06);
+      c.quadraticCurveTo(x+r*.3,y+r*.5,x,y+r*.45);c.fill();
+      c.fillStyle=p[0];c.beginPath();c.moveTo(x-r*.22,y+r*.18);
+      c.quadraticCurveTo(x-r*.2,y-r*.3,x+lean*r*.4,y-r*.7);
+      c.quadraticCurveTo(x+r*.45,y-r*.1,x+r*.19,y+r*.22);c.closePath();c.fill();c.restore();
+    };
     const attack=!['healing','shield','ascension','celestial-crown','stellar-renewal','capture','miss'].includes(e.style);
     const charging=smooth(phase(t,0,.1))*(1-smooth(phase(t,.14,.34)));
     const bloom=Math.sin(phase(t,.4,.93)*Math.PI);
@@ -229,8 +242,8 @@
     }
     switch(e.style) {
       case 'astral-rend': {
-        // Three staggered crystal talons cross the victim. The luminous spine
-        // and broad translucent blade follow one arc rather than strobing.
+        // Keep the stable choreography key while showing three golden flame
+        // talons: tapered trails with rising embers and a single impact bloom.
         const turn=cx>source.x?1:-1;
         for(let claw=0;claw<3;claw++){
           const progress=ease(phase(t,.13+claw*.05,.48+claw*.05));
@@ -243,7 +256,11 @@
           ribbon(points,10-claw*1.2,p[2],opacity*.24);
           ribbon(points,3.6,p[1],opacity*.85);
           stroke(points,p[0],1.4,opacity);
-          const tip=points[points.length-1];star(tip[0],tip[1],8*s,p[3],t*.4,opacity);
+          const tip=points[points.length-1];lampFlame(tip[0],tip[1],9*s,turn*.6,p[1],opacity);
+          for(let ember=0;ember<3;ember++){
+            const point=points[Math.floor((points.length-1)*(ember+1)/4)];
+            lampFlame(point[0],point[1]-phase(t,.4,.95)*25*s,(3+ember)*s,-turn*.3,p[1],opacity*.55);
+          }
         }
         impactRing(108*s);sparks(cx,cy,Math.floor(count*.65),102*s);break;
       }
@@ -258,7 +275,7 @@
         }
         curvedTrail(source,center,25*s,14,p[2],comet*.20);
         curvedTrail(source,center,25*s,4.5,p[1],comet*.8);
-        star(center.x,center.y,18*s,p[0],t*.6,comet);
+        lampFlame(center.x,center.y,22*s,(cx>source.x?-1:1)*.6,p[1],comet);
         const expansion=ease(phase(t,.43,.91)),nova=Math.sin(phase(t,.4,1)*Math.PI);
         glow(cx,cy,(28+expansion*108)*s,nova*.36,p[1]);
         for(let ring=0;ring<3;ring++){
@@ -269,7 +286,11 @@
           const a=ray*TAU/(low?5:8)+.2,r=(23+expansion*92)*s;
           const outer={x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r*.7};
           curvedTrail({x:cx,y:cy},outer,18*s,2.4,p[ray%3],nova*.7);
-          shard(outer.x,outer.y,9*s,a,p[0],nova);
+          lampFlame(outer.x,outer.y,(12+ray%3*4)*s,Math.cos(a)*.35,p[1],nova);
+        }
+        for(let plume=0;plume<(low?3:5);plume++){
+          const spread=(plume-(low?1:2))*23*s;
+          lampFlame(cx+spread,cy+25*s-expansion*36*s,(22+Math.sin(plume+1)*5)*s,Math.sin(plume)*.4,p[plume%2?2:1],nova*.75);
         }
         sparks(cx,cy,Math.floor(count*.55),120*s);break;
       }
@@ -278,12 +299,13 @@
         const crownY=cy-(54+gather*25)*s,radius=(24+gather*23)*s;
         glow(cx,crownY,74*s,gather*hold*.28,p[3]);
         ellipse(cx,cy+48*s,(29+gather*32)*s,17*s,p[1],2.5,hold*.75);
+        ellipse(cx,cy-6*s,(42+gather*17)*s,(53+gather*21)*s,p[1],2,gather*hold*.48);
         ellipse(cx,crownY,radius,12*s,p[3],2,gather*hold);
         for(let jewel=0;jewel<7;jewel++){
           const a=jewel*TAU/7+t*.32,x=cx+Math.cos(a)*radius,y=crownY+Math.sin(a)*12*s;
           const tip={x,y:y-(jewel%2?17:25)*s*gather};
           stroke([[x,y],[tip.x,tip.y]],p[1],2,gather*hold);
-          shard(tip.x,tip.y,7*s,-Math.PI/2,p[jewel%3],gather*hold);
+          lampFlame(tip.x,tip.y,7*s,Math.sin(a)*.25,p[1],gather*hold);
         }
         for(let stream=0;stream<(low?3:5);stream++){
           const a=stream*TAU/(low?3:5)+t*.7;
@@ -291,7 +313,7 @@
           const end={x:cx+Math.cos(a+.5)*radius,y:crownY};
           curvedTrail(start,mixPoint(start,end,gather),18*s,1.7,p[stream%3],hold*.55);
         }
-        star(cx,crownY-31*s,12*s*gather,p[3],0,hold);break;
+        lampFlame(cx,crownY-25*s,12*s*gather,0,p[1],hold);break;
       }
       case 'stellar-renewal': {
         const open=smooth(phase(t,.02,.35)),hold=1-smooth(phase(t,.76,1));
@@ -304,11 +326,11 @@
           const u=phase(t,.02+random(seed,moteIndex)*.25,.67+random(seed,moteIndex)*.2);
           const a=moteIndex*2.39996-u*1.5,r=(1-u)*75*s;
           const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.7-u*26*s;
-          star(x,y,(3+u*3)*s,p[moteIndex%3],u,Math.sin(u*Math.PI)*hold);
+          lampFlame(x,y,(3+u*3)*s,Math.cos(a)*.3,p[1],Math.sin(u*Math.PI)*hold);
         }
         const bloom=smooth(phase(t,.25,.6))*hold;
-        star(cx,cy-16*s,25*s*bloom,p[3],0,bloom*.8);
-        star(cx,cy-16*s,14*s*bloom,p[0],Math.PI/4,bloom);break;
+        lampFlame(cx,cy-7*s,25*s*bloom,.12,p[1],bloom*.8);
+        lampFlame(cx,cy-4*s,13*s*bloom,-.1,p[3],bloom);break;
       }
       case 'seed':
       case 'water-orbs':
@@ -626,7 +648,7 @@
       if(e.critical&&t>.4){ellipse(cx,cy,95*s*burst,60*s*burst,p[3],3,hitAlpha*.6);}
     }
     // Damage labels are intentionally localized to their target, not screen-sized flashes.
-    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(['futo_ascend','arvelion_crown'].includes(e.move)?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
+    const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(e.move==='arvelion_crown'?(e.raised===false?'護炎':'全能力↑・護炎'):e.move==='futo_ascend'?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
     if(label&&t>.42){const alpha=smooth(phase(t,.42,.53))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
       c.font=`900 ${Math.max(13,Math.round((e.critical?27:23)*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle='#19253d';
       c.fillStyle=e.kind==='heal'?'#d5ffad':e.kind==='miss'?'#e5e9f1':e.critical?'#ffe09c':'#ffffff';
