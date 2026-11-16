@@ -128,11 +128,15 @@ async function main() {
   const run = await runtime(), { LT } = run, art = LT.CreatureArt;
   const species = Object.values(LT.DATA.species);
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
-  const unchanged = species.filter(s => !children.has(s.id));
+  // The newly created legendary has its own authored atlas and is verified
+  // separately; retain the exact pre-existing-form regression snapshot.
+  const unchanged = species.filter(s => !children.has(s.id)&&s.id!=='arvelion');
   const evolved = species.filter(s => children.has(s.id));
-  assert.equal(species.length, 260);
+  assert.equal(species.length, 261);
   assert.equal(evolved.length, 129);
   assert.equal(unchanged.length, 131);
+  assert(art.status().arvelionLoaded,'Original legendary atlas did not load');
+  assert.notEqual(imageStats(art.get('arvelion')).hash,imageStats(art.get('arvelion',true)).hash,'Legendary rear duplicates front');
   assert.equal(art.status().evolutionRequested, 0, 'Startup must not download all evolution sheets');
   assert(!run.requests.some(x => x.includes('creatures-evolution-')), 'Evolution requests occurred before use');
   const engine = new LT.Engine(); engine.newGame('komori');

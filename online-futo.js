@@ -16,6 +16,11 @@
     const state = LT.adminBridge?.getEngine?.()?.state;
     return [...(state?.party || []), ...(state?.storage || [])].find(mon => mon.species === 'futo' && typeof mon.grantId === 'string' && mon.grantId.length > 0) || null;
   }
+  function ownedLegendary() {
+    const id=LT.DATA.legendary?.species;
+    const state=LT.adminBridge?.getEngine?.()?.state;
+    return id?[...(state?.party||[]),...(state?.storage||[])].find(mon=>mon.species===id)||null:null;
+  }
   function appearanceFor(ids){
     const state=LT.adminBridge?.getEngine?.()?.state;
     const party=[...(state?.party||[]),...(state?.storage||[])];
@@ -29,7 +34,8 @@
     });
   }
   function rosterIds(base) {
-    const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly);
+    const legendary=LT.DATA.legendary?.species,hasLegendary=!!ownedLegendary();
+    const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly&&(id!==legendary||hasLegendary));
     if (owned() && LT.DATA.species.futo) ids.push('futo');
     return ids;
   }
@@ -92,6 +98,9 @@
     }
     async setTeam(input = {}) {
       if(!Array.isArray(input.ids))return fail('チームのパチモンを選んでください。');
+      // Adventure ownership controls local selection. Peer teams use the
+      // shared fixed combat rules, not a claim of server-verified ownership.
+      if(input.ids.includes(LT.DATA.legendary?.species)&&!ownedLegendary())return fail('アルヴェリオンを仲間にしてから編成してください。');
       if (!input.ids.includes('futo')) {
         if(this._closed||!this._started||!this._connected||this.duel||this._teams[this.role]||this._futoChecking)return fail('現在は編成を変更できません。');
         const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:appearanceFor(input.ids)};
@@ -159,7 +168,7 @@
     }
   }
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':futo-server-pass-v2-appearance';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':futo-server-pass-v3-owned-legendary';
   LT.DuelSession = FutoSession;
-  LT.OnlineFuto = { owned, rosterIds, validateSnapshot, version: 2 };
+  LT.OnlineFuto = { owned, ownedLegendary, rosterIds, validateSnapshot, version: 3 };
 })();

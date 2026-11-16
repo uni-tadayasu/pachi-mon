@@ -13,12 +13,12 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 const response=data=>({ok:true,status:200,json:async()=>({ok:true,...data})});
 async function until(check){for(let i=0;i<100;i++){if(check())return;await Promise.resolve();}assert.fail('Expected asynchronous step was not reached');}
 function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}){
-  const calls=[],applied=[],updated=[];
+  const calls=[],applied=[],updated=[],initial=[],toasts=[];
   const serviceBody={dataset:{},innerHTML:''},statusLine={dataset:{},textContent:''},keyField={value:''};
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,futoMoveEntries,get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -28,8 +28,9 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
     MutationObserver:class{observe(){}},
     document:{getElementById:element,addEventListener(){},hidden:false},
     LT:{DATA:{moves:Object.fromEntries(CONFIG.moves.map(id=>[id,{name:id}]))},adminBridge:{
-      getEngine:()=>null,getPlayerName:()=> 'Traveller',toast(){},
+      getEngine:()=>null,getPlayerName:()=> 'Traveller',toast:message=>toasts.push(message),
       grantFuto:g=>{applied.push(g);return{ok:true,alreadyReceived:true};},
+      receiveAdminLegendary:g=>{initial.push(g);return{ok:true,alreadyReceived:true};},
       updateOwnedFuto:(id,g)=>{updated.push(g);return{ok:true};},...bridge}},
     fetch:async(url,options)=>{
       const call={path:new URL(url).pathname.replace('/api',''),search:new URL(url).search,token:options.headers.Authorization?.replace('Bearer ',''),body:options.body?JSON.parse(options.body):undefined};calls.push(call);
@@ -41,7 +42,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
     }
   };
   ctx.window=ctx;vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'admin-console.js'});
-  return{ctx,api:ctx.__test,calls,applied,updated,storage,serviceBody,statusLine,keyField};
+  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField};
 }
 function adopt(h,token=TOKEN_A,player=PLAYER_A){h.api.adoptIdentity({token,id:player.id,name:player.name},player,true);}
 
@@ -95,6 +96,75 @@ test('fresh sync waits for a new config read after the running pass',async()=>{
 test('deferred administrator stat updates contribute to pending count',async()=>{
   const h=harness({bridge:{updateOwnedFuto:()=>({ok:false,pending:true})},handle:c=>c.path==='/me'?response({player:PLAYER_A,adminExists:true,grants:[{grantId:'admin-initial:'+PLAYER_A.id}],nextCursor:null}):null});
   adopt(h);await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,1);
+});
+
+const LEGENDARY={grantId:'admin-legendary:'+PLAYER_A.id,species:'arvelion',level:70};
+test('administrator initial companion is processed once across inbox pages',async()=>{
+  const h=harness({settings:true,handle:c=>c.path==='/me'?response({player:PLAYER_A,adminExists:true,grants:[],initialCompanions:[LEGENDARY],nextCursor:c.search.includes('cursor=')?null:42}):null});
+  adopt(h);await h.api.sync();
+  assert.equal(h.initial.length,1);assert.equal(h.initial[0].species,'arvelion');
+  assert.equal(h.applied.length,0,'Initial companion must not pass through Futo distribution');
+  assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(h.toasts.length,0,'Previously received members produce no new toast');
+  assert(h.serviceBody.innerHTML.includes('初期メンバー'));
+  assert(!h.calls.some(c=>c.path==='/admin/grants'),'Initial ownership must never send a distribution request');
+});
+
+test('deferred initial companion retries and successful receipt is announced only once',async()=>{
+  let phase='battle',calls=0;
+  const h=harness({settings:true,bridge:{receiveAdminLegendary:()=>{calls++;if(phase==='battle')return{ok:false,pending:true};if(phase==='ready'){phase='received';return{ok:true};}return{ok:true,alreadyReceived:true};}},handle:c=>c.path==='/me'?response({player:PLAYER_A,adminExists:true,grants:[],initialCompanions:[LEGENDARY],nextCursor:null}):null});
+  adopt(h);await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,1);assert.equal(h.toasts.length,0);
+  assert(h.serviceBody.innerHTML.includes('受け取り待ちの仲間：1体'));
+  phase='ready';await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(h.toasts.length,1);
+  assert(h.toasts[0].includes('初期メンバーにアルヴェリオン'));
+  await h.api.sync();assert.equal(calls,3);assert.equal(h.toasts.length,1);
+});
+
+test('nonadministrators and mismatched initial companion ownership are rejected',async()=>{
+  let currentPlayer=PLAYER_B;
+  const h=harness({handle:c=>c.path==='/me'?response({player:currentPlayer,adminExists:true,grants:[],initialCompanions:[LEGENDARY,{...LEGENDARY,grantId:'admin-legendary:'+PLAYER_B.id}],nextCursor:null}):null});
+  adopt(h,TOKEN_B,PLAYER_B);await h.api.sync();assert.equal(h.initial.length,0);
+  currentPlayer={...PLAYER_B,isAdmin:true};await h.api.sync();
+  assert.equal(h.initial.length,1);assert.equal(h.initial[0].grantId,'admin-legendary:'+PLAYER_B.id);
+});
+
+test('stale administrator identity cannot receive a delayed initial companion',async()=>{
+  const old=deferred();
+  const h=harness({handle:c=>c.path==='/me'&&c.token===TOKEN_A?old.promise:null});
+  adopt(h);const first=h.api.sync();await until(()=>h.calls.some(c=>c.path==='/me'));
+  adopt(h,TOKEN_B,PLAYER_B);const fresh=h.api.sync({fresh:true});
+  old.resolve(response({player:PLAYER_A,adminExists:true,grants:[],initialCompanions:[LEGENDARY],nextCursor:null}));
+  await Promise.all([first,fresh]);assert.equal(h.initial.length,0);
+});
+
+test('initial companion receipt survives reload only after its save succeeds',()=>{
+  const html=fs.readFileSync(require.resolve('../index.html'),'utf8');
+  const ctx=vm.createContext({console});
+  for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
+    if(/\bsrc=|application\/ld\+json/.test(script[1]))continue;
+    vm.runInContext(script[2],ctx);
+    if(ctx.LT?.Engine)break;
+  }
+  const engine=new ctx.LT.Engine();engine.newGame(ctx.LT.DATA.starters[0]);
+  let failWrite=true,saved=null,writes=0,events=0;
+  Object.assign(ctx,{Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
+    localStorage:{setItem:(key,value)=>{if(failWrite)throw Error('Storage full');saved=value;writes++;}},
+    performance:{now:()=>100},updateAll(){},loadStored(){},
+    CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
+    document:{dispatchEvent:()=>events++}});
+  const start=html.indexOf('  function persistGiftMutation(method,...args){');
+  const end=html.indexOf('  LT.playMoveSound=',start);
+  assert(start>0&&end>start);vm.runInContext(html.slice(start,end),ctx);
+  assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).pending,true);
+  assert.equal(engine.state.party.length,1);assert.equal(engine.state.giftReceipts.length,0);assert.equal(events,0);
+  failWrite=false;
+  assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).ok,true);
+  assert.equal(engine.state.party.filter(mon=>mon.species==='arvelion').length,1);
+  assert.equal(writes,1);assert.equal(events,1);
+  assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).alreadyReceived,true);
+  assert.equal(writes,1);assert.equal(events,1);
+  const reloaded=new ctx.LT.Engine(JSON.parse(saved));
+  assert.equal(reloaded.receiveAdminLegendary(LEGENDARY).alreadyReceived,true);
+  assert.equal(reloaded.state.party.filter(mon=>mon.species==='arvelion').length,1);
 });
 
 test('one in-flight send, and an uncertain send survives reload with its original id',async()=>{
@@ -173,4 +243,14 @@ test('failed recovery clears the password, releases busy state and refreshes ava
   assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(button.disabled,false);
   assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(h.api.status.adminRecoveryAvailable,false);
   assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+});
+
+
+test('legendary signature moves are excluded from Futo configuration choices',()=>{
+  const h=harness();
+  Object.assign(h.ctx.LT.DATA,{legendary:{species:'arvelion'},species:{arvelion:{moves:['arvelion_rend']}}});
+  Object.assign(h.ctx.LT.DATA.moves,{arvelion_rend:{name:'星環裂爪'},struggle:{name:'苦しまぎれ'}});
+  const choices=Array.from(h.api.futoMoveEntries(),entry=>entry[0]);
+  assert(!choices.includes('arvelion_rend'));assert(!choices.includes('struggle'));
+  assert(choices.includes(CONFIG.moves[0]));
 });

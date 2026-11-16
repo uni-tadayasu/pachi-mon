@@ -136,12 +136,16 @@ async function main() {
   const { LT, engine, beforeLoad, afterLoad } = await runtime();
   await progress('Base artwork loaded');
   const species = Object.values(LT.DATA.species).filter(s => !s.specialOnly), maps = Object.values(LT.DATA.maps);
-  assert.equal(species.length, 259, 'Species count changed');
+  assert.equal(species.length, 260, 'Species count changed');
   assert.equal(maps.filter(m => !m.interior).length, 64, 'Outdoor map count changed');
   assert.equal(maps.filter(m => m.interior).length, 54, 'Interior map count changed');
   assert.equal(new Set(species.map(s => s.shape)).size, 29, 'Expected 29 creature forms');
   assert(LT.CreatureArt.status().futoLoaded, 'Supplied Futo artwork did not load');
   visible(LT.CreatureArt.get('futo'), 'Supplied Futo illustration', true);
+  assert(LT.CreatureArt.status().arvelionLoaded, 'Original legendary artwork did not load');
+  const legendaryFront=visible(LT.CreatureArt.get('arvelion'), 'Arvelion front', true);
+  const legendaryBack=visible(LT.CreatureArt.get('arvelion',true), 'Arvelion back', true);
+  assert.notEqual(legendaryFront.hash,legendaryBack.hash,'Arvelion must have separate authored front/back views');
   for (const module of ['CreatureArt', 'TravellerArt', 'FieldArt', 'BattleArt']) assert(LT[module], `${module} did not load`);
   assert.notEqual(beforeLoad, afterLoad, 'The field retained the procedural pre-load cache after artwork became ready');
   // Evolution art is intentionally lazy during startup. Load it explicitly so

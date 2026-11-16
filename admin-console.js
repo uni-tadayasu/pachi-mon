@@ -75,12 +75,24 @@
         epoch=identityEpoch;await ensureIdentity();
         if(epoch!==identityEpoch)throw staleIdentity();
         const token=identity.token;
-        let cursor='', totalPending=0, received=0;
+        let cursor='', totalPending=0, received=0, initialReceived=0;
+        const initialSeen=new Set();
         do{
           if(epoch!==identityEpoch)throw staleIdentity();
           const data=await request('/me?limit=50'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{token});
           if(epoch!==identityEpoch)throw staleIdentity();
           player=data.player;status=serviceStatus(data);
+          // Initial companions are a current-owner entitlement, separate from
+          // the Futo inbox and its administrator distribution controls.
+          if(player?.isAdmin===true){
+            for(const companion of data.initialCompanions||[]){
+              if(companion?.species!=='arvelion'||companion.grantId!=='admin-legendary:'+player.id||initialSeen.has(companion.grantId))continue;
+              initialSeen.add(companion.grantId);
+              const outcome=LT.adminBridge?.receiveAdminLegendary?.(companion);
+              if(outcome?.pending||!outcome?.ok)totalPending++;
+              else if(!outcome.alreadyReceived)initialReceived++;
+            }
+          }
           for(const grant of data.grants||[]){
             const bridge=LT.adminBridge;if(!bridge){totalPending++;continue;}
             const outcome=bridge.grantFuto(grant);
@@ -94,7 +106,7 @@
           cursor=data.nextCursor == null?'':String(data.nextCursor);
         }while(cursor);
         pending=totalPending;
-        if(received)LT.adminBridge?.toast?.('フートを受け取りました。旅の仲間・ひかえを確認してください。');
+        if(received||initialReceived)LT.adminBridge?.toast?.(`${received?'フートを受け取りました。':''}${initialReceived?'運営の初期メンバーにアルヴェリオンが加わりました。':''}旅の仲間・ひかえを確認してください。`);
       }catch(err){if(!err.staleIdentity&&epoch===identityEpoch)lastError=err.message;}
       if(epoch===identityEpoch)refreshSettings();
   }
@@ -110,7 +122,7 @@
     const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending].join('|');
     if(body.dataset.signature!==signature){
       body.dataset.signature=signature;
-      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>未受領のフート：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
+      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
     }
     const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
   }
@@ -121,7 +133,7 @@
     const recovering=status?.adminRecoveryAvailable===true;
     claimBusy=true;
     try{
-      await withButton(button,async()=>{try{await ensureIdentity();const data=await request('/admin/claim',{method:'POST',body:{key}});player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートを準備しています。':'運営に登録しました。フートを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
+      await withButton(button,async()=>{try{await ensureIdentity();const data=await request('/admin/claim',{method:'POST',body:{key}});player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートとアルヴェリオンを準備しています。':'運営に登録しました。フートとアルヴェリオンを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
     }finally{claimBusy=false;refreshSettings();await sync();}
   }
   function readConfig(){
@@ -181,13 +193,17 @@
       throw err;
     }finally{setSending(false);renderPendingGrant();}
   }
+  function futoMoveEntries(){
+    const exclusive=new Set(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]);
+    return Object.entries(LT.DATA.moves).filter(([id])=>id!=='struggle'&&!exclusive.has(id));
+  }
   async function openConsole(){
     if(sendBusy)throw new Error('配布結果を確認しています。少しお待ちください。');
     await ensureIdentity();if(!player?.isAdmin)throw new Error('運営として登録されていません。');
     const data=await request('/admin/config');savedConfig=data.config;revision=data.revision;
     if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy){event.preventDefault();say('配布結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{void sync();});}
-    const cfg={...data.config,moves:LT.FutoRules?.normalizeMoves?LT.FutoRules.normalizeMoves(data.config.moves):data.config.moves};const moveLabel=m=>m.kind==='attack'?`${m.category==='physical'?'物理':'特殊'}・威力${m.power}`:m.kind==='heal'?`HP${m.power}%回復`:m.kind==='boost'?'全能力アップ':'防御';const options=selected=>Object.entries(LT.DATA.moves).filter(([id])=>id!=='struggle').map(([id,m])=>`<option value="${escape(id)}"${id===selected?' selected':''}>${escape(m.name)} · ${escape(moveLabel(m))}</option>`).join('');
-    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">フートの運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><div class="pachi-console-hero"><img src="assets/futo.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートはレベルアップしても、設定した能力値を維持します。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（HP半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset><p class="pachi-status" role="status" aria-live="polite"></p></div>`;
+    const cfg={...data.config,moves:LT.FutoRules?.normalizeMoves?LT.FutoRules.normalizeMoves(data.config.moves):data.config.moves};const moveLabel=m=>m.kind==='attack'?`${m.category==='physical'?'物理':'特殊'}・威力${m.power}`:m.kind==='heal'?`HP${m.power}%回復`:m.kind==='boost'?'全能力アップ':'防御';const options=selected=>futoMoveEntries().map(([id,m])=>`<option value="${escape(id)}"${id===selected?' selected':''}>${escape(m.name)} · ${escape(moveLabel(m))}</option>`).join('');
+    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">フートの運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><div class="pachi-console-hero"><img src="assets/futo.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（HP半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset><p class="pachi-status" role="status" aria-live="polite"></p></div>`;
     consoleDialog._playersCursor=null;pendingGrant=loadPendingGrant();renderPendingGrant();
     if(!consoleDialog.open)consoleDialog.showModal();await loadPlayers(false);renderPendingGrant();
   }
