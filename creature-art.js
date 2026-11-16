@@ -85,7 +85,7 @@
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
       if(id==='futo'){for(const rear of back==='both'?[false,true]:[!!back])requests.push(futoRecords[rear?'back':'front'].promise);continue;}
-      if(id==='arvelion'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
+      if(id==='arvelion'||id==='floravelle'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
@@ -209,9 +209,29 @@
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
-  function arvelionSprite(back){
-    const record=uniqueSheets.get('arvelion');if(!record?.loaded)return null;
-    const key=`arvelion:${back?1:0}`;
+  // A small dedicated silhouette remains available offline; it does not borrow
+  // another species or use the front as a rear. The full atlas replaces it on load.
+  function floravelleFallback(back){
+    const key=`floravelle:${back?1:0}:fallback`;if(cache.has(key))return cache.get(key);
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');
+    const ellipse=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
+    const leaf=(x,y,w,h,angle,color)=>{c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();c.moveTo(0,-h);c.quadraticCurveTo(w,-h*.4,0,h*.3);c.quadraticCurveTo(-w,-h*.4,0,-h);c.fill();c.restore();};
+    if(back){c.translate(SIZE,0);c.scale(-1,1);}
+    c.strokeStyle='#376c49';c.lineWidth=12;c.beginPath();c.moveTo(218,215);c.bezierCurveTo(286,214,292,111,252,119);c.stroke();
+    for(let i=0;i<5;i++)leaf(254,112,15,32,i*Math.PI*2/5,'#f1edcf');ellipse(254,109,9,9,'#d4bb63');
+    for(const x of [130,163,204,232]){ellipse(x,264,13,28,'#376b4b');ellipse(x-3,285,15,8,'#c4a95b');}
+    ellipse(180,206,68,58,'#2c6246');
+    for(let i=0;i<5;i++)for(let j=0;j<3;j++)leaf(136+i*20,161+j*29,20,34,.2+(i-2)*.16,(i+j)%2?'#6c9c5b':'#40784d');
+    ellipse(119,120,43,46,back?'#376b4b':'#e9e7c6');
+    leaf(91,96,21,42,-.9,'#719d5b');leaf(149,97,20,40,.9,'#719d5b');
+    for(let i=0;i<3;i++)leaf(119+(i-1)*15,80,17,48,(i-1)*.48,'#80b87c');ellipse(117,72,10,11,'#e9dfaa');
+    if(back){for(let i=0;i<4;i++)leaf(96+i*17,111,20,40,(i-1.5)*.3,'#3b774c');}
+    else{ellipse(96,132,21,13,'#e9e7c6');ellipse(81,129,5,4,'#23473a');ellipse(104,112,7,5,'#286649');ellipse(103,111,2,2,'#ffffff');}
+    cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);return cv;
+  }
+  function uniqueSprite(id,back){
+    const record=uniqueSheets.get(id);if(!record?.loaded)return id==='floravelle'?floravelleFallback(back):null;
+    const key=`${id}:${back?1:0}`;
     if(cache.has(key))return cache.get(key);
     const image=record.image,half=Math.floor(image.naturalWidth/2),sx=back?half:0;
     const raw=canvas(half,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
@@ -233,7 +253,7 @@
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
     if(id==='futo')return futoSprite(back);
-    if(id==='arvelion')return arvelionSprite(back);
+    if(id==='arvelion'||id==='floravelle')return uniqueSprite(id,back);
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -336,6 +356,7 @@
       : !back&&futoFallbackRecord.loaded
         ? {direction:1,source:'futo-original-front',authoredBack:false,stage:0}
         : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
+    if(id==='floravelle')return {direction:back?1:-1,source:uniqueSheets.get(id)?.loaded?'floravelle-original':'floravelle-fallback',authoredBack:!!back,stage:0};
     if(id==='arvelion')return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'arvelion-original',authoredBack:!!back,stage:0}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
@@ -348,11 +369,11 @@
     const key=`${location.group}:${stage}:${back?1:0}`;
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href)]);
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261116-mythical',root).href)]);
   LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
-      futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
+      futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };
 })();

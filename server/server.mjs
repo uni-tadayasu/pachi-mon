@@ -3,6 +3,7 @@
 const BASE_ORIGIN = 'https://uni-tadayasu.github.io';
 const encoder = new TextEncoder();
 const DEFAULT_MOVES = ['futo_breaker', 'futo_burst', 'futo_ascend', 'futo_restore'];
+export const MYTHICAL_CONFIG = Object.freeze({level:50, stats:Object.freeze({hp:510, atk:350, def:310, spAtk:390, spDef:330, speed:310, accuracy:110, evasion:105}), moves:Object.freeze(['verdant_lance','forest_crown','genesis_bloom','root_drain'])});
 const LEGACY_DEFAULT_MOVES = ['supernova', 'atlas_crystal_4', 'starlight', 'shell'];
 const BASIC_MOVES = 'sprout vine bloom wave surge mist spark blaze warmth gust storm shelter glint prism shell nudge lifeline evergreen thorn dew riptide ripple frost spring sunburst cinder phoenix heatveil tempest whisper feather sirocco supernova moonbeam facet starlight pulse focus restsong dawnstep'.split(' ');
 const MOVE_IDS = new Set([...DEFAULT_MOVES, ...BASIC_MOVES, ...['leaf', 'tide', 'ember', 'wind', 'crystal'].flatMap(type => Array.from({length:12}, (_, i) => `atlas_${type}_${i + 1}`))]);
@@ -57,7 +58,12 @@ async function verifyPass(env, body) {
     const payload = decodeURL(parts[0]), signature = decodeURL(parts[1]);
     if (signature.length !== 32 || !await crypto.subtle.verify('HMAC', key, signature, payload)) throw new Error('Invalid signature');
     const data = JSON.parse(new TextDecoder().decode(payload));
-    if (data.v !== 1 || data.sessionId !== expectedSession || data.side !== expectedSide || !integer(data.expiresAt, Date.now(), Date.now() + 600001) || typeof data.grantId !== 'string') throw new Error('Invalid payload');
+    if (![1,2].includes(data.v) || data.sessionId !== expectedSession || data.side !== expectedSide || !integer(data.expiresAt, Date.now(), Date.now() + 600001) || typeof data.grantId !== 'string') throw new Error('Invalid payload');
+    if(data.v===2){
+      const owner=await ownerRecord(env);
+      if(data.species!=='floravelle'||typeof data.playerId!=='string'||owner?.player_id!==data.playerId||data.grantId!==`admin-mythical:${data.playerId}`)throw new Error('No current owner entitlement');
+      return {grantId:data.grantId,species:'floravelle',...MYTHICAL_CONFIG,sessionId:data.sessionId,side:data.side,expiresAt:data.expiresAt};
+    }
     return {grantId:data.grantId, species:'futo', ...validateConfig(data.config), sessionId:data.sessionId, side:data.side, expiresAt:data.expiresAt};
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -123,7 +129,7 @@ async function initialCompanions(env, playerId) {
   // receipt separate from Futo deliveries lets existing administrators receive
   // their initial companion without adding records or replaying gift batches.
   const owner = await ownerRecord(env);
-  return owner?.player_id === playerId ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}] : [];
+  return owner?.player_id === playerId ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}, {grantId:`admin-mythical:${playerId}`,species:'floravelle',level:70}] : [];
 }
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
@@ -198,6 +204,14 @@ async function route(request, env, url) {
     const body = await bodyJSON(request), session = sessionId(body.sessionId), side = sideId(body.side);
     if (typeof body.grantId !== 'string' || body.grantId.length > 100) fail(400, 'INVALID_GRANT', 'フートの受取記録を指定してください。');
     await consumeLimit(env, request, `duel-issue:${player.id}`, 30, 60000, true);
+    if(body.grantId.startsWith('admin-mythical:')){
+      const owner=await ownerRecord(env);
+      if(owner?.player_id!==player.id||body.grantId!==`admin-mythical:${player.id}`)fail(403,'GRANT_NOT_OWNED','この幻パチモンは現在の運営だけが使用できます。');
+      const expiresAt=Date.now()+600000;
+      const payload=encoder.encode(JSON.stringify({v:2,species:'floravelle',playerId:player.id,grantId:body.grantId,sessionId:session,side,expiresAt}));
+      const signature=new Uint8Array(await crypto.subtle.sign('HMAC',await signingKey(env),payload));
+      return {pass:`${encodeURL(payload)}.${encodeURL(signature)}`,expiresAt};
+    }
     const grant = await env.DB.prepare('SELECT grant_id, config_json FROM grants WHERE player_id = ? AND grant_id = ?').bind(player.id, body.grantId).first();
     if (!grant) fail(403, 'GRANT_NOT_OWNED', 'このフートの受取記録を確認できません。');
     const expiresAt = Date.now() + 600000;

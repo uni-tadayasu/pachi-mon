@@ -76,7 +76,7 @@
         if(epoch!==identityEpoch)throw staleIdentity();
         const token=identity.token;
         let cursor='', totalPending=0, received=0, initialReceived=0;
-        const initialSeen=new Set();
+        const initialSeen=new Set(),initialNames=new Set();
         do{
           if(epoch!==identityEpoch)throw staleIdentity();
           const data=await request('/me?limit=50'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{token});
@@ -86,11 +86,13 @@
           // the Futo inbox and its administrator distribution controls.
           if(player?.isAdmin===true){
             for(const companion of data.initialCompanions||[]){
-              if(companion?.species!=='arvelion'||companion.grantId!=='admin-legendary:'+player.id||initialSeen.has(companion.grantId))continue;
+              const method=companion?.species==='arvelion'?'receiveAdminLegendary':companion?.species==='floravelle'?'receiveAdminMythical':null;
+              const prefix=companion?.species==='arvelion'?'admin-legendary:':'admin-mythical:';
+              if(!method||companion.grantId!==prefix+player.id||initialSeen.has(companion.grantId))continue;
               initialSeen.add(companion.grantId);
-              const outcome=LT.adminBridge?.receiveAdminLegendary?.(companion);
+              const outcome=LT.adminBridge?.[method]?.(companion);
               if(outcome?.pending||!outcome?.ok)totalPending++;
-              else if(!outcome.alreadyReceived)initialReceived++;
+              else if(!outcome.alreadyReceived){initialReceived++;initialNames.add(companion.species==='arvelion'?'アルヴェリオン':'フロラヴェール');}
             }
           }
           for(const grant of data.grants||[]){
@@ -106,7 +108,7 @@
           cursor=data.nextCursor == null?'':String(data.nextCursor);
         }while(cursor);
         pending=totalPending;
-        if(received||initialReceived)LT.adminBridge?.toast?.(`${received?'フートを受け取りました。':''}${initialReceived?'運営の初期メンバーにアルヴェリオンが加わりました。':''}旅の仲間・ひかえを確認してください。`);
+        if(received||initialReceived)LT.adminBridge?.toast?.(`${received?'フートを受け取りました。':''}${initialReceived?'運営の初期メンバーに'+[...initialNames].join('・')+'が加わりました。':''}旅の仲間・ひかえを確認してください。`);
       }catch(err){if(!err.staleIdentity&&epoch===identityEpoch)lastError=err.message;}
       if(epoch===identityEpoch)refreshSettings();
   }
@@ -194,7 +196,7 @@
     }finally{setSending(false);renderPendingGrant();}
   }
   function futoMoveEntries(){
-    const exclusive=new Set(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]);
+    const exclusive=new Set([...(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]),...(LT.DATA.species?.[LT.DATA.mythical?.species]?.moves||[])]);
     return Object.entries(LT.DATA.moves).filter(([id])=>id!=='struggle'&&!exclusive.has(id));
   }
   async function openConsole(){
@@ -270,6 +272,13 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync();});
   setInterval(()=>{if(!document.hidden)void sync();},30000);
   LT.Admin={sync,open:openConsole,get player(){return player;},get pending(){return pending;},
+    async authorizeSecretEncounter(){
+      await ensureIdentity();const epoch=identityEpoch,data=await request('/me?limit=1');
+      if(epoch!==identityEpoch)throw staleIdentity();
+      player=data.player;status=serviceStatus(data);
+      if(player?.isAdmin!==true)throw new Error('この操作は現在の運営だけが使用できます。');
+      return {...player};
+    },
     async requestDuelPass(sessionId,grantId,side){await ensureIdentity();return request('/duel-pass',{method:'POST',body:{sessionId,grantId,side}});},
     verifyDuelPass(sessionId,pass,side){return request('/duel-pass/verify',{method:'POST',body:{sessionId,pass,side},auth:false});}
   };

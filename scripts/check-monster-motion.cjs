@@ -6,7 +6,7 @@ async function main(){
  const {LT,engine}=await runtime();
  const byShape=new Map();
  for(const s of Object.values(LT.DATA.species)){const family=LT.CreatureArt.lineage(s.id);if(!byShape.has(family.shape))byShape.set(family.shape,s.id);}
- const ids=[...new Set([...byShape.values(),'futo','arvelion','komorion','saikaju'])];
+ const ids=[...new Set([...byShape.values(),'futo','arvelion','floravelle','komorion','saikaju'])];
  const before=JSON.stringify(engine.state),profiles=new Set();let views=0;
  const cv=canvas.createCanvas(200,200);
  function frame(id,options){LT.Art.creature(cv,id,options);return imageStats(cv);}

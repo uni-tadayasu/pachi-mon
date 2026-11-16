@@ -41,7 +41,7 @@ async function main(){
  const markers=new Map();art.get=(id,back)=>{const key=id+':'+back;if(!markers.has(key)){const cv=canvas.createCanvas(32,32);cv._monster={id,back};cv.getContext('2d').fillRect(2,2,8,12);markers.set(key,cv);}return markers.get(key);};
  c.drawImage=(image,...args)=>{if(image._monster)trace.push({...image._monster,a:c.getTransform().a});return draw(image,...args);};
  function verify(expected){assert.equal(trace.length,expected.length);for(let i=0;i<expected.length;i++){const [id,back,target]=expected[i],actual=trace[i];assert.equal(actual.id,id);assert.equal(actual.back,back);assert.equal(actual.a<0,LT.PixelSprites.battleFacing(id,back,target).flip,`${id}: draw ignored battle orientation`);}trace.length=0;}
- for(const ally of [...finals,'futo','arvelion']){
+ for(const ally of [...finals,'futo','arvelion','floravelle']){
   engine.state.party=[engine.makeMonster(ally,45)];engine.battle={activeIndex:0,enemy:engine.makeMonster('komori',45)};
   LT.Art.battle(target,engine,0);verify([['komori',false,'left'],[ally,true,'right']]);
  }
@@ -60,7 +60,7 @@ async function main(){
  };
  engine.battle=null;
  let followerCases=0;
- for(const id of ['komori','futo','arvelion']){
+ for(const id of ['komori','futo','arvelion','floravelle']){
   await art.preload([id],{back:'both'});engine.state.party=[engine.makeMonster(id,45)];
   for(const facing of ['left','right','up','down']){
    engine.state.facing=facing;LT.Art.world(target,engine,0);
@@ -88,6 +88,6 @@ async function main(){
   }
   fs.mkdirSync(path.dirname(path.resolve(output)),{recursive:true});fs.writeFileSync(output,contact.toBuffer('image/png'));
  }
- console.log(JSON.stringify({ok:true,species:all.length,orientationCombinations:all.length*4,authoredSheets:13,soloCases:5,doubleViewpoints:2,portraitOrientationPreserved:true,followerCases,finaleSprites:finals,legendaryFrontBack:true}));
+ console.log(JSON.stringify({ok:true,species:all.length,orientationCombinations:all.length*4,authoredSheets:14,soloCases:finals.length+3,doubleViewpoints:2,portraitOrientationPreserved:true,followerCases,finaleSprites:finals,legendaryFrontBack:true}));
 }
 main().catch(e=>{console.error(e.stack);process.exitCode=1;});

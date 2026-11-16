@@ -31,6 +31,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
       getEngine:()=>null,getPlayerName:()=> 'Traveller',toast:message=>toasts.push(message),
       grantFuto:g=>{applied.push(g);return{ok:true,alreadyReceived:true};},
       receiveAdminLegendary:g=>{initial.push(g);return{ok:true,alreadyReceived:true};},
+      receiveAdminMythical:g=>{initial.push(g);return{ok:true,alreadyReceived:true};},
       updateOwnedFuto:(id,g)=>{updated.push(g);return{ok:true};},...bridge}},
     fetch:async(url,options)=>{
       const call={path:new URL(url).pathname.replace('/api',''),search:new URL(url).search,token:options.headers.Authorization?.replace('Bearer ',''),body:options.body?JSON.parse(options.body):undefined};calls.push(call);
@@ -248,9 +249,38 @@ test('failed recovery clears the password, releases busy state and refreshes ava
 
 test('legendary signature moves are excluded from Futo configuration choices',()=>{
   const h=harness();
-  Object.assign(h.ctx.LT.DATA,{legendary:{species:'arvelion'},species:{arvelion:{moves:['arvelion_rend']}}});
-  Object.assign(h.ctx.LT.DATA.moves,{arvelion_rend:{name:'星環裂爪'},struggle:{name:'苦しまぎれ'}});
+  Object.assign(h.ctx.LT.DATA,{legendary:{species:'arvelion'},mythical:{species:'floravelle'},species:{arvelion:{moves:['arvelion_rend']},floravelle:{moves:['verdant_lance']}}});
+  Object.assign(h.ctx.LT.DATA.moves,{arvelion_rend:{name:'星環裂爪'},verdant_lance:{name:'翠天の槍'},struggle:{name:'苦しまぎれ'}});
   const choices=Array.from(h.api.futoMoveEntries(),entry=>entry[0]);
-  assert(!choices.includes('arvelion_rend'));assert(!choices.includes('struggle'));
+  assert(!choices.includes('arvelion_rend'));assert(!choices.includes('verdant_lance'));assert(!choices.includes('struggle'));
   assert(choices.includes(CONFIG.moves[0]));
+});
+
+
+test('only current-owner mythical entitlements are delivered, once per sync',async()=>{
+  const mythical={grantId:'admin-mythical:'+PLAYER_A.id,species:'floravelle',level:70};let admin=true;
+  const h=harness({handle:c=>c.path==='/me'?response({player:{...PLAYER_A,isAdmin:admin},adminExists:true,grants:[],initialCompanions:[mythical,mythical,{...mythical,grantId:'admin-mythical:'+PLAYER_B.id}],nextCursor:null}):null});
+  adopt(h);await h.api.sync();assert.equal(h.initial.length,1);assert.equal(h.initial[0].species,'floravelle');
+  admin=false;await h.api.sync();assert.equal(h.initial.length,1);
+});
+
+
+test('secret encounter authorization refreshes current role and rejects revocation',async()=>{
+  let allowed=true;
+  const h=harness({handle:c=>c.path==='/me'?response({player:{...PLAYER_A,isAdmin:allowed},adminExists:true,grants:[],initialCompanions:[],nextCursor:null}):null});
+  adopt(h);
+  assert.equal((await h.ctx.LT.Admin.authorizeSecretEncounter()).id,PLAYER_A.id);
+  assert(h.calls.some(c=>c.path==='/me'&&c.search==='?limit=1'));
+  allowed=false;await assert.rejects(h.ctx.LT.Admin.authorizeSecretEncounter(),/現在の運営/);
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);
+});
+
+test('secret encounter authorization cannot complete under a restored identity',async()=>{
+  const pending=deferred();
+  const h=harness({handle:c=>c.path==='/me'?pending.promise:null});adopt(h);
+  const attempt=h.ctx.LT.Admin.authorizeSecretEncounter();
+  await until(()=>h.calls.some(c=>c.path==='/me'));adopt(h,TOKEN_B,PLAYER_B);
+  pending.resolve(response({player:PLAYER_A,adminExists:true}));
+  await assert.rejects(attempt,error=>error.staleIdentity===true);
+  assert.equal(h.ctx.LT.Admin.player.id,PLAYER_B.id);
 });

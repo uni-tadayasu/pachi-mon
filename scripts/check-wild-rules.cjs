@@ -71,12 +71,11 @@ assert(!dexContent.includes('野生には出現しません'));
 const e=new Engine();e.newGame('komori');assert.equal(e.effectiveness('tide',D.species.arvelion.element),1.5);assert.equal(e.effectiveness('leaf',D.species.arvelion.element),.7);
 assert.equal(e.effectiveness('ember',D.species.arvelion.element),.8);
 const old=e.serialize();old.party.push(e.makeMonster('shizuku',15));old.caught.push('shizuku');old.seen.push('shizuku');assert.equal(new Engine(copy(old)).state.party[1].species,'shizuku');
-// Arvelion's attacker bonus follows its new type, while its four dedicated
-// moves retain their existing elements and other gameplay properties.
+// Arvelion and all four dedicated techniques share the published lamp type.
 e.startBattle('arvelion',70);const attacker=e.makeMonster('arvelion',70),defender=e.battle.enemy;
 e.rng=()=>.5;e.effectiveness=()=>1;e.battleStats=()=>({atk:100,def:100,spAtk:100,spDef:100,accuracy:100,evasion:100});
 function damage(element){defender.hp=10000;e.applyMove(attacker,defender,{name:'type probe',kind:'damage',category:'special',element,power:50,accuracy:100},'ally',[]);return 10000-defender.hp;}
 const emberDamage=damage('ember'),crystalDamage=damage('crystal');
 assert(emberDamage/crystalDamage>1.14&&emberDamage/crystalDamage<1.16,'Arvelion does not receive its 灯 same-type bonus');
-assert(e.moves(attacker).every(move=>move.element==='crystal'),'Changing species type rewrote its dedicated moves');
+assert(e.moves(attacker).every(move=>move.element==='ember'),'Arvelion dedicated moves must remain lamp type');
 console.log(JSON.stringify({ok:true,maps:Object.keys(D.maps).length,grassMaps,wildSlots:slots,starters:[...excluded],initialChoicesAndSaves:true,arvelionElement:'灯',collectionTargets:[256,256,254],oldCatchesPreserved:true}));

@@ -16,7 +16,7 @@
     idsByFile.get(entry.file).push(id);
   }
   let tick=0,active=0,peakActive=0,successfulLoads=0,evictions=0;
-  const validEntry=id=>!['futo','arvelion'].includes(id)&&LT.DATA?.species?.[id]&&entries[id];
+  const validEntry=id=>!['futo','arvelion','floravelle'].includes(id)&&LT.DATA?.species?.[id]&&entries[id];
   const keyOf=(id,back,shiny=false)=>`${id}:${back?1:0}:${shiny?1:0}`;
   function touch(record){record.used=++tick;}
   function remember(key,value){
