@@ -1793,6 +1793,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 })();
 
 </script><script>
+/* Initial companions are selected once, never drawn from wild encounter pools. */
+(() => {
+  const D=globalThis.LT.DATA,excluded=new Set(D.starters);
+  D.wildExcluded=Object.freeze([...excluded]);
+  for(const map of Object.values(D.maps))map.encounters=map.encounters.filter(id=>!excluded.has(id));
+})();
+
 /* Pachi Monsters — Arvelion, the original roaming legendary. */
 (() => {
   'use strict';
@@ -1805,7 +1812,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     arvelion_crown:{id:'arvelion_crown',name:'天穹の戴冠',element:'crystal',kind:'boost',category:'status',effect:'allStats',power:0,accuracy:100,pp:3,description:'攻撃・防御・特攻・特防・素早さ・命中・回避を1段階上げる（各最大6段階）。最大HPは変わらず、交代・戦闘不能・戦闘終了で解除。PP3。'},
     arvelion_renewal:{id:'arvelion_renewal',name:'星命の回帰',element:'crystal',kind:'heal',category:'status',power:50,accuracy:100,pp:5,description:'星の光を集め、最大HPの半分（端数切り上げ）を回復する。最大HPを超えない。PP5。'}
   });
-  D.species.arvelion={id:'arvelion',name:'アルヴェリオン',element:'crystal',shape:'wolf',
+  D.species.arvelion={id:'arvelion',name:'アルヴェリオン',element:'ember',shape:'wolf',
     rarity:'legendary',atlasNumber:261,color:'#b7783c',accent:'#ffd166',
     description:'焔色のたてがみと金色に輝く双角を持ち、白煙の尾をなびかせて世界中を巡る伝説の獅子。全マップで移動1歩ごとに1/700の確率で現れる。野生はLv.70固定。捕獲率はHPに応じて1〜6%。進化せず、Lv.100まで成長する。',
     base:{hp:320,atk:245,def:225,spAtk:265,spDef:235,speed:220,accuracy:110,evasion:105},
@@ -1815,7 +1822,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.content.moves=Object.keys(D.moves).length;
   D.story.title=`64の土地、${D.content.species}の出会い。`;
   const allVoices=D.quests.find(quest=>quest.id==='all-voices');
-  if(allVoices){allVoices.target=D.content.species;allVoices.description=`伝説を含む通常${D.content.species}種すべてを仲間に記録し、パチモン図鑑を完成させる。`;}
+  // The initial choice leaves two base forms unavailable. Reachability also
+  // follows evolution, so a quest never demands an unobtainable starter line.
+  const extendEvolution=ids=>{
+    const found=new Set(ids);
+    for(const start of ids){let id=start;const visited=new Set();while(D.species[id]?.evolvesTo&&!visited.has(id)){visited.add(id);id=D.species[id].evolvesTo;found.add(id);}}
+    return [...found].filter(id=>D.species[id]&&!D.species[id].specialOnly);
+  };
+  D.collectionRoutes=Object.freeze({
+    wild:Object.freeze(extendEvolution([...new Set(Object.values(D.maps).flatMap(map=>map.encounters)),D.legendary.species])),
+    starters:Object.freeze(Object.fromEntries(D.starters.map(id=>[id,Object.freeze(extendEvolution([id]))])))
+  });
+  if(allVoices){allVoices.target=D.collectionRoutes.wild.length;allVoices.description='野生で出会える仲間とその進化形、選んだ最初の相棒の進化系列をすべて図鑑に記録する。';}
   const mentor=D.maps.village.npcs.find(npc=>npc.id==='mentor');
   if(mentor)mentor.lines[0]=`ようこそ、パチモンの世界へ。相棒と64の土地を旅して、${D.content.species}種の仲間を記録しよう。`;
 })();
@@ -2613,7 +2631,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         caught:this.state.caught.length,seals:this.state.seals.length,steps:this.state.steps,visited:this.state.visited.filter(id=>!D.maps[id].interior).length,
         leagueWins:this.state.leagueWins.length,champion:this.state.flags.championWon?1:0,
         types:new Set(this.state.caught.map(id=>D.species[id].element)).size};
-      return (D.quests||[]).map(q=>{const target=q.id==='all-voices'?Object.values(D.species).filter(s=>!s.specialOnly).length:q.target;const value=q.id==='all-voices'?this.state.caught.filter(id=>!D.species[id].specialOnly).length:values[q.metric]||0;const progress=Math.min(target,value);return {...q,target,progress,complete:progress>=target,claimed:this.state.questsClaimed.includes(q.id)};});
+      // caught preserves acquisition order even after evolving or releasing.
+      // Old saves retain their original first starter even if they later caught
+      // another starter while those species still appeared in the wild.
+      const starter=this.state.caught.find(id=>D.starters.includes(id))
+        ||this.state.caught.map(id=>D.starters.find(root=>D.collectionRoutes.starters[root].includes(id))).find(Boolean);
+      const collection=new Set([...D.collectionRoutes.wild,...(D.collectionRoutes.starters[starter]||[])]);
+      return (D.quests||[]).map(q=>{
+        const target=q.id==='all-voices'?collection.size:q.target;
+        const value=q.id==='all-voices'?this.state.caught.filter(id=>collection.has(id)).length:values[q.metric]||0;
+        const progress=Math.min(target,value),claimed=this.state.questsClaimed.includes(q.id);
+        return {...q,target,progress,complete:progress>=target||(q.id==='all-voices'&&claimed),claimed};
+      });
     }
     claimQuest(id) {
       if(this.battle)return fail('試練を終えてから依頼の報酬を受け取りましょう。');
@@ -2741,6 +2770,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 
 </script>
 <script src="creature-art.js?v=20261116-legendary-lion"></script>
+<script src="assets/creatures-individual-catalog.js?v=20261116-individual"></script>
+<script src="individual-creature-art.js?v=20261116-individual"></script>
 <script src="traveller-art.js?v=20261116-v12"></script>
 <script src="field-art.js?v=20261116"></script>
 <script src="battle-art.js?v=20261116"></script>
@@ -3259,7 +3290,7 @@ function world(canvas,engine,time=0,options={}){if(!canvas||!engine?.state)retur
 const left=Math.floor(cx/64)-2,top=Math.floor(cy/64)-3,right=Math.ceil((cx+LW)/64)+2,bottom=Math.ceil((cy+LH)/64)+2;
 if(time)for(let y=Math.max(0,top);y<Math.min(m.height,bottom);y++)for(let x=Math.max(0,left);x<Math.min(m.width,right);x++)if(tile(m,x,y)==='~'&&hash(x,y)%3===0){const shift=Math.floor(time/180)%5;r(c,x*64+8+shift,y*64+14,8,1,p.foam);r(c,x*64+16+shift,y*64+16,4,1,p.foam);r(c,x*64+5+shift,y*64+21,3,1,mix(p.foam,p.water,.4));}
 const objects=info.objects.filter(o=>o.kind!=='tree'||(o.x>=left&&o.x<=right&&o.y>=top&&o.y<=bottom)).slice();for(const n of m.npcs||[])if(n.x>=left&&n.x<=right&&n.y>=top&&n.y<=bottom)objects.push({kind:'npc',n,depth:(n.y+1)*64});const moving=options.moving===undefined?Math.abs(px-engine.state.x)+Math.abs(py-engine.state.y)>.01:options.moving,follow={down:[-.65,-.7],up:[.65,.7],left:[.8,.25],right:[-.8,.25]}[engine.state.facing]||[-.65,-.7],mon=engine.state.party?.[0];if(mon)objects.push({kind:'follower',x:(px+follow[0])*64,y:(py+follow[1])*64,depth:(py+follow[1]+1)*64});objects.push({kind:'hero',depth:(py+1)*64});objects.sort((a,b)=>a.depth-b.depth);
-for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(m.theme,o.variant),o.x*64-32,o.y*64-88);else if(o.kind==='building'||o.kind==='furniture')c.drawImage(o.cv,o.left,o.top);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state);else if(o.kind==='hero')c.drawImage(personSprite(engine.state.avatar==='female'?'hero-female':'hero',engine.state.facing,walkFrame({...options,moving},time),0),Math.round(px*64-16),Math.round(py*64-64));else if(o.kind==='follower'){const x=Math.round(o.x),y=Math.round(o.y),bob=moving&&Math.floor(time/140)%2?-4:0;r(c,x+12,y+52,44,4,p.grass3);if(LT.PixelSprites?.creature)LT.PixelSprites.creature(c,mon.species,{x:x-12,y:y-32+bob,size:96,back:engine.state.facing==='up',flip:engine.state.facing==='left',shiny:!!mon.shiny,motion:moving?'walk':'idle',time});else{box(c,x+12,y+4+bob,44,48,'#7cb6a3','#3e5f62');r(c,x+16,y-8+bob,12,20,'#7cb6a3');r(c,x+40,y-8+bob,12,20,'#7cb6a3');r(c,x+20,y+16+bob,4,8,'#344453');r(c,x+40,y+16+bob,4,8,'#344453');}}}
+for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(m.theme,o.variant),o.x*64-32,o.y*64-88);else if(o.kind==='building'||o.kind==='furniture')c.drawImage(o.cv,o.left,o.top);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state);else if(o.kind==='hero')c.drawImage(personSprite(engine.state.avatar==='female'?'hero-female':'hero',engine.state.facing,walkFrame({...options,moving},time),0),Math.round(px*64-16),Math.round(py*64-64));else if(o.kind==='follower'){const x=Math.round(o.x),y=Math.round(o.y),bob=moving&&Math.floor(time/140)%2?-4:0;r(c,x+12,y+52,44,4,p.grass3);if(LT.PixelSprites?.creature)LT.PixelSprites.creature(c,mon.species,{x:x-12,y:y-32+bob,size:96,back:engine.state.facing==='up',facing:engine.state.facing,shiny:!!mon.shiny,motion:moving?'walk':'idle',time});else{box(c,x+12,y+4+bob,44,48,'#7cb6a3','#3e5f62');r(c,x+16,y-8+bob,12,20,'#7cb6a3');r(c,x+40,y-8+bob,12,20,'#7cb6a3');r(c,x+20,y+16+bob,4,8,'#344453');r(c,x+40,y+16+bob,4,8,'#344453');}}}
 for(const e of m.exits||[]){if(tile(m,e.x,e.y)==='D'&&!m.interior)continue;const locked=(e.requires&&!engine.state.seals.includes(e.requires))||((LT.DATA.maps[e.to]?.requiredSeals||0)>(engine.state.seals?.length||0)),x=e.x*32+16,y=e.y*32+16;grid(c,2,()=>{if(locked){box(c,x-6,y-4,14,12,'#e0b579','#665768');r(c,x-4,y-10,10,6,'#665768');r(c,x-2,y-8,6,4,p.grass);r(c,x,y,2,4,'#665768');r(c,x-3,y-2,8,1,'#f3d297');}else if(!m.interior){const d=e.x===0?'left':e.x===m.width-1?'right':e.y===0?'up':'down';if(d==='left'||d==='right')poly(c,[[x+(d==='right'?6:-6),y],[x+(d==='right'?-4:4),y-6],[x+(d==='right'?-4:4),y+6]],'#f8e9aa');else poly(c,[[x,y+(d==='down'?6:-6)],[x-6,y+(d==='down'?-4:4)],[x+6,y+(d==='down'?-4:4)]],'#f8e9aa');}});}
 c.restore();
 if(!m.interior&&options.weather==='snow')for(let i=0;i<26;i++)r(c,(hash(i,6)%LW+Math.floor(time/70))%LW,(hash(i,9)%LH+Math.floor(time/45))%LH,2+i%2,2,'#f4faed');if(!m.interior&&options.weather==='embers')for(let i=0;i<19;i++)r(c,(hash(i,8)%LW+Math.floor(time/140))%LW,(hash(i,2)%LH-Math.floor(time/60)+LH*99)%LH,2,4,i%2?'#ffce77':'#d58b67');if(!m.interior&&options.weather==='rain')for(let i=0;i<42;i++){const x=(hash(i,3)%LW+Math.floor(time/25))%LW,y=(hash(i,4)%LH+Math.floor(time/12))%LH;r(c,x,y,1,9,'#9ebed1');}
@@ -4224,7 +4255,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(!this._observer)this._scan=true;
       this._schedule();
     }
-    invalidate(){if(this._destroyed)return;this.prune();for(const record of this._records.values()){record.painted=false;if(record.visible)this._enqueue(record);}this.refresh();}
+    invalidate(ids){if(this._destroyed)return;this.prune();const selected=Array.isArray(ids)?new Set(ids):null;for(const record of this._records.values()){if(selected&&!selected.has(record.id))continue;record.painted=false;if(record.visible)this._enqueue(record);}this.refresh();}
     refresh(){if(this._destroyed)return;this.prune();if(!this._observer)this._scan=true;this._schedule();}
     _visibility(record,visible){
       if(!this._connected(record.canvas)){this._forget(record);return;}
@@ -4373,7 +4404,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (settings.sound) sound.setEnabled(true);
     $('game-canvas').focus({preventScroll:true});
     if (!data) setTimeout(() => showDialogue('旅のはじまり', [
-      '海を越え、地下へ潜り、まだ知らない相棒に出会う。パチモンの世界には伝説を含む260種の野生パチモンと64の街・探索エリアが広がっている。',
+      '海を越え、地下へ潜り、まだ知らない相棒に出会う。パチモンの世界には伝説を含む260種のパチモンと64の街・探索エリアが広がっている。',
       '16人の紋章守に挑み、旅紋を集めよう。その先には四境の守護者と、頂点に立つ星路の継承者が待っている。建物の入口へ進むと、中へ入れる。',
       'まずは村の案内人に話しかけよう。矢印キー / WASDで移動、E / Enter / スペースで話す・調べる。スマホは画面下の十字キーと「A」を使う。'
     ]), 160);
@@ -4437,6 +4468,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     lizard:['喉の扇形のひだと背の鱗が重なり、長い節状の尾が高く巻き上がる。','喉の大きな扇形のひだを開き、厚い背の鱗と先の太い尾が輪郭を縁取る。']
   };
   function creatureDescription(species) {
+    if(LT.IndividualCreatureArt?.has(species?.id))return species?.description||'';
     const family=LT.CreatureArt?.lineage?.(species?.id),features=family&&evolutionFeatures[family.shape];
     const original=family&&DATA.species[family.rootId];
     if(!family?.stage||!features||!original||species.specialOnly)return species?.description||'';
@@ -4738,7 +4770,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showDexEntry(id) {
     const s = DATA.species[id]; if (!s || !engine.state.seen.includes(id)) return;
     const habitats = Object.values(DATA.maps).filter(m => m.encounters.includes(id)).map(m=>m.name);
-    openModal(s.name, `<div class="creature-card">${creatureView(id,180)}<div>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 捕獲済み':'未捕獲'}</p><p>生息地：${escape(habitats.length?habitats.join('・'):'進化・星環の地で出会う')}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div>${evolutionLineage(id)}<div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
+    const habitatText = DATA.starters.includes(id)?'最初の相棒として選択（野生には出現しません）':habitats.length?habitats.join('・'):'進化・星環の地で出会う';
+    openModal(s.name, `<div class="creature-card">${creatureView(id,180)}<div>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 捕獲済み':'未捕獲'}</p><p>生息地：${escape(habitatText)}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div>${evolutionLineage(id)}<div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
   }
   function showMap() {
     const st=engine.state;
@@ -5047,7 +5080,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   };
   resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
   document.dispatchEvent(new CustomEvent('pachi-admin-bridge-ready'));
-  const refreshArtwork=()=>{portraitLoader.invalidate();paintPortraits();};
+  const refreshArtwork=event=>{portraitLoader.invalidate(event?.speciesIds);paintPortraits();};
   document.addEventListener('pachi-art-ready',refreshArtwork);
   if(Art.ready && typeof Art.ready.then==='function')Art.ready.then(refreshArtwork).catch(()=>{});
 })();

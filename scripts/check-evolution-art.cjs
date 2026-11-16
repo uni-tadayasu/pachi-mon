@@ -70,6 +70,9 @@ async function runtime({ mode = 'normal', renderer } = {}) {
     if (/application\/ld\+json/.test(match[1])) continue;
     const source = /\bsrc=["']([^"']+)["']/.exec(match[1])?.[1];
     const file = source?.split('?')[0];
+    // Keep the original authored-evolution snapshots as a fallback regression.
+    // Dedicated per-species artwork is verified by check-individual-art.cjs.
+    if (file === 'individual-creature-art.js' || file === 'assets/creatures-individual-catalog.js') continue;
     const code = file === 'creature-art.js' && renderer ? renderer : file ? fs.readFileSync(path.join(root, file), 'utf8') : match[2];
     document.currentScript = { src: new URL(source || 'index.html', document.baseURI).href };
     vm.runInContext(code, context, { filename: source || 'index.html', timeout: 30000 });

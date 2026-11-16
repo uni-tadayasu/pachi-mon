@@ -148,16 +148,15 @@ async function main() {
   assert.notEqual(legendaryFront.hash,legendaryBack.hash,'Arvelion must have separate authored front/back views');
   for (const module of ['CreatureArt', 'TravellerArt', 'FieldArt', 'BattleArt']) assert(LT[module], `${module} did not load`);
   assert.notEqual(beforeLoad, afterLoad, 'The field retained the procedural pre-load cache after artwork became ready');
-  // Evolution art is intentionally lazy during startup. Load it explicitly so
-  // this comprehensive rendering pass checks the generated views, not fallbacks.
-  await LT.CreatureArt.preload(species.filter(s => LT.CreatureArt.lineage(s.id).stage > 0).map(s => s.id), { back: 'both' });
-  assert.equal(LT.CreatureArt.status().evolutionLoaded, 8, 'Evolution atlases did not all load');
-  await progress(`Evolution artwork loaded; rendering ${species.length} species`);
+  // Dedicated sheets are lazy and bounded; load each subset immediately before
+  // rendering it instead of assuming that the entire collection stays decoded.
+  await progress(`Rendering ${species.length} species`);
 
   const snapshots = { data: JSON.stringify(LT.DATA), state: JSON.stringify(engine.state) };
   const fronts = new Set(), backs = new Set();
   let creatureCount = 0;
   for (const monster of species) {
+    await LT.CreatureArt.preload([monster.id], { back: 'both' });
     const front = visible(LT.CreatureArt.get(monster.id, false), `${monster.id} front`, true);
     const back = visible(LT.CreatureArt.get(monster.id, true), `${monster.id} back`, true);
     assert.notEqual(front.hash, back.hash, `${monster.id}: front and rear artwork are identical`);
@@ -261,7 +260,7 @@ async function main() {
   assert.equal(delayed.beforeLoad, delayed.afterLoad, 'Timed-out images should retain playable fallback graphics');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 0, 'Delayed downloads completed before the test released them');
   const recovered = await delayed.finishDelayedImages();
-  assert.equal(recovered.notifications, 14, 'Every late successful image, including the legendary atlas, should refresh the display');
+  assert.equal(recovered.notifications, 14+(delayed.LT.IndividualCreatureArt?.status().successfulLoads||0), 'Every late successful image should refresh the display');
   assert.notEqual(recovered.hash, delayed.afterLoad, 'The late artwork left stale world caches on screen');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 4, 'Late creature atlases were not adopted');
   assert.equal(delayed.LT.CreatureArt.status().failed, 0, 'Recovered creature atlases still report failure');

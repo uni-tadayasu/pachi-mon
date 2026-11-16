@@ -142,5 +142,5 @@ assert(e.receiveAdminLegendary(another).pending);assert(!e.state.giftReceipts.in
 e.state.storage.pop();assert(e.receiveAdminLegendary(another).ok);
 const raw=e.serialize(),invalidCustom=copy(raw);invalidCustom.storage[0].customStats=copy(D.species.futo.base);assert.throws(()=>new Engine(invalidCustom));
 const invalidId=copy(raw);invalidId.storage[0].grantId='arbitrary-gift';assert.throws(()=>new Engine(invalidId));
-assert.equal(e.quests().find(quest=>quest.id==='all-voices').target,260);
+assert.equal(e.quests().find(quest=>quest.id==='all-voices').target,256);
 console.log(`Legendary checks passed: ${mapsChecked} maps, exact 1/700 walking roll, arrivals, independent shiny, 1–6% capture, all four moves, Lv100, save validation and once-only administrator membership.`);
