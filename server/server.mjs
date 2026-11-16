@@ -118,6 +118,13 @@ async function consumeLimit(env, request, action, max, milliseconds, global = fa
   await env.DB.prepare('DELETE FROM rate_limits WHERE key IN (SELECT key FROM rate_limits WHERE expires_at < ? LIMIT 20)').bind(now - 86400000).run();
 }
 async function ownerRecord(env) { return env.DB.prepare('SELECT player_id FROM admin_owner WHERE singleton = 1').first(); }
+async function initialCompanions(env, playerId) {
+  // This is an owner entitlement, not a distributable grant. Keeping its stable
+  // receipt separate from Futo deliveries lets existing administrators receive
+  // their initial companion without adding records or replaying gift batches.
+  const owner = await ownerRecord(env);
+  return owner?.player_id === playerId ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}] : [];
+}
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
   // that ID, which disables recovery without editing secrets or deleting data.
@@ -179,7 +186,7 @@ async function route(request, env, url) {
   const player = await authenticate(env, request);
   if (path === '/api/me' && method === 'GET') {
     const {cursor, limit} = paging(url);
-    return {player:playerView(player), ...await adminState(env, request), ...await playerGrants(env, player.id, cursor, limit)};
+    return {player:playerView(player), ...await adminState(env, request), ...await playerGrants(env, player.id, cursor, limit), initialCompanions:await initialCompanions(env, player.id)};
   }
   if (path === '/api/me' && method === 'PATCH') {
     const name = safeName((await bodyJSON(request)).name);
@@ -200,7 +207,7 @@ async function route(request, env, url) {
   }
   if (path === '/api/admin/claim' && method === 'POST') {
     const previousOwner = await ownerRecord(env), recovering = recoveryAllowed(env, request, previousOwner);
-    if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100)};
+    if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
     if (previousOwner && !recovering) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
     if (typeof env.ADMIN_CLAIM_KEY !== 'string' || env.ADMIN_CLAIM_KEY.length < 12) fail(503, 'ADMIN_NOT_CONFIGURED', '運営登録は準備中です。');
     await consumeLimit(env, request, 'claim-ip', 8, 900000);
@@ -221,7 +228,7 @@ async function route(request, env, url) {
     ]);
     const owner = await ownerRecord(env);
     if (owner?.player_id !== player.id) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
-    return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100)};
+    return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
   }
   await requireAdmin(env, player);
   if (path === '/api/admin/config' && method === 'GET') return configRecord(env);
@@ -244,6 +251,7 @@ async function route(request, env, url) {
   }
   if (path === '/api/admin/grants' && method === 'POST') {
     const body = await bodyJSON(request);
+    if (body.species !== undefined && body.species !== 'futo') fail(400, 'SPECIES_NOT_DISTRIBUTABLE', '配布できるパチモンはフートだけです。');
     if (typeof body.requestId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.requestId)) fail(400, 'INVALID_REQUEST_ID', '配布操作の識別情報が正しくありません。');
     let target = body.target === 'self' ? player.id : body.target;
     if (target !== 'all' && (typeof target !== 'string' || !/^P[0-9a-f]{16}$/.test(target))) fail(400, 'INVALID_TARGET', '配布先を選択してください。');

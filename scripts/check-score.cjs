@@ -58,12 +58,19 @@ test('all 32 original themes have finite, distinct complete arrangements in both
   }
 });
 test('real graph remains bounded with dense music and repeated layered move effects',()=>{
+  const techniques=[
+    {id:'futo_burst',kind:'attack',category:'special',element:'crystal',power:100},
+    {id:'arvelion_rend',kind:'attack',category:'physical',element:'crystal',power:135},
+    {id:'arvelion_nova',kind:'attack',category:'special',element:'crystal',power:150},
+    {id:'arvelion_crown',kind:'boost',category:'status',element:'crystal'},
+    {id:'arvelion_renewal',kind:'heal',category:'status',element:'crystal'}
+  ];
   for(const quality of ['low','high']){
     const {audio}=make(quality);audio.switchTrack('champion',true);
     let peak=0,previous=0;
     for(let frame=0;frame<3600;frame++){
       audio.ctx.currentTime=frame/60;audio.tick();
-      if(frame%45===0)audio.move({id:'futo_burst',kind:'attack',category:'special',element:'crystal',power:100},{side:'ally'},{duration:1000,impactAt:.43,releaseAt:.14});
+      if(frame%45===0)audio.move(techniques[(frame/45)%techniques.length],{side:'ally'},{duration:1000,impactAt:.43,releaseAt:.14});
       peak=Math.max(peak,audio.voices.size);assert(audio.voices.size<=audio.maxVoices);
       for(const n of audio.ctx.created.slice(previous)){if(n.started!==undefined)assert(n.stopped>=n.started);}
       previous=audio.ctx.created.length;
@@ -72,6 +79,26 @@ test('real graph remains bounded with dense music and repeated layered move effe
     }
     assert(peak>15,'exercise polyphony');audio.stopAll(audio.ctx.currentTime);audio.prune(audio.ctx.currentTime+4);assert.equal(audio.voices.size,0);assert.equal(audio.groups.size,0);
   }
+});
+test('the four legendary techniques have distinct signatures and suppress hit sounds on misses',()=>{
+  const {audio}=make(),calls=[],signatures=new Set();
+  audio.instrument=(g,kind,midi,t,d,v)=>calls.push(['note',kind,midi,d,v]);
+  audio.drum=(g,kind,t,v)=>calls.push(['drum',kind,v]);
+  audio.texture=(t,...args)=>calls.push(['texture',...args]);
+  audio.sweep=(t,...args)=>calls.push(['sweep',...args]);
+  for(const [id,kind,category,power] of [
+    ['arvelion_rend','attack','physical',135],['arvelion_nova','attack','special',150],
+    ['arvelion_crown','boost','status',0],['arvelion_renewal','heal','status',0]
+  ]){
+    calls.length=0;audio.ctx.currentTime+=2;
+    audio.move({id,kind,category,power,element:'crystal'});
+    assert(calls.length>5,`${id} must have a layered signature`);
+    signatures.add(JSON.stringify(calls));
+  }
+  assert.equal(signatures.size,4);
+  calls.length=0;audio.ctx.currentTime+=2;
+  audio.move({id:'arvelion_nova',kind:'attack',category:'special',power:150,element:'crystal'},{kind:'miss'});
+  assert(!calls.some(e=>e[0]==='drum'||e[0]==='note'),'a missed nova must omit its explosion and choir');
 });
 test('spell families have different sounds, misses omit impacts and duplicates are suppressed',()=>{
   const {audio}=make(),calls=[];
