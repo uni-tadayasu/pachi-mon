@@ -84,6 +84,7 @@
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
+      if(id==='futo'){for(const rear of back==='both'?[false,true]:[!!back])requests.push(futoRecords[rear?'back':'front'].promise);continue;}
       if(id==='arvelion'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
@@ -91,7 +92,8 @@
     }
     return Promise.all(requests);
   }
-  const futoRecord={image:null,loaded:false,failed:false};
+  const futoRecords={front:{image:null,loaded:false,failed:false,promise:null,frame:null},back:{image:null,loaded:false,failed:false,promise:null,frame:null}};
+  const futoFallbackRecord={image:null,loaded:false,failed:false,promise:null,frame:null};
   const root = new URL('.', document.currentScript?.src || document.baseURI);
   function hash(value) { let n=2166136261; for(const c of String(value)) n=Math.imul(n^c.charCodeAt(0),16777619); return n>>>0; }
   function canvas(w, h) { const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
@@ -141,34 +143,69 @@
   function load(group,back){
     return loadAtlas(sheets,`${group}:${back?1:0}`,new URL(`assets/creatures-${group?'b':'a'}-${back?'back':'front'}.webp`,root).href);
   }
-  function loadFuto(){
-    const image=futoRecord.image=new Image();
-    return new Promise(resolve=>{
+  function loadFutoSource(record,file,back=false){
+    const image=record.image=new Image();
+    record.promise=new Promise(resolve=>{
       let settled=false,finished=false;
       const release=ok=>{if(settled)return;settled=true;clearTimeout(timer);resolve(ok);};
+      const fallback=()=>{
+        // A failed rear must not fetch or display a front illustration.
+        if(record===futoRecords.front&&!futoFallbackRecord.promise)loadFutoSource(futoFallbackRecord,'assets/futo.png');
+      };
       const finish=ok=>{
         if(finished)return;finished=true;
-        const late=settled;futoRecord.loaded=ok;futoRecord.failed=!ok;
+        const late=settled;record.loaded=ok;record.failed=!ok;
         image.onload=null;image.onerror=null;release(ok);
-        if(ok&&late)document.dispatchEvent(new Event('pachi-art-ready'));
+        if(ok){
+          // Only this view and its shiny derivative can be stale. Preserve the
+          // opposite view when its own request has already succeeded.
+          const prefix=`futo:${back?1:0}:`;
+          for(const key of cache.keys())if(key.startsWith(prefix))cache.delete(key);
+          // Normal startup is covered by Art.ready; notify only later changes.
+          if(late||record===futoFallbackRecord){
+            const event=new Event('pachi-art-ready');event.speciesIds=['futo'];document.dispatchEvent(event);
+          }
+        }else fallback();
       };
-      const timer=setTimeout(()=>{futoRecord.failed=true;release(false);},18000);
+      const timer=setTimeout(()=>{record.failed=true;release(false);fallback();},18000);
       image.onload=()=>finish(image.naturalWidth>0&&image.naturalHeight>0);
       image.onerror=()=>finish(false);
-      image.src=new URL('assets/futo.png',root).href;
+      image.src=new URL(file,root).href;
     });
+    return record.promise;
   }
-  function futoSprite(){
-    if(!futoRecord.loaded)return null;
-    if(cache.has('futo:original'))return cache.get('futo:original');
-    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d'),image=futoRecord.image;
-    const scale=Math.min((SIZE-24)/image.naturalWidth,(SIZE-24)/image.naturalHeight);
-    const w=Math.round(image.naturalWidth*scale),h=Math.round(image.naturalHeight*scale);
-    c.imageSmoothingEnabled=false;
-    // Futo currently has only the supplied front illustration. Keep that
-    // illustration intact; supportsBack() explicitly reports this limitation.
-    c.drawImage(image,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
-    cache.set('futo:original',cv);
+  function loadFuto(){return Promise.all([
+    loadFutoSource(futoRecords.front,'assets/futo-front-v2.png'),
+    loadFutoSource(futoRecords.back,'assets/futo-back-v2.png',true)
+  ]);}
+  function futoFrame(record){
+    if(record.frame)return record.frame;
+    const image=record.image,raw=canvas(image.naturalWidth,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
+    rc.drawImage(image,0,0);const pixels=rc.getImageData(0,0,raw.width,raw.height).data;
+    let left=raw.width,right=-1,top=raw.height,bottom=-1;
+    for(let i=3;i<pixels.length;i+=4)if(pixels[i]>12){
+      const p=(i-3)/4,x=p%raw.width,y=Math.floor(p/raw.width);
+      left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+    }
+    record.frame=right>=left&&bottom>=top?[left,top,right-left+1,bottom-top+1]:null;
+    raw.width=raw.height=1;return record.frame;
+  }
+  function futoSprite(back=false){
+    const authored=futoRecords[back?'back':'front'];
+    const record=authored.loaded?authored:!back&&futoFallbackRecord.loaded?futoFallbackRecord:null;
+    // The supplied original is a front-only fallback. Missing rear art falls
+    // through to the renderer's procedural rear, never a mirrored front.
+    if(!record)return null;
+    const key=`futo:${back?1:0}:${record===authored?'authored':'original'}`;
+    if(cache.has(key))return cache.get(key);
+    const frame=futoFrame(record);if(!frame)return null;
+    const scale=Math.min((SIZE-24)/frame[2],(SIZE-24)/frame[3]);
+    const w=Math.round(frame[2]*scale),h=Math.round(frame[3]*scale);
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+    // Remove transparent padding only. Both views share the same 12px margin
+    // and baseline, without painting, mirroring, or distorting the figure.
+    c.drawImage(record.image,...frame,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
+    cache.set(key,cv);
     if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
@@ -195,7 +232,7 @@
   function getBase(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
-    if(id==='futo')return futoSprite();
+    if(id==='futo')return futoSprite(back);
     if(id==='arvelion')return arvelionSprite(back);
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
@@ -294,9 +331,11 @@
   }
   function orientation(id,back=false){
     const d=LT.DATA?.species?.[id];if(!d)return {direction:0,source:'unavailable',authoredBack:false};
-    // The retained Futo front fallback still faces right even when drawn in an
-    // ally's rear-view position. Report the view actually present, not requested.
-    if(id==='futo')return {direction:1,source:'futo-front',authoredBack:false,stage:0};
+    if(id==='futo')return futoRecords[back?'back':'front'].loaded
+      ? {direction:back?1:-1,source:'futo-authored',authoredBack:!!back,stage:0}
+      : !back&&futoFallbackRecord.loaded
+        ? {direction:1,source:'futo-original-front',authoredBack:false,stage:0}
+        : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
     if(id==='arvelion')return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'arvelion-original',authoredBack:!!back,stage:0}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
@@ -310,9 +349,10 @@
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
   const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href)]);
-  LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>id!=='futo',clearCache(){cache.clear();},spriteSize:SIZE,
+  LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
-      futoLoaded:futoRecord.loaded,futoFailed:futoRecord.failed,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
+      futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
+      futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };
 })();

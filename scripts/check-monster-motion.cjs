@@ -31,7 +31,7 @@ async function main(){
   global.gc?.();await new Promise(setImmediate);
  }
  assert.equal(profiles.size,5,'All five family motion rigs must be used');
- assert.equal(LT.CreatureArt.supportsBack('futo'),false,'Futo has no authored rear illustration');
+ assert.equal(LT.CreatureArt.supportsBack('futo'),true,'Futo has a dedicated authored rear illustration');
  assert.equal(LT.CreatureArt.supportsBack('komori'),true);
  assert.equal(LT.CreatureArt.supportsBack('arvelion'),true);
  assert.equal(LT.PixelSprites.motionProfile('arvelion'),'breath','The legendary lion stands on the ground');
@@ -43,6 +43,6 @@ async function main(){
  assert.equal(pose({side:'ally',kind:'miss',started:100,duration:1000},600,'enemy').action,undefined,'A miss triggered hit motion');
  assert.equal(JSON.stringify(engine.state),before,'Rendering changed save data');
  assert(LT.CreatureArt.status().cached<=LT.CreatureArt.status().cacheLimit);
- console.log(JSON.stringify({ok:true,speciesSampled:ids.length,frontBackViews:views,motionProfiles:profiles.size,poses:4,shinySilhouettesPreserved:true,reducedMotion:true,authoredFutoRear:false}));
+ console.log(JSON.stringify({ok:true,speciesSampled:ids.length,frontBackViews:views,motionProfiles:profiles.size,poses:4,shinySilhouettesPreserved:true,reducedMotion:true,authoredFutoRear:true}));
 }
 if(!global.gc){const child=require('node:child_process').spawnSync(process.execPath,['--expose-gc',__filename],{stdio:'inherit'});process.exitCode=child.status??1;}else main().catch(e=>{console.error(e.stack);process.exitCode=1;});

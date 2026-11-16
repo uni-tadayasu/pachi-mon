@@ -6,7 +6,7 @@ const model=vm.createContext({console});
 for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(script[1]))continue;vm.runInContext(script[2],model);if(model.LT?.Engine)break;}
 const {Engine,DATA}=model.LT,engine=new Engine();engine.newGame(DATA.starters[0],'female');engine.state.party[0].shiny=true;
 let writes=0,failWrite=false;const elements=new Map();
-const c=vm.createContext({console,Engine,DATA,LT:{...model.LT,onlineActive:false,CreatureArt:{supportsBack:id=>id!=='futo'}},engine,playing:true,storedSave:null,lastSave:0,lastPortraitFrame:0,selectedAvatar:'male',settings:{reducedMotion:false},performance:{now:()=>123},SAVE_KEY:'test',
+const c=vm.createContext({console,Engine,DATA,LT:{...model.LT,onlineActive:false,CreatureArt:{supportsBack:()=>true}},engine,playing:true,storedSave:null,lastSave:0,lastPortraitFrame:0,selectedAvatar:'male',selectedPlayerName:'プレイヤー',settings:{reducedMotion:false},performance:{now:()=>123},SAVE_KEY:'test',
  document:{querySelectorAll:()=>[]},Art:{},escape:value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),
  $:id=>elements.get(id),typeBadge:()=>'',creatureDescription:species=>species.description,
  showParty:index=>{c.returned=index;},updateAll:()=>{},toast:message=>{c.toast=message;},
@@ -15,7 +15,7 @@ const c=vm.createContext({console,Engine,DATA,LT:{...model.LT,onlineActive:false
 });
 function load(start,end){const a=html.indexOf(start),b=html.indexOf(end,a);assert(a>0&&b>a);vm.runInContext(html.slice(a,b),c);}
 load('  const nameOf=','  const evolutionFeatures=');
-load('  function chooseAvatar()','  function interact()');
+load('  function bindPlayerNameInput(','  function interact()');
 load('  function findOwned(','  function persistRelease(');
 const before=JSON.stringify(c.engine.serialize());c.chooseAvatar();assert.equal(c.modal.pane,'avatars');assert(c.modal.markup.includes('data-avatar="male"'));assert(c.modal.markup.includes('data-avatar="female"'));assert.equal(JSON.stringify(c.engine.serialize()),before,'Opening choice must not overwrite save');
 c.selectedAvatar='female';c.chooseStarter();assert.equal(c.modal.pane,'starters');assert(c.modal.markup.includes('女性の主人公'));assert.equal(JSON.stringify(c.engine.serialize()),before,'Choosing appearance alone must not overwrite save');
@@ -26,8 +26,8 @@ failWrite=true;submit();assert.equal(c.engine.state.party[0].nickname,undefined,
 c.showNickname(uid);input().value='';input().listeners.input();submit();assert.equal(c.engine.state.party[0].nickname,undefined,'Empty name resets species name');
 c.showNickname(uid);input().value='👩‍🚀🌿';input().listeners.input();assert.equal(elements.get('nickname-count').textContent,'2 / 5文字');submit();assert.equal(c.engine.state.party[0].nickname,'👩‍🚀🌿');
 c.engine.state.party[0].nickname='<x>';c.showNickname(uid);assert(c.modal.markup.includes('&lt;x&gt;'));assert(!c.modal.markup.includes('<x>'));
-assert(c.creatureView(c.engine.state.party[0]).includes('data-shiny="true"'));assert(c.creatureView('komori').includes('data-creature-view="back"'));assert(!c.creatureView('futo').includes('data-creature-view="back"'));
-assert(html.includes("engine.newGame(starter, selectedAvatar)"));assert(html.includes("personSprite(engine.state.avatar==='female'?'hero-female':'hero'"));assert(html.includes('LT.playMoveSound='));
+assert(c.creatureView(c.engine.state.party[0]).includes('data-shiny="true"'));assert(c.creatureView('komori').includes('data-creature-view="back"'));assert(c.creatureView('futo').includes('data-creature-view="back"'));
+assert(html.includes("candidate.newGame(starter, selectedAvatar, selectedPlayerName)"));assert(html.includes("personSprite(engine.state.avatar==='female'?'hero-female':'hero'"));assert(html.includes('LT.playMoveSound='));
 console.log('Avatar/identity UI: safe selection, 5-grapheme validation, IME composition, escaped names, transactional persistence, shiny preservation and view controls passed.');
 
 (async()=>{

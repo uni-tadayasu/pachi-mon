@@ -131,24 +131,24 @@ async function main() {
   const run = await runtime(), { LT } = run, art = LT.CreatureArt;
   const species = Object.values(LT.DATA.species);
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
-  // The newly created legendary has its own authored atlas and is verified
-  // separately; retain the exact pre-existing-form regression snapshot.
-  const unchanged = species.filter(s => !children.has(s.id)&&s.id!=='arvelion');
+  // The two special monsters have their own authored art and dedicated tests;
+  // retain the exact snapshot of the 130 unchanged normal roots/singles.
+  const unchanged = species.filter(s => !children.has(s.id)&&!['arvelion','futo'].includes(s.id));
   const evolved = species.filter(s => children.has(s.id));
   assert.equal(species.length, 261);
   assert.equal(evolved.length, 129);
-  assert.equal(unchanged.length, 131);
+  assert.equal(unchanged.length, 130);
   assert(art.status().arvelionLoaded,'Original legendary atlas did not load');
   assert.notEqual(imageStats(art.get('arvelion')).hash,imageStats(art.get('arvelion',true)).hash,'Legendary rear duplicates front');
   assert.equal(art.status().evolutionRequested, 0, 'Startup must not download all evolution sheets');
   assert(!run.requests.some(x => x.includes('creatures-evolution-')), 'Evolution requests occurred before use');
   const engine = new LT.Engine(); engine.newGame('komori');
   const before = { data: JSON.stringify(LT.DATA), state: JSON.stringify(engine.state) };
-  await progress('Checking 131 unchanged original forms');
+  await progress('Checking 130 unchanged original forms');
   const baseline = await unchangedDigest(LT, unchanged.map(s => s.id));
-  // Snapshot from the released renderer before the evolution change, covering
-  // all 130 normal roots/singles plus the supplied Futo image in both views.
-  assert.equal(baseline, '64b1f88864ceec10d046aa281cadefbe4ab191d339c0796609389afda98ed6f0', 'Original forms or Futo were changed by the evolution renderer');
+  // Computed with untouched released renderer f91df1d954c5affaa559629b19642da24265b4f6,
+  // excluding only the independently tested Futo and Arvelion images.
+  assert.equal(baseline, '7009d789d5f9dd546e5d8d09aec4adfddfeb0917ba9999a3d46352cb8ddf6826', 'Original normal forms were changed by the evolution renderer');
   assert.equal(art.status().evolutionRequested, 0, 'Original forms requested evolution images');
   await progress('Original forms unchanged; checking generated evolution views');
 
