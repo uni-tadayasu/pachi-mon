@@ -1,0 +1,259 @@
+{
+ "version": "2026-11-17",
+ "files": [
+  {
+   "url": "assets/arvelion.png?v=20261116-lion",
+   "bytes": 1338546
+  },
+  {
+   "url": "assets/battle-landscapes-v7.webp",
+   "bytes": 881734
+  },
+  {
+   "url": "assets/cover-handheld.webp",
+   "bytes": 121836
+  },
+  {
+   "url": "assets/creatures-a-back.webp",
+   "bytes": 757308
+  },
+  {
+   "url": "assets/creatures-a-front.webp",
+   "bytes": 829342
+  },
+  {
+   "url": "assets/creatures-b-back.webp",
+   "bytes": 818114
+  },
+  {
+   "url": "assets/creatures-b-front.webp",
+   "bytes": 950676
+  },
+  {
+   "url": "assets/creatures-evolution-a-1-back.webp",
+   "bytes": 759388
+  },
+  {
+   "url": "assets/creatures-evolution-a-1-front.webp",
+   "bytes": 1134884
+  },
+  {
+   "url": "assets/creatures-evolution-a-2-back.webp",
+   "bytes": 1078104
+  },
+  {
+   "url": "assets/creatures-evolution-a-2-front.webp",
+   "bytes": 1353332
+  },
+  {
+   "url": "assets/creatures-evolution-b-1-back.webp",
+   "bytes": 972930
+  },
+  {
+   "url": "assets/creatures-evolution-b-1-front.webp",
+   "bytes": 1181908
+  },
+  {
+   "url": "assets/creatures-evolution-b-2-back.webp",
+   "bytes": 713070
+  },
+  {
+   "url": "assets/creatures-evolution-b-2-front.webp",
+   "bytes": 1322048
+  },
+  {
+   "url": "assets/creatures-individual-01.webp",
+   "bytes": 657538
+  },
+  {
+   "url": "assets/creatures-individual-02.webp",
+   "bytes": 897598
+  },
+  {
+   "url": "assets/creatures-individual-03.webp",
+   "bytes": 473666
+  },
+  {
+   "url": "assets/creatures-individual-04.webp",
+   "bytes": 388696
+  },
+  {
+   "url": "assets/creatures-individual-05.webp",
+   "bytes": 537906
+  },
+  {
+   "url": "assets/creatures-individual-06.webp",
+   "bytes": 963308
+  },
+  {
+   "url": "assets/creatures-individual-07.webp",
+   "bytes": 671480
+  },
+  {
+   "url": "assets/creatures-individual-08.webp",
+   "bytes": 430580
+  },
+  {
+   "url": "assets/creatures-individual-09.webp",
+   "bytes": 1041920
+  },
+  {
+   "url": "assets/creatures-individual-10.webp",
+   "bytes": 517786
+  },
+  {
+   "url": "assets/creatures-individual-11.webp",
+   "bytes": 752714
+  },
+  {
+   "url": "assets/creatures-individual-12.webp",
+   "bytes": 771202
+  },
+  {
+   "url": "assets/creatures-individual-13.webp",
+   "bytes": 662724
+  },
+  {
+   "url": "assets/creatures-individual-14.webp",
+   "bytes": 861854
+  },
+  {
+   "url": "assets/creatures-individual-15.webp",
+   "bytes": 598954
+  },
+  {
+   "url": "assets/creatures-individual-16.webp",
+   "bytes": 819810
+  },
+  {
+   "url": "assets/creatures-individual-17.webp",
+   "bytes": 765702
+  },
+  {
+   "url": "assets/creatures-individual-18.webp",
+   "bytes": 619554
+  },
+  {
+   "url": "assets/creatures-individual-19.webp",
+   "bytes": 848268
+  },
+  {
+   "url": "assets/creatures-individual-20.webp",
+   "bytes": 585636
+  },
+  {
+   "url": "assets/creatures-individual-21.webp",
+   "bytes": 900884
+  },
+  {
+   "url": "assets/creatures-individual-22.webp",
+   "bytes": 607840
+  },
+  {
+   "url": "assets/creatures-individual-23.webp",
+   "bytes": 528034
+  },
+  {
+   "url": "assets/creatures-individual-24.webp",
+   "bytes": 803062
+  },
+  {
+   "url": "assets/creatures-individual-25.webp",
+   "bytes": 604174
+  },
+  {
+   "url": "assets/creatures-individual-26.webp",
+   "bytes": 615502
+  },
+  {
+   "url": "assets/creatures-individual-27.webp",
+   "bytes": 779312
+  },
+  {
+   "url": "assets/creatures-individual-28.webp",
+   "bytes": 346456
+  },
+  {
+   "url": "assets/creatures-individual-29.webp",
+   "bytes": 529038
+  },
+  {
+   "url": "assets/creatures-individual-30.webp",
+   "bytes": 345972
+  },
+  {
+   "url": "assets/creatures-individual-31.webp",
+   "bytes": 824642
+  },
+  {
+   "url": "assets/creatures-individual-32.webp",
+   "bytes": 831016
+  },
+  {
+   "url": "assets/creatures-individual-33.webp",
+   "bytes": 349848
+  },
+  {
+   "url": "assets/creatures-individual-catalog.js?v=20261117-256",
+   "bytes": 41903
+  },
+  {
+   "url": "assets/environment-buildings.webp",
+   "bytes": 675582
+  },
+  {
+   "url": "assets/environment-props.webp",
+   "bytes": 784996
+  },
+  {
+   "url": "assets/environment-terrain.webp",
+   "bytes": 664300
+  },
+  {
+   "url": "assets/environment-trees.webp",
+   "bytes": 978966
+  },
+  {
+   "url": "assets/floravelle.png?v=20261116-mythical",
+   "bytes": 1740319
+  },
+  {
+   "url": "assets/futo-back-v2.png",
+   "bytes": 819177
+  },
+  {
+   "url": "assets/futo-front-v2.png",
+   "bytes": 750833
+  },
+  {
+   "url": "assets/futo.png",
+   "bytes": 554441
+  },
+  {
+   "url": "assets/traveller-female.webp",
+   "bytes": 1059028
+  },
+  {
+   "url": "assets/traveller-hero.webp",
+   "bytes": 1072744
+  },
+  {
+   "url": "assets/traveller-npcs.webp",
+   "bytes": 1015426
+  }
+ ],
+ "core": [
+  "assets/battle-landscapes-v7.webp",
+  "assets/cover-handheld.webp",
+  "assets/creatures-individual-catalog.js?v=20261117-256",
+  "assets/environment-buildings.webp",
+  "assets/environment-props.webp",
+  "assets/environment-terrain.webp",
+  "assets/environment-trees.webp",
+  "assets/traveller-female.webp",
+  "assets/traveller-hero.webp",
+  "assets/traveller-npcs.webp"
+ ],
+ "totalBytes": 46303611,
+ "coreBytes": 7296515
+}

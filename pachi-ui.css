@@ -1000,3 +1000,7 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
 @keyframes pm-levelup-glow{0%{color:var(--pm-gold)}50%{color:#fff}}
 @media (prefers-reduced-motion:reduce){.levelup-card,.levelup-title{animation:none}}
 @media (max-width:420px){.levelup-gains{grid-template-columns:repeat(2,minmax(0,1fr))}.levelup-title{font-size:17px}}
+
+/* Offline play (settings) */
+.offline-setting .offline-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:9.5em}
+.offline-setting #offline-status{margin:4px 0;color:var(--pm-text-2)}

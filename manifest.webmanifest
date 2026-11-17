@@ -1,0 +1,24 @@
+{
+  "name": "パチモン｜Pachi Monsters",
+  "short_name": "パチモン",
+  "description": "無料のドット絵モンスター育成RPG。256種のパチモンと128ステージ。オフラインでも遊べます。",
+  "lang": "ja",
+  "dir": "ltr",
+  "id": "./",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#17283e",
+  "theme_color": "#17283e",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/ogp-handheld.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide", "label": "パチモンのタイトル画面" }
+  ]
+}
