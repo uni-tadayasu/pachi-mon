@@ -1,0 +1,63 @@
+/* パチモン｜Pachi Monsters — companion pages (encyclopedia & guide).
+ * Lightweight handheld-era windows matching the game. © 2026 KASAI SOLUTIONS INC. */
+:root{--bg:#0b0e26;--win:linear-gradient(180deg,#3a60d6 0 14%,#3457c9 14% 28%,#2e4fbb 28% 42%,#2946ac 42% 56%,#243e9c 56% 70%,#1f358b 70% 84%,#1a2d7b 84%);--frame:#f7f8ff;--ink:#0a1242;--text:#fff;--text2:#e2e8ff;--text3:#b3bfee;--gold:#ffd23f;--gold-deep:#d98a1a;--pixel:"DotGothic16","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI",Meiryo,sans-serif;--sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Yu Gothic",Meiryo,system-ui,sans-serif;--notch:polygon(0 6px,3px 6px,3px 3px,6px 3px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,calc(100% - 3px) 3px,calc(100% - 3px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) calc(100% - 3px),calc(100% - 6px) calc(100% - 3px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 3px),3px calc(100% - 3px),3px calc(100% - 6px),0 calc(100% - 6px));color-scheme:dark}
+*{box-sizing:border-box}
+html{background:radial-gradient(1100px 620px at 8% -8%,rgba(84,70,200,.34),transparent 62%),radial-gradient(1200px 760px at 50% 118%,rgba(110,58,200,.26),transparent 62%),var(--bg)}
+body{margin:0;color:var(--text);font:500 15px/1.9 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:#9ff0ff}
+a:hover{color:#fff}
+h1,h2,h3{font-family:var(--pixel);font-weight:400;letter-spacing:.04em;text-shadow:2px 2px 0 var(--ink);line-height:1.4}
+h1{font-size:clamp(26px,4vw,38px);margin:.2em 0 .4em}
+h2{font-size:clamp(19px,2.6vw,24px);margin:1.6em 0 .6em;color:var(--gold)}
+h2::before{content:"▶ ";font-size:.7em}
+.site-head{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px clamp(14px,3vw,32px);background:var(--win);border-bottom:3px solid var(--frame);box-shadow:0 3px 0 var(--ink)}
+.logo{display:flex;align-items:baseline;gap:8px;color:#fff;text-decoration:none;font:400 24px/1 var(--pixel);text-shadow:2px 2px 0 var(--ink)}
+.logo small{font-size:11px;letter-spacing:.2em;color:var(--gold)}
+.site-head nav{display:flex;gap:8px;flex-wrap:wrap}
+.site-head nav a,.button{display:inline-block;padding:7px 14px 9px;border:2px solid rgba(247,248,255,.6);background:#3e62d9;color:#fff;font:400 14px/1.3 var(--pixel);text-decoration:none;text-shadow:1px 1px 0 var(--ink);box-shadow:inset 0 -4px 0 rgba(8,14,60,.45),inset 0 2px 0 rgba(255,255,255,.2);clip-path:var(--notch)}
+.site-head nav a.play,.button{background:var(--gold);border-color:#fff4c9;color:#3a2200;text-shadow:none;box-shadow:inset 0 -4px 0 var(--gold-deep),inset 0 2px 0 #fff6d0}
+.button{font-size:17px;padding:12px 22px 14px}
+.wrap{max-width:1080px;margin:0 auto;padding:20px clamp(12px,3vw,24px) 40px}
+.window{margin:0 0 18px;padding:clamp(16px,3vw,28px);background:var(--win);border:3px solid var(--frame);box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 3px rgba(255,255,255,.2);clip-path:var(--notch);text-shadow:1px 1px 0 rgba(10,18,66,.9)}
+.crumbs{margin:0 0 12px;color:var(--text3);font:400 13px/1.6 var(--pixel)}
+.crumbs a{color:var(--text2)}
+.lead{color:var(--text2);font-size:15.5px}
+.note{color:var(--text3);font-size:13px}
+.dex-hero{display:flex;gap:clamp(14px,3vw,28px);align-items:center;flex-wrap:wrap}
+.sprite{width:192px;height:192px;image-rendering:pixelated;background:radial-gradient(circle at 50% 62%,rgba(255,255,255,.18),transparent 66%),rgba(10,18,66,.45);border:2px solid rgba(247,248,255,.3);clip-path:var(--notch)}
+.dex-hero>div{flex:1;min-width:240px}
+.dex-no{margin:0;color:var(--gold);font:400 14px/1.4 var(--pixel);letter-spacing:.1em}
+.chip{display:inline-block;padding:0 9px;margin:0 4px 4px 0;border:2px solid rgba(10,18,66,.55);background:#8f96c8;color:#0d1240;font:400 13px/1.6 var(--pixel);text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.t-leaf{background:#79b88f}.t-tide{background:#68b8d3}.t-ember{background:#ed9674}.t-wind{background:#b0bdda}.t-crystal{background:#c6a2da}.t-none{background:#a5abc9}
+table{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:14px}
+th,td{padding:8px 10px;border-bottom:2px dashed rgba(247,248,255,.25);text-align:left;vertical-align:top}
+thead th{color:var(--gold);font:400 13px/1.4 var(--pixel);background:rgba(10,18,66,.35)}
+tbody th{font-family:var(--pixel);font-weight:400;color:#fff;white-space:nowrap}
+.facts th{width:8.5em}
+.stats td{width:4.5em;font-family:var(--pixel)}
+.stats td.bar{width:auto}
+.bar span{display:block;height:12px;min-width:4px;background:#42e08a;border:2px solid var(--frame);box-shadow:inset 0 3px 0 rgba(255,255,255,.35)}
+.table-wrap{overflow-x:auto}
+.moves td:last-child{min-width:14em;color:var(--text2)}
+.evo{display:flex;flex-wrap:wrap;gap:10px;list-style:none;padding:0;margin:0 0 10px}
+.evo li{display:flex;align-items:center;gap:8px}
+.evo a{display:flex;flex-direction:column;align-items:center;padding:6px 10px;border:2px solid rgba(247,248,255,.3);background:rgba(10,18,66,.35);color:#fff;text-decoration:none;font-family:var(--pixel);clip-path:var(--notch)}
+.evo li.current a{border-color:var(--gold);background:rgba(255,210,63,.14)}
+.evo img{image-rendering:pixelated}
+.evo small{color:var(--gold);font-family:var(--pixel)}
+.cta{margin:22px 0 4px;text-align:center}
+.pager{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-family:var(--pixel)}
+.pager a{color:#fff}
+.jump{display:flex;flex-wrap:wrap;gap:6px}
+.jump a{text-decoration:none;color:#fff;font-family:var(--pixel)}
+.dex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;list-style:none;padding:0;margin:10px 0 0}
+.dex-grid a{display:flex;flex-direction:column;align-items:center;padding:8px 6px 10px;border:2px solid rgba(247,248,255,.28);background:rgba(10,18,66,.35);color:#fff;text-decoration:none;font-family:var(--pixel);clip-path:var(--notch)}
+.dex-grid a:hover{border-color:var(--frame);background:rgba(255,255,255,.1)}
+.dex-grid img{image-rendering:pixelated}
+.dex-grid strong{font-weight:400;font-size:14px}
+.dex-grid .dex-no{font-size:11px}
+.toc ol{columns:2;margin:0;padding-left:1.4em}
+.guide ul{padding-left:1.3em}
+.site-foot{padding:24px 16px 40px;text-align:center;color:var(--text3);font:400 13px/1.8 var(--pixel)}
+.site-foot a{color:var(--text2)}
+@media (max-width:640px){.toc ol{columns:1}.sprite{width:144px;height:144px}.site-head nav a{padding:6px 10px 8px;font-size:13px}}

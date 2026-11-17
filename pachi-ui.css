@@ -800,3 +800,21 @@ html:not(.mobile-screen) .console-screen>.battle-panel .move-btn{min-height:48px
 .battle-panel.playing .battle-log-wrap{display:flex!important;border-right:0!important;border-bottom:0}
 html:not(.mobile-screen) .console-screen>.battle-panel.playing{grid-template-columns:minmax(0,1fr)!important}
 .mobile-screen .battle-panel.playing #battle-log{max-height:120px}
+
+/* ---------- Landing: encyclopedia & guide links ---------- */
+.title-links{display:inline-flex;flex-wrap:wrap;gap:8px}
+.title-link::after{content:none!important}
+.dex-teaser{margin:30px 0 10px}
+.dex-teaser-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:18px}
+.dex-teaser-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:150px;padding:12px 8px;border:3px solid var(--pm-frame);background:var(--pm-window);box-shadow:var(--pm-window-edge);clip-path:var(--pm-notch);color:#fff;text-decoration:none;font-family:var(--pm-pixel);text-shadow:var(--pm-shadow-text)}
+.dex-teaser-card img{image-rendering:pixelated}
+.dex-teaser-card strong{font-weight:400;font-size:17px}
+.dex-teaser-card small{color:var(--pm-text-2);font-size:12px}
+.dex-teaser-card:hover{filter:brightness(1.12)}
+.dex-teaser-more{background:var(--pm-gold);border-color:#fff4c9;color:var(--pm-gold-ink);text-shadow:none;box-shadow:inset 0 -5px 0 var(--pm-gold-deep)}
+.dex-teaser-more small{color:rgba(58,34,0,.8)}
+.site-footer a{color:var(--pm-cyan)}
+@media (max-width:900px){.dex-teaser-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:520px){.dex-teaser-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.game-info-heading h2,.game-info-heading h3{text-wrap:balance}
+.dex-teaser .game-info-heading h3{font-size:clamp(26px,3vw,38px)}
