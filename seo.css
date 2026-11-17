@@ -61,3 +61,6 @@ tbody th{font-family:var(--pixel);font-weight:400;color:#fff;white-space:nowrap}
 .site-foot{padding:24px 16px 40px;text-align:center;color:var(--text3);font:400 13px/1.8 var(--pixel)}
 .site-foot a{color:var(--text2)}
 @media (max-width:640px){.toc ol{columns:1}.sprite{width:144px;height:144px}.site-head nav a{padding:6px 10px 8px;font-size:13px}}
+/* Move tables: short headings and numbers stay on one line (the table scrolls inside its frame). */
+.moves thead th,.moves td:nth-child(-n+6){white-space:nowrap}
+.moves td:nth-child(7){min-width:14em}.moves td:nth-child(8){min-width:10em}

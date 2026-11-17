@@ -95,11 +95,19 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 }</style>
 <link rel="stylesheet" href="mobile-screen.css?v=20261116">
   <title>パチモン｜無料のドット絵モンスター育成RPG（ブラウザ・スマホで遊べる）</title>
-  <meta name="description" content="パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、128のステージ、64曲のBGM、32の旅紋、16の隠し要素、8つの裏技、四境の守護者4人とチャンピオン2人。携帯ゲーム機風の操作画面とレトロ表示で、PC・スマホですぐ遊べます。">
+  <meta name="description" content="パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、96種の技、128のステージ、64曲のBGM、32の旅紋、四境の守護者4人とチャンピオン2人。一度開けばオフラインでも遊べ、携帯ゲーム機風の操作画面とレトロ表示でPC・スマホからすぐ遊べます。">
   <link rel="canonical" href="https://www.kasai-solutions-inc.com/">
+  <link rel="alternate" hreflang="ja" href="https://www.kasai-solutions-inc.com/">
+  <link rel="alternate" hreflang="x-default" href="https://www.kasai-solutions-inc.com/">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <link rel="apple-touch-icon" sizes="256x256" href="assets/apple-touch-pixel.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="パチモン">
+  <meta name="application-name" content="パチモン">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:site_name" content="パチモン｜Pachi Monsters">
@@ -139,7 +147,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       "@id": "https://www.kasai-solutions-inc.com/#webpage",
       "url": "https://www.kasai-solutions-inc.com/",
       "name": "パチモン｜無料のドット絵モンスター育成RPG（ブラウザ・スマホで遊べる）",
-      "description": "パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、128のステージ、64曲のBGM、32の旅紋、16の隠し要素、8つの裏技、四境の守護者4人とチャンピオン2人。携帯ゲーム機風の操作画面とレトロ表示で、PC・スマホですぐ遊べます。",
+      "description": "パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、96種の技、128のステージ、64曲のBGM、32の旅紋、四境の守護者4人とチャンピオン2人。一度開けばオフラインでも遊べ、携帯ゲーム機風の操作画面とレトロ表示でPC・スマホからすぐ遊べます。",
       "inLanguage": "ja",
       "isPartOf": {
         "@id": "https://www.kasai-solutions-inc.com/#website"
@@ -163,6 +171,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           "@type": "WebPage",
           "name": "パチモン攻略ガイド",
           "url": "https://www.kasai-solutions-inc.com/guide/"
+        },
+        {
+          "@type": "WebPage",
+          "name": "パチモン技一覧",
+          "url": "https://www.kasai-solutions-inc.com/moves/"
         }
       ]
     },
@@ -175,7 +188,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       "name": "パチモン｜Pachi Monsters",
       "alternateName": "Pachi Monsters",
       "url": "https://www.kasai-solutions-inc.com/",
-      "description": "パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、128のステージ、64曲のBGM、32の旅紋、16の隠し要素、8つの裏技、四境の守護者4人とチャンピオン2人。携帯ゲーム機風の操作画面とレトロ表示で、PC・スマホですぐ遊べます。",
+      "description": "パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、96種の技、128のステージ、64曲のBGM、32の旅紋、四境の守護者4人とチャンピオン2人。一度開けばオフラインでも遊べ、携帯ゲーム機風の操作画面とレトロ表示でPC・スマホからすぐ遊べます。",
       "image": "https://www.kasai-solutions-inc.com/assets/ogp-handheld.png",
       "inLanguage": "ja",
       "copyrightNotice": "© 2026 KASAI SOLUTIONS INC.",
@@ -187,7 +200,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         "@type": "Organization",
         "name": "KASAI SOLUTIONS INC."
       },
-      "softwareVersion": "16.0",
+      "softwareVersion": "19.0",
       "applicationCategory": "GameApplication",
       "genre": [
         "ロールプレイング",
@@ -229,7 +242,12 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         "240ドット表示・16ビット風・4階調液晶などの画面モード",
         "チップチューン風のオリジナルBGM",
         "文字送りの速さとバトル演出テンポの設定",
-        "256種のパチモン図鑑（Webページ版あり）"
+        "256種のパチモン図鑑（Webページ版あり）",
+        "96種の技と24種類の技エフェクト（技一覧ページあり）",
+        "最初の相棒が二段進化で覚える特別な技",
+        "オフラインプレイ（ホーム画面に追加して起動）",
+        "体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避の8能力と振り分けポイント",
+        "全256種で異なる色違いの配色"
       ],
       "screenshot": "https://www.kasai-solutions-inc.com/assets/ogp-handheld.png"
     }
@@ -250,7 +268,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
-  <link rel="stylesheet" href="pachi-ui.css?v=20261117-online">
+  <link rel="stylesheet" href="pachi-ui.css?v=20261117-offline">
+  <script type="application/ld+json" id="faq-jsonld">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"伝説のアルヴェリオンにはどう出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに700分の1の確率で出現し、道・街・室内では出現しません。野生のレベルは70固定。捕獲率は体力満タン時1%、残り体力1の時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。"}},{"@type":"Question","name":"運営専用の幻パチモンとは？","acceptedAnswer":{"@type":"Answer","text":"芽タイプのフロラヴェールです。運営だけが初期メンバーとしてLv70で受け取れます。野生出現・一般配布はなく、進化せずLv100まで育ちます。通常の図鑑収集課題には含みません。"}},{"@type":"Question","name":"色違いのパチモンはどうやって出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、色違いの配色は256種すべてで異なります。捕獲後も進化後も色違いを引き継ぎます（進化すると色違いの色も変わります）。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。"}},{"@type":"Question","name":"パチモンの名前や主人公は選べますか？","acceptedAnswer":{"@type":"Answer","text":"冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。"}},{"@type":"Question","name":"レベル上限とフートの成長について教えてください。","acceptedAnswer":{"@type":"Answer","text":"すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。"}},{"@type":"Question","name":"オフラインでも遊べますか？","acceptedAnswer":{"@type":"Answer","text":"はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。オンライン対戦・通信交換はインターネット接続が必要です。"}},{"@type":"Question","name":"技は何種類ありますか？","acceptedAnswer":{"@type":"Answer","text":"全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。"}},{"@type":"Question","name":"登録やインストールは必要ですか？","acceptedAnswer":{"@type":"Answer","text":"アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。"}},{"@type":"Question","name":"冒険の記録を引き継ぐには？","acceptedAnswer":{"@type":"Answer","text":"同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。"}},{"@type":"Question","name":"建物の中には、どうやって入りますか？","acceptedAnswer":{"@type":"Answer","text":"建物の入口に向かって歩くと室内へ移動します。室内の出口から外へ戻れます。道具店、宿、住居などを探索し、近くの人には決定ボタンで話しかけましょう。"}},{"@type":"Question","name":"音が出ないときや、動作が重いときは？","acceptedAnswer":{"@type":"Answer","text":"ブラウザーの制限により、音声はクリックやタップの後に再生されます。サウンドをONにして、音量と端末側の設定を確認してください。「遊び方・設定」から画質を標準・軽量へ変更できます。音楽はWeb Audioで再生するオリジナル楽曲です。"}},{"@type":"Question","name":"対戦相手はほかのプレイヤーですか？","acceptedAnswer":{"@type":"Answer","text":"冒険の調律士はCPUです。「オンライン対戦」（冒険中はメニューから）では、6文字のルームコードを友だちに伝えてプレイヤー1人対1人で戦えます。シングルは1体ずつ、ダブルは2体ずつを場に出します。通常253種に加え、アルヴェリオンは所持している場合に編成できます。レベル50統一で戦い、冒険のセーブには影響しません。接続には外部のPeerJS共有サービスを利用し、サービスや回線の状況によって接続できない場合があります。交換機能はありません。"}}]}</script>
 </head>
 <body>
   <!-- Original Pachi Monsters interface pixel icons. Copyright (c) 2026 KASAI SOLUTIONS INC. -->
@@ -486,7 +505,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         </nav><p class="journal-footnote"><span class="saved-dot"></span> この端末のブラウザーに記録されます</p>
       </aside>
     </main>
-    <footer class="site-footer"><span>パチモン <i>／</i> PACHI MONSTERS</span><span>EVERY JOURNEY. A NEW PARTNER.</span><span class="copyright-line">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button> <a href="monsters/" target="_blank" rel="noopener">図鑑</a> <a href="guide/" target="_blank" rel="noopener">攻略ガイド</a></span></footer>
+    <footer class="site-footer"><span>パチモン <i>／</i> PACHI MONSTERS</span><span>EVERY JOURNEY. A NEW PARTNER.</span><span class="copyright-line">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button> <a href="monsters/" target="_blank" rel="noopener">図鑑</a> <a href="moves/" target="_blank" rel="noopener">技一覧</a> <a href="guide/" target="_blank" rel="noopener">攻略ガイド</a></span></footer>
   </div>
 
   <section id="title-screen" class="title-screen" aria-label="パチモン タイトル画面">
@@ -501,7 +520,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       <p id="title-status" class="title-status">登録不要・無料でプレイ / 端末内に自動セーブ</p>
       <div class="title-metrics" aria-label="冒険の内容"><div><strong id="content-species-count">256</strong><span>種のパチモン</span></div><div><strong id="content-map-count">128</strong><span>ステージ</span></div><div><strong id="content-music-count">64</strong><span>曲のBGM</span></div></div>
     </div><div class="title-world-note"><span>THE MERIDIAN ACCORD</span><strong>16<span>WAYMARKS</span></strong><p>四境の守護者、そして星路の継承者へ。</p><svg aria-hidden="true"><use href="#i-trophy"/></svg></div></div>
-    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>／</i> BEFRIEND <i>／</i> BATTLE</span><span class="title-links"><a id="title-discover" class="title-discover" href="#about-game">世界と遊び方 <svg aria-hidden="true"><use href="#i-chevron"/></svg></a><a class="title-discover title-link" href="monsters/">パチモン図鑑</a><a class="title-discover title-link" href="guide/">攻略ガイド</a></span><span class="title-copyright">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button></span></footer>
+    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>／</i> BEFRIEND <i>／</i> BATTLE</span><span class="title-links"><a id="title-discover" class="title-discover" href="#about-game">世界と遊び方 <svg aria-hidden="true"><use href="#i-chevron"/></svg></a><a class="title-discover title-link" href="monsters/">パチモン図鑑</a><a class="title-discover title-link" href="moves/">技一覧</a><a class="title-discover title-link" href="guide/">攻略ガイド</a></span><span class="title-copyright">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button></span></footer>
   </section>
   <section id="about-game" class="game-info" aria-labelledby="about-game-title">
     <div class="game-info-inner">
@@ -548,10 +567,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         <div class="game-info-heading"><p class="eyebrow">BEFORE YOUR FIRST EXPEDITION</p><h3 id="faq-title">冒険をはじめる前に。</h3></div>
         <details><summary>伝説のアルヴェリオンにはどう出会えますか？</summary><p>野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに700分の1の確率で出現し、道・街・室内では出現しません。野生のレベルは70固定。捕獲率は体力満タン時1%、残り体力1の時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。</p></details>
         <details><summary>運営専用の幻パチモンとは？</summary><p>芽タイプのフロラヴェールです。運営だけが初期メンバーとしてLv70で受け取れます。野生出現・一般配布はなく、進化せずLv100まで育ちます。通常の図鑑収集課題には含みません。</p></details>
-        <details><summary>色違いのパチモンはどうやって出会えますか？</summary><p>野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、捕獲後も進化後も色違いを引き継ぎます。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。</p></details>
+        <details><summary>色違いのパチモンはどうやって出会えますか？</summary><p>野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、色違いの配色は256種すべてで異なります。捕獲後も進化後も色違いを引き継ぎます（進化すると色違いの色も変わります）。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。</p></details>
         <details><summary>パチモンの名前や主人公は選べますか？</summary><p>冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。</p></details>
         <details><summary>レベル上限とフートの成長について教えてください。</summary><p>すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。</p></details>
-        <details><summary>登録やインストールは必要ですか？</summary><p>アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。ページの読み込みにはインターネット接続が必要です。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
+        <details><summary>オフラインでも遊べますか？</summary><p>はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。オンライン対戦・通信交換はインターネット接続が必要です。</p></details><details><summary>技は何種類ありますか？</summary><p>全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。</p></details><details><summary>登録やインストールは必要ですか？</summary><p>アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
         <details><summary>冒険の記録を引き継ぐには？</summary><p>同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。</p></details>
         <details><summary>建物の中には、どうやって入りますか？</summary><p>建物の入口に向かって歩くと室内へ移動します。室内の出口から外へ戻れます。道具店、宿、住居などを探索し、近くの人には決定ボタンで話しかけましょう。</p></details>
         <details><summary>音が出ないときや、動作が重いときは？</summary><p>ブラウザーの制限により、音声はクリックやタップの後に再生されます。サウンドをONにして、音量と端末側の設定を確認してください。「遊び方・設定」から画質を標準・軽量へ変更できます。音楽はWeb Audioで再生するオリジナル楽曲です。</p></details>
@@ -6533,9 +6552,45 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showHelp() {
     openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と2人のチャンピオン</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>属性の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプのパチモンはかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
+  // ── Offline play: the service worker keeps the game (and, on request, all art) on the device.
+  const offlinePlay={registration:null,installPrompt:null,storing:false,status:null};
+  function offlineWorker(){return globalThis.navigator?.serviceWorker?.controller||offlinePlay.registration?.active||null;}
+  function offlineStatusText(status){
+    if(!status)return globalThis.navigator?.serviceWorker?'オフライン機能を準備しています…':'このブラウザはオフライン保存に対応していません。';
+    if(!status.shell)return 'まだ準備中です。通信がある状態で一度開くと、オフラインでも起動できるようになります。';
+    const mb=value=>(value/1048576).toFixed(1);
+    return `オフラインで起動できます。画像 ${status.stored}/${status.total}（${mb(status.bytes)} / ${mb(status.totalBytes)}MB）を保存済み。`;
+  }
+  function renderOfflineStatus(){
+    const line=$('offline-status');if(line)line.textContent=offlinePlay.storing?offlinePlay.storing:offlineStatusText(offlinePlay.status);
+    const store=$('offline-store-btn');if(store){const done=offlinePlay.status&&offlinePlay.status.total&&offlinePlay.status.stored>=offlinePlay.status.total;store.disabled=!!offlinePlay.storing||!offlineWorker()||done;store.textContent=done?'すべて保存済み':'画像をすべて保存';}
+    const install=$('install-app-btn');if(install)install.hidden=!offlinePlay.installPrompt;
+  }
+  function requestOfflineStatus(){offlineWorker()?.postMessage({type:'offline-status'});renderOfflineStatus();}
+  function storeAllOffline(){
+    const worker=offlineWorker();if(!worker){toast('オフライン機能の準備ができていません。少し待ってからもう一度お試しください。');return;}
+    if(globalThis.navigator?.onLine===false){toast('保存には通信が必要です。');return;}
+    offlinePlay.storing='画像を保存しています…';renderOfflineStatus();worker.postMessage({type:'offline-store-all'});
+  }
+  function registerOfflinePlay(){
+    const sw=globalThis.navigator?.serviceWorker,href=globalThis.location?.href||'';
+    if(!sw||!/^(https:|http:\/\/(localhost|127\.0\.0\.1)[:/])/.test(href))return;
+    sw.addEventListener('message',event=>{
+      const data=event.data||{};
+      if(data.type==='offline-status'){offlinePlay.status=data;renderOfflineStatus();}
+      if(data.type==='offline-progress'){offlinePlay.storing=`画像を保存しています… ${data.done}/${data.total}`;renderOfflineStatus();}
+      if(data.type==='offline-done'){offlinePlay.storing=null;toast(data.failed?`オフライン用の画像を保存しました（${data.failed}件は通信の都合で保存できませんでした）。`:'オフライン用の画像をすべて保存しました。');requestOfflineStatus();}
+    });
+    sw.register('sw.js').then(registration=>{offlinePlay.registration=registration;sw.ready.then(()=>{if(activePane==='settings')requestOfflineStatus();});}).catch(()=>{});
+  }
+  globalThis.window?.addEventListener?.('beforeinstallprompt',event=>{event.preventDefault();offlinePlay.installPrompt=event;renderOfflineStatus();});
+  globalThis.window?.addEventListener?.('appinstalled',()=>{offlinePlay.installPrompt=null;renderOfflineStatus();toast('ホーム画面に追加しました。');});
+  globalThis.window?.addEventListener?.('offline',()=>toast('オフラインになりました。冒険はそのまま続けられます（オンライン対戦・交換は通信が必要です）。'));
+  globalThis.window?.addEventListener?.('online',()=>toast('通信が戻りました。'));
+  globalThis.window?.addEventListener?.('load',registerOfflinePlay);
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${[...(LT.RetroScreen?.order||[]),...(settings.glitchUnlocked&&LT.RetroScreen?.isMode('glitch')?['glitch']:[])].map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
-    bindVolume();
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${[...(LT.RetroScreen?.order||[]),...(settings.glitchUnlocked&&LT.RetroScreen?.isMode('glitch')?['glitch']:[])].map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="setting-row offline-setting"><div><strong>オフラインで遊ぶ</strong><p id="offline-status">${escape(offlineStatusText(offlinePlay.status))}</p><small>画像をすべて保存すると、通信がない場所でもモンスターの姿まで表示されます（約44MB）。オンライン対戦・通信交換は通信が必要です。iPhoneは共有ボタンの「ホーム画面に追加」でアプリのように起動できます。</small></div><div class="offline-actions"><button type="button" class="btn btn-small" id="offline-store-btn" data-ui="offline-store">画像をすべて保存</button><button type="button" class="btn btn-small" id="install-app-btn" data-ui="install-app" hidden>ホーム画面に追加</button></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    bindVolume();requestOfflineStatus();
   }
   function bindVolume(){
     const slider=$('volume-slider');if(!slider)return;
@@ -6595,12 +6650,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 
   function openOnlineFromMenu(){
     if(busy){toast('現在の演出が終わってから開いてください。');return;}
+    if(globalThis.navigator?.onLine===false){toast('オフラインのため、オンライン対戦は使えません。通信がつながってから開いてください。');return;}
     if(!LT.OnlineUI){toast('通信対戦を準備できません。ページを再読み込みしてください。');return;}
     save();closeModal();LT.OnlineUI.open({returnToMenu:true});
   }
   function openTradeFromMenu(){
     if(!playing||busy||engine.battle||LT.onlineActive){toast('冒険中の移動できるときに交換できます。');return;}
     if(!LT.Trade){toast('交換を準備できません。ページを再読み込みしてください。');return;}
+    if(globalThis.navigator?.onLine===false){toast('オフラインのため、通信交換は使えません。通信がつながってから開いてください。');return;}
     save();closeModal();LT.Trade.open();
   }
   function commitTrade(receipt){
@@ -6799,6 +6856,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.screen&&LT.RetroScreen?.isMode(d.screen)){settings.screen=d.screen;saveSettings();showSettings();return;}
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt'){settings.crt=!settings.crt;if(tapStreak('mirror',9000)){document.documentElement.classList.toggle('mirror-world');noteTrick('mirror');toast(document.documentElement.classList.contains('mirror-world')?'……画面が左右反転した！ 鏡写しバグ。':'鏡写しを元に戻した。');}}else if(d.setting==='autoRun')settings.autoRun=!settings.autoRun;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
+    if(d.ui==='offline-store'){storeAllOffline();return;}
+    if(d.ui==='install-app'){const prompt=offlinePlay.installPrompt;if(prompt){offlinePlay.installPrompt=null;prompt.prompt?.();prompt.userChoice?.finally?.(renderOfflineStatus);}return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
     if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
