@@ -1028,3 +1028,10 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
 .reduce-motion .company-splash,.reduce-motion .company-splash-name{transition:none}
 @media (prefers-reduced-motion:reduce){.company-splash,.company-splash-name{transition:none}}
 .title-audio-hint{margin:6px 0 0;font-size:12px;line-height:1.6;color:var(--pm-gold)}
+
+/* ---------- Choice buttons in the battle lobby and local trade (readable on the handheld theme) ---------- */
+#online-modal .link-modes button,.local-trade .link-modes button{background:rgba(10,18,66,.6);border:2px solid var(--pm-frame-faint);color:#fff;text-shadow:var(--pm-shadow-text);box-shadow:none}
+#online-modal .link-modes button small,.local-trade .link-modes button small{color:inherit;opacity:.82}
+#online-modal .link-modes button[aria-pressed=true],.local-trade .link-modes button[aria-pressed=true]{background:var(--pm-gold);border-color:var(--pm-gold-deep);color:var(--pm-gold-ink);text-shadow:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22)}
+#online-modal .link-modes button:disabled,.local-trade .link-modes button:disabled{opacity:.55;cursor:default}
+#online-modal .link-modes button:not(:disabled):hover,.local-trade .link-modes button:not(:disabled):hover{border-color:#fff}
