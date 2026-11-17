@@ -7,16 +7,18 @@
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   if (LT.RetroScreen) return;
+  // `long` is the length of the frame's long side on the virtual LCD, in dots.
   const MODES = Object.freeze({
-    color: Object.freeze({ id: 'color', label: 'フルカラー', short: 'COLOR', pixel: 0 }),
-    dot: Object.freeze({ id: 'dot', label: 'ドット（16ビット風）', short: 'DOT', pixel: 4, levels: 12 }),
-    leaf: Object.freeze({ id: 'leaf', label: '若葉液晶（4階調）', short: 'LEAF', pixel: 5, palette: ['#13280f', '#3b5a24', '#87a438', '#c6d681'] }),
-    sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', pixel: 5, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
-    night: Object.freeze({ id: 'night', label: '月夜液晶（4階調）', short: 'NIGHT', pixel: 5, palette: ['#0c0f2d', '#2e3c7b', '#7e9dda', '#e0e8ff'] }),
-    mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', pixel: 5, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] })
+    gba: Object.freeze({ id: 'gba', label: '携帯機GBA風（240ドット・32768色）', short: 'GBA', long: 240, levels: 32, saturate: 1.16 }),
+    dot: Object.freeze({ id: 'dot', label: '16ビット風（384ドット）', short: 'DOT', long: 384, levels: 12 }),
+    leaf: Object.freeze({ id: 'leaf', label: '若葉液晶（4階調）', short: 'LEAF', long: 300, palette: ['#13280f', '#3b5a24', '#87a438', '#c6d681'] }),
+    sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', long: 300, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
+    night: Object.freeze({ id: 'night', label: '月夜液晶（4階調）', short: 'NIGHT', long: 300, palette: ['#0c0f2d', '#2e3c7b', '#7e9dda', '#e0e8ff'] }),
+    mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', long: 300, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] }),
+    color: Object.freeze({ id: 'color', label: 'フルカラー（高精細）', short: 'HD', long: 0 })
   });
-  const ORDER = Object.freeze(['dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
-  const DEFAULT = 'dot';
+  const ORDER = Object.freeze(['gba', 'dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
+  const DEFAULT = 'gba';
   const surfaces = new Map();
   let filtersReady = false, filterSupport = null, ditherPattern = null;
 
@@ -71,7 +73,12 @@
         });
         filter.append(matrix, contrast, map);
       } else {
-        // Coarse colour steps per channel for a cartridge-era look.
+        // Optional handheld-style saturation, then coarse colour steps per channel.
+        if (mode.saturate) {
+          const saturate = document.createElementNS(ns, 'feColorMatrix');
+          saturate.setAttribute('type', 'saturate'); saturate.setAttribute('values', String(mode.saturate));
+          filter.appendChild(saturate);
+        }
         const steps = Array.from({ length: mode.levels }, (_, i) => i / (mode.levels - 1));
         const post = document.createElementNS(ns, 'feComponentTransfer');
         for (const channel of ['R', 'G', 'B']) {
@@ -116,11 +123,11 @@
 
   function apply(canvas, id = DEFAULT) {
     const mode = MODES[id] || MODES[DEFAULT];
-    if (!canvas || !mode.pixel || canvas.width < 64 || canvas.height < 40) return false;
+    if (!canvas || !mode.long || canvas.width < 64 || canvas.height < 40) return false;
     if (typeof document === 'undefined') return false;
     installFilters();
-    const factor = Math.max(2, Math.round(Math.max(canvas.width, canvas.height) / (1536 / mode.pixel)));
-    const width = Math.max(32, Math.round(canvas.width / factor)), height = Math.max(20, Math.round(canvas.height / factor));
+    const scale = Math.min(1, mode.long / Math.max(canvas.width, canvas.height));
+    const width = Math.max(32, Math.round(canvas.width * scale)), height = Math.max(20, Math.round(canvas.height * scale));
     // Two-step reduction averages fine texture instead of aliasing it into noise.
     const mid = surface('mid', Math.max(width, Math.ceil(canvas.width / 2)), Math.max(height, Math.ceil(canvas.height / 2)));
     const raw = surface('raw', width, height), out = surface('out', width, height);
@@ -168,6 +175,8 @@
   }
 
   const next = id => ORDER[(Math.max(0, ORDER.indexOf(id)) + 1) % ORDER.length];
-  LT.RetroScreen = Object.freeze({ modes: MODES, order: ORDER, defaultMode: DEFAULT, apply, next,
+  // Menu portraits follow the same era: 64-dot sprites (40 for small icons) unless HD is chosen.
+  const portraitRaster = (id, size) => (MODES[id] || MODES[DEFAULT]).long ? (size <= 60 ? 40 : 64) : Math.max(256, Math.ceil(size * 2));
+  LT.RetroScreen = Object.freeze({ modes: MODES, order: ORDER, defaultMode: DEFAULT, apply, next, portraitRaster,
     label: id => (MODES[id] || MODES[DEFAULT]).label, isMode: id => Object.hasOwn(MODES, id) });
 })();
