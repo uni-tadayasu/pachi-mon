@@ -204,7 +204,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>パチモンに1つ持たせると、バトル中に自動で効果を発揮します。道具屋の「持ち物コーナー」で、集めた旅紋の数に応じて購入できます。</p>
   <div class="table-wrap"><table><thead><tr><th>持ち物</th><th>効果</th><th>入荷</th></tr></thead><tbody>${Object.values(D.heldItems).map(h => `<tr><th>${esc(h.name)}</th><td>${esc(h.description)}</td><td>${h.tier ? `旅紋${h.tier}個〜` : '最初から'}・${h.price}コイン</td></tr>`).join('')}</tbody></table></div>
   <h2 id="growth">性別と振り分けポイント</h2>
-  <p>パチモンには性別（♂・♀）があります（伝説・幻・配布限定は性別なし）。レベルが上がるたびに振り分けポイントが${D.allocation.pointsPerLevel}もらえ、HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさに自由に振り分けられます（1能力${D.allocation.capPerStat}まで、HPは1ポイントで+${D.allocation.hpPerPoint}）。「鍛錬の帯」を持たせると、レベルアップごとに1ポイント多くもらえます。</p>
+  <p>パチモンには性別（♂・♀）があります（伝説・幻・配布限定は性別なし）。レベルが上がるたびに振り分けポイントが${D.allocation.pointsPerLevel}もらえ、HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさに自由に振り分けられます（1能力${D.allocation.capPerStat}まで、HPは1ポイントで+${D.allocation.hpPerPoint}）。「鍛錬の帯」を持たせると、レベルアップごとに1ポイント多くもらえます。振り分けは仲間の詳細画面で行い、＋・−は画面を移らずに続けて押せるほか、長押しで連続して振り分けられます。「おまかせ」で自動配分、「リセット」でやり直しもできます。</p>
   <h2 id="secrets">16の隠し要素と8つの裏技</h2>
   <p>冒険中のメニュー「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。見つける前はヒントだけが表示されます。たとえば「${esc(D.secrets[2].hint)}」「${esc(D.secrets[13].hint)}」——世界のどこかで試してみてください。</p>
   <h2 id="online">オンライン対戦・交換</h2>

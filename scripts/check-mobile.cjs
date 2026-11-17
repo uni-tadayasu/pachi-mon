@@ -19,9 +19,10 @@ const root = {
 };
 const listen = (type, listener) => { if (!events.has(type)) events.set(type, []); events.get(type).push(listener); };
 const mobile = { matches: true, addEventListener: listen };
-const window = { innerHeight: 844, visualViewport: { height: 844, addEventListener: listen }, addEventListener: listen, dispatchEvent() {} };
-const document = { documentElement: root, querySelector() { return viewport; }, addEventListener: listen };
-const context = vm.createContext({ window, document, Element, Event: class Event {}, matchMedia: () => mobile,
+const scrolls = [], shapes = [];
+const window = { innerWidth: 390, innerHeight: 844, scrollX: 0, scrollY: 0, scrollTo(x, y) { scrolls.push([x, y]); this.scrollX = x; this.scrollY = y; }, visualViewport: { height: 844, addEventListener: listen }, addEventListener: listen, dispatchEvent() {} };
+const document = { documentElement: root, querySelector() { return viewport; }, addEventListener: listen, dispatchEvent(event) { shapes.push(event.detail?.shape); } };
+const context = vm.createContext({ window, document, Element, Event: class Event {}, CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } }, matchMedia: () => mobile,
   requestAnimationFrame(callback) { frames.push(callback); return frames.length; } });
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'mobile-screen.js'), 'utf8'), context);
 
@@ -56,6 +57,21 @@ window.visualViewport.height = 380;
 for (const listener of events.get('orientationchange')) listener();
 while (frames.length) frames.shift()();
 check(properties.get('--app-height'), '380px', 'Visible height updates after rotation/keyboard');
+
+// Rotating to landscape and back: a leftover scroll offset is cleared (otherwise
+// taps land away from what is drawn) and every shape change is announced so the
+// game can release buttons whose pointerup was swallowed by the rotation.
+Object.assign(window, { innerWidth: 844, innerHeight: 390, scrollY: 140 }); window.visualViewport.height = 390;
+for (const listener of events.get('orientationchange')) listener();
+while (frames.length) frames.shift()();
+check(JSON.stringify(scrolls.at(-1)), '[0,0]', 'Scroll offset reset after rotating to landscape');
+check(shapes.at(-1), 'landscape:true', 'Landscape shape announced');
+Object.assign(window, { innerWidth: 390, innerHeight: 844, scrollY: 60 }); window.visualViewport.height = 844;
+for (const listener of events.get('orientationchange')) listener();
+while (frames.length) frames.shift()();
+check(JSON.stringify(scrolls.at(-1)), '[0,0]', 'Scroll offset reset after rotating back to portrait');
+check(shapes.at(-1), 'portrait:true', 'Portrait shape announced');
+check(properties.get('--app-height'), '844px', 'Portrait height restored after rotation');
 
 mobile.matches = false;
 for (const listener of events.get('change')) listener();
@@ -161,4 +177,24 @@ modal.open = true;
 up.send('pointerdown', 12);
 check(up.classList.contains('pressed'), false, 'Modal blocks new touch movement');
 check(game.directionSource, 'ArrowUp', 'Blocked press does not take over input');
-console.log(JSON.stringify({ ok: true, checks, coverage: 'Mobile gestures, held-pointer handoff, interruption cleanup, editable inputs, viewport changes, desktop restoration' }));
+
+// Turning the phone mid-press can swallow the pointerup: rotation releases held input and re-fits the canvas.
+modal.open = false; game.directionSource = null; game.pressedDirection = null;
+let resized = 0; game.resize = () => { resized += 1; };
+for (const [n, type] of ['orientationchange', 'pachi-viewport-change'].entries()) {
+  right.send('pointerdown', 20 + n);
+  check(game.pressedDirection, 'right', `${type}: direction held before turning`);
+  game.sprint = true;
+  gameEvent(type);
+  check(game.pressedDirection, null, `${type}: held direction is released`);
+  check(game.directionSource, null, `${type}: input ownership clears`);
+  check(game.sprint, false, `${type}: sprint is released`);
+  check(right.classList.contains('pressed'), false, `${type}: pressed look clears`);
+  check(resized, n + 1, `${type}: canvas re-fits the new shape`);
+  right.send('pointerup', 20 + n);
+  check(game.pressedDirection, null, `${type}: a late release cannot resume the old direction`);
+  up.send('pointerdown', 30 + n);
+  check(game.pressedDirection, 'up', `${type}: the next tap is read as itself`);
+  up.send('pointerup', 30 + n);
+}
+console.log(JSON.stringify({ ok: true, checks, coverage: 'Mobile gestures, held-pointer handoff, interruption cleanup, editable inputs, viewport changes, rotation release, desktop restoration' }));
