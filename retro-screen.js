@@ -9,7 +9,7 @@
   if (LT.RetroScreen) return;
   // `long` is the length of the frame's long side on the virtual LCD, in dots.
   const MODES = Object.freeze({
-    gba: Object.freeze({ id: 'gba', label: '携帯機GBA風（240ドット・32768色）', short: 'GBA', long: 240, levels: 32, saturate: 1.16 }),
+    pocket: Object.freeze({ id: 'pocket', label: '携帯機風（240ドット・32768色）', short: 'POCKET', long: 240, levels: 32, saturate: 1.16 }),
     dot: Object.freeze({ id: 'dot', label: '16ビット風（384ドット）', short: 'DOT', long: 384, levels: 12 }),
     leaf: Object.freeze({ id: 'leaf', label: '若葉液晶（4階調）', short: 'LEAF', long: 300, palette: ['#13280f', '#3b5a24', '#87a438', '#c6d681'] }),
     sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', long: 300, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
@@ -17,8 +17,8 @@
     mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', long: 300, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] }),
     color: Object.freeze({ id: 'color', label: 'フルカラー（高精細）', short: 'HD', long: 0 })
   });
-  const ORDER = Object.freeze(['gba', 'dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
-  const DEFAULT = 'gba';
+  const ORDER = Object.freeze(['pocket', 'dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
+  const DEFAULT = 'pocket';
   const surfaces = new Map();
   let filtersReady = false, filterSupport = null, ditherPattern = null;
 

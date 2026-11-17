@@ -818,3 +818,6 @@ html:not(.mobile-screen) .console-screen>.battle-panel.playing{grid-template-col
 @media (max-width:520px){.dex-teaser-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .game-info-heading h2,.game-info-heading h3{text-wrap:balance}
 .dex-teaser .game-info-heading h3{font-size:clamp(26px,3vw,38px)}
+.screen-mode-setting{display:block}
+.screen-mode-setting .screen-options{display:flex;flex-wrap:wrap;gap:6px}
+.screen-mode-setting .screen-options .btn{flex:0 1 auto}
