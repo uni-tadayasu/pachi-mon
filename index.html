@@ -3743,7 +3743,16 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const limiter=ctx.createDynamicsCompressor();limiter.threshold.value=-3;limiter.knee.value=0;limiter.ratio.value=20;limiter.attack.value=.001;limiter.release.value=.09;
       const lowCut=ctx.createBiquadFilter();lowCut.type='highpass';lowCut.frequency.value=28;lowCut.Q.value=.5;
       this.mix.connect(lowCut);lowCut.connect(compressor);compressor.connect(limiter);limiter.connect(this.master);this.master.connect(ctx.destination);
-      this.musicBus=ctx.createGain();this.musicBus.gain.value=1;this.musicBus.connect(this.mix);
+      this.musicBus=ctx.createGain();this.musicBus.gain.value=1;
+      // Handheld-era output stage: an 8-bit-like step curve and a ~7.8 kHz roll-off
+      // give the PCM grit of early-2000s pocket consoles without clipping.
+      if(typeof ctx.createWaveShaper==='function') {
+        const dac=ctx.createWaveShaper(),curve=new Float32Array(4096),levels=112;
+        for(let i=0;i<curve.length;i++){const x=i/(curve.length-1)*2-1;curve[i]=Math.round(x*levels)/levels;}
+        dac.curve=curve;dac.oversample='none';
+        const roll=ctx.createBiquadFilter();roll.type='lowpass';roll.frequency.value=7800;roll.Q.value=.4;
+        this.musicBus.connect(dac);dac.connect(roll);roll.connect(this.mix);
+      } else this.musicBus.connect(this.mix);
       // Fixed harmonic spectra replace buzzy stock sawtooth timbres. PeriodicWave
       // objects are built once per context and reused by all notes.
       if(typeof ctx.createPeriodicWave==='function') {
@@ -3767,6 +3776,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
           harmonics.forEach((v,i)=>imag[i+1]=v);
           this.waves[name]=ctx.createPeriodicWave(real,imag);
         }
+        // Pulse waves at 50%, 25% and 12.5% duty, the classic handheld lead/arp voices.
+        for(const [name,duty] of [['pulse50',.5],['pulse25',.25],['pulse125',.125]]) {
+          const count=40,real=new Float32Array(count+1),imag=new Float32Array(count+1);
+          for(let n=1;n<=count;n++){const k=n*Math.PI;real[n]=Math.sin(2*k*duty)/k;imag[n]=(1-Math.cos(2*k*duty))/k;}
+          this.waves[name]=ctx.createPeriodicWave(real,imag);
+        }
       }
       const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=35;hp.Q.value=.5;
       const wet=ctx.createGain();wet.gain.value=.16;
@@ -3774,7 +3789,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       this.reverb.connect(hp);hp.connect(wet);wet.connect(this.mix);
       this.delay=ctx.createDelay(1);this.delay.delayTime.value=.24;
       const feedback=ctx.createGain(),filter=ctx.createBiquadFilter(),echo=ctx.createGain();
-      feedback.gain.value=.17;filter.type='lowpass';filter.frequency.value=2800;echo.gain.value=.09;
+      feedback.gain.value=.24;filter.type='lowpass';filter.frequency.value=3200;echo.gain.value=.12;
       this.delay.connect(filter);filter.connect(feedback);feedback.connect(this.delay);filter.connect(echo);echo.connect(this.mix);
       this.fxBus=ctx.createGain();this.fxBus.gain.value=.82;this.fxBus.connect(this.mix);
       const fxSend=ctx.createGain();fxSend.gain.value=.24;this.fxBus.connect(fxSend);fxSend.connect(this.reverb);
@@ -3878,10 +3893,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     scheduleStep(s,g,step,time,unit) {
       const spb=s.beats*2,bar=Math.floor(step/spb),within=step%spb;
       const section=s.form[Math.floor(bar/8)%s.form.length],phraseBar=bar%4;
-      const intro=section==='Prelude',bridge=section==='Bridge',build=section==='Build';
+      const energetic=['battle','epic','heavy','rock','arena'].includes(s.style);
+      // Action themes open at full strength, as handheld battle music does;
+      // gentler themes keep their quiet prelude.
+      const intro=section==='Prelude'&&!energetic,bridge=section==='Bridge',build=section==='Build';
       const final=section==='Finale'||section==='Coda',coda=section==='Coda';
       const refrain=section==='B'||final,variation=section==='A2'||build,secondHalf=bar%8>=4;
-      const energetic=['battle','epic','heavy','rock','arena'].includes(s.style);
       const soft=['ambient','snow','cave','sanctuary'].includes(s.style);
       const swing=['swing','bossa'].includes(s.style)?(within%2?.14*unit:0):0;
       // Deterministic microtiming is bounded to 5ms and never moves a note before
@@ -3898,13 +3915,17 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const note=phrase.notes.find(n=>n.step===position);
       let lead=intro?'piano':bridge?(energetic?'oboe':'flute'):s.lead;
       if(final&&s.style==='orchestra')lead=s.id==='ending'?'flute':'horn';
+      if(energetic&&!intro&&!bridge&&!final)lead='pulse25';
       if(secondHalf&&s.style==='water')lead='flute';
       if(variation&&s.style==='folk')lead='clarinet';
       if(note) {
         const degree=note.degree+(variation&&phraseBar===2?2:0);
         const pitch=noteFor(s,degree,bridge?-1:0);
         const duration=Math.min(note.length*(bridge?2:1),spb*1.5)*unit*(energetic&&!bridge?.84:.94);
-        this.instrument(g,lead,pitch,at,duration,.168*dynamic,lead==='piano'?-.1:.05);
+        this.instrument(g,lead,pitch,at,duration,(lead.startsWith('pulse')?.118:.168)*dynamic,lead==='piano'?-.1:.05);
+        // Action themes double the tune an octave down on a square voice, handheld style.
+        if(energetic&&!intro&&!bridge&&this.quality!=='low')this.instrument(g,'pulse50',pitch-12,at+.004,duration*.92,.05*dynamic,-.18);
+        if(final&&energetic&&this.quality!=='low'&&note.length>=2)this.instrument(g,'pulse25',pitch+12,at+.008,duration*.8,.034*dynamic,.26);
         if(final&&!soft&&this.quality!=='low'&&within===0&&note.length>=2)
           this.instrument(g,'strings',pitch-12,at+.016,duration*.93,.046,-.24);
         if(final&&secondHalf&&phraseBar===3&&this.quality!=='low'&&note.length>=2)
@@ -3926,11 +3947,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         const count=intro?2:this.quality==='low'?3:4;
         const voiceKind=intro?'piano':final&&s.style==='orchestra'?'choir':energetic&&!bridge?'strings':'pad';
         g.voicing.slice(0,count).forEach((n,i)=>this.instrument(g,voiceKind,n,time+i*.014,spb*unit*.88,.033*dynamic,[-.5,-.18,.22,.5][i]));
-        this.instrument(g,'bass',noteFor(s,chord,-2),time,Math.min(spb*unit*(soft?.66:.40),1.6),(soft?.125:.19)*intensity,0);
+        this.instrument(g,energetic?'wavebass':'bass',noteFor(s,chord,-2),time,Math.min(spb*unit*(soft?.66:.40),1.6),(soft?.125:energetic?.17:.19)*intensity,0);
         if((final||refrain)&&!soft&&bar%4===0)this.drum(g,'cymbal',time,.035*intensity);
       }
       if(within===Math.floor(spb/2)&&!soft&&!intro)
-        this.instrument(g,'bass',noteFor(s,chord+4,-2),at,unit*(energetic?1.1:1.7),.12*intensity,0);
+        this.instrument(g,energetic?'wavebass':'bass',noteFor(s,chord+4,-2),at,unit*(energetic?1.1:1.7),.12*intensity,0);
       if(energetic&&!bridge&&!intro&&within===spb-1) {
         const next=noteFor(s,s.chords[(bar+1)%s.chords.length],-2);
         this.instrument(g,'bass',next-1,at,unit*.7,.085*intensity,0);
@@ -3939,8 +3960,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(within%stride===0&&!(within===0&&note?.length===1)) {
         const offset=variation?(s.arp.length-1-within%s.arp.length):within%s.arp.length;
         const d=chord+s.arp[offset];
-        const inst=['snow','cave','ancient','water','lab'].includes(s.style)?'harp':energetic?'guitar':s.style==='waltz'?'guitar':'epiano';
-        this.instrument(g,inst,noteFor(s,d,-1),at,unit*(s.style==='water'?2.1:1.2),(energetic?.052:soft?.035:.045)*dynamic,within%4<2?-.35:.33);
+        const chip=energetic||['folk','swing','rock','lab','celebrate'].includes(s.style);
+        const inst=['snow','cave','ancient','water'].includes(s.style)?'harp':chip?'pulse125':s.style==='waltz'?'guitar':'epiano';
+        this.instrument(g,inst,noteFor(s,d,inst==='pulse125'?0:-1),at,unit*(s.style==='water'?2.1:inst==='pulse125'?.9:1.2),(inst==='pulse125'?.03:energetic?.052:soft?.035:.045)*dynamic,within%4<2?-.35:.33);
       }
       // Counterpoint occupies a rest or the tail of a long phrase, leaving the
       // main tune intelligible. Its four-note answer follows the current chord.
@@ -3993,7 +4015,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         bass:{type:'triangle',wave:'bass',partials:[[1,.9],[.5,.1]],cut:950,attack:.008,release:.12,hold:.37},
         harp:{type:'triangle',wave:'harp',partials:[[1,.96],[2.003,.04]],cut:4600,attack:.003,release:.33,hold:.10},
         oboe:{type:'triangle',wave:'oboe',partials:[[1,1]],cut:2850,attack:.028,release:.17,hold:.68},
-        choir:{type:'triangle',wave:'choir',partials:[[.999,.5],[1.001,.5]],cut:1650,attack:.14,release:.31,hold:.67}
+        choir:{type:'triangle',wave:'choir',partials:[[.999,.5],[1.001,.5]],cut:1650,attack:.14,release:.31,hold:.67},
+        pulse50:{type:'square',wave:'pulse50',partials:[[1,1]],cut:5200,attack:.004,release:.09,hold:.64},
+        pulse25:{type:'square',wave:'pulse25',partials:[[1,.92],[1.004,.08]],cut:5600,attack:.003,release:.1,hold:.66},
+        pulse125:{type:'square',wave:'pulse125',partials:[[1,1]],cut:6200,attack:.002,release:.05,hold:.38},
+        wavebass:{type:'triangle',partials:[[1,1],[2,.05]],cut:2100,attack:.004,release:.06,hold:.58}
       };
       const cfg=configs[kind]||configs.piano;
       const attack=Math.min(cfg.attack,duration*.24),release=cfg.release,hold=cfg.hold;
@@ -4023,9 +4049,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         osc.connect(part);part.connect(env);voice.nodes.push(osc,part);voice.sources.push(osc);
         // Delayed, low-depth vibrato is deterministic and requires no extra LFO
         // sources. It is absent on attacks and percussive instruments.
-        if(['flute','strings','cello','horn','clarinet','muted','oboe','choir'].includes(kind)&&duration>.24) {
+        if(['flute','strings','cello','horn','clarinet','muted','oboe','choir','pulse50','pulse25'].includes(kind)&&duration>.24) {
           osc.detune.setValueAtTime(0,time);
-          const depth=['strings','cello'].includes(kind)?4:kind==='flute'?6:3;
+          const depth=['strings','cello'].includes(kind)?4:kind==='flute'?6:kind.startsWith('pulse')?9:3;
           for(let t=.14,j=0;t<duration;t+=.095,j++)osc.detune.linearRampToValueAtTime((j%2?1:-1)*depth,time+t);
           osc.detune.linearRampToValueAtTime(0,time+duration);
         }
@@ -4035,7 +4061,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     drum(group,kind,time,volume) {
       if(!this.ctx||!this.enabled||this.voices.size>=this.maxVoices-(group?8:0))return;
       const ctx=this.ctx,bus=group?.bus||this.fxBus,env=ctx.createGain(),filter=ctx.createBiquadFilter();
-      const duration=kind==='kick'?.26:kind==='hat'?.055:kind==='rim'?.065:kind==='cymbal'?.8:kind==='tom'?.22:.15;
+      const duration=kind==='kick'?.2:kind==='hat'?.045:kind==='rim'?.06:kind==='cymbal'?.7:kind==='tom'?.2:.13;
       const voice={group,sources:[],nodes:[env,filter],end:time+duration+.03};this.voices.add(voice);group?.voices.add(voice);
       env.connect(filter);
       if(typeof ctx.createStereoPanner==='function') {
@@ -4046,14 +4072,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       let source;
       if(['kick','rim','tom'].includes(kind)) {
         source=ctx.createOscillator();source.type=kind==='rim'?'triangle':'sine';
-        const frequencies=kind==='kick'?[130,43]:kind==='tom'?[220,90]:[420,180];
+        const frequencies=kind==='kick'?[150,44]:kind==='tom'?[240,96]:[460,190];
         source.frequency.setValueAtTime(frequencies[0],time);source.frequency.exponentialRampToValueAtTime(frequencies[1],time+duration*.72);
         filter.type='lowpass';filter.frequency.value=kind==='kick'?750:2200;
       } else {
         source=ctx.createBufferSource();source.buffer=this.noise;
         // Repeating a tiny noise buffer would add a pitched buzz; the generated
         // buffer is long enough for the longest one-shot cymbal.
-        filter.type=kind==='snare'?'bandpass':'highpass';filter.frequency.value=kind==='hat'?6500:kind==='cymbal'?4100:1900;filter.Q.value=.55;
+        filter.type=kind==='snare'?'bandpass':'highpass';filter.frequency.value=kind==='hat'?7600:kind==='cymbal'?4400:2300;filter.Q.value=kind==='snare'?.8:.55;
         if(kind==='snare') {
           const body=ctx.createOscillator(),level=ctx.createGain();body.type='triangle';body.frequency.setValueAtTime(180,time);body.frequency.exponentialRampToValueAtTime(105,time+.11);level.gain.value=.22;
           body.connect(level);level.connect(env);body.start(time);body.stop(voice.end);voice.sources.push(body);voice.nodes.push(body,level);
