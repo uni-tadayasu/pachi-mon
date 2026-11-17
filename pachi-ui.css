@@ -787,3 +787,16 @@ html:not(.mobile-screen) .console-screen>.battle-panel .move-btn{min-height:48px
   dialog[open],body::before,.title-discover::after,.title-start .button-arrow,.section-kicker h2::before,.battle-log-wrap::after,.dialogue-text::after,.game-info .eyebrow::before{animation:none}
 }
 .reduce-motion dialog[open],.reduce-motion body::before,.reduce-motion .title-discover::after,.reduce-motion .title-start .button-arrow,.reduce-motion .section-kicker h2::before,.reduce-motion .battle-log-wrap::after,.reduce-motion .dialogue-text::after,.reduce-motion .game-info .eyebrow::before{animation:none}
+
+/* ---------- Battle intro: double flash, then a shutter wipe ---------- */
+.battle-intro{position:absolute;inset:0;z-index:7;pointer-events:none;background:#fff;animation:pm-intro .74s steps(1) forwards}
+.battle-intro::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#0a0d2c 0 32px,transparent 32px 64px);opacity:0;animation:pm-shutter .74s steps(8) forwards}
+@keyframes pm-intro{0%{opacity:1}12%{opacity:0}24%{opacity:1}36%,100%{opacity:0;background:transparent}}
+@keyframes pm-shutter{0%,35%{opacity:0;clip-path:inset(0 0 0 0)}36%{opacity:1;clip-path:inset(0 0 0 0)}100%{opacity:1;clip-path:inset(0 0 0 100%)}}
+.reduce-motion .battle-intro{display:none}
+
+/* While a turn plays out, the window shows only the message, as handheld RPGs do. */
+.battle-panel.playing .battle-actions{display:none}
+.battle-panel.playing .battle-log-wrap{display:flex!important;border-right:0!important;border-bottom:0}
+html:not(.mobile-screen) .console-screen>.battle-panel.playing{grid-template-columns:minmax(0,1fr)!important}
+.mobile-screen .battle-panel.playing #battle-log{max-height:120px}

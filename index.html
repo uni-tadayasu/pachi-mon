@@ -4549,11 +4549,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let moveAnim = null, pressedDirection = null, directionSource = null;
   let shopQuantity = 1, selectedAvatar = 'male', selectedPlayerName = LT.PlayerIdentity.defaultName, lastPortraitFrame = 0;
   let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
-  let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:true, screen:LT.RetroScreen?.defaultMode||'color' };
+  let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:true, screen:LT.RetroScreen?.defaultMode||'color', textSpeed:'normal', autoRun:false };
   try {
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if(saved && typeof saved==='object') {
-      for(const k of ['sound','dayNight','reducedMotion','crt'])if(typeof saved[k]==='boolean')settings[k]=saved[k];
+      for(const k of ['sound','dayNight','reducedMotion','crt','autoRun'])if(typeof saved[k]==='boolean')settings[k]=saved[k];
+      if(['slow','normal','fast','instant'].includes(saved.textSpeed))settings.textSpeed=saved.textSpeed;
       if(Number.isFinite(saved.volume))settings.volume=Math.max(0,Math.min(1,saved.volume));
       if(['high','balanced','low'].includes(saved.quality))settings.quality=saved.quality;
       if(LT.RetroScreen?.isMode(saved.screen))settings.screen=saved.screen;
@@ -4834,8 +4835,24 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     Object.assign(battleView.battle,{activeIndex:visual.activeIndex,enemy:JSON.parse(JSON.stringify(visual.enemy)),enemyIndex:visual.enemyIndex});
     updateBattle();
   }
+  // Handheld-style message pacing. Typing runs on animation frames beside the
+  // existing timed delay, so the turn order and minimum durations never change.
+  const TEXT_PACE={slow:{cps:30,tempo:1.15},normal:{cps:80,tempo:1},fast:{cps:220,tempo:.7},instant:{cps:0,tempo:.55}};
+  let battleSkip=false;
+  function typeLine(line,text,cps,onFrame){
+    const chars=Array.from(String(text??''));
+    if(!cps||typeof requestAnimationFrame!=='function'||chars.length<2){line.textContent=chars.join('');return 0;}
+    const start=performance.now();line.textContent='';
+    const step=()=>{
+      const shown=battleSkip?chars.length:Math.min(chars.length,Math.ceil((performance.now()-start)*cps/1000));
+      line.textContent=chars.slice(0,shown).join('');onFrame?.();
+      if(shown<chars.length)requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    return Math.ceil(chars.length*1000/cps)+80;
+  }
   async function playBattleEvents(result,usedMove=null) {
-    busy=true;battleEffect=null;
+    busy=true;battleEffect=null;battleSkip=false;$('battle-panel')?.classList?.add('playing');
     $('battle-actions').querySelectorAll('button').forEach(button=>button.disabled=true);
     const events=result.events||[],box=$('battle-log');box.replaceChildren();updateAll();
     try {
@@ -4854,13 +4871,17 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         else if(event.kind==='damage')sound.fx('hit');
         else if(event.kind==='faint')sound.fx('faint');
         if(['heal','evolve','caught','seal'].includes(event.kind)&&!(hasMoveSound&&event.kind==='heal'))sound.fx(event.kind==='evolve'?'evolution':event.kind==='caught'?'capture':event.kind==='heal'?'heal':'win');
-        const line=document.createElement('p');line.textContent=typeof event==='string'?event:event.text;box.appendChild(line);box.scrollTop=box.scrollHeight;
-        const delay=settings.reducedMotion?(['faint','switch'].includes(event.kind)?180:60):effect?effect.duration+60:(i===events.length-1?160:240);
-        await new Promise(resolve=>setTimeout(resolve,delay));
+        const line=document.createElement('p'),text=typeof event==='string'?event:event.text;box.appendChild(line);
+        const pace=TEXT_PACE[settings.textSpeed]||TEXT_PACE.normal;
+        let delay=settings.reducedMotion?(['faint','switch'].includes(event.kind)?180:60):effect?effect.duration+60:(i===events.length-1?160:240);
+        if(!settings.reducedMotion&&(pace.tempo!==1||battleSkip))delay=Math.max(60,Math.round(delay*pace.tempo*(battleSkip?.35:1)));
+        const typing=settings.reducedMotion||battleSkip?typeLine(line,text,0):typeLine(line,text,pace.cps,()=>{box.scrollTop=box.scrollHeight;});
+        box.scrollTop=box.scrollHeight;
+        await new Promise(resolve=>setTimeout(resolve,Math.max(delay,typing)));
         applyBattleVisual(event.visual);battleEffect=null;
       }
     } finally {
-      battleView=null;battleEffect=null;$('game-canvas').classList.remove('battle-impact');
+      battleView=null;battleEffect=null;$('game-canvas').classList.remove('battle-impact');$('battle-panel')?.classList?.remove('playing');
       busy=false;updateAll();save();
     }
     if(['won','caught'].includes(result.ended))sound.fx(result.ended==='caught'?'capture':'win');
@@ -4885,6 +4906,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const p = document.createElement('p'); p.textContent = b.title ? `${b.title}がはじまった！` : b.guardian ? `${DATA.guardians[b.guardian].name}との試練がはじまった！` : `${b.enemy.shiny?'色違いの':''}${nameOf(b.enemy)}が姿をあらわした。`;
     $('battle-log').appendChild(p);
     updateAll(); sound.fx('click');
+    const stage=document.querySelector('.game-stage');
+    if(stage&&!settings.reducedMotion){stage.querySelector('.battle-intro')?.remove();const intro=document.createElement('div');intro.className='battle-intro';intro.setAttribute('aria-hidden','true');stage.appendChild(intro);setTimeout(()=>intro.remove(),760);}
     if (!document.documentElement.classList.contains('mobile-screen') && matchMedia('(max-width: 600px)').matches) $('battle-panel').scrollIntoView({block:'nearest',behavior:'smooth'});
   }
   function finishBattle() {
@@ -4912,7 +4935,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     let pos = 0;
     const show = () => {
       openModal(title, `<div class="dialogue-text"><p>${escape(lines[pos])}</p></div><div class="modal-actions"><small class="muted">${pos+1} / ${lines.length}</small><button class="btn btn-primary" id="dialogue-next">${pos===lines.length-1 ? 'わかった' : 'つづきを読む'} →</button></div>`, 'dialogue');
-      $('dialogue-next').onclick = () => { sound.fx('click'); if (++pos<lines.length) show(); else { closeModal(); if (after) after(); } };
+      const paragraph=$('modal-content').querySelector('.dialogue-text p'),full=String(lines[pos]??''),pace=TEXT_PACE[settings.textSpeed]||TEXT_PACE.normal;
+      let typing=false;
+      if(paragraph&&!settings.reducedMotion&&pace.cps&&typeof requestAnimationFrame==='function'){
+        const chars=Array.from(full),start=performance.now();typing=true;paragraph.textContent='';
+        const step=()=>{if(!typing||!paragraph.isConnected)return;const shown=Math.min(chars.length,Math.ceil((performance.now()-start)*pace.cps/1000));paragraph.textContent=chars.slice(0,shown).join('');if(shown<chars.length)requestAnimationFrame(step);else typing=false;};
+        requestAnimationFrame(step);
+      }
+      $('dialogue-next').onclick = () => { if(typing){typing=false;paragraph.textContent=full;return;} sound.fx('click'); if (++pos<lines.length) show(); else { closeModal(); if (after) after(); } };
     }; show();
   }
   function bindPlayerNameInput(id,onInput,buttons){
@@ -5153,7 +5183,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。HPを減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさ・めいちゅう・かいひがバトルに影響します。物理わざはこうげきとぼうぎょ、特殊わざはとくこうととくぼうで威力が決まり、めいちゅうとかいひで当たりやすさが変わります。</p><h3>建物と星路評議会</h3><p>建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。道具店・宿・研究所には係員がいます。16の旅紋を順番に集め、星路評議会最終会場で四境の守護者4人、星路の継承者1人に挑みましょう。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手のHPを減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所でHPとPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${(LT.RetroScreen?.order||[]).map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${(LT.RetroScreen?.order||[]).map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();
   }
   function bindVolume(){
@@ -5246,7 +5276,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const result=engine.move(dx,dy);updateFacing();
     if(result.message) { const now=performance.now(); if(!walk.lastToast || now-walk.lastToast>2200){toast(result.message);walk.lastToast=now;} }
     if(result.ok) {
-      moveAnim=result.mapChanged?null:{x:old.x,y:old.y,time:performance.now(),duration:(sprint||padSprint)?82:132,stepIndex:engine.state.steps-1};
+      moveAnim=result.mapChanged?null:{x:old.x,y:old.y,time:performance.now(),duration:(sprint||padSprint||settings.autoRun)?82:132,stepIndex:engine.state.steps-1};
       if(result.mapChanged) { toast(engine.map.name); updateAll(); save(); }
       else { $('world-hint').textContent=nearHint(); if(performance.now()-lastSave>1800)save(); }
       if(result.battleStarted || engine.battle)openBattle();
@@ -5266,7 +5296,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(!playing)return;
     if(keyDirs[e.key] && !engine.battle){e.preventDefault();$('game-canvas').focus({preventScroll:true});pressedDirection=keyDirs[e.key];directionSource=e.key; if(!e.repeat){lastStep=performance.now();walk(...directions[pressedDirection]);}return;}
     if(e.repeat)return;
-    if(['e','E','Enter',' '].includes(e.key)){if(e.target.tagName==='BUTTON' && !['e','E'].includes(e.key))return;e.preventDefault();if(engine.battle?.result)finishBattle();else interact();}
+    if(['e','E','Enter',' '].includes(e.key)){if(busy&&engine.battle){e.preventDefault();battleSkip=true;return;}if(e.target.tagName==='BUTTON' && !['e','E'].includes(e.key))return;e.preventDefault();if(engine.battle?.result)finishBattle();else interact();}
     else if(e.key==='Escape'){e.preventDefault();showMenu();}
     else if(['j','J'].includes(e.key))showDex();
     else if(['m','M'].includes(e.key))showMap();
@@ -5304,7 +5334,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   $('continue-btn').onclick=()=>storedSave && begin(null,storedSave);
   $('title-settings-btn').onclick=showSettings;
   $('interact-btn').onclick=interact;
-  $('touch-action').onclick=()=>{if(engine.battle?.result)finishBattle();else interact();};
+  $('touch-action').onclick=()=>{if(busy&&engine.battle){battleSkip=true;return;}if(engine.battle?.result)finishBattle();else interact();};
   $('touch-menu').onclick=showMenu;
   // Handheld B: tap to go back; hold while exploring to dash. SELECT opens the bag.
   const touchB=$('touch-b');
@@ -5323,6 +5353,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
   if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
+  $('battle-panel')?.addEventListener('pointerdown',()=>{if(busy&&engine.battle)battleSkip=true;});
   if($('console-palette'))$('console-palette').onclick=()=>{if(!LT.RetroScreen)return;settings.screen=LT.RetroScreen.next(settings.screen);saveSettings();toast(`画面モード：${LT.RetroScreen.label(settings.screen)}`);if(activePane==='settings')showSettings();};
   if($('touch-select'))$('touch-select').onclick=()=>{if(!playing)return;if(engine.battle){toast('バトル中は「バッグ」から道具を使えます。');return;}showBag();};
   $('menu-btn').onclick=showMenu;
@@ -5368,9 +5399,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.claim){const r=engine.claimQuest(d.claim);toast(r.message);if(r.ok){save();updateAll();sound.fx('win');showQuests();}return;}
     if(d.challenge){const r=d.challenge==='tower'?engine.startTower():d.challenge==='rival'?engine.startRival(d.id):d.challenge==='elite'?engine.startElite(d.id):d.challenge==='champion'?engine.startChampion():engine.startRematch(d.id);if(r.ok){closeModal();openBattle();}else toast(r.message);return;}
     if(d.track){settings.sound=true;sound.setEnabled(true);sound.preview(d.track==='auto'?null:d.track);saveSettings();updateSound();showMusic();return;}
+    if(d.textSpeed&&['slow','normal','fast','instant'].includes(d.textSpeed)){settings.textSpeed=d.textSpeed;saveSettings();showSettings();return;}
     if(d.screen&&LT.RetroScreen?.isMode(d.screen)){settings.screen=d.screen;saveSettings();showSettings();return;}
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
-    if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt')settings.crt=!settings.crt;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
+    if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt')settings.crt=!settings.crt;else if(d.setting==='autoRun')settings.autoRun=!settings.autoRun;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
     if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
@@ -5391,7 +5423,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     controller?.poll(now);
     if(document.hidden)return;
     paintAnimatedPortraits(now);
-    if(pressedDirection && now-lastStep>((sprint||padSprint)?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
+    if(pressedDirection && now-lastStep>((sprint||padSprint||settings.autoRun)?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
     if(now-lastClock>=1000){if(playing && !$('modal').open && !(LT.onlineActive||tradeLocked()) && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
     else sound.tick();
     if((LT.onlineActive||tradeLocked())||!playing)return;
