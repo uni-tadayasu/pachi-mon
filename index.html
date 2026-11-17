@@ -4988,7 +4988,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(!value) {
         this.enabled=false;this.releasePlayback();
         if(this.ctx&&this.master){this.master.gain.setTargetAtTime(0,this.ctx.currentTime,.035);this.stopAll(this.ctx.currentTime+.16);}
-        return false;
+        this.notify();return false;
       }
       try {
         if(typeof document!=='undefined' && document.hidden){this.enabled=false;this.releasePlayback();return false;}
@@ -5004,8 +5004,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         this.master.gain.setTargetAtTime(this.volume*.72,this.ctx.currentTime,.06);
         if(!this.group)this.switchTrack(this.previewId || this.pickScene(),true);
         else if(this.group.recorded)this.playRecording();
-        return true;
-      } catch(error) {if(request!==this.enableRequest)return this.enabled;this.lastError=error?.message || '音声を開始できませんでした。';this.enabled=false;this.releasePlayback();return false;}
+        this.notify();return true;
+      } catch(error) {if(request!==this.enableRequest)return this.enabled;this.lastError=error?.message || '音声を開始できませんでした。';this.enabled=false;this.releasePlayback();this.notify();return false;}
     }
     setup() {
       const Constructor=globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -6879,8 +6879,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   window.addEventListener('orientationchange',releaseHeldInputs);
   document.addEventListener('pachi-viewport-change',releaseHeldInputs);
   document.addEventListener('visibilitychange',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.suspend();}else if(settings.sound&&sound.ctx)sound.setEnabled(true);});
-  const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock()){sound.primeRecording?.();sound.setEnabled(true).then(updateAudioHint,updateAudioHint);}};
-  document.addEventListener('pachi-audio-state',updateAudioHint);
+  const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock()){sound.primeRecording?.();sound.setEnabled(true);}};
   document.addEventListener('pointerdown',unlockSound,{capture:true});
   document.addEventListener('keydown',unlockSound,{capture:true});
   document.addEventListener('touchend',unlockSound,{capture:true,passive:true});
@@ -7151,7 +7150,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(error){return {ok:false,pending:true,message:error?.message||'端末に保存できません。空き容量を確認して再度お試しください。'};}
   }
   LT.playMoveSound=(move,event,effect)=>sound.move?.(move,event,effect);
-  LT.soundEngine=sound;
+  Object.defineProperty(LT,'soundEngine',{configurable:true,get:()=>sound});
   LT.adminBridge={
     commitTrade,
     getEngine:()=>playing?engine:storedSave?new Engine(storedSave):null,
@@ -7179,6 +7178,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
   // The title theme starts by itself wherever the browser allows sound before any
   // interaction; elsewhere the note on the title explains that a first touch starts it.
+  document.addEventListener('pachi-audio-state',()=>updateAudioHint());
   if(settings.sound&&!document.hidden)sound.tryAutoplay().then(updateAudioHint,updateAudioHint);else updateAudioHint();
   document.dispatchEvent(new CustomEvent('pachi-admin-bridge-ready'));
   const refreshArtwork=event=>{portraitLoader.invalidate(event?.speciesIds);paintPortraits();};

@@ -87,7 +87,7 @@ const settle = () => wait(20);
   assert(w.audio.recording.blocked && w.audio.needsUnlock(), 'a blocked media element also waits for the first touch');
 
   // ── The page: autoplay attempt, note, first-touch priming; offline storage.
-  for (const needle of ['sound.tryAutoplay().then(updateAudioHint,updateAudioHint)', 'id="title-audio-hint"', "document.addEventListener('pachi-audio-state',updateAudioHint)", 'sound.primeRecording?.();',
+  for (const needle of ['sound.tryAutoplay().then(updateAudioHint,updateAudioHint)', 'id="title-audio-hint"', "document.addEventListener('pachi-audio-state',()=>updateAudioHint())", 'sound.primeRecording?.();',
     '<link rel="prefetch" href="assets/music/title-16bit.mp3?v=20261117-aishiteirukara">'])
     assert(html.includes(needle), `index.html: ${needle}`);
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
