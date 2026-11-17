@@ -196,7 +196,7 @@
     }finally{setSending(false);renderPendingGrant();}
   }
   function futoMoveEntries(){
-    const exclusive=new Set([...(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]),...(LT.DATA.species?.[LT.DATA.mythical?.species]?.moves||[])]);
+    const exclusive=new Set([...(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]),...(LT.DATA.species?.[LT.DATA.mythical?.species]?.moves||[]),...Object.keys(LT.DATA.signatureMoves||{})]);
     return Object.entries(LT.DATA.moves).filter(([id])=>id!=='struggle'&&!exclusive.has(id));
   }
   async function openConsole(){

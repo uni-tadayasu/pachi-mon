@@ -27,7 +27,8 @@ let DATA,Engine;
  for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(match[1]))continue;runInNewContext(match[2],context);if(context.LT?.Engine)break;}
  ({DATA,Engine}=context.LT);
 }
-function mon(species='komori',uid='test-mon'){const e=new Engine(),m=JSON.parse(JSON.stringify(e.makeMonster(species,20)));m.uid=uid;m.hp-=3;m.xp=11;m.shiny=true;m.nickname='なかま';m.pp[Object.keys(m.pp)[0]]=1;return m;}
+// Monsters travel in the exchange catalog: the game converts its current moves' PP to it (Engine#tradeWirePP).
+function mon(species='komori',uid='test-mon'){const e=new Engine(),m=JSON.parse(JSON.stringify(e.makeMonster(species,20)));m.uid=uid;m.hp-=3;m.xp=11;m.shiny=true;m.nickname='なかま';m.pp=JSON.parse(JSON.stringify(e.tradeWirePP(m)));m.pp[Object.keys(m.pp)[0]]=1;return m;}
 
 test('trade catalog matches every ordinary species and preserves all legal snapshot fields',()=>{
  let count=0;for(const [id,s]of Object.entries(DATA.species)){

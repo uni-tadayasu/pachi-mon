@@ -2486,6 +2486,120 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.allocation=Object.freeze({pointsPerLevel:2,capPerStat:64,keys:Object.freeze(['hp','atk','def','spAtk','spDef','speed']),hpPerPoint:2});
 })();
 
+
+/* Pachi Monsters — 96 moves: 15 per type, 6 neutral, 12 special and 3 starter signature moves. */
+(() => {
+  'use strict';
+  const D=globalThis.LT?.DATA;
+  if(!D||D.moveRoster)return;
+  // Movesets and PP limits from before this rework. Trades travel in this
+  // format (the exchange server keeps the same catalog) and old saves are read
+  // with it, slot by slot.
+  const LEGACY='komori:sprout.30,nudge.30,bloom.10,lifeline.20;komorion:vine.15,nudge.30,bloom.10,lifeline.20;shizuku:wave.30,nudge.30,mist.15,frost.20;shizurua:surge.15,wave.30,mist.15,frost.20;hibana:spark.30,nudge.30,warmth.10,cinder.20;akebino:blaze.15,spark.30,warmth.10,cinder.20;fuwari:gust.30,nudge.30,shelter.15,whisper.20;sorahane:storm.15,gust.30,shelter.15,whisper.20;chirari:spark.30,gust.30,warmth.10,cinder.20;tomoriga:blaze.15,storm.15,warmth.10,cinder.20;nemuri:sprout.30,nudge.30,shell.15,lifeline.20;kodamori:vine.15,glint.30,bloom.10,lifeline.20;minamo:wave.30,gust.30,mist.15,frost.20;shionagi:surge.15,storm.15,mist.15,frost.20;kirari:glint.30,nudge.30,shell.15,facet.20;seiran:prism.15,wave.30,shell.15,facet.20;hatane:vine.15,gust.30,bloom.10,lifeline.20;sunokko:storm.15,nudge.30,shelter.15,whisper.20;kagetsu:blaze.15,glint.30,warmth.10,cinder.20;hoshiwa:prism.15,nudge.30,shell.15,facet.20;yorune:storm.15,glint.30,shelter.15,whisper.20;astralith:prism.15,storm.15,shell.15,facet.20;momiji:sprout.30,gust.30,bloom.10,nudge.30;akihane:evergreen.10,storm.15,dew.10,thorn.20;koromo:sprout.30,glint.30,bloom.10,focus.15;moriboshi:evergreen.10,moonbeam.20,dew.10,lifeline.20;tsumugi:gust.30,sprout.30,feather.10,nudge.30;orihime:tempest.10,vine.15,feather.10,whisper.20;suine:wave.30,gust.30,spring.10,nudge.30;suirei:riptide.10,storm.15,spring.10,ripple.30;sazanami:wave.30,nudge.30,mist.15,frost.20;shioshige:riptide.10,facet.20,mist.15,frost.20;sunari:spark.30,sirocco.20,warmth.10,nudge.30;sabaryo:sunburst.10,sirocco.20,phoenix.10,cinder.20;honoha:spark.30,gust.30,warmth.10,nudge.30;enraku:sunburst.10,tempest.10,phoenix.10,cinder.20;kourin:glint.30,frost.20,shell.15,nudge.30;setsurei:supernova.10,frost.20,starlight.10,facet.20;yukumo:wave.30,nudge.30,spring.10,shell.15;hakurou:riptide.10,pulse.20,spring.10,frost.20;raito:glint.30,nudge.30,shell.15,facet.20;raigai:supernova.10,pulse.20,shell.15,facet.20;sorami:gust.30,wave.30,feather.10,nudge.30;amakumo:tempest.10,riptide.10,feather.10,whisper.20;kuroto:glint.30,gust.30,starlight.10,nudge.30;yorutsuki:supernova.10,tempest.10,starlight.10,moonbeam.20;irisowl:tempest.10,facet.20,feather.10,shelter.15;mosselk:evergreen.10,lifeline.20,dew.10,shell.15;cocoroc:evergreen.10,lifeline.20,dew.10,focus.15;sahari:sunburst.10,sirocco.20,heatveil.15,cinder.20;enneko:sunburst.10,moonbeam.20,phoenix.10,cinder.20;tobari:tempest.10,whisper.20,feather.10,facet.20;rurihime:riptide.10,moonbeam.20,spring.10,ripple.30;yashiro:supernova.10,pulse.20,shell.15,starlight.10;gurenka:sunburst.10,tempest.10,phoenix.10,cinder.20;aotori:riptide.10,tempest.10,spring.10,ripple.30;silfara:tempest.10,moonbeam.20,feather.10,sirocco.20;luminarch:evergreen.10,supernova.10,dew.10,lifeline.20;tanemaru:atlas_leaf_1.30,atlas_leaf_4.10,atlas_ember_6.15,atlas_leaf_9.10;fukumori:atlas_leaf_2.20,atlas_leaf_5.30,atlas_wind_7.20,atlas_leaf_9.10;saikaju:atlas_leaf_3.15,atlas_leaf_6.15,atlas_crystal_8.10,atlas_leaf_10.10;ruron:atlas_tide_1.30,atlas_tide_4.10,atlas_wind_6.15,atlas_tide_9.10;mizukane:atlas_tide_2.15,atlas_tide_5.30,atlas_crystal_7.20,atlas_tide_9.10;suirinka:atlas_tide_3.15,atlas_tide_6.15,atlas_leaf_8.15,atlas_tide_10.10;hikumaru:atlas_ember_1.30,atlas_ember_4.10,atlas_crystal_6.15,atlas_ember_9.10;akazuchi:atlas_ember_2.15,atlas_ember_5.30,atlas_leaf_7.20,atlas_ember_9.10;akakagura:atlas_ember_3.15,atlas_ember_6.15,atlas_tide_8.10,atlas_ember_10.10;piyumu:atlas_wind_1.30,atlas_wind_4.10,atlas_leaf_6.15,atlas_wind_9.10;kazaharu:atlas_wind_2.20,atlas_wind_5.30,atlas_tide_7.20,atlas_wind_9.10;soramado:atlas_wind_3.15,atlas_wind_6.15,atlas_ember_8.10,atlas_wind_10.10;chokori:atlas_crystal_1.30,atlas_crystal_4.10,atlas_tide_6.15,atlas_crystal_9.10;sekkura:atlas_crystal_2.15,atlas_crystal_5.20,atlas_ember_7.20,atlas_crystal_9.10;sekkokyo:atlas_crystal_3.10,atlas_crystal_6.15,atlas_wind_8.15,atlas_crystal_10.10;tsurune:atlas_leaf_4.10,atlas_leaf_7.20,atlas_ember_1.30,atlas_leaf_10.10;hagalune:atlas_leaf_5.30,atlas_leaf_8.15,atlas_wind_2.20,atlas_leaf_11.15;shinjuka:atlas_leaf_6.15,atlas_leaf_1.30,atlas_crystal_3.10,atlas_leaf_11.15;nakakiri:atlas_tide_4.10,atlas_tide_7.20,atlas_wind_1.30,atlas_tide_10.10;umikiri:atlas_tide_5.30,atlas_tide_8.10,atlas_crystal_2.15,atlas_tide_11.15;umihibiki:atlas_tide_6.15,atlas_tide_1.30,atlas_leaf_3.15,atlas_tide_11.15;lumitomo:atlas_ember_4.10,atlas_ember_7.20,atlas_crystal_1.30,atlas_ember_10.10;yorutomo:atlas_ember_5.30,atlas_ember_8.10,atlas_leaf_2.20,atlas_ember_11.15;akatsubame:atlas_ember_6.15,atlas_ember_1.30,atlas_tide_3.15,atlas_ember_11.15;fukiho:atlas_wind_4.10,atlas_wind_7.20,atlas_leaf_1.30,atlas_wind_10.10;fukiryu:atlas_wind_5.30,atlas_wind_8.15,atlas_tide_2.15,atlas_wind_11.15;kuchuri:atlas_crystal_4.10,atlas_crystal_7.20,atlas_wind_1.30,atlas_crystal_10.10;kujyura:atlas_crystal_5.20,atlas_crystal_8.10,atlas_tide_2.15,atlas_crystal_11.15;mofuri:atlas_leaf_7.20,atlas_leaf_2.20,atlas_wind_4.10,atlas_leaf_12.15;mofurou:atlas_leaf_8.15,atlas_leaf_3.15,atlas_crystal_5.20,atlas_leaf_12.15;hakone:atlas_wind_6.15,atlas_wind_1.30,atlas_leaf_3.15,atlas_wind_11.15;hakozora:atlas_wind_7.20,atlas_wind_2.20,atlas_tide_4.10,atlas_wind_12.15;sorotto:atlas_wind_8.15,atlas_wind_3.15,atlas_ember_5.30,atlas_wind_12.15;sorotora:atlas_wind_1.30,atlas_wind_4.10,atlas_leaf_6.15,atlas_wind_9.10;nagin:atlas_tide_7.20,atlas_tide_2.15,atlas_crystal_4.10,atlas_tide_12.15;naginori:atlas_tide_8.10,atlas_tide_3.15,atlas_leaf_5.30,atlas_tide_12.15;sibuki:atlas_tide_1.30,atlas_tide_4.10,atlas_wind_6.15,atlas_tide_9.10;shibunami:atlas_tide_2.15,atlas_tide_5.30,atlas_crystal_7.20,atlas_tide_9.10;sumina:atlas_ember_7.20,atlas_ember_2.15,atlas_tide_4.10,atlas_ember_12.15;sumirekka:atlas_ember_8.10,atlas_ember_3.15,atlas_crystal_5.20,atlas_ember_12.15;kanero:atlas_crystal_6.15,atlas_crystal_1.30,atlas_ember_3.15,atlas_crystal_11.15;kanedora:atlas_crystal_7.20,atlas_crystal_2.15,atlas_wind_4.10,atlas_crystal_12.15;amaguri:atlas_leaf_1.30,atlas_leaf_4.10,atlas_ember_6.15,atlas_leaf_9.10;amagurio:atlas_leaf_2.20,atlas_leaf_5.30,atlas_wind_7.20,atlas_leaf_9.10;nukumi:atlas_ember_1.30,atlas_ember_4.10,atlas_tide_6.15,atlas_ember_9.10;nukumaru:atlas_ember_2.15,atlas_ember_5.30,atlas_crystal_7.20,atlas_ember_9.10;kiraho:atlas_crystal_8.10,atlas_crystal_3.10,atlas_ember_5.30,atlas_crystal_12.15;kirawashi:atlas_crystal_1.30,atlas_crystal_4.10,atlas_wind_6.15,atlas_crystal_9.10;hazumi:atlas_leaf_3.15,atlas_leaf_6.15,atlas_ember_8.10,atlas_leaf_10.10;hazuhane:atlas_leaf_4.10,atlas_leaf_7.20,atlas_wind_1.30,atlas_leaf_10.10;shiori:atlas_tide_3.15,atlas_tide_6.15,atlas_leaf_8.15,atlas_tide_10.10;shioraku:atlas_tide_4.10,atlas_tide_7.20,atlas_wind_1.30,atlas_tide_10.10;torone:atlas_wind_2.20,atlas_wind_5.30,atlas_tide_7.20,atlas_wind_9.10;toronari:atlas_wind_3.15,atlas_wind_6.15,atlas_ember_8.10,atlas_wind_10.10;hoshimi:atlas_crystal_2.15,atlas_crystal_5.20,atlas_tide_7.20,atlas_crystal_9.10;hoshimori:atlas_crystal_3.10,atlas_crystal_6.15,atlas_ember_8.10,atlas_crystal_10.10;riyuna:atlas_tide_5.30,atlas_tide_8.10,atlas_leaf_2.20,atlas_tide_11.15;riyutai:atlas_tide_6.15,atlas_tide_1.30,atlas_wind_3.15,atlas_tide_11.15;nomori:atlas_leaf_5.30,atlas_leaf_8.15,atlas_wind_2.20,atlas_leaf_11.15;nomorika:atlas_leaf_6.15,atlas_leaf_1.30,atlas_crystal_3.10,atlas_leaf_11.15;ennori:atlas_ember_3.15,atlas_ember_6.15,atlas_crystal_8.10,atlas_ember_10.10;ennoraku:atlas_ember_4.10,atlas_ember_7.20,atlas_leaf_1.30,atlas_ember_10.10;yurushi:atlas_tide_7.20,atlas_tide_2.15,atlas_leaf_4.10,atlas_tide_12.15;yurushio:atlas_tide_8.10,atlas_tide_3.15,atlas_wind_5.30,atlas_tide_12.15;nureha:atlas_leaf_7.20,atlas_leaf_2.20,atlas_wind_4.10,atlas_leaf_12.15;tousa:atlas_wind_4.10,atlas_wind_7.20,atlas_ember_1.30,atlas_wind_10.10;fukuro:atlas_leaf_8.15,atlas_leaf_3.15,atlas_ember_5.30,atlas_leaf_12.15;aonagi:atlas_tide_1.30,atlas_tide_4.10,atlas_crystal_6.15,atlas_tide_9.10;oshire:atlas_crystal_4.10,atlas_crystal_7.20,atlas_wind_1.30,atlas_crystal_10.10;kagaru:atlas_ember_5.30,atlas_ember_8.10,atlas_crystal_2.15,atlas_ember_11.15;murasora:atlas_wind_5.30,atlas_wind_8.15,atlas_tide_2.15,atlas_wind_11.15;yamone:atlas_leaf_1.30,atlas_leaf_4.10,atlas_crystal_6.15,atlas_leaf_9.10;sazuka:atlas_tide_2.15,atlas_tide_5.30,atlas_wind_7.20,atlas_tide_9.10;genro:atlas_crystal_5.20,atlas_crystal_8.10,atlas_wind_2.20,atlas_crystal_11.15;enritsu:atlas_ember_6.15,atlas_ember_1.30,atlas_crystal_3.10,atlas_ember_11.15;shimarune:atlas_crystal_6.15,atlas_crystal_1.30,atlas_ember_3.15,atlas_crystal_11.15;kuromado:atlas_crystal_7.20,atlas_crystal_2.15,atlas_wind_4.10,atlas_crystal_12.15;suiraku:atlas_tide_3.15,atlas_tide_6.15,atlas_wind_8.15,atlas_tide_10.10;haneko:atlas_leaf_2.20,atlas_leaf_5.30,atlas_wind_7.20,atlas_leaf_9.10;toganashi:atlas_leaf_3.15,atlas_leaf_6.15,atlas_crystal_8.10,atlas_leaf_10.10;mairaku:atlas_ember_7.20,atlas_ember_2.15,atlas_crystal_4.10,atlas_ember_12.15;hotarune:atlas_ember_8.10,atlas_ember_3.15,atlas_tide_5.30,atlas_ember_12.15;sumizora:atlas_wind_8.15,atlas_wind_3.15,atlas_leaf_5.30,atlas_wind_12.15;namisora:atlas_tide_4.10,atlas_tide_7.20,atlas_leaf_1.30,atlas_tide_10.10;ringetsu:atlas_crystal_8.10,atlas_crystal_3.10,dawnstep.15,atlas_crystal_12.15;tokimori:atlas_leaf_5.30,atlas_leaf_8.15,atlas_crystal_2.15,restsong.10;yoruumi:atlas_tide_5.30,atlas_tide_8.10,atlas_wind_2.20,atlas_tide_11.15;velora_1:sprout.30,evergreen.10,bloom.10,pulse.20;velora_2:vine.15,thorn.20,dew.10,pulse.20;velora_3:lifeline.20,atlas_leaf_1.30,atlas_leaf_9.10,dawnstep.15;nereid_1:surge.15,frost.20,spring.10,pulse.20;nereid_2:riptide.10,atlas_tide_1.30,atlas_tide_9.10,pulse.20;nereid_3:ripple.30,atlas_tide_2.15,atlas_tide_10.10,dawnstep.15;ignox_1:sunburst.10,atlas_ember_2.15,heatveil.15,pulse.20;ignox_2:cinder.20,atlas_ember_3.15,atlas_ember_9.10,pulse.20;ignox_3:atlas_ember_1.30,atlas_ember_4.10,atlas_ember_10.10,dawnstep.15;aerlyn_1:whisper.20,atlas_wind_2.20,atlas_wind_10.10,pulse.20;aerlyn_2:sirocco.20,atlas_wind_3.15,atlas_wind_11.15,pulse.20;aerlyn_3:atlas_wind_1.30,atlas_wind_4.10,atlas_wind_12.15,dawnstep.15;quartz_1:facet.20,atlas_crystal_3.10,atlas_crystal_11.15,pulse.20;quartz_2:atlas_crystal_1.30,atlas_crystal_4.10,atlas_crystal_12.15,pulse.20;quartz_3:atlas_crystal_2.15,atlas_crystal_5.20,shell.15,dawnstep.15;papilio_1:atlas_leaf_1.30,atlas_leaf_4.10,atlas_leaf_12.15,pulse.20;papilio_2:atlas_leaf_2.20,atlas_leaf_5.30,bloom.10,pulse.20;papilio_3:atlas_leaf_3.15,atlas_leaf_6.15,dew.10,dawnstep.15;brine_1:atlas_tide_2.15,atlas_tide_5.30,mist.15,pulse.20;brine_2:atlas_tide_3.15,atlas_tide_6.15,spring.10,pulse.20;brine_3:atlas_tide_4.10,atlas_tide_7.20,atlas_tide_9.10,dawnstep.15;carmine_1:atlas_ember_4.10,atlas_ember_7.20,warmth.10,pulse.20;carmine_2:atlas_ember_5.30,atlas_ember_8.10,phoenix.10,pulse.20;carmine_3:atlas_ember_6.15,spark.30,heatveil.15,dawnstep.15;gale_1:atlas_wind_4.10,atlas_wind_7.20,atlas_wind_9.10,pulse.20;gale_2:atlas_wind_5.30,atlas_wind_8.15,atlas_wind_10.10,pulse.20;gale_3:atlas_wind_6.15,gust.30,atlas_wind_11.15,dawnstep.15;opal_1:atlas_crystal_5.20,atlas_crystal_8.10,atlas_crystal_10.10,pulse.20;opal_2:atlas_crystal_6.15,glint.30,atlas_crystal_11.15,pulse.20;opal_3:atlas_crystal_7.20,prism.15,atlas_crystal_12.15,dawnstep.15;thorn_1:atlas_leaf_6.15,sprout.30,atlas_leaf_11.15,pulse.20;thorn_2:atlas_leaf_7.20,vine.15,atlas_leaf_12.15,pulse.20;thorn_3:atlas_leaf_8.15,lifeline.20,bloom.10,dawnstep.15;rill_1:atlas_tide_7.20,surge.15,atlas_tide_12.15,pulse.20;rill_2:atlas_tide_8.10,riptide.10,mist.15,pulse.20;rill_3:wave.30,ripple.30,spring.10,dawnstep.15;ferrum_1:spark.30,cinder.20,atlas_ember_11.15,pulse.20;ferrum_2:blaze.15,atlas_ember_1.30,atlas_ember_12.15,pulse.20;ferrum_3:sunburst.10,atlas_ember_2.15,warmth.10,dawnstep.15;cirrus_1:gust.30,whisper.20,feather.10,pulse.20;cirrus_2:storm.15,sirocco.20,atlas_wind_9.10,pulse.20;cirrus_3:tempest.10,atlas_wind_1.30,atlas_wind_10.10,dawnstep.15;obsidian_1:prism.15,facet.20,atlas_crystal_9.10,pulse.20;obsidian_2:supernova.10,atlas_crystal_1.30,atlas_crystal_10.10,pulse.20;obsidian_3:moonbeam.20,atlas_crystal_2.15,atlas_crystal_11.15,dawnstep.15;saffron_1:lifeline.20,atlas_leaf_1.30,atlas_leaf_10.10,pulse.20;saffron_2:evergreen.10,atlas_leaf_2.20,atlas_leaf_11.15,pulse.20;saffron_3:thorn.20,atlas_leaf_3.15,atlas_leaf_12.15,dawnstep.15;abyss_1:ripple.30,atlas_tide_2.15,atlas_tide_11.15,pulse.20;abyss_2:frost.20,atlas_tide_3.15,atlas_tide_12.15,pulse.20;abyss_3:atlas_tide_1.30,atlas_tide_4.10,mist.15,dawnstep.15;flint_1:atlas_ember_2.15,atlas_ember_5.30,atlas_ember_9.10,pulse.20;flint_2:atlas_ember_3.15,atlas_ember_6.15,atlas_ember_10.10,pulse.20;flint_3:atlas_ember_4.10,atlas_ember_7.20,atlas_ember_11.15,dawnstep.15;volt_1:atlas_wind_1.30,atlas_wind_4.10,shelter.15,pulse.20;volt_2:atlas_wind_2.20,atlas_wind_5.30,feather.10,pulse.20;volt_3:atlas_wind_3.15,atlas_wind_6.15,atlas_wind_9.10,dawnstep.15;lunette_1:atlas_crystal_2.15,atlas_crystal_5.20,starlight.10,pulse.20;lunette_2:atlas_crystal_3.10,atlas_crystal_6.15,atlas_crystal_9.10,pulse.20;lunette_3:atlas_crystal_4.10,atlas_crystal_7.20,atlas_crystal_10.10,dawnstep.15;cedran_1:atlas_leaf_3.15,atlas_leaf_6.15,atlas_leaf_9.10,pulse.20;cedran_2:atlas_leaf_4.10,atlas_leaf_7.20,atlas_leaf_10.10,pulse.20;cedran_3:atlas_leaf_5.30,atlas_leaf_8.15,atlas_leaf_11.15,dawnstep.15;corall_1:atlas_tide_4.10,atlas_tide_7.20,atlas_tide_10.10,pulse.20;corall_2:atlas_tide_5.30,atlas_tide_8.10,atlas_tide_11.15,pulse.20;corall_3:atlas_tide_6.15,wave.30,atlas_tide_12.15,dawnstep.15;vermion_1:atlas_ember_7.20,blaze.15,phoenix.10,pulse.20;vermion_2:atlas_ember_8.10,sunburst.10,heatveil.15,pulse.20;vermion_3:spark.30,cinder.20,atlas_ember_9.10,dawnstep.15;zephyr_1:atlas_wind_6.15,gust.30,atlas_wind_12.15,pulse.20;zephyr_2:atlas_wind_7.20,storm.15,shelter.15,pulse.20;zephyr_3:atlas_wind_8.15,tempest.10,feather.10,dawnstep.15;aurora_1:atlas_crystal_7.20,prism.15,shell.15,pulse.20;aurora_2:atlas_crystal_8.10,supernova.10,starlight.10,pulse.20;aurora_3:glint.30,moonbeam.20,atlas_crystal_9.10,dawnstep.15;fernix_1:atlas_leaf_8.15,lifeline.20,dew.10,pulse.20;fernix_2:sprout.30,evergreen.10,atlas_leaf_9.10,pulse.20;fernix_3:vine.15,thorn.20,atlas_leaf_10.10,dawnstep.15;pelagic_1:wave.30,ripple.30,atlas_tide_9.10,pulse.20;pelagic_2:surge.15,frost.20,atlas_tide_10.10,pulse.20;pelagic_3:riptide.10,atlas_tide_1.30,atlas_tide_11.15,dawnstep.15;solstice_1:cinder.20,atlas_ember_3.15,atlas_ember_12.15,pulse.20;solstice_2:atlas_ember_1.30,atlas_ember_4.10,warmth.10,pulse.20;solstice_3:atlas_ember_2.15,atlas_ember_5.30,phoenix.10,dawnstep.15;stratus_1:tempest.10,atlas_wind_1.30,atlas_wind_11.15,pulse.20;stratus_2:whisper.20,atlas_wind_2.20,atlas_wind_12.15,pulse.20;stratus_3:sirocco.20,atlas_wind_3.15,shelter.15,dawnstep.15;noctil_1:moonbeam.20,atlas_crystal_2.15,atlas_crystal_12.15,pulse.20;noctil_2:facet.20,atlas_crystal_3.10,shell.15,pulse.20;noctil_3:atlas_crystal_1.30,atlas_crystal_4.10,starlight.10,dawnstep.15;bromel_1:thorn.20,atlas_leaf_3.15,bloom.10,pulse.20;bromel_2:atlas_leaf_1.30,atlas_leaf_4.10,dew.10,pulse.20;bromel_3:atlas_leaf_2.20,atlas_leaf_5.30,atlas_leaf_9.10,dawnstep.15;isola_1:atlas_tide_1.30,atlas_tide_4.10,spring.10,pulse.20;isola_2:atlas_tide_2.15,atlas_tide_5.30,atlas_tide_9.10,pulse.20;isola_3:atlas_tide_3.15,atlas_tide_6.15,atlas_tide_10.10,dawnstep.15;pyrrha_1:atlas_ember_5.30,atlas_ember_8.10,atlas_ember_10.10,pulse.20;pyrrha_2:atlas_ember_6.15,spark.30,atlas_ember_11.15,pulse.20;pyrrha_3:atlas_ember_7.20,blaze.15,atlas_ember_12.15,dawnstep.15;skarn_1:atlas_crystal_3.10,atlas_crystal_6.15,atlas_crystal_10.10,pulse.20;skarn_2:atlas_crystal_4.10,atlas_crystal_7.20,atlas_crystal_11.15,pulse.20;skarn_3:atlas_crystal_5.20,atlas_crystal_8.10,atlas_crystal_12.15,dawnstep.15;caelum_1:atlas_wind_4.10,atlas_wind_7.20,atlas_wind_11.15,pulse.20;caelum_2:atlas_wind_5.30,atlas_wind_8.15,atlas_wind_12.15,pulse.20;caelum_3:atlas_wind_6.15,gust.30,shelter.15,dawnstep.15;futo:futo_breaker.15,futo_burst.15,futo_ascend.5,futo_restore.10;komorizen:atlas_leaf_4.10,atlas_leaf_6.15,bloom.10,lifeline.20;shizunaria:atlas_tide_4.10,atlas_tide_6.15,mist.15,frost.20;akehomura:atlas_ember_4.10,atlas_ember_6.15,warmth.10,cinder.20;arvelion:arvelion_rend.8,arvelion_nova.5,arvelion_crown.3,arvelion_renewal.5;floravelle:verdant_lance.8,forest_crown.3,genesis_bloom.5,root_drain.10';
+  D.legacyMovesets=Object.freeze(Object.fromEntries(LEGACY.split(';').map(entry=>{const [id,list]=entry.split(':');return [id,Object.freeze(list.split(',').map(item=>{const [move,max]=item.split('.');return Object.freeze([move,Number(max)]);}))];})));
+  const ROLES=['pWeak','sWeak','pMid','sMid','pStrong','sStrong','sHeavy','pRecoil','sDrain','pDrain','pPierce','sPierce','healS','healL','guard'];
+  const T={pWeak:['attack','physical',24,100],sWeak:['attack','special',22,100],pMid:['attack','physical',33,96],sMid:['attack','special',34,96],
+    pStrong:['attack','physical',42,90],sStrong:['attack','special',44,90],sHeavy:['attack','special',52,80],pRecoil:['attack','physical',56,92,'recoil'],
+    sDrain:['attack','special',26,98,'drain'],pDrain:['attack','physical',36,92,'drain'],pPierce:['attack','physical',30,97,'pierce'],sPierce:['attack','special',40,90,'pierce'],
+    healS:['heal','status',30,100],healL:['heal','status',45,100],guard:['guard','status',0,100]};
+  // Existing IDs are kept so the exchange server and saved Futo settings keep accepting them.
+  const IDS={
+    leaf:['sprout','atlas_leaf_1','atlas_leaf_3','vine','atlas_leaf_8','evergreen','atlas_leaf_4','atlas_leaf_12','lifeline','atlas_leaf_6','thorn','atlas_leaf_7','bloom','atlas_leaf_10','atlas_leaf_11'],
+    tide:['wave','atlas_tide_1','atlas_tide_3','surge','atlas_tide_8','riptide','atlas_tide_4','atlas_tide_12','atlas_tide_5','atlas_tide_6','frost','atlas_tide_7','spring','atlas_tide_10','mist'],
+    ember:['spark','atlas_ember_1','atlas_ember_3','atlas_ember_2','sunburst','blaze','atlas_ember_4','atlas_ember_8','atlas_ember_5','atlas_ember_6','cinder','atlas_ember_7','warmth','atlas_ember_10','heatveil'],
+    wind:['gust','atlas_wind_1','atlas_wind_3','storm','atlas_wind_8','tempest','atlas_wind_4','atlas_wind_12','whisper','atlas_wind_6','sirocco','atlas_wind_7','feather','atlas_wind_10','shelter'],
+    crystal:['glint','atlas_crystal_1','atlas_crystal_3','prism','atlas_crystal_8','supernova','atlas_crystal_4','atlas_crystal_12','atlas_crystal_5','moonbeam','facet','atlas_crystal_7','starlight','atlas_crystal_10','shell']};
+  const RENAME={atlas_leaf_12:'倒木の一撃',atlas_tide_12:'怒濤の突進',atlas_wind_12:'疾風の捨て身',atlas_crystal_12:'晶塊の砕撃'};
+  // Moves that left the roster, and the move that takes over their place.
+  const RETIRED=Object.freeze({atlas_leaf_2:'vine',atlas_leaf_5:'lifeline',atlas_leaf_9:'bloom',ripple:'atlas_tide_6',atlas_tide_2:'surge',atlas_tide_9:'spring',atlas_tide_11:'mist',
+    phoenix:'atlas_ember_10',atlas_ember_9:'warmth',atlas_ember_11:'heatveil',atlas_ember_12:'heatveil',atlas_wind_2:'storm',atlas_wind_5:'whisper',atlas_wind_9:'feather',atlas_wind_11:'shelter',
+    atlas_crystal_2:'prism',atlas_crystal_6:'moonbeam',atlas_crystal_9:'starlight',atlas_crystal_11:'shell'});
+  const EN=element=>D.elements[element].name;
+  const statusNote=element=>{const s=D.statuses?.[D.statusByElement?.[element]];return s?`${Math.round(s.chance*100)}%で${s.name}にすることがある。`:'';};
+  const TEXT={pWeak:e=>`${EN(e)}の力をまとった軽い物理攻撃。確実に当たる。`,sWeak:e=>`${EN(e)}の力を放つ軽い特殊攻撃。確実に当たる。`,
+    pMid:e=>`${EN(e)}の力を込めた物理攻撃。威力と命中のバランスがよい。`,sMid:e=>`${EN(e)}の力を込めた特殊攻撃。威力と命中のバランスがよい。`,
+    pStrong:e=>`${EN(e)}の力で打ち込む強力な物理攻撃。`,sStrong:e=>`${EN(e)}の力を解き放つ強力な特殊攻撃。`,
+    sHeavy:e=>`${EN(e)}の力をすべて注ぐ特殊攻撃。威力は最大級だが、命中がやや低い。`,
+    pRecoil:e=>`${EN(e)}の力で捨て身の突撃をする物理攻撃。とても強いが、自分も最大体力の1/4の反動を受ける。`,
+    sDrain:e=>`${EN(e)}の力で生命力を吸う特殊攻撃。与えたダメージの1/4だけ体力を回復する。`,pDrain:e=>`${EN(e)}の力で生命力を吸う物理攻撃。与えたダメージの1/4だけ体力を回復する。`,
+    pPierce:e=>`${EN(e)}の力で守りを貫く物理攻撃。防御の技による軽減を受けない。`,sPierce:e=>`${EN(e)}の力で守りを貫く特殊攻撃。防御の技による軽減を受けない。`,
+    healS:e=>`${EN(e)}の力で最大体力の30%を回復する。`,healL:e=>`${EN(e)}の力で最大体力の45%を回復する。`,
+    guard:e=>`${EN(e)}の守りで、次に受ける攻撃のダメージを半分にする。素早さに関係なく先に構える。`};
+  const define=(id,name,element,role,extra={})=>{const [kind,category,power,accuracy,effect]=T[role];
+    const move={id,name,element,power,accuracy,kind,category,role,description:TEXT[role](element)+(kind==='attack'?statusNote(element):''),...extra};
+    if(effect)move.effect=effect;else delete move.effect;return move;};
+  const next={};
+  for(const [element,ids] of Object.entries(IDS))ids.forEach((id,i)=>{next[id]=define(id,RENAME[id]||D.moves[id].name,element,ROLES[i]);});
+  const neutral=(id,name,kind,category,power,accuracy,description)=>({id,name,element:null,power,accuracy,kind,category,role:'neutral',description});
+  Object.assign(next,{
+    nudge:neutral('nudge','小さなとっしん','attack','physical',22,100,'体ごとぶつかる軽い物理攻撃。どのタイプにも等しく当たる。'),
+    pulse:neutral('pulse','心音の波','attack','physical',30,98,'心音を波にして打ち込む物理攻撃。どのタイプにも等しく当たる。'),
+    dawnstep:neutral('dawnstep','暁を駆ける','attack','physical',40,92,'夜明けの光をまとって駆け抜ける強い物理攻撃。どのタイプにも等しく当たる。'),
+    dew:neutral('dew','澄んだ響き','attack','special',32,96,'澄んだ音を響かせる特殊攻撃。どのタイプにも等しく当たる。'),
+    focus:neutral('focus','静寂のまもり','guard','status',0,100,'心を静めて構え、次に受ける攻撃のダメージを半分にする。素早さに関係なく先に構える。'),
+    restsong:neutral('restsong','旅人の子守歌','heal','status',35,100,'旅人の子守歌で、最大体力の35%を回復する。')});
+  // The three starters learn a signature move when they reach their final form.
+  const SIGNATURE={komorizen:{id:'sig_leaf',name:'千年樹の抱擁',element:'leaf',power:60,accuracy:95,effect:'drain',text:'千年樹の根で相手を包み込み、与えたダメージの1/4だけ体力を回復する。'},
+    shizunaria:{id:'sig_tide',name:'天海渦流',element:'tide',power:60,accuracy:95,effect:'pierce',text:'天と海をつなぐ大渦で、防御の技による軽減を受けずに攻撃する。'},
+    akehomura:{id:'sig_ember',name:'暁焔の翼',element:'ember',power:66,accuracy:95,text:'暁の焔を翼にまとって突き抜ける、最大級の一撃。'}};
+  const bias=s=>{const b=s.base,atk=b.atk,sp=b.spAtk??b.atk;return atk===sp?(hash(s.id)%2?'physical':'special'):atk>sp?'physical':'special';};
+  function hash(text){let h=2166136261;for(const ch of String(text)){h^=ch.codePointAt(0);h=Math.imul(h,16777619)>>>0;}return h;}
+  for(const [owner,sig] of Object.entries(SIGNATURE)){
+    const species=D.species[owner];if(!species)throw Error(`Missing starter final form ${owner}`);
+    next[sig.id]={id:sig.id,name:sig.name,element:sig.element,power:sig.power,accuracy:sig.accuracy,pp:8,kind:'attack',category:bias({...species,id:owner}),role:'signature',signature:owner,
+      description:`${species.name}だけが覚える特別な技。${sig.text}${statusNote(sig.element)}`,...(sig.effect?{effect:sig.effect}:{})};
+  }
+  // Futo, Arvelion and the mythical keep their own four.
+  const special=['futo','arvelion','floravelle'].flatMap(id=>D.species[id]?.moves||[]);
+  for(const id of special){next[id]=D.moves[id];if(next[id]&&!next[id].role)next[id].role='special';}
+  for(const id of Object.keys(D.moves))delete D.moves[id];
+  Object.assign(D.moves,next);
+  // ── Movesets: element, physical/special leaning and place in the evolution line.
+  const parent={};for(const [id,s] of Object.entries(D.species))if(s.evolvesTo)parent[s.evolvesTo]=id;
+  const line=id=>{let root=id;for(let g=0;g<6&&parent[root];g++)root=parent[root];const list=[root];while(D.species[list.at(-1)].evolvesTo&&list.length<6)list.push(D.species[list.at(-1)].evolvesTo);return list;};
+  const R=(element,role)=>IDS[element][ROLES.indexOf(role)];
+  const BEATS={leaf:'tide',tide:'ember',ember:'leaf',wind:'crystal',crystal:'wind'};
+  const coverOf=(element,h)=>{const triangle=['leaf','tide','ember'];if(!triangle.includes(element))return triangle[h%3];const threat=Object.keys(BEATS).find(e=>BEATS[e]===element);return Object.keys(BEATS).find(e=>BEATS[e]===threat);};
+  const ordinary=Object.keys(D.species).filter(id=>!['futo','arvelion','floravelle'].includes(id));
+  const bst=id=>Object.entries(D.species[id].base).filter(([k])=>['hp','atk','def','spAtk','spDef','speed'].includes(k)).reduce((s,[,v])=>s+v,0);
+  const late=ordinary.filter(id=>{const l=line(id);return l.indexOf(id)===l.length-1;}).map(bst).sort((a,b)=>a-b);
+  const eliteAt=late[Math.floor(late.length*.75)];
+  for(const id of ordinary){
+    const s=D.species[id],E=s.element,l=line(id),stage=l.indexOf(id),h=hash(id),b=bias({...s,id}),o=b==='physical'?'special':'physical',P=b==='physical';
+    const tier=l.length>1&&stage===0?'early':stage<l.length-1?'mid':bst(id)>=eliteAt?'elite':'late';
+    const C=coverOf(E,h);
+    const util=list=>list[h%list.length];
+    const sets={
+      early:[R(E,P?'pWeak':'sWeak'),h%2?R(E,P?'sWeak':'pWeak'):R(E,'sDrain'),h%5===0?'dew':'nudge',util([R(E,'healS'),R(E,'guard'),R(E,'healS')])],
+      mid:[R(E,P?'pMid':'sMid'),R(E,P?'pDrain':'sDrain'),h%2?'pulse':R(E,P?'pPierce':'sPierce'),util([R(E,'healS'),R(E,'guard'),'restsong'])],
+      late:[R(E,P?'pStrong':'sStrong'),R(E,h%2?(P?'pPierce':'sPierce'):(P?'sMid':'pMid')),R(C,P?'pMid':'sMid'),util([R(E,'healL'),R(E,'guard'),R(E,P?'pRecoil':'sHeavy'),'focus'])],
+      elite:[R(E,P?'pRecoil':'sHeavy'),R(E,o==='physical'?'pStrong':'sStrong'),h%3===0?'dawnstep':R(C,P?'pStrong':'sStrong'),util([R(E,'healL'),R(E,'guard')])]};
+    const moves=[...new Set(sets[tier])];
+    for(const filler of [R(E,P?'pMid':'sMid'),R(E,'guard'),'nudge',R(E,'healS')])if(moves.length<4&&!moves.includes(filler))moves.push(filler);
+    if(SIGNATURE[id])moves[0]=SIGNATURE[id].id;
+    s.moves=moves.slice(0,4);
+  }
+  // Every move appears on at least one monster: swap it in where a move of the same kind is most common.
+  const uses=()=>{const m=new Map(Object.keys(D.moves).map(id=>[id,0]));for(const s of Object.values(D.species))for(const id of s.moves)m.set(id,(m.get(id)||0)+1);return m;};
+  for(const id of Object.keys(D.moves)){
+    if(uses().get(id))continue;
+    const move=D.moves[id],count=uses();
+    const candidates=ordinary.filter(sid=>(move.element===null||D.species[sid].element===move.element)&&!SIGNATURE[sid]&&!D.species[sid].moves.includes(id))
+      .map(sid=>{const s=D.species[sid],slot=s.moves.findIndex(other=>D.moves[other].kind===move.kind&&D.moves[other].role!=='signature'&&count.get(other)>2);return {sid,slot,weight:slot<0?-1:count.get(s.moves[slot])*1000+(hash(sid+id)%997)};})
+      .filter(c=>c.slot>=0).sort((a,b)=>b.weight-a.weight);
+    if(!candidates.length)throw Error(`No monster can learn ${id}`);
+    D.species[candidates[0].sid].moves[candidates[0].slot]=id;
+  }
+  const final=uses(),count=Object.keys(D.moves).length;
+  if(count!==96)throw Error(`Exactly 96 moves are required (${count})`);
+  for(const [id,n] of final)if(!n)throw Error(`Unused move ${id}`);
+  for(const s of Object.values(D.species))if(s.moves.length!==4||new Set(s.moves).size!==4||s.moves.some(id=>!D.moves[id]))throw Error(`Invalid moveset for ${s.id}`);
+  for(const [owner,sig] of Object.entries(SIGNATURE))if(Object.values(D.species).some(s=>s.moves.includes(sig.id)!==(s.id===owner)))throw Error(`Signature ${sig.id} must belong to ${owner} only`);
+  D.retiredMoves=RETIRED;
+  D.signatureMoves=Object.freeze(Object.fromEntries(Object.entries(SIGNATURE).map(([owner,sig])=>[sig.id,owner])));
+  if(D.content&&!Object.isFrozen(D.content))D.content.moves=count;
+  D.moveRoster=Object.freeze({total:count,perElement:15,neutral:6,special:special.length,signature:Object.keys(SIGNATURE).length,roles:Object.freeze(ROLES.slice())});
+})();
 </script><script>
 /* Pachi Monsters — deterministic combat, interiors, league and versioned saves. */
 (() => {
@@ -2533,6 +2647,19 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const FUTO_GROWTH=Object.freeze({hp:5,atk:3,def:2,spAtk:3,spDef:2,speed:2,accuracy:0,evasion:0});
   const SHINY_ODDS=3000;
   const LEGACY_FUTO_MOVES=['supernova','atlas_crystal_4','starlight','shell'];
+  // PP carried between two movesets slot by slot keeps its share of the maximum.
+  const scalePP=(value,fromMax,toMax)=>Math.max(0,Math.min(toMax,Math.round(value*toMax/Math.max(1,fromMax))));
+  // Moves that left the 96-move roster are read as the move that replaced them.
+  function migrateMoveIds(list,fallback=[]){
+    const out=[];
+    for(const id of list){
+      const retired=Object.hasOwn(D.retiredMoves||{},id);let next=retired?D.retiredMoves[id]:id;
+      // Only a collision created by the replacement is resolved; duplicates in the input stay invalid.
+      if(retired&&(out.includes(next)||list.includes(next)))next=fallback.find(candidate=>!out.includes(candidate)&&!list.includes(candidate))||next;
+      out.push(next);
+    }
+    return out;
+  }
   const legacyFutoMoves=value=>Array.isArray(value)&&value.length===4&&value.every((id,i)=>id===LEGACY_FUTO_MOVES[i]);
   const STAGE_KEYS=Object.freeze(['atk','def','spAtk','spDef','speed','accuracy','evasion']);
   const stageValue=value=>Number.isInteger(value)?Math.max(-6,Math.min(6,value)):0;
@@ -2554,7 +2681,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     return stats;
   }
   function futoMoves(raw){
-    const values=raw??D.species.futo.moves;
+    const values=Array.isArray(raw)?migrateMoveIds(raw,D.species.futo.moves):raw??D.species.futo.moves;
     if(!Array.isArray(values)||values.length!==4||new Set(values).size!==4||values.some(id=>typeof id!=='string'||!Object.hasOwn(D.moves,id)))throw Error('フートの技は登録された異なる4つを指定してください。');
     return legacyFutoMoves(values)?D.species.futo.moves.slice():values.slice();
   }
@@ -3382,6 +3509,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           this.syncPP(mon);
           this.markCaught(mon.species);this.state.stats.evolutions++;
           this.event(events,`${before}は${displayName(mon)}に進化した！`,'evolve');
+          const signature=D.species[mon.species].moves.find(id=>D.signatureMoves?.[id]===mon.species);
+          if(signature)this.event(events,`${displayName(mon)}は 特別な技「${D.moves[signature].name}」を覚えた！`,'learn',{move:signature});
           data=D.species[mon.species];
         }
       };
@@ -3538,6 +3667,26 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const pp={};for(const move of moves){if(!Object.hasOwn(mon.pp,move.id) || !finiteInt(mon.pp[move.id],0,this.maxPP(move)))throw Error('交換するパチモンのPPが正しくありません。');pp[move.id]=mon.pp[move.id];}
       return {uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp,pp,shiny:mon.shiny===true,...(nickname?{nickname}:{})};
     }
+    // Trades travel in the exchange server's catalog (the movesets from before the
+    // 96-move rework); PP is carried slot by slot, keeping its share of the maximum.
+    tradeWirePP(mon){
+      const pp=mon?.pp,old=D.legacyMovesets?.[mon?.species],ids=D.species[mon?.species]?.moves;
+      if(!pp||typeof pp!=='object'||Array.isArray(pp))return pp;
+      if(!old||!ids||Object.keys(pp).length!==ids.length||!ids.every(id=>Object.hasOwn(pp,id)))return {...pp};
+      return Object.fromEntries(old.map(([id,max],i)=>[id,finiteInt(pp[ids[i]],0,this.maxPP(D.moves[ids[i]]))?scalePP(pp[ids[i]],this.maxPP(D.moves[ids[i]]),max):pp[ids[i]]]));
+    }
+    toTradeWire(mon){const trade=this.tradeMonster(mon);return {...trade,pp:this.tradeWirePP(trade)};}
+    fromTradeWire(wire){
+      const old=D.legacyMovesets?.[wire?.species],ids=D.species[wire?.species]?.moves,pp=wire?.pp;
+      if(!old||!ids||!pp||typeof pp!=='object'||Array.isArray(pp)||Object.keys(pp).length!==old.length||!old.every(([id])=>Object.hasOwn(pp,id)))return wire;
+      return {...wire,pp:Object.fromEntries(ids.map((id,i)=>[id,finiteInt(pp[old[i][0]],0,old[i][1])?scalePP(pp[old[i][0]],old[i][1],this.maxPP(D.moves[id])):-1]))};
+    }
+    // The exchange-catalog view of a trade monster, whichever format it arrived in.
+    wireEcho(wire){
+      const old=D.legacyMovesets?.[wire?.species],source=this.tradeWirePP(wire)||{};
+      const echo={uid:wire?.uid,species:wire?.species,level:wire?.level,xp:wire?.xp,hp:wire?.hp,pp:old?Object.fromEntries(old.map(([id])=>[id,source[id]])):{...source},shiny:wire?.shiny===true};
+      if(wire?.nickname)echo.nickname=wire.nickname;return echo;
+    }
     applyTrade(receipt){
       if(!this.state.started)return {...fail('冒険を始めてから交換を受け取ってください。'),pending:true};
       if(this.battle)return {...fail('バトルが終わると交換を受け取れます。'),pending:true};
@@ -3546,13 +3695,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(receipts.includes(receipt.id))return {ok:true,alreadyReceived:true,receiptId:receipt.id,message:'この交換は受け取り済みです。'};
       if(receipts.length>=TRADE_LIMIT)return {...fail('交換記録が上限に達しています。'),pending:true};
       let outgoing,incoming;
-      try{outgoing=this.tradeMonster(receipt.outgoing);incoming=this.tradeMonster(receipt.incoming);}catch(error){return fail(error.message);}
+      try{outgoing=this.tradeMonster(this.fromTradeWire(receipt.outgoing));incoming=this.tradeMonster(this.fromTradeWire(receipt.incoming));}catch(error){return fail(error.message);}
       const transferUid='tr-'+receipt.id.slice(6)+'-';
       if(outgoing.uid!==receipt.outgoingUid || ![transferUid+'h',transferUid+'g'].includes(incoming.uid))return fail('交換する個体の識別情報が一致しません。');
       const destination=this.state.party.some(mon=>mon.uid===receipt.outgoingUid)?'party':'storage';
       const index=this.state[destination].findIndex(mon=>mon.uid===receipt.outgoingUid);
       if(index<0)return {...fail('交換に出したパチモンが見つかりません。元のセーブで再開してください。'),pending:true};
-      try{if(JSON.stringify(this.tradeMonster(this.state[destination][index]))!==JSON.stringify(outgoing))return {...fail('交換に出したパチモンの状態が変わっています。確認した時のセーブで再開してください。'),pending:true};}catch(error){return fail(error.message);}
+      try{if(JSON.stringify(this.wireEcho(this.tradeMonster(this.state[destination][index])))!==JSON.stringify(this.wireEcho(receipt.outgoing)))return {...fail('交換に出したパチモンの状態が変わっています。確認した時のセーブで再開してください。'),pending:true};}catch(error){return fail(error.message);}
       if([...this.state.party,...this.state.storage].some(mon=>mon.uid===incoming.uid))return fail('受け取るパチモンの識別情報が重複しています。');
       if(destination==='party' && incoming.hp<=0 && !this.state.party.some((mon,i)=>i!==index&&mon.hp>0))return {...fail('動ける仲間を一体以上、パーティーに残してください。'),pending:true};
       const candidate=clone(this.state);candidate[destination][index]=incoming;
@@ -3796,12 +3945,15 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           if(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))special.shiny=true;
         }
         if(!finiteInt(mon.level,1,MAX_LEVEL) || !finiteInt(mon.xp,0,mon.level===MAX_LEVEL?0:this.xpToNext(mon.level)-1) || !finiteInt(mon.hp,0,this.stats(mon).hp))error('モンスターの能力が正しくありません。');
-        const pp={},legacy=legacyFutoRecord(mon);
+        const pp={},legacy=legacyFutoRecord(mon),current=this.moves(mon);
         if(mon.pp!==undefined && (!mon.pp || typeof mon.pp!=='object' || Array.isArray(mon.pp)))error('技のPPが正しくありません。');
-        for(const [i,move]of this.moves(mon).entries()) {
-          const previousId=legacy?LEGACY_FUTO_MOVES[i]:move.id,previousMax=legacy?this.maxPP(D.moves[previousId]):this.maxPP(move);
+        // Saves from before the 96-move rework hold the old four moves: carry their PP over slot by slot.
+        const oldSet=!legacy&&mon.pp&&!current.every(move=>Object.hasOwn(mon.pp,move.id))?D.legacyMovesets?.[mon.species]:null;
+        const fromOld=oldSet&&oldSet.length===current.length&&oldSet.every(([id])=>Object.hasOwn(mon.pp,id))?oldSet:null;
+        for(const [i,move]of current.entries()) {
+          const previousId=legacy?LEGACY_FUTO_MOVES[i]:fromOld?fromOld[i][0]:move.id,previousMax=legacy?this.maxPP(D.moves[previousId]):fromOld?fromOld[i][1]:this.maxPP(move);
           if(mon.pp!==undefined && !finiteInt(mon.pp[previousId],0,previousMax))error('技のPPが正しくありません。');
-          pp[move.id]=mon.pp===undefined?this.maxPP(move):Math.min(mon.pp[previousId],this.maxPP(move));
+          pp[move.id]=mon.pp===undefined?this.maxPP(move):fromOld?scalePP(mon.pp[previousId],previousMax,this.maxPP(move)):Math.min(mon.pp[previousId],this.maxPP(move));
         }
         if(legacy)special.customMoves=D.species.futo.moves.slice();
         if(typeof mon.status==='string'&&STATUS[mon.status]?.persistent&&mon.hp>0)special.status=mon.status;
@@ -3881,7 +4033,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
   }
   LT.Engine=Engine;
-  LT.TradeRules=Object.freeze({receiptLimit:TRADE_LIMIT,isEligible:mon=>{try{new Engine().tradeMonster(mon);return true;}catch(_){return false;}}});
+  LT.TradeRules=Object.freeze({receiptLimit:TRADE_LIMIT,isEligible:mon=>{try{new Engine().tradeMonster(mon);return true;}catch(_){return false;}},
+    wirePP:mon=>new Engine().tradeWirePP(mon),toWire:mon=>new Engine().toTradeWire(mon),fromWire:mon=>new Engine().fromTradeWire(mon)});
   LT.MonsterIdentity=Object.freeze({normalizeNickname,countNickname,displayName,maxNicknameLength:5,shinyOdds:SHINY_ODDS});
   LT.PlayerIdentity=Object.freeze({normalizeName:normalizePlayerName,countName:countNickname,onlineName:playerOnlineName,defaultName:DEFAULT_PLAYER_NAME,maxLength:MAX_PLAYER_NAME});
   LT.displayName=displayName;
@@ -3889,7 +4042,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   LT.ConditionRules=Object.freeze({statuses:STATUS,byElement:STATUS_BY_ELEMENT,held:HELD,allocation:ALLOC});
   LT.normalizeFutoMoves=futoMoves;
   LT.BattleStages=BattleStages;
-  LT.FutoRules=Object.freeze({statLimits:Object.freeze({...FUTO_STAT_LIMITS}),defaultMoves:Object.freeze(D.species.futo.moves.slice()),normalizeMoves:futoMoves,maxLevel:MAX_LEVEL,growth:FUTO_GROWTH,grownStats:grownFutoStats});
+  LT.migrateMoveIds=migrateMoveIds;
+  LT.FutoRules=Object.freeze({migrateMoves:list=>migrateMoveIds(list,D.species.futo.moves),statLimits:Object.freeze({...FUTO_STAT_LIMITS}),defaultMoves:Object.freeze(D.species.futo.moves.slice()),normalizeMoves:futoMoves,maxLevel:MAX_LEVEL,growth:FUTO_GROWTH,grownStats:grownFutoStats});
 })();
 
 </script>
@@ -7975,12 +8129,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261116-battle-trade"></script>
-<script src="admin-console.js?v=20261116-battle-trade"></script>
-<script src="online-futo.js?v=20261117-alloc"></script>
+<script src="battle-vfx.js?v=20261117-fx24"></script>
+<script src="admin-console.js?v=20261117-moves96"></script>
+<script src="online-futo.js?v=20261117-moves96"></script>
 <script src="secret-encounter.js?v=20261117-shiny"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261116-battle-trade">
-<script src="trade-client.js?v=20261116-battle-trade"></script>
+<script src="trade-client.js?v=20261117-moves96"></script>
 <script src="mobile-screen.js?v=20261117-rotate"></script>
 </body>
 </html>
