@@ -34,7 +34,7 @@ test('trade catalog matches every ordinary species and preserves all legal snaps
   const m=mon(id);if(s.specialOnly||s.adminOnly){assert.throws(()=>validateTradeMonster(m));continue;}
   assert.deepEqual(validateTradeMonster(m),m);count++;
  }
- assert.equal(count,260);
+ assert.equal(count,254); // 253 ordinary + legendary; retired IDs stay accepted server-side for older clients
  for(const change of [{species:'missing'},{species:'floravelle'},{species:'futo'},{level:101},{xp:99999},{hp:99999},{shiny:'true'},{grantId:'admin-legendary:P1234567890abcdef'},{customStats:{}},{customMoves:[]},{futoConfigLevel:70},{nickname:'123456'},{nickname:'bad\u202e'},{pp:{fake:5}},{uid:'bad/id'}])assert.throws(()=>validateTradeMonster({...mon(),...change}),JSON.stringify(change));
  assert.equal(validateTradeMonster(mon('arvelion')).species,'arvelion');
  const absent=mon();delete absent.shiny;delete absent.nickname;assert.equal(validateTradeMonster(absent).shiny,false);assert(!('nickname'in validateTradeMonster(absent)));

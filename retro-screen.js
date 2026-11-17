@@ -15,7 +15,9 @@
     sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', long: 300, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
     night: Object.freeze({ id: 'night', label: '月夜液晶（4階調）', short: 'NIGHT', long: 300, palette: ['#0c0f2d', '#2e3c7b', '#7e9dda', '#e0e8ff'] }),
     mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', long: 300, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] }),
-    color: Object.freeze({ id: 'color', label: 'フルカラー（高精細）', short: 'HD', long: 0 })
+    color: Object.freeze({ id: 'color', label: 'フルカラー（高精細）', short: 'HD', long: 0 }),
+    // Hidden until the title-screen trick: channels rotate, colours band hard.
+    glitch: Object.freeze({ id: 'glitch', label: 'バグ色（色化け）', short: 'BUG', long: 200, levels: 5, saturate: 1.9, swap: true })
   });
   const ORDER = Object.freeze(['pocket', 'dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
   const DEFAULT = 'pocket';
@@ -73,7 +75,13 @@
         });
         filter.append(matrix, contrast, map);
       } else {
-        // Optional handheld-style saturation, then coarse colour steps per channel.
+        // Optional channel rotation (glitch palette), saturation, then coarse colour steps.
+        if (mode.swap) {
+          const swap = document.createElementNS(ns, 'feColorMatrix');
+          swap.setAttribute('type', 'matrix');
+          swap.setAttribute('values', '0.1 0.9 0 0 0  0 0.15 0.85 0 0  0.9 0 0.1 0 0  0 0 0 1 0');
+          filter.appendChild(swap);
+        }
         if (mode.saturate) {
           const saturate = document.createElementNS(ns, 'feColorMatrix');
           saturate.setAttribute('type', 'saturate'); saturate.setAttribute('values', String(mode.saturate));

@@ -39,7 +39,7 @@ for(const starter of D.starters){
   const reachable=new Set([...D.collectionRoutes.wild,...D.collectionRoutes.starters[starter]]);
   e.state.caught=[starter,...[...reachable].filter(id=>id!==starter)];e.state.seen=e.state.caught.slice();
   const quest=e.quests().find(q=>q.id==='all-voices');
-  assert.equal(quest.target,starter==='hibana'?254:256);assert(quest.complete,`${starter}: feasible collection cannot complete`);
+  assert.equal(quest.target,starter==='hibana'?248:250);assert(quest.complete,`${starter}: feasible collection cannot complete`);
   const missing=[...reachable].find(id=>id!=='arvelion'&&!excluded.has(id));
   e.state.caught=e.state.caught.filter(id=>id!==missing);
   assert(!e.quests().find(q=>q.id==='all-voices').complete,'An unrelated missing obtainable species must block completion');

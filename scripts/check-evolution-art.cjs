@@ -135,9 +135,9 @@ async function main() {
   // retain the exact snapshot of the 130 unchanged normal roots/singles.
   const unchanged = species.filter(s => !children.has(s.id)&&!['arvelion','futo','floravelle'].includes(s.id));
   const evolved = species.filter(s => children.has(s.id));
-  assert.equal(species.length, 262);
+  assert.equal(species.length, 256);
   assert.equal(evolved.length, 129);
-  assert.equal(unchanged.length, 130);
+  assert.equal(unchanged.length, 124);
   assert(art.status().arvelionLoaded,'Original legendary atlas did not load');
   assert.notEqual(imageStats(art.get('arvelion')).hash,imageStats(art.get('arvelion',true)).hash,'Legendary rear duplicates front');
   assert.equal(art.status().evolutionRequested, 0, 'Startup must not download all evolution sheets');
