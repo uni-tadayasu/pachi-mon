@@ -14,7 +14,11 @@ async function main(){
   const api=require('../battle-vfx.js');
   assert(LT.Art.battle._pachiVFX,'Battle hook was not installed');
   const moves=Object.values(LT.DATA.moves),families=new Set(moves.map(m=>api.classify(m)));
-  assert(families.size>=18,`Too few distinct move families: ${families.size}`);
+  // Exactly 24 move effects, every one of them used by some move.
+  assert.equal(api.effects.length,24);assert.equal(new Set(api.effects).size,24);
+  assert.equal(families.size,24,`Every move effect is used: ${[...families].join(',')}`);
+  assert(moves.every(m=>api.effects.includes(api.classify(m))),'Every move uses one of the 24 effects');
+  assert.deepEqual([...api.styles].sort(),[...api.effects,'capture','miss','faint','arrival'].sort());
   assert(moves.every(m=>api.styles.includes(api.classify(m))),'Unmapped technique');
   assert(api.budgets.low.particles < api.budgets.high.particles);
   assert(api.budgets.high.ribbonSteps <= 26 && api.budgets.high.corona <= 15);
@@ -29,7 +33,7 @@ async function main(){
   assert.deepEqual(a.source,{x:470,y:375});assert.deepEqual(a.target,{x:820,y:185});
   const b=api.anchors(1000,500,{side:0,slot:1,target:0,kind:'heal'},{online:true,double:true,side:1});
   assert.deepEqual(b.source,b.target);assert.equal(b.source.x,820);
-  const futoMoves=[['futo_breaker','damage','fracture-punch'],['futo_burst','damage','focus-beam'],['futo_ascend','boost','ascension'],['futo_restore','heal','healing']];
+  const futoMoves=[['futo_breaker','damage','impact'],['futo_burst','damage','beam'],['futo_ascend','boost','ascension'],['futo_restore','heal','healing']];
   const futoEvents=futoMoves.map(([id,kind,style])=>{
     const move=LT.DATA.moves[id];assert(move,`Missing Futo technique: ${id}`);
     assert.equal(api.classify(move),style,`${id} must have its intended visual style`);
@@ -47,7 +51,7 @@ async function main(){
     return event;
   });
   assert.equal(api.fromEvent({kind:'boost',move:'futo_ascend',side:0,changed:false},null,100),null,'Capped boosts must not show a stat increase');
-  const legendaryMoves=[['arvelion_rend','damage','astral-rend'],['arvelion_nova','damage','creation-nova'],['arvelion_crown','boost','celestial-crown'],['arvelion_renewal','heal','stellar-renewal']];
+  const legendaryMoves=[['arvelion_rend','damage','astral-rend'],['arvelion_nova','damage','creation-nova'],['arvelion_crown','boost','ascension'],['arvelion_renewal','heal','healing']];
   const legendaryEvents=legendaryMoves.map(([id,kind,style])=>{
     const move=LT.DATA.moves[id];assert(move,`Missing legendary technique: ${id}`);
     assert.equal(api.classify(move),style);
@@ -64,7 +68,7 @@ async function main(){
   const cv=canvas.createCanvas(768,440),c=cv.getContext('2d');
   let rendered=0;
   for(const [i,style] of api.styles.entries())for(const quality of ['high','low']){
-    const kind=['healing','stellar-renewal'].includes(style)?'heal':style==='shield'?'guard':['ascension','celestial-crown'].includes(style)?'boost':style==='capture'?'capture':style==='miss'?'miss':'damage';
+    const kind=style==='healing'?'heal':style==='shield'?'guard':style==='ascension'?'boost':style==='capture'?'capture':style==='miss'?'miss':'damage';
     const event={style,kind,side:'ally',element:['leaf','tide','ember','wind','crystal'][i%5],started:100,duration:1000,seed:17,power:45,amount:kind==='damage'?78:0};
     for(const age of [0.2,0.51,0.81]){
       c.clearRect(0,0,cv.width,cv.height);const yes=api.render(c,cv.width,cv.height,100+age*1000,event,{quality});
@@ -136,7 +140,7 @@ async function main(){
     const sheet=canvas.createCanvas(tileW*cols,tileH*rows),sc=sheet.getContext('2d');sc.fillStyle='#101b2b';sc.fillRect(0,0,sheet.width,sheet.height);
     styles.forEach((style,i)=>{
       const tile=canvas.createCanvas(768,440),tc=tile.getContext('2d');
-      const kind=['healing','stellar-renewal'].includes(style)?'heal':style==='shield'?'guard':['ascension','celestial-crown'].includes(style)?'boost':style==='capture'?'capture':'damage';
+      const kind=style==='healing'?'heal':style==='shield'?'guard':style==='ascension'?'boost':style==='capture'?'capture':'damage';
       tc.fillStyle='#213348';tc.fillRect(0,0,768,440);tc.fillStyle='#34546a';tc.fillRect(0,275,768,165);
       const mon=Object.values(LT.DATA.species)[0];
       LT.PixelSprites.creature(tc,mon.id,{x:140,y:240,size:180,back:true});

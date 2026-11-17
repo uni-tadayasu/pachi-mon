@@ -63,6 +63,7 @@
     return ids;
   }
   function validateSnapshot(snapshot, sessionId, side, now = Date.now(), species = 'futo') {
+    if (plain(snapshot) && Array.isArray(snapshot.moves) && species === 'futo' && LT.FutoRules?.migrateMoves) snapshot = { ...snapshot, moves: LT.FutoRules.migrateMoves(snapshot.moves) };
     if (!plain(snapshot) || snapshot.ok === false || snapshot.species !== species || !Object.hasOwn(specialFields,species) || snapshot.sessionId !== sessionId || snapshot.side !== side ||
       typeof snapshot.grantId !== 'string' || snapshot.grantId.length < 1 || snapshot.grantId.length > 128 ||
       !integer(snapshot.level, 1, 100) || !Number.isSafeInteger(snapshot.expiresAt) || snapshot.expiresAt <= now ||

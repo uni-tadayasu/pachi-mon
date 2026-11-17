@@ -15,17 +15,27 @@
     crystal: ['#fff2ff', '#d6acff', '#7685ec', '#fff9cf'],
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff']
   };
-  const direct = {
-    verdant_lance:'beam',root_drain:'roots',forest_crown:'ascension',genesis_bloom:'healing',
-    sprout:'seed', vine:'petals', lifeline:'roots', evergreen:'roots', thorn:'roots',
-    wave:'water-orbs', surge:'wave', riptide:'wave', ripple:'ripples', frost:'ice',
-    spark:'flame', blaze:'fire-vortex', sunburst:'sunburst', cinder:'fire-lance',
-    gust:'wind-blades', storm:'feathers', tempest:'vortex', whisper:'feathers', sirocco:'wind-blades',
-    glint:'crystals', prism:'star-rings', supernova:'starfall', moonbeam:'beam', facet:'crystals',
-    nudge:'impact', pulse:'ripples', struggle:'impact',
-    futo_breaker:'fracture-punch', futo_burst:'focus-beam', futo_ascend:'ascension', futo_restore:'healing',
-    arvelion_rend:'astral-rend', arvelion_nova:'creation-nova', arvelion_crown:'celestial-crown', arvelion_renewal:'stellar-renewal'
+  // Exactly 24 move effects. Every move maps to one, by its role in the type's
+  // roster (or a named exception); colours come from the move or its type.
+  const MOVE_EFFECTS = Object.freeze(['seed','petals','roots','water-orbs','wave','ripples','ice','flame','fire-vortex','fire-lance','wind-blades','feathers',
+    'vortex','crystals','star-rings','beam','impact','healing','shield','ascension','lightning','starfall','astral-rend','creation-nova']);
+  const ROLE_EFFECTS = {
+    pWeak:{leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'},
+    sWeak:{leaf:'seed',tide:'water-orbs',ember:'flame',wind:'feathers',crystal:'crystals'},
+    pMid:{leaf:'roots',tide:'wave',ember:'fire-lance',wind:'wind-blades',crystal:'crystals'},
+    sMid:{leaf:'petals',tide:'wave',ember:'fire-vortex',wind:'feathers',crystal:'star-rings'},
+    pStrong:{leaf:'roots',tide:'wave',ember:'fire-lance',wind:'wind-blades',crystal:'crystals'},
+    sStrong:{leaf:'petals',tide:'wave',ember:'fire-vortex',wind:'vortex',crystal:'star-rings'},
+    sHeavy:{leaf:'petals',tide:'wave',ember:'creation-nova',wind:'vortex',crystal:'starfall'},
+    pRecoil:{leaf:'impact',tide:'impact',ember:'impact',wind:'impact',crystal:'impact'},
+    sDrain:{leaf:'roots',tide:'ripples',ember:'fire-vortex',wind:'feathers',crystal:'beam'},
+    pDrain:{leaf:'roots',tide:'ripples',ember:'flame',wind:'feathers',crystal:'beam'},
+    pPierce:{leaf:'roots',tide:'ice',ember:'fire-lance',wind:'lightning',crystal:'crystals'},
+    sPierce:{leaf:'astral-rend',tide:'ice',ember:'astral-rend',wind:'lightning',crystal:'beam'}
   };
+  const NAMED_EFFECTS = {nudge:'impact',pulse:'ripples',dawnstep:'impact',dew:'ripples',struggle:'impact',
+    futo_breaker:'impact',futo_burst:'beam',arvelion_rend:'astral-rend',arvelion_nova:'creation-nova',
+    verdant_lance:'astral-rend',root_drain:'roots',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova'};
   const movePalettes = {
     futo_breaker:['#fff1fb','#ff8bcf','#913eb7','#ffecbd'],
     futo_burst:['#fff5ff','#ee7bda','#873ed4','#ffd6ed'],
@@ -34,14 +44,10 @@
     arvelion_rend:['#fff4ca','#ffc34c','#e65e24','#fff8e3'],
     arvelion_nova:['#fff3bd','#ffae32','#d94416','#fff8df'],
     arvelion_crown:['#fff2b2','#ffd159','#dc7c22','#fff8de'],
-    arvelion_renewal:['#fff4ca','#ffc963','#e08a32','#fff9e9']
-  };
-  const atlas = {
-    leaf:['seed','petals','roots','petals','seed','roots','roots','roots'],
-    tide:['water-orbs','ripples','wave','wave','water-orbs','ripples','water-orbs','ice'],
-    ember:['flame','flame','fire-lance','sunburst','flame','fire-vortex','fire-lance','meteor'],
-    wind:['wind-blades','feathers','wind-blades','vortex','vortex','feathers','wind-blades','lightning'],
-    crystal:['crystals','crystals','beam','star-rings','crystals','star-rings','crystals','beam']
+    arvelion_renewal:['#fff4ca','#ffc963','#e08a32','#fff9e9'],
+    sig_leaf:['#fbffe0','#b6f26a','#2f9e4f','#ffe9a3'],
+    sig_tide:['#eefcff','#7ee3ff','#1f6fd1','#fff2b8'],
+    sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a']
   };
   const clamp = (n,a=0,b=1) => Math.max(a,Math.min(b,n));
   const ease = n => 1-Math.pow(1-clamp(n),3);
@@ -58,30 +64,24 @@
     if(quoted){const found=Object.values(moves).find(m=>m.name===quoted);if(found)return found;}
     return event?.side==='enemy'||typeof event?.side==='number'?null:fallback;
   }
+  function effectOf(move={}) {
+    if(move.kind==='heal')return 'healing';
+    if(move.kind==='guard')return 'shield';
+    if(move.kind==='boost')return 'ascension';
+    if(NAMED_EFFECTS[move.id])return NAMED_EFFECTS[move.id];
+    const byRole=ROLE_EFFECTS[move.role]?.[move.element];if(byRole)return byRole;
+    return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
+  }
   function classify(move={},kind=move.kind) {
     if(kind==='faint')return 'faint';
     if(kind==='switch')return 'arrival';
     if(kind==='miss')return 'miss';
     if(kind==='capture'||kind==='caught'||kind==='resonate')return 'capture';
-    if(move.id?.startsWith('arvelion_')&&direct[move.id]&&['attack','damage','boost','heal'].includes(kind))return direct[move.id];
+    if(kind==='recoil')return 'impact';
     if(kind==='heal')return 'healing';
     if(kind==='guard')return 'shield';
     if(kind==='boost')return 'ascension';
-    if(kind==='recoil')return 'impact';
-    if(direct[move.id])return direct[move.id];
-    const a=/^atlas_(leaf|tide|ember|wind|crystal)_(\d+)$/.exec(move.id||'');
-    if(a){const n=Number(a[2]);return n<=8?atlas[a[1]][n-1]:n<=10?'healing':'shield';}
-    const name=move.name||'';
-    if(/雷|電/.test(name))return 'lightning';
-    if(/氷|雪|霜/.test(name))return 'ice';
-    if(/光線|ビーム|月虹|レーザー/.test(name))return 'beam';
-    if(/流星|隕石/.test(name))return 'meteor';
-    if(/星|銀河/.test(name))return 'starfall';
-    if(/渦|竜巻|奔流/.test(name))return move.element==='ember'?'fire-vortex':'vortex';
-    if(/花|華/.test(name))return 'petals';
-    if(/根|茨|樹/.test(name))return 'roots';
-    if(/波|潮|海/.test(name))return 'wave';
-    return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
+    return effectOf(move);
   }
   function fromEvent(event,fallback=null,now=globalThis.performance?.now?.()||0) {
     if(!event||!['damage','attack','heal','guard','boost','miss','capture','caught','resonate','recoil','faint','switch'].includes(event.kind))return null;
@@ -210,10 +210,10 @@
       c.quadraticCurveTo(x-r*.2,y-r*.3,x+lean*r*.4,y-r*.7);
       c.quadraticCurveTo(x+r*.45,y-r*.1,x+r*.19,y+r*.22);c.closePath();c.fill();c.restore();
     };
-    const attack=!['healing','shield','ascension','celestial-crown','stellar-renewal','capture','miss'].includes(e.style);
+    const attack=!['healing','shield','ascension','capture','miss'].includes(e.style);
     const charging=smooth(phase(t,0,.1))*(1-smooth(phase(t,.14,.34)));
     const bloom=Math.sin(phase(t,.4,.93)*Math.PI);
-    const physical=e.category==='physical'||e.style==='fracture-punch'||e.style==='impact';
+    const physical=e.category==='physical'||e.style==='impact';
 
     // Atmosphere is local to the two actors. No opaque or strobed full-screen
     // flash: preserve the arena, creature silhouettes and motion throughout.
@@ -317,44 +317,6 @@
         }
         sparks(cx,cy,Math.floor(count*.55),120*s);break;
       }
-      case 'celestial-crown': {
-        const gather=smooth(phase(t,.02,.36)),hold=1-smooth(phase(t,.78,1));
-        const crownY=cy-(54+gather*25)*s,radius=(24+gather*23)*s;
-        glow(cx,crownY,74*s,gather*hold*.28,p[3]);
-        ellipse(cx,cy+48*s,(29+gather*32)*s,17*s,p[1],2.5,hold*.75);
-        ellipse(cx,cy-6*s,(42+gather*17)*s,(53+gather*21)*s,p[1],2,gather*hold*.48);
-        ellipse(cx,crownY,radius,12*s,p[3],2,gather*hold);
-        for(let jewel=0;jewel<7;jewel++){
-          const a=jewel*TAU/7+t*.32,x=cx+Math.cos(a)*radius,y=crownY+Math.sin(a)*12*s;
-          const tip={x,y:y-(jewel%2?17:25)*s*gather};
-          stroke([[x,y],[tip.x,tip.y]],p[1],2,gather*hold);
-          lampFlame(tip.x,tip.y,7*s,Math.sin(a)*.25,p[1],gather*hold);
-        }
-        for(let stream=0;stream<(low?3:5);stream++){
-          const a=stream*TAU/(low?3:5)+t*.7;
-          const start={x:cx+Math.cos(a)*58*s,y:cy+48*s};
-          const end={x:cx+Math.cos(a+.5)*radius,y:crownY};
-          curvedTrail(start,mixPoint(start,end,gather),18*s,1.7,p[stream%3],hold*.55);
-        }
-        lampFlame(cx,crownY-25*s,12*s*gather,0,p[1],hold);break;
-      }
-      case 'stellar-renewal': {
-        const open=smooth(phase(t,.02,.35)),hold=1-smooth(phase(t,.76,1));
-        glow(cx,cy,80*s,open*hold*.24,p[1]);
-        for(let orbit=0;orbit<3;orbit++){
-          const radius=(37+orbit*15)*s*open;
-          ellipse(cx,cy+20*s,radius,radius*(.4+orbit*.16),p[orbit],2,hold*.72);
-        }
-        for(let moteIndex=0;moteIndex<Math.floor(count*.7);moteIndex++){
-          const u=phase(t,.02+random(seed,moteIndex)*.25,.67+random(seed,moteIndex)*.2);
-          const a=moteIndex*2.39996-u*1.5,r=(1-u)*75*s;
-          const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.7-u*26*s;
-          lampFlame(x,y,(3+u*3)*s,Math.cos(a)*.3,p[1],Math.sin(u*Math.PI)*hold);
-        }
-        const bloom=smooth(phase(t,.25,.6))*hold;
-        lampFlame(cx,cy-7*s,25*s*bloom,.12,p[1],bloom*.8);
-        lampFlame(cx,cy-4*s,13*s*bloom,-.1,p[3],bloom);break;
-      }
       case 'seed':
       case 'water-orbs':
       case 'flame': {
@@ -425,9 +387,8 @@
         }impactRing(86*s);sparks(cx,cy);break;
       }
       case 'fire-lance':
-      case 'focus-beam':
       case 'beam': {
-        const focused=e.style==='focus-beam';
+        const focused=e.move==='futo_burst';
         const end=mixPoint(source,target,travel),width=Math.sin(phase(t,.08,.9)*Math.PI)*(focused?14:e.style==='beam'?21:15)*s*size;
         if(width>0){trail(source,end,width/s);glow(end.x,end.y,35*s,.45);}
         for(let i=0;i<3;i++){const tt=phase(t,.12+i*.08,.6+i*.08),pos=mixPoint(source,target,tt);
@@ -461,48 +422,6 @@
           }
         }
         impactRing(95*s);sparks(cx,cy);break;
-      }
-      case 'fracture-punch': {
-        const flight=ease(phase(t,.13,.43)),pos=mixPoint(source,target,flight),strike=1-smooth(phase(t,.47,.67));
-        const dx=Math.cos(direction),dy=Math.sin(direction),scale=15*s*size;
-        const transform=(x,y)=>[pos.x+(x*dx-y*dy)*scale,pos.y+(x*dy+y*dx)*scale];
-        for(let i=-2;i<=2;i++){
-          const offset=i*8*s,tail=42*s*(1-Math.abs(i)*.14);
-          stroke([[pos.x-dx*tail-dy*offset,pos.y-dy*tail+dx*offset],[pos.x-dx*9*s-dy*offset,pos.y-dy*9*s+dx*offset]],i%2?p[1]:p[0],i===0?5:2,strike*.75);
-        }
-        const fist=[[-1.65,-.5],[-.6,-.5],[-.36,-.94],[.72,-.94],[1.04,-.65],[1.04,.45],[.65,.88],[-.25,.88],[-.55,.48],[-1.65,.48]].map(([x,y])=>transform(x,y));
-        glow(pos.x,pos.y,35*s,strike*.33);poly(fist,p[2],strike*.88);stroke(fist,p[1],3,strike,true);
-        stroke([transform(-.25,-.64),transform(.7,-.64),transform(.7,.35),transform(.45,.58)],p[0],2,strike);
-        for(let i=0;i<3;i++)stroke([transform(i*.27,-.65),transform(i*.27,-.22)],p[0],1,strike*.8);
-        if(t>.4){
-          const fracture=ease(phase(t,.4,.68)),opacity=1-smooth(phase(t,.69,1));
-          for(let i=0;i<(low?7:10);i++){
-            const a=i*TAU/(low?7:10)+.22,r=(47+random(seed,i)*47)*s*size*fracture;
-            const point=(rr,angle)=>[cx+Math.cos(angle)*rr,cy+Math.sin(angle)*rr*.76];
-            const middle=point(r*.56,a+.13),end=point(r,a-.06);
-            const crack=[point(12*s,a),middle,point(r*.76,a-.11),end];
-            stroke(crack,p[2],5,opacity*.28);stroke(crack,p[0],1.8,opacity*.9);
-            stroke([middle,point(r*.73,a+.35)],p[1],1,opacity*.8);
-            shard(end[0],end[1],5*s,a,p[i%3],opacity*.8);
-          }
-          star(cx,cy,24*s*(1-fracture*.55),p[0],direction,opacity*.85);
-        }
-        impactRing(106*s);sparks(cx,cy,Math.floor(count*.6),85*s,p[1]);break;
-      }
-      case 'sunburst': {
-        const rise=ease(phase(t,.08,.45)),radius=(12+rise*44)*s*size;
-        const energy=1-smooth(phase(t,.69,1));
-        glow(cx,cy,radius*2.2,.38*energy);
-        for(let i=0;i<(low?9:15);i++){
-          const a=i*TAU/(low?9:15)+t*.15,reach=radius*(1.4+random(seed,i+90)*.45+burst*.4);
-          const start={x:cx+Math.cos(a)*radius*.6,y:cy+Math.sin(a)*radius*.6};
-          const end={x:cx+Math.cos(a+.14)*reach,y:cy+Math.sin(a+.14)*reach};
-          curvedTrail(start,end,12*s,3.6,p[i%2],energy*.5);
-        }
-        ellipse(cx,cy,radius,radius,p[0],3,.8*energy);
-        ellipse(cx,cy,radius*.78,radius*.78,p[1],7,.3*energy);
-        star(cx,cy,radius*.54,p[0],t*.2,.27*energy);
-        impactRing(112*s);break;
       }
       case 'fire-vortex':
       case 'vortex': {
@@ -544,12 +463,11 @@
         for(let i=0;i<3;i++){const b=points[Math.min(points.length-1,4+i*2)];stroke([b,[b[0]+(i%2?30:-30)*s,b[1]+20*s],[b[0]+(i%2?50:-40)*s,b[1]+43*s]],p[1],2,energy*.7);}
         impactRing(90*s);sparks(cx,cy);break;
       }
-      case 'meteor':
       case 'starfall': {
         const n=low?5:8;
         for(let i=0;i<n;i++){const tt=ease(phase(t,.07+i*.04,.48+i*.04)),xx=cx+(random(seed,i)-.5)*95*s,yy=cy+(random(seed,i+10)-.5)*42*s;
           const start={x:xx-85*s,y:Math.max(-40*s,yy-200*s)},pos=mixPoint(start,{x:xx,y:yy},tt),prev=mixPoint(start,{x:xx,y:yy},Math.max(0,tt-.24));
-          trail(prev,pos,e.style==='meteor'?7:3);star(pos.x,pos.y,(e.style==='meteor'?12:8)*s,p[0],.4,1-smooth(phase(t,.64+i*.02,.9+i*.01)));
+          trail(prev,pos,3);star(pos.x,pos.y,8*s,p[0],.4,1-smooth(phase(t,.64+i*.02,.9+i*.01)));
         }impactRing(105*s);sparks(cx,cy);break;
       }
       case 'healing': {
@@ -748,7 +666,7 @@
     globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,palettes,budgets,styles:[...new Set([...Object.values(direct),...Object.values(atlas).flat(),'healing','shield','capture','miss','faint','arrival'])]};
+  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();

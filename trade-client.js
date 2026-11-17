@@ -6,9 +6,11 @@
   const copy=value=>JSON.parse(JSON.stringify(value));
   function parsePending(raw){const p=JSON.parse(raw);if(!p||p.version!==1||typeof p.ownerId!=='string'||(!p.roomId&&!['create','join'].includes(p.action)))throw Error('Invalid pending trade');return p;}
   const stable=value=>JSON.stringify(value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,JSON.parse(stable(value[key]))])):Array.isArray(value)?value.map(item=>JSON.parse(stable(item))):value);
-  function snapshot(mon){
+  function snapshot(mon,engine){
     if(!mon)return null;
-    const value={uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp,pp:copy(mon.pp||{}),nickname:mon.nickname||'',shiny:mon.shiny===true};
+    // PP goes out in the exchange server's catalog; an echo of our own offer is already in it.
+    const pp=typeof engine?.tradeWirePP==='function'?engine.tradeWirePP(mon):LT.TradeRules?.wirePP?LT.TradeRules.wirePP(mon):copy(mon.pp||{});
+    const value={uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp,pp:copy(pp||{}),nickname:mon.nickname||'',shiny:mon.shiny===true};
     return value;
   }
   function eligible(mon,data=LT.DATA){
@@ -117,14 +119,15 @@
       const mon=this.inventory().find(item=>item.uid===uid);
       if(!eligible(mon,this.data))throw Error('このパチモンは交換できません。運営専用・配布個体は対象外です。');
       const owner=await this.identity();
-      const result=await this.request('/trades/'+trade.id+'/offer',{method:'POST',body:{revision:trade.revision,monster:snapshot(mon)}});
+      const result=await this.request('/trades/'+trade.id+'/offer',{method:'POST',body:{revision:trade.revision,monster:snapshot(mon,this.getEngine())}});
       await this.accept(result.trade,owner);
     });}
     checkConfirmation(){
       const trade=this.trade,own=this.own(),other=this.other();
       if(!trade||trade.state!=='open'||!own?.monster||!other?.monster)throw Error('お互いのパチモンが選ばれるまでお待ちください。');
       const state=this.getEngine()?.state,mon=this.inventory().find(item=>item.uid===own.monster.uid);
-      if(!eligible(mon,this.data)||stable(snapshot(mon))!==stable(snapshot(own.monster)))throw Error('選んだパチモンの状態が変わりました。選び直してください。');
+      const engine=this.getEngine();
+      if(!eligible(mon,this.data)||stable(snapshot(mon,engine))!==stable(snapshot(own.monster,engine)))throw Error('選んだパチモンの状態が変わりました。選び直してください。');
       if(!eligible(other.monster,this.data))throw Error('相手のパチモンを交換できません。');
       if((state.tradeReceipts||[]).length>=(LT.TradeRules?.receiptLimit||4096))throw Error('交換記録が上限に達しています。');
       if(state.party.some(item=>item.uid===mon.uid)&&!state.party.some(item=>item.uid!==mon.uid&&item.hp>0)&&other.monster.hp<=0)throw Error('動ける仲間がいなくなるため、相手のパチモンを回復してから選び直してください。');
