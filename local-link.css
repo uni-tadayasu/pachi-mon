@@ -49,3 +49,8 @@
 }
 .mobile-screen .menu-grid button[data-ui="local"]{grid-column:auto;flex-direction:column;justify-content:center}
 .mobile-screen .menu-grid button[data-ui="local"]::after{content:none}
+/* How to connect (Wi-Fi, hotspot, Bluetooth tethering). */
+.local-howto{margin:10px 0;padding:8px 12px;border:2px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.35);font-size:12px;line-height:1.7;text-align:left}
+.local-howto summary{cursor:pointer;color:var(--pm-cyan,#7fe7ff)}
+.local-howto p,.local-howto ol{margin:6px 0}
+.local-howto ol{padding-left:1.4em}

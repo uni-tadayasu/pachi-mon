@@ -53,15 +53,19 @@ d=make();prepareKO(d);d.state.teams[1].monsters.slice(1).forEach(mon=>mon.hp=0);
 // Observer timing never shows the replacement during the preceding hit/faint effect.
 vm.runInContext(fs.readFileSync(path.join(root,'battle-vfx.js'),'utf8'),context);const fx=LT.BattleVFX;
 assert(fx.fromEvent({kind:'faint',side:1}));assert(fx.fromEvent({kind:'switch',side:1}));
-const start=5000,visuals=koState.events.map(e=>fx.fromEvent(e,null,0)).filter(Boolean),duration=visuals.reduce((sum,e)=>sum+e.duration+75,0)+180;
+// Every message has its own beat (effects and plain lines alike); the plan gives the offsets.
+const start=5000,plan=fx.onlinePlan(koState),duration=plan.total,faintAt=plan.beats.find(beat=>beat.kind==='faint').start;
+const arrival=fx.onlinePlan(entryState).beats.find(beat=>beat.kind==='switch').start;
+assert.equal(plan.beats.length,koState.events.length,'every message is scheduled');assert(plan.beats.every((beat,i)=>!i||beat.start>=plan.beats[i-1].until),'beats never overlap');
 assert(fx.onlineBusy(koState,start));assert.equal(fx.onlineView(koState,start).teams[1].monsters[0].hp,1);
-const duringFaint=start+visuals[0].duration+76;assert.equal(fx.onlineView(koState,duringFaint).teams[1].active[0],0);assert(fx.onlineBusy(koState,duringFaint));
+const duringFaint=start+faintAt+50;assert.equal(fx.onlineView(koState,duringFaint).teams[1].active[0],0);assert(fx.onlineBusy(koState,duringFaint));
 assert(!fx.onlineBusy(koState,start+duration+1));assert.equal(fx.onlineView(koState,start+duration+1).teams[1].active[0],0);
-assert(fx.onlineBusy(entryState,start+duration+100));assert.equal(fx.onlineView(entryState,start+duration+100).teams[1].active[0],2,'Arrival effect uses the selected incoming creature');
+assert(fx.onlineBusy(entryState,start+duration+100));assert.equal(fx.onlineView(entryState,start+duration+100+arrival+10).teams[1].active[0],2,'Arrival effect uses the selected incoming creature');
 const untouched=JSON.stringify(koState),slowKO={...copy(koState),seed:koState.seed+1},fastEntry={...copy(entryState),seed:koState.seed+1},slowStart=20000;
 assert(fx.onlineBusy(slowKO,slowStart));assert(fx.onlineBusy(fastEntry,slowStart+100));
 assert.equal(fx.onlineView(fastEntry,slowStart+200).teams[1].active[0],0,"A faster peer must not truncate this client's KO animation");
-assert.equal(fx.onlineView(fastEntry,slowStart+duration+1).teams[1].active[0],2,'Queued arrival follows the full KO playback');
+assert.equal(fx.onlineView(fastEntry,slowStart+duration+arrival-50).teams[1].active[0],0,'Nothing arrives before the KO playback and its announcement end');
+assert.equal(fx.onlineView(fastEntry,slowStart+duration+arrival+10).teams[1].active[0],2,'Queued arrival follows the full KO playback');
 assert.equal(JSON.stringify(koState),untouched,'Playback never mutates synchronized state');
 async function pair(){
  const queue=[],sessions=[0,1].map(role=>new LT.DuelSession({role,mode:'single',send:message=>{queue.push({role,message:copy(message)});return true;}}));

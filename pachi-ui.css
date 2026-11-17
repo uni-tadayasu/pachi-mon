@@ -515,6 +515,19 @@ dialog::backdrop{background:rgba(4,6,24,.74);background-image:repeating-linear-g
 .link-leave-confirm{padding:12px 18px;border-top:2px dashed var(--pm-frame-faint);background:rgba(255,107,138,.14)}
 .link-text-button{background:none;border:0;color:var(--pm-cyan);text-decoration:underline;cursor:pointer;font:inherit}
 
+/* Battle lobby: each member's held item. */
+.link-item-field{display:grid;gap:4px;width:100%;margin-top:6px;font-size:11px;text-align:left}
+.link-item-field select{width:100%}
+.link-item-note{display:block;margin-top:4px;font-size:10px;line-height:1.5;color:var(--pm-text-3,#b8c4ff);text-align:left}
+.link-item-note.is-inert{color:#ffb3c4}
+.link-empty-team{margin:12px 0;padding:12px 14px;border:2px dashed var(--pm-frame-faint,#6b7bd8);line-height:1.7}
+/* Battle cards: condition and held item. */
+.link-condition{display:inline-block;margin:2px 4px 0 0;padding:1px 6px;border-radius:2px;background:var(--c,#888);color:#fff;font-size:10px;text-shadow:1px 1px 0 rgba(0,0,0,.45)}
+.link-held{display:inline-block;margin:2px 0 0;padding:1px 6px;font-size:10px;color:var(--pm-gold,#ffd34d);background:rgba(10,18,66,.78);text-shadow:none}
+.link-log p.is-current{color:#fff;font-weight:700;border-left:3px solid var(--pm-gold);padding-left:6px;animation:link-line-in .25s ease-out}
+@keyframes link-line-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.link-log p.is-current{animation:none}}
+
 /* ---------- Trade & operator panels ---------- */
 .pachi-trade,.pachi-console{font-family:var(--pm-pixel)}
 .pachi-trade header,.pachi-console-head{background:var(--pm-dither),rgba(10,18,66,.3);border-bottom:2px dashed var(--pm-frame-soft)}

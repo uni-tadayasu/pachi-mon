@@ -6,6 +6,7 @@
  * used, or all at once on request. Server and peer traffic is never cached.
  * v21: the page also links the local link code and prefetches its QR code
  * libraries, so battles and trades with a nearby device work offline too.
+ * v22: battle items and rhythm; the new code versions are stored on install.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
