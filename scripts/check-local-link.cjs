@@ -16,7 +16,7 @@ for (const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   vm.runInContext(script[2], context); if (context.LT?.Engine) break;
 }
 const { Engine, DATA: D } = context.LT, copy = value => JSON.parse(JSON.stringify(value));
-const { LocalLink, LocalTradeSession, encodeSignal, decodeSignal, trimSdp } = require(path.join(root, 'local-link.js'));
+const { LocalLink, LocalTradeSession, encodeSignal, decodeSignal, trimSdp, LocalNet } = require(path.join(root, 'local-link.js'));
 const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR = require(path.join(root, 'vendor', 'jsQR.js'));
 
 (async () => {
@@ -176,6 +176,31 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   guestOnly.receive({ t: 'hello', v: 1, name: 'x', tradeId: 'not-a-uuid' }); assert.equal(guestOnly.phase, 'error', 'the trade id must be a UUID');
   assert.equal(new LocalTradeSession({ role: 1, send: () => true, getEngine: () => B.engine, commit: B.commit }).offer(B.engine.state.party[0]).ok, false, 'no offers before the partner says hello');
 
+  // ── Bluetooth only (Bluetooth tethering, no Wi-Fi): the choice is remembered; the status line
+  // follows the Network Information API; the camera is asked once, released at once, and
+  // never asked again once denied (it only makes this device's code carry its real address).
+  const store = new Map();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) } });
+  assert.equal(LocalNet.preferred(), 'wifi'); LocalNet.remember('bluetooth'); assert.equal(LocalNet.preferred(), 'bluetooth'); LocalNet.remember('x'); assert.equal(LocalNet.preferred(), 'wifi');
+  const tracks = []; let asked = 0;
+  const nav = (type, permission, fail) => ({ connection: type ? { type } : undefined, permissions: { query: async () => ({ state: permission }) },
+    mediaDevices: { getUserMedia: async constraints => { asked++; assert.deepEqual(constraints, { video: true, audio: false }); if (fail) throw Object.assign(new Error('denied'), { name: 'NotAllowedError' });
+      const track = { stopped: false, stop() { this.stopped = true; } }; tracks.push(track); return { getTracks: () => [track] }; } } });
+  const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const setNav = value => Object.defineProperty(globalThis, 'navigator', { configurable: true, value });
+  setNav(nav('bluetooth', 'prompt')); assert.equal(LocalNet.type(), 'bluetooth'); assert.match(LocalNet.panel(), /この端末の接続：Bluetooth ✓ Bluetoothでつながっています/);
+  assert.equal(await LocalNet.reveal(), true); assert.equal(asked, 1); assert(tracks.length === 1 && tracks.every(t => t.stopped), 'the camera is released at once');
+  setNav(nav('wifi', 'denied')); assert.match(LocalNet.panel(), /この端末の接続：Wi-Fi/); assert.equal(await LocalNet.reveal(), false); assert.equal(asked, 1, 'a denied camera is not asked again');
+  setNav(nav(null, 'prompt', true)); assert.equal(await LocalNet.reveal(), false); assert.equal(LocalNet.type(), null); assert(!/この端末の接続/.test(LocalNet.panel()), 'no status line without the API');
+  setNav({}); assert.equal(await LocalNet.reveal(), false, 'no camera API: carry on without it');
+  if (realNavigator) Object.defineProperty(globalThis, 'navigator', realNavigator);
+  assert.match(LocalNet.toggle('bluetooth', 'data-x'), /data-x="wifi" aria-pressed="false">.*data-x="bluetooth" aria-pressed="true"><b>Bluetoothのみ<\/b><small>Wi-Fi不要<\/small>/);
+  assert.match(LocalNet.panel(), /Wi-Fiは不要・オフのままで大丈夫/); assert.match(LocalNet.panel(), /Wi-Fiやインターネットは使いません/); assert.match(LocalNet.hint, /入れ替えて/);
+  const localSource = fs.readFileSync(path.join(root, 'local-link.js'), 'utf8');
+  assert(localSource.includes("if (net === 'bluetooth' && (action === 'host' || action === 'join') && !link)") && localSource.includes('if (!link) net = preferredNet();'), 'the trade dialog prepares Bluetooth and follows the remembered choice');
+  for (const needle of ["LT.LocalNet?.toggle?.(netChoice(),'data-link-net')", "case 'link-local-host':await prepareBluetooth();await connect(true);break;", "case 'link-local-join':await prepareBluetooth();await connect(false);break;", 'LT.LocalNet?.hint'])
+    assert(html.includes(needle), `index.html: ${needle}`);
+
   // ── The page wires it up: menu, lobby transport, offline storage of the QR libraries.
   for (const needle of ['<script src="local-link.js?v=', '<link rel="stylesheet" href="local-link.css?v=', '<link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">', '<link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">',
     "['local','link','ローカル通信']", 'data-ui="local-battle"', 'data-ui="local-trade"', 'data-link-transport="local"', "transport:'local'", 'checkTrade', 'LT.localTradeActive', '<symbol id="i-link"'])
@@ -185,5 +210,5 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   const licenses = fs.readFileSync(path.join(root, 'LICENSES.txt'), 'utf8');
   assert(/qrcode-generator/.test(licenses) && /jsQR/.test(licenses) && fs.existsSync(path.join(root, 'vendor', 'jsQR.LICENSE.txt')) && fs.existsSync(path.join(root, 'vendor', 'qrcode-generator.LICENSE.txt')), 'bundled library licenses');
   console.log(JSON.stringify({ ok: true, codeChars: { offer: offer.length, answer: answer.length },
-    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'invalid partners', 'cancel', 'page wiring and licenses'] }));
+    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'invalid partners', 'cancel', 'Bluetooth-only choice, status and camera permission', 'page wiring and licenses'] }));
 })().catch(error => { console.error(error); process.exit(1); });

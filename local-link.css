@@ -54,3 +54,11 @@
 .local-howto summary{cursor:pointer;color:var(--pm-cyan,#7fe7ff)}
 .local-howto p,.local-howto ol{margin:6px 0}
 .local-howto ol{padding-left:1.4em}
+/* Connection choice: Wi-Fi/hotspot or Bluetooth only (Bluetooth tethering, no Wi-Fi). */
+.local-net-toggle{margin:10px 0}
+.local-bt{margin:10px 0;padding:10px 12px;border:2px solid var(--pm-cyan,#7fe7ff);background:rgba(10,18,66,.45);font-size:12px;line-height:1.7;text-align:left}
+.local-bt-title{margin:0 0 6px;color:var(--pm-cyan,#7fe7ff);font-weight:700}
+.local-bt ol{margin:6px 0;padding-left:1.4em}
+.local-bt li{margin:3px 0}
+.local-net-status{margin:8px 0 0;padding:4px 8px;border:1px dashed var(--pm-frame-faint,#6b7bd8);color:var(--pm-text-3,#b8c4ff)}
+.local-net-status.is-ok{border-color:#6df0a8;color:#c9ffe0}

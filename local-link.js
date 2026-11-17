@@ -164,6 +164,42 @@
       <li>もう片方の Bluetooth設定で、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
       <li>あとは、いつもどおりQRコードを読み取って接続します。</li></ol>
     <p class="local-note">ブラウザーの仕組み上、Bluetoothだけで端末どうしを直接つなぐことはできないため、Bluetoothテザリングで作ったネットワークを使います。iPhoneのインターネット共有は、モバイルデータ通信の契約がないと使えない場合があります。公共・会社のWi-Fiでは、端末どうしの通信が禁止されていてつながらないことがあります。</p></details>`;
+  // ── Bluetooth only (no Wi-Fi). Two phones joined by Bluetooth tethering form a small
+  // network of their own and the link runs over it; Wi-Fi and the internet are not used.
+  // Camera permission (also needed to read the codes) lets the browser put this device's
+  // real local address in its code instead of a hidden name; on tethered links the name
+  // lookups often do not travel, so this keeps the connection working.
+  const NET_KEY = 'pachi-local-net';
+  const NET_LABEL = { bluetooth: 'Bluetooth', wifi: 'Wi-Fi', cellular: 'モバイル回線', ethernet: '有線LAN', none: 'つながっていません', wimax: 'WiMAX', other: 'その他', unknown: '不明' };
+  function networkType() { const type = globalThis.navigator?.connection?.type; return typeof type === 'string' ? type : null; }
+  function preferredNet() { try { return globalThis.localStorage?.getItem(NET_KEY) === 'bluetooth' ? 'bluetooth' : 'wifi'; } catch (_) { return 'wifi'; } }
+  function rememberNet(net) { try { globalThis.localStorage?.setItem(NET_KEY, net === 'bluetooth' ? 'bluetooth' : 'wifi'); } catch (_) {} }
+  async function revealLocalAddress() {
+    try {
+      const devices = globalThis.navigator?.mediaDevices; if (!devices?.getUserMedia) return false;
+      const state = await globalThis.navigator.permissions?.query?.({ name: 'camera' }).then(result => result.state, () => null);
+      if (state === 'denied') return false;
+      const stream = await devices.getUserMedia({ video: true, audio: false });
+      stream.getTracks().forEach(track => track.stop()); // nothing is recorded or shown
+      return true;
+    } catch (_) { return false; }
+  }
+  function netToggle(net, attr) {
+    return `<div class="link-modes local-net-toggle" role="group" aria-label="つなぎ方"><button type="button" ${attr}="wifi" aria-pressed="${net !== 'bluetooth'}"><b>Wi-Fi・テザリング</b><small>同じネットワークにつなぐ</small></button><button type="button" ${attr}="bluetooth" aria-pressed="${net === 'bluetooth'}"><b>Bluetoothのみ</b><small>Wi-Fi不要</small></button></div>`;
+  }
+  function bluetoothPanel() {
+    const type = networkType();
+    const status = type ? `<p class="local-net-status${type === 'bluetooth' ? ' is-ok' : ''}">この端末の接続：${esc(NET_LABEL[type] || type)}${type === 'bluetooth' ? ' ✓ Bluetoothでつながっています' : ''}</p>` : '';
+    return `<div class="local-bt">
+      <p class="local-bt-title">Bluetoothだけでつなぐ（Wi-Fiは不要・オフのままで大丈夫）</p>
+      <ol><li>2台ともBluetoothをオンにして、ペアリングします。</li>
+        <li>片方で「Bluetoothテザリング」をオンにします。<br>Android：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」<br>iPhone：設定 →「インターネット共有」→「ほかの人の接続を許可」</li>
+        <li>もう片方のBluetooth設定で、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
+        <li>部屋をつくり、QRコードを読み取り合って接続します。カメラの使用を許可すると、Bluetoothでもつながりやすくなります（カメラの映像は使いません）。</li></ol>${status}
+      <p class="local-note">2台はBluetoothで作った小さなネットワークだけで通信し、Wi-Fiやインターネットは使いません。ブラウザーの仕組み上、ペアリングしただけでは通信できないため、Bluetoothテザリングを使います。iPhoneのインターネット共有は、モバイル通信の契約がないとオンにできない場合があります。</p></div>`;
+  }
+  const BLUETOOTH_HINT = 'Bluetoothの場合は、片方でBluetoothテザリングがオンになっているか、もう片方で「インターネット接続（ネットワークアクセス）」がオンになっているかを確かめてから、部屋をつくる側と参加する側を入れ替えて試してください。';
+
   // ── QR codes: draw them, and read them with the camera.
   const scripts = new Map();
   function loadScript(src) {
@@ -305,13 +341,13 @@
 
   // ── Local trade dialog.
   const Trade = (() => {
-    let dialog = null, link = null, session = null, code = '', status = '', error = '', connecting = false, generation = 0, pasted = '', role = null, selected = '';
+    let dialog = null, link = null, session = null, code = '', status = '', error = '', connecting = false, generation = 0, pasted = '', role = null, selected = '', net = preferredNet();
     const bridge = () => LT.adminBridge;
     function inventory() { const state = bridge()?.getEngine?.()?.state; return [...(state?.party || []).map(mon => ({ mon, where: '手持ち' })), ...(state?.storage || []).map(mon => ({ mon, where: 'ひかえ' }))]; }
     function eligible(mon) { try { bridge().getEngine().toTradeWire(mon); return true; } catch (_) { return false; } }
     function label(mon) { const s = LT.DATA.species[mon.species]; return `${mon.shiny ? '✦ ' : ''}${mon.nickname || s?.name || mon.species}${mon.nickname ? `（${s?.name}）` : ''} Lv.${mon.level}`; }
     function connectHtml() {
-      if (!link) return `<p class="local-lead">同じWi-Fi・スマホのテザリング・Bluetoothテザリングでつないだ近くの端末と、インターネットなしで交換できます。</p>${GUIDE}
+      if (!link) return `<p class="local-lead">近くの端末と、インターネットなしで交換できます。Wi-Fiを使わず、Bluetoothだけでもつなげます。</p>${netToggle(net, 'data-local-net')}${net === 'bluetooth' ? bluetoothPanel() : GUIDE}
         <div class="local-actions"><button type="button" class="btn btn-primary" data-local="host" ${connecting ? 'disabled' : ''}>部屋をつくる</button></div>
         <div class="link-or">または、相手のコードで参加</div>
         <div class="local-actions"><button type="button" class="btn" data-local="scan-offer" ${connecting ? 'disabled' : ''}>カメラで読み取る</button></div>
@@ -366,7 +402,7 @@
           },
           onMessage: message => { if (g === generation) session?.receive(message); },
           onClose: info => { if (g !== generation) return; connecting = false; if (session?.phase !== 'done') { error = info.reason || '接続が切れました。'; } render(); },
-          onError: err => { if (g === generation) { error = err.message; render(); } }
+          onError: err => { if (g === generation) { error = err.message + (net === 'bluetooth' ? ' ' + BLUETOOTH_HINT : ''); render(); } }
         });
         code = host ? await link.host() : await link.join(offer);
         if (g !== generation) return; connecting = false; render();
@@ -384,8 +420,12 @@
       dialog.addEventListener('change', event => { if (event.target.id === 'local-trade-select') selected = event.target.value; });
       dialog.addEventListener('close', () => { if (session?.phase !== 'done') reset(); else { link?.close('交換が完了しました。'); link = null; session = null; code = ''; } LT.localTradeActive = false; });
       dialog.addEventListener('click', async event => {
+        const choice = event.target.closest('[data-local-net]');
+        if (choice && !link && !connecting) { net = choice.dataset.localNet === 'bluetooth' ? 'bluetooth' : 'wifi'; rememberNet(net); error = ''; render(); return; }
         const button = event.target.closest('[data-local]'); if (!button || button.disabled) return;
         const action = button.dataset.local;
+        // Bluetooth: camera permission first, so this device's code carries its real address.
+        if (net === 'bluetooth' && (action === 'host' || action === 'join') && !link) { status = 'Bluetoothでつながりやすくするため、カメラの使用を確認しています…'; render(); await revealLocalAddress(); status = ''; }
         if (action === 'close') { dialog.close(); return; }
         if (action === 'reset') { reset(); return; }
         if (action === 'host') await connect(true);
@@ -404,6 +444,7 @@
       if (b.isBusy?.()) { b.toast?.('冒険中の移動できるときに交換できます。'); return; }
       if (!LocalLink.supported()) { b.toast?.('この端末・ブラウザーはローカル通信に対応していません。'); return; }
       if (!dialog) build();
+      if (!link) net = preferredNet(); // the choice made last time (lobby or trade)
       b.saveNow?.(); LT.localTradeActive = true; dialog.showModal(); render();
     }
     function close() { if (dialog?.open) dialog.close(); }
@@ -413,7 +454,8 @@
   LT.LocalLink = LocalLink;
   LT.LocalSignal = Object.freeze({ encode: encodeSignal, decode: decodeSignal, trim: trimSdp, prefix: PREFIX });
   LT.LocalQR = Object.freeze({ svg: qrSvg, hydrate, scan, vendor: VENDOR, guide: GUIDE });
+  LT.LocalNet = Object.freeze({ type: networkType, preferred: preferredNet, remember: rememberNet, reveal: revealLocalAddress, toggle: netToggle, panel: bluetoothPanel, hint: BLUETOOTH_HINT });
   LT.LocalTradeSession = LocalTradeSession;
   LT.LocalTrade = Trade;
-  if (typeof module !== 'undefined' && module.exports) module.exports = { LocalLink, LocalTradeSession, encodeSignal, decodeSignal, trimSdp, stable };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { LocalLink, LocalTradeSession, encodeSignal, decodeSignal, trimSdp, stable, LocalNet: LT.LocalNet };
 })();
