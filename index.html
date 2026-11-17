@@ -428,19 +428,27 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     <main class="game-layout">
       <section class="play-column" aria-label="冒険フィールド">
         <div class="field-heading"><span class="eyebrow"><svg><use href="#i-travel"/></svg> PACHI FIELD ATLAS</span><span class="field-status"><span></span> 探索モード <span id="facing-label" class="facing-label" aria-label="向き 南">↓ 南</span></span></div>
-        <div class="game-stage">
-          <canvas id="game-canvas" width="768" height="480" tabindex="0" aria-label="冒険フィールド。矢印またはWASDで移動、スペースまたはEで調べる。">このゲームを遊ぶにはCanvasに対応したブラウザーが必要です。</canvas>
-          <div id="world-label" class="world-label">風待ちの里</div><div id="world-hint" class="world-hint">旅は、小さな出会いから。</div>
-          <div id="battle-ui" class="battle-ui" hidden>
-            <div class="combatant enemy-card"><div class="combatant-top"><strong id="enemy-name">モンスター</strong><span id="enemy-level">Lv. 5</span></div><div class="combatant-type"><span id="enemy-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="enemy-hp" class="hp-fill"></span></div><span id="enemy-hp-text" class="hp-text">— / —</span></div>
-            <div class="combatant ally-card"><div class="combatant-top"><strong id="ally-name">仲間のモンスター</strong><span id="ally-level">Lv. 5</span></div><div class="combatant-type"><span id="ally-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="ally-hp" class="hp-fill"></span></div><span id="ally-hp-text" class="hp-text">— / —</span><div class="xp-track"><span id="ally-xp"></span></div></div>
+        <div class="console-body">
+          <div class="console-screen">
+            <div class="console-screen-top" aria-hidden="true"><span class="console-label"><b>PACHI MONSTERS</b>PIXEL HANDHELD</span></div>
+            <span class="console-led" aria-hidden="true"><i></i>POWER</span>
+            <button id="console-palette" type="button" class="console-palette" aria-label="画面モードを切り替える" title="画面モード"><i aria-hidden="true"></i><span>液晶</span></button>
+            <div class="game-stage">
+              <canvas id="game-canvas" width="768" height="480" tabindex="0" aria-label="冒険フィールド。矢印またはWASDで移動、スペースまたはEで調べる。">このゲームを遊ぶにはCanvasに対応したブラウザーが必要です。</canvas>
+              <div id="world-label" class="world-label">風待ちの里</div><div id="world-hint" class="world-hint">旅は、小さな出会いから。</div>
+              <div id="battle-ui" class="battle-ui" hidden>
+                <div class="combatant enemy-card"><div class="combatant-top"><strong id="enemy-name">モンスター</strong><span id="enemy-level">Lv. 5</span></div><div class="combatant-type"><span id="enemy-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="enemy-hp" class="hp-fill"></span></div><span id="enemy-hp-text" class="hp-text">— / —</span></div>
+                <div class="combatant ally-card"><div class="combatant-top"><strong id="ally-name">仲間のモンスター</strong><span id="ally-level">Lv. 5</span></div><div class="combatant-type"><span id="ally-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="ally-hp" class="hp-fill"></span></div><span id="ally-hp-text" class="hp-text">— / —</span><div class="xp-track"><span id="ally-xp"></span></div></div>
+              </div>
+              <span class="stage-corner tl"></span><span class="stage-corner tr"></span><span class="stage-corner bl"></span><span class="stage-corner br"></span>
+            </div>
           </div>
-          <span class="stage-corner tl"></span><span class="stage-corner tr"></span><span class="stage-corner bl"></span><span class="stage-corner br"></span>
+          <div class="console-brand" aria-hidden="true"><span>Pachi</span><strong>MONSTERS</strong><small>PM-01</small></div>
+          <div class="touch-controls" aria-label="携帯機の操作ボタン"><div class="dpad" aria-label="移動ボタン"><button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><svg><use href="#i-chevron"/></svg></button><span class="dpad-center" aria-hidden="true"><svg><use href="#i-lantern"/></svg></span><button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><svg><use href="#i-chevron"/></svg></button></div><span class="console-caption console-caption-dpad">移動 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><div class="touch-instruction"><small>EXPLORE</small><span>次の出会いへ</span></div><div class="console-system" role="group" aria-label="SELECT・START"><button id="touch-select" type="button" class="console-pill" aria-label="SELECTボタン：道具袋を開く"><i aria-hidden="true"></i><span>SELECT</span><small>道具袋 <kbd>B</kbd></small></button><button id="touch-menu" type="button" class="touch-menu console-pill" aria-label="STARTボタン：メニューを開く"><i aria-hidden="true"></i><span>START</span><small>メニュー <kbd>Esc</kbd></small></button></div><div class="touch-commands"><button id="touch-b" type="button" class="touch-b" aria-label="Bボタン：もどる。押し続けるとダッシュ"><span>B</span><small>もどる <kbd>Shift</kbd></small></button><button id="touch-action" type="button" class="touch-action" aria-label="Aボタン：話す・調べる"><span>A</span><small>調べる <kbd>E</kbd></small></button></div><div class="console-speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
         <section id="battle-panel" class="battle-panel" aria-label="戦闘コマンド" hidden><div class="battle-log-wrap"><svg class="battle-log-mark"><use href="#i-resonate"/></svg><div id="battle-log" role="log" aria-live="polite" aria-relevant="additions text">どうする？</div></div><div id="battle-actions" class="battle-actions"></div></section>
         <div id="controller-status" class="controller-status" role="status" aria-live="polite" hidden><span class="controller-status-label"><svg aria-hidden="true"><use href="#i-gamepad"/></svg><span id="controller-status-text">コントローラー接続中</span></span><span id="controller-help" class="controller-help"><b>左スティック・十字</b> 移動 <b>決定</b> 調べる <b>START</b> メニュー</span></div>
         <div id="world-controls" class="world-controls"><div class="keyboard-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><i>移動</i></span><span><kbd>E</kbd><i>話す・調べる</i></span><span><kbd>Shift</kbd><i>走る</i></span></div><button id="interact-btn" type="button" class="btn btn-small interact-btn"><svg><use href="#i-resonate"/></svg>話す・調べる <kbd>E</kbd></button></div>
-        <div class="touch-controls" aria-label="タッチ操作"><div class="dpad" aria-label="移動ボタン"><button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><svg><use href="#i-chevron"/></svg></button><span class="dpad-center" aria-hidden="true"><svg><use href="#i-lantern"/></svg></span><button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><svg><use href="#i-chevron"/></svg></button></div><div class="touch-instruction"><small>EXPLORE</small><span>次の出会いへ</span></div><div class="touch-commands"><button id="touch-action" type="button" class="touch-action"><span>A</span><small>調べる</small></button><button id="touch-menu" type="button" class="touch-menu"><svg><use href="#i-menu"/></svg><small>メニュー</small></button></div></div>
         <div class="field-caption"><span><svg><use href="#i-lantern"/></svg> きみと相棒の、次の一歩。</span><span>PACHI MONSTERS · PIXEL EDITION</span></div>
       </section>
       <aside class="journal" aria-label="冒険の手帳">
@@ -4497,7 +4505,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   LT.PortraitLoader=PortraitLoader;
 })();
 
-</script><script>
+</script><script src="retro-screen.js?v=20261117-lcd"></script>
+<script>
 /* Pachi Monsters — browser interface, accessible input and original soundtrack. */
 (() => {
   'use strict';
@@ -4514,13 +4523,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let moveAnim = null, pressedDirection = null, directionSource = null;
   let shopQuantity = 1, selectedAvatar = 'male', selectedPlayerName = LT.PlayerIdentity.defaultName, lastPortraitFrame = 0;
   let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
-  let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:true };
+  let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:true, screen:LT.RetroScreen?.defaultMode||'color' };
   try {
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if(saved && typeof saved==='object') {
       for(const k of ['sound','dayNight','reducedMotion','crt'])if(typeof saved[k]==='boolean')settings[k]=saved[k];
       if(Number.isFinite(saved.volume))settings.volume=Math.max(0,Math.min(1,saved.volume));
       if(['high','balanced','low'].includes(saved.quality))settings.quality=saved.quality;
+      if(LT.RetroScreen?.isMode(saved.screen))settings.screen=saved.screen;
     }
   } catch(_){}
   const sound = new LT.Audio();
@@ -5117,7 +5127,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。HPを減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。すばやさの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>HP・こうげき・ぼうぎょ・とくこう・とくぼう・すばやさ・めいちゅう・かいひがバトルに影響します。物理わざはこうげきとぼうぎょ、特殊わざはとくこうととくぼうで威力が決まり、めいちゅうとかいひで当たりやすさが変わります。</p><h3>建物と星路評議会</h3><p>建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。道具店・宿・研究所には係員がいます。16の旅紋を順番に集め、星路評議会最終会場で四境の守護者4人、星路の継承者1人に挑みましょう。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手のHPを減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所でHPとPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${(LT.RetroScreen?.order||[]).map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();
   }
   function bindVolume(){
@@ -5270,6 +5280,23 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   $('interact-btn').onclick=interact;
   $('touch-action').onclick=()=>{if(engine.battle?.result)finishBattle();else interact();};
   $('touch-menu').onclick=showMenu;
+  // Handheld B: tap to go back; hold while exploring to dash. SELECT opens the bag.
+  const touchB=$('touch-b');
+  if(touchB){
+    let heldB=null;
+    const releaseB=event=>{if(heldB===null||(event&&event.pointerId!==heldB))return;heldB=null;sprint=false;touchB.classList.remove('pressed');};
+    touchB.addEventListener('pointerdown',event=>{
+      event.preventDefault();
+      if(tradeLocked()){LT.Trade?.open?.();return;}
+      if(!playing||busy||$('modal').open||engine.battle||LT.onlineActive){controllerBack();return;}
+      heldB=event.pointerId;sprint=true;touchB.classList.add('pressed');
+      try{touchB.setPointerCapture(event.pointerId);}catch(_){}
+    });
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])touchB.addEventListener(type,releaseB);
+    touchB.addEventListener('contextmenu',event=>event.preventDefault());
+  }
+  if($('console-palette'))$('console-palette').onclick=()=>{if(!LT.RetroScreen)return;settings.screen=LT.RetroScreen.next(settings.screen);saveSettings();toast(`画面モード：${LT.RetroScreen.label(settings.screen)}`);if(activePane==='settings')showSettings();};
+  if($('touch-select'))$('touch-select').onclick=()=>{if(!playing)return;if(engine.battle){toast('バトル中は「バッグ」から道具を使えます。');return;}showBag();};
   $('menu-btn').onclick=showMenu;
   $('journal-btn').onclick=()=>showDex();
   $('save-btn').onclick=()=>save(true);
@@ -5313,6 +5340,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.claim){const r=engine.claimQuest(d.claim);toast(r.message);if(r.ok){save();updateAll();sound.fx('win');showQuests();}return;}
     if(d.challenge){const r=d.challenge==='tower'?engine.startTower():d.challenge==='rival'?engine.startRival(d.id):d.challenge==='elite'?engine.startElite(d.id):d.challenge==='champion'?engine.startChampion():engine.startRematch(d.id);if(r.ok){closeModal();openBattle();}else toast(r.message);return;}
     if(d.track){settings.sound=true;sound.setEnabled(true);sound.preview(d.track==='auto'?null:d.track);saveSettings();updateSound();showMusic();return;}
+    if(d.screen&&LT.RetroScreen?.isMode(d.screen)){settings.screen=d.screen;saveSettings();showSettings();return;}
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt')settings.crt=!settings.crt;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
@@ -5345,6 +5373,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(moveAnim){const t=Math.min(1,(now-moveAnim.time)/(moveAnim.duration||132));if(!settings.reducedMotion){options.playerX=moveAnim.x+(engine.state.x-moveAnim.x)*t;options.playerY=moveAnim.y+(engine.state.y-moveAnim.y)*t;options.moving=t<1;options.walkPhase=moveAnim.stepIndex+t;}if(t===1||settings.reducedMotion)moveAnim=null;}
     if(engine.battle && playing)Art.battle($('game-canvas'),battleView||engine,settings.reducedMotion?0:now,options);
     else Art.world($('game-canvas'),engine,settings.reducedMotion?0:now,options);
+    if(settings.screen&&settings.screen!=='color')LT.RetroScreen?.apply($('game-canvas'),settings.screen);
   }
 
   function controllerContext(){

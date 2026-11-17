@@ -70,7 +70,7 @@ kbd{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 
 canvas{image-rendering:pixelated}
 
 /* ---------- Pixel frames ---------- */
-.journal,.battle-panel,.combatant,dialog,#modal,#online-modal,.touch-controls,.pachi-trade,.pachi-console,.game-info-card,.game-info-controls,.game-info-faq,.toast,.game-stage{clip-path:var(--pm-notch)}
+.journal,.battle-panel,.combatant,dialog,#modal,#online-modal,.pachi-trade,.pachi-console,.game-info-card,.game-info-controls,.game-info-faq,.toast{clip-path:var(--pm-notch)}
 .btn,.icon-btn,.journal-nav button,.menu-grid button,.party-card,.item-row,.dex-card,.quest-card,.map-card,.stat-cell,.move-btn,.starter-card,.avatar-card,.creature-card,.notice,.world-label,.world-hint,.title-metrics>div,.title-platform,.bag-summary,#objective-text,.seal>span,.type-badge,.badge,.shiny-badge,.track-button,.guardian-preview,.evolution-stage,.title-settings,.title-discover,.lead-mark,.map-number,.item-symbol,.party-order-row,.link-box,.link-team-card,.link-command-card,.link-combatant,.link-log,.link-rules,.pachi-service,.list-empty,.controller-status,.nickname-input,#dex-filter,.dex-header select{clip-path:var(--pm-notch-sm)}
 
 /* ---------- Buttons ---------- */
@@ -118,7 +118,7 @@ canvas{image-rendering:pixelated}
 .game-layout{grid-template-columns:minmax(0,1fr) 320px;gap:22px;max-width:1720px;padding:20px 26px 10px;align-items:start}
 html:not(.mobile-screen) .play-column{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
 .field-heading,.field-caption,.stage-corner{display:none!important}
-.game-stage{position:relative;width:100%;max-width:min(100%,calc((100dvh - 160px) * 1.6));justify-self:center;margin:0;border:4px solid var(--pm-frame);background:#0b1229;box-shadow:inset 0 0 0 3px var(--pm-ink)}
+.game-stage{position:relative;width:100%;margin:0 auto;border:3px solid #04051a;background:#0b1229;box-shadow:0 0 0 1px rgba(255,255,255,.06);clip-path:none}
 #game-canvas{display:block;width:100%;height:100%}
 .game-stage>.world-label,.game-stage>.world-hint,.game-stage>.battle-ui{z-index:3}
 html.crt .game-stage::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 62%,rgba(0,0,0,.32) 100%)}
@@ -135,7 +135,7 @@ html.crt .game-stage::after{content:"";position:absolute;inset:0;z-index:2;point
 .controller-help b{font-weight:400;padding:2px 7px;margin-left:4px;background:rgba(255,255,255,.06)}
 
 /* ---------- Windows (journal, battle, dialogs) ---------- */
-.journal,.battle-panel,dialog,#modal,#online-modal,.touch-controls,.pachi-trade,.pachi-console{background:var(--pm-window);border:3px solid var(--pm-frame);box-shadow:var(--pm-window-edge);color:var(--pm-text)}
+.journal,.battle-panel,dialog,#modal,#online-modal,.pachi-trade,.pachi-console{background:var(--pm-window);border:3px solid var(--pm-frame);box-shadow:var(--pm-window-edge);color:var(--pm-text)}
 
 /* ---------- Journal sidebar ---------- */
 html:not(.mobile-screen) .journal{position:sticky;top:86px;display:flex;flex-direction:column;gap:14px}
@@ -237,7 +237,7 @@ html:not(.mobile-screen) .journal{position:sticky;top:86px;display:flex;flex-dir
 html:not(.mobile-screen) body.in-battle .game-layout{grid-template-columns:minmax(0,1fr)}
 html:not(.mobile-screen) body.in-battle .journal{display:none}
 html:not(.mobile-screen) body.in-battle .play-column{grid-template-columns:minmax(0,1fr) minmax(330px,390px);align-items:stretch}
-html:not(.mobile-screen) body.in-battle .game-stage{grid-column:1;grid-row:1;max-width:min(100%,calc((100dvh - 120px) * 1.6))}
+html:not(.mobile-screen) body.in-battle .console-body{grid-column:1;grid-row:1}
 html:not(.mobile-screen) body.in-battle .battle-panel{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-self:stretch;max-height:calc(100dvh - 110px)}
 html:not(.mobile-screen) body.in-battle .battle-log-wrap{flex:1 1 auto;min-height:120px}
 html:not(.mobile-screen) body.in-battle #battle-log{max-height:none;height:100%}
@@ -246,22 +246,8 @@ html:not(.mobile-screen) .battle-actions .move-btn{grid-column:1/-1;min-height:6
 @media (max-width:1100px){
   html:not(.mobile-screen) body.in-battle .play-column{grid-template-columns:minmax(0,1fr)}
   html:not(.mobile-screen) body.in-battle .battle-panel{grid-column:1;grid-row:auto;max-height:none}
-  html:not(.mobile-screen) body.in-battle .game-stage{max-width:min(100%,calc((100dvh - 390px) * 1.6))}
   html:not(.mobile-screen) body.in-battle #battle-log{max-height:96px}
 }
-
-/* ---------- Touch console ---------- */
-.dpad button,.dpad-center{border:2px solid var(--pm-frame-soft)!important;background:var(--pm-win-hi);color:#dfe6ff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.12)}
-.dpad button.pressed,.dpad button:active{background:var(--pm-win-hover);color:var(--pm-gold);box-shadow:inset 0 2px 0 rgba(0,0,0,.4)}
-.dpad-center{color:var(--pm-gold)}
-.dpad-center svg{width:20px;height:20px}
-.touch-instruction small{font:400 10px/1 var(--pm-pixel);letter-spacing:.2em;color:var(--pm-gold)}
-.touch-instruction span{font-family:var(--pm-pixel);color:var(--pm-text-2)}
-.touch-action{border-radius:50%!important;clip-path:none!important;border:3px solid #fff1c2!important;background:var(--pm-gold)!important;color:var(--pm-gold-ink)!important;box-shadow:inset 0 -5px 0 var(--pm-gold-deep),inset 0 3px 0 #fff3c8,0 4px 0 var(--pm-ink)!important}
-.touch-action>span{font-family:var(--pm-pixel)!important;font-weight:400!important}
-.touch-action small{color:rgba(58,27,0,.85)}
-.touch-menu{border-radius:50%!important;clip-path:none!important;border:3px solid var(--pm-frame-soft)!important;background:var(--pm-win-hi)!important;color:var(--pm-text)!important;box-shadow:inset 0 -4px 0 rgba(0,0,0,.4),0 4px 0 var(--pm-ink)!important}
-.touch-commands small{font-family:var(--pm-pixel);letter-spacing:.04em}
 
 /* ---------- Footer ---------- */
 .site-footer{display:flex;justify-content:center;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 20px 22px;border:0;background:transparent;color:var(--pm-text-3);font:400 12px/1.6 var(--pm-pixel)}
@@ -289,7 +275,7 @@ html:not(.mobile-screen) .battle-actions .move-btn{grid-column:1/-1;min-height:6
 .title-inner{position:relative;z-index:1;display:flex;align-items:center;max-width:1360px;min-height:calc(100svh - 150px);margin:0 auto;padding:30px 0 40px}
 .title-copy{width:min(600px,100%);max-width:600px;min-width:0;padding:0;background:transparent;border:0;box-shadow:none}
 .title-wordmark{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin:0 0 20px}
-.title-wordmark h1{margin:0;font:400 clamp(64px,8.4vw,118px)/1 var(--pm-pixel);letter-spacing:.04em;background:linear-gradient(180deg,#fff7d6 0%,#fff1b0 30%,#ffcc4d 31%,#ffb43c 62%,#ff8a2a 63%,#ff7a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(4px 4px 0 #2a1200) drop-shadow(4px 4px 0 rgba(5,6,26,.85));text-shadow:none}
+.title-wordmark h1{margin:0;font:400 clamp(64px,8.4vw,118px)/1 var(--pm-pixel);letter-spacing:.04em;background:linear-gradient(180deg,#fff7d6 0%,#fff1b0 30%,#ffcc4d 31%,#ffb43c 62%,#ff8a2a 63%,#ff7a1e 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(2px 0 0 #2a1200) drop-shadow(-2px 0 0 #2a1200) drop-shadow(0 2px 0 #2a1200) drop-shadow(0 -2px 0 #2a1200) drop-shadow(4px 4px 0 rgba(5,6,26,.9));text-shadow:none}
 .title-english{width:min(250px,70%);margin:0;padding:0;border:0;font-size:0;line-height:0;color:#e9eeff;filter:drop-shadow(3px 3px 0 var(--pm-ink))}
 .title-copy h2{margin:0 0 14px;font:400 clamp(24px,2.5vw,34px)/1.45 var(--pm-pixel);color:#fff;text-shadow:3px 3px 0 var(--pm-ink)}
 .title-copy h2 em{font-style:normal;color:var(--pm-gold)}
@@ -304,7 +290,7 @@ html:not(.mobile-screen) .battle-actions .move-btn{grid-column:1/-1;min-height:6
 #continue-btn:not([hidden])+#start-btn{grid-column:auto;background:var(--pm-win-hi);color:var(--pm-text);border-color:var(--pm-frame-soft);box-shadow:inset 0 -4px 0 rgba(0,0,0,.38),inset 0 2px 0 rgba(255,255,255,.14)}
 #continue-btn:not([hidden])+#start-btn .ui-icon{color:var(--pm-gold)}
 #start-btn .ui-icon,#continue-btn .ui-icon{color:var(--pm-gold-ink)}
-.link-title-button{white-space:nowrap;background:#163a5a;color:#dff6ff;border-color:rgba(95,224,255,.6)}
+.link-title-button{white-space:nowrap;justify-content:flex-start!important;background:#163a5a;color:#dff6ff;border-color:rgba(95,224,255,.6)}
 .link-title-button:hover:not(:disabled){background:#1c4a72;border-color:var(--pm-cyan)}
 .link-title-button .ui-icon{color:var(--pm-cyan)}
 .link-title-button small{display:none}
@@ -581,16 +567,8 @@ dialog::backdrop{background:rgba(4,6,20,.78);background-image:repeating-linear-g
 .mobile-screen #sound-btn{width:auto;padding:8px 9px}
 .mobile-screen .game-layout{padding:8px;gap:8px}
 .mobile-screen .play-column{gap:8px}
-.mobile-screen .game-stage{max-width:none;border-width:3px}
 .mobile-screen .world-label{top:8px;left:8px;padding:4px 10px;font-size:12px}
 .mobile-screen .world-hint{bottom:8px;padding:4px 10px;font-size:11px}
-.mobile-screen .touch-controls{flex:0 0 150px;padding:6px 14px}
-.mobile-screen .dpad{width:138px;min-width:138px;height:138px;min-height:138px;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px)}
-.mobile-screen .touch-commands{gap:14px}
-.mobile-screen .touch-commands button{width:70px;height:70px}
-.mobile-screen .touch-action>span{font-size:28px!important;line-height:1}
-.mobile-screen .touch-commands small{font-size:11px}
-.mobile-screen .touch-menu{width:58px!important;height:58px!important}
 .mobile-screen .journal{position:relative;top:auto;padding:8px 10px}
 .mobile-screen .in-battle .journal{display:none}
 .mobile-screen .title-metrics{display:none}
@@ -648,11 +626,132 @@ dialog::backdrop{background:rgba(4,6,20,.78);background-image:repeating-linear-g
   .mobile-screen .title-english{display:none}
 }
 @media (orientation:landscape){
-  .mobile-screen .touch-controls{flex:none;padding:6px}
-  .mobile-screen .touch-commands button{width:60px;height:52px}
   .mobile-screen .title-copy{width:60%;max-width:430px}
   .mobile-screen .title-wordmark h1{font-size:40px}
   .mobile-screen .title-backdrop::after{background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px),linear-gradient(90deg,rgba(7,10,28,.96) 0%,rgba(7,10,28,.8) 45%,rgba(7,10,28,.1) 75%)}
+}
+
+/* ---------- Handheld console "PM-01" ----------
+ * An original pocket-console shell: plastic body, LCD bezel with power lamp,
+ * cross key, A/B, SELECT/START and a speaker grille. The buttons are real
+ * controls (pointer, touch and keyboard focus) wired to the game. */
+.console-body{position:relative;isolation:isolate;width:100%;margin:0 auto;padding:18px 22px 22px;border-radius:24px 24px 64px 24px;color:#c9c6f4;background:
+  linear-gradient(180deg,rgba(255,255,255,.12) 0,rgba(255,255,255,0) 26%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 2px,transparent 2px 4px),
+  linear-gradient(180deg,#3b4192 0%,#2d3280 46%,#23276a 100%);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.24),inset 0 -6px 0 rgba(0,0,0,.3),inset 3px 0 0 rgba(255,255,255,.08),inset -3px 0 0 rgba(0,0,0,.2),0 0 0 2px #10123a,0 20px 44px rgba(0,0,0,.5)}
+.console-body::before{content:"";position:absolute;left:24px;right:24px;top:8px;height:2px;border-radius:2px;background:rgba(0,0,0,.28);box-shadow:0 1px 0 rgba(255,255,255,.12)}
+.console-screen{position:relative;padding:30px 26px 18px 34px;border-radius:12px 12px 40px 12px;background:linear-gradient(180deg,#1b1d49,#111334);box-shadow:inset 0 2px 0 rgba(255,255,255,.08),inset 0 -2px 0 rgba(0,0,0,.45),0 2px 0 rgba(255,255,255,.12)}
+.console-screen-top{position:absolute;left:16px;right:16px;top:11px;display:flex;align-items:center;gap:10px;color:#9ea2d6;font:400 10px/1 var(--pm-pixel);letter-spacing:.18em;white-space:nowrap}
+.console-screen-top::before,.console-screen-top::after{content:"";flex:1;height:3px;background:linear-gradient(180deg,var(--pm-gold) 0 1px,transparent 1px 2px,var(--pm-rose) 2px 3px)}
+.console-label b{font-weight:400;color:#e7e3ff;margin-right:8px}
+.console-led{position:absolute;left:9px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:#8b8fc6;font:400 8px/1 var(--pm-pixel);letter-spacing:.12em;writing-mode:vertical-rl}
+.console-led i{display:block;width:9px;height:9px;border-radius:50%;background:#ff3d63;box-shadow:0 0 8px #ff3d63,0 0 16px rgba(255,61,99,.5),inset 0 1px 1px rgba(255,255,255,.6)}
+.console-screen .game-stage{border-radius:3px}
+.console-screen-top{right:84px}
+.console-palette{position:absolute;top:5px;right:12px;display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 9px;border:0;border-radius:999px;background:#0c0e2a;color:#c9c6f4;font:400 10px/1 var(--pm-pixel);letter-spacing:.12em;box-shadow:inset 0 1px 2px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.12);cursor:pointer}
+.console-palette i{display:block;width:8px;height:8px;background:conic-gradient(#87a438 0 25%,#c08a4b 0 50%,#7e9dda 0 75%,#a8a8a8 0)}
+.console-palette:hover{color:#fff;background:#14173d}
+.console-palette:active{transform:translateY(1px)}
+.screen-options{margin-top:10px}
+.console-brand{display:flex;align-items:baseline;gap:8px;margin:12px 0 0 6px;color:#cfcaff;font:400 15px/1 var(--pm-pixel);letter-spacing:.06em;transform:skewX(-10deg);transform-origin:left;text-shadow:0 1px 0 rgba(255,255,255,.18),0 -1px 0 rgba(0,0,0,.45)}
+.console-brand strong{font-weight:400;font-size:20px;color:#efeaff}
+.console-brand small{font-size:11px;color:var(--pm-gold);letter-spacing:.2em}
+.touch-controls{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"dpad sys ab" "cap sys ab";align-items:center;column-gap:20px;row-gap:6px;margin:10px 4px 0;padding:0;background:none;border:0;box-shadow:none;clip-path:none;touch-action:none}
+.touch-instruction{display:none!important}
+.dpad{grid-area:dpad;display:grid;width:120px;min-width:120px;height:120px;min-height:120px;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:0;margin:0;filter:drop-shadow(0 4px 0 rgba(4,5,26,.55))}
+.dpad button,.dpad-center{display:grid;place-items:center;min-width:0;min-height:0;padding:0;border:0!important;background:linear-gradient(180deg,#252957,#16183d);color:#7d82c2;box-shadow:inset 0 2px 0 rgba(255,255,255,.12);cursor:pointer;touch-action:none;transition:none}
+.dpad-up{grid-area:1/2;border-radius:7px 7px 0 0}.dpad-left{grid-area:2/1;border-radius:7px 0 0 7px}.dpad-center{grid-area:2/2;border-radius:0;box-shadow:none}.dpad-right{grid-area:2/3;border-radius:0 7px 7px 0}.dpad-down{grid-area:3/2;border-radius:0 0 7px 7px}
+.dpad svg{width:15px;height:15px}
+.dpad-up svg{transform:rotate(-90deg)}.dpad-left svg{transform:rotate(180deg)}.dpad-down svg{transform:rotate(90deg)}.dpad-right svg{transform:none}
+.dpad-center svg{display:none}
+.dpad-center::after{content:"";width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 45% 40%,rgba(0,0,0,.35),rgba(255,255,255,.06) 70%)}
+.dpad button:hover{color:#c7cbff}
+.dpad button.pressed,.dpad button:active{background:linear-gradient(180deg,#14163a,#1d2050);color:var(--pm-gold);box-shadow:inset 0 3px 5px rgba(0,0,0,.55)}
+.console-caption{grid-area:cap;justify-self:center;display:flex;align-items:center;gap:3px;color:#a7aade;font:400 11px/1 var(--pm-pixel);letter-spacing:.06em}
+.console-caption kbd,.touch-controls kbd{min-width:18px;height:18px;padding:0 4px;font-size:10px;border-width:1px;border-bottom-width:2px;background:#1b1e4a;border-color:rgba(255,255,255,.2)}
+.console-system{grid-area:sys;align-self:end;display:flex;justify-content:center;align-items:flex-end;gap:22px;padding-bottom:4px}
+.console-pill{display:flex;flex-direction:column;align-items:center;gap:7px;min-height:0;width:auto;height:auto;padding:4px 2px;background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;clip-path:none!important;color:#b6b9ea;cursor:pointer}
+.console-pill>i{display:block;width:46px;height:13px;border-radius:999px;background:linear-gradient(180deg,#3d4278,#1b1d44);box-shadow:0 3px 0 #0b0c28,inset 0 1px 0 rgba(255,255,255,.2);transform:rotate(-24deg)}
+.console-pill>span{font:400 10px/1 var(--pm-pixel);letter-spacing:.16em;color:#c3c6f0}
+.console-pill small{display:flex;align-items:center;gap:3px;font:400 10.5px/1 var(--pm-pixel);color:#9195c8}
+.console-pill:hover>i{background:linear-gradient(180deg,#4a4f8c,#23265a)}
+.console-pill:active>i{transform:rotate(-24deg) translateY(2px);box-shadow:0 1px 0 #0b0c28,inset 0 1px 0 rgba(255,255,255,.15)}
+.touch-commands{grid-area:ab;display:flex;align-items:flex-start;gap:16px;padding-right:66px}
+.touch-b,.touch-action{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;width:auto;height:auto;min-height:0;padding:0;background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;clip-path:none!important;color:#b6b9ea;cursor:pointer;touch-action:none}
+.touch-b{margin-top:30px}
+.touch-b>span,.touch-action>span{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;font:400 22px/1 var(--pm-pixel)!important;transition:transform .05s}
+.touch-action>span{background:radial-gradient(circle at 36% 30%,#fff1c2 0%,#ffcc4d 38%,#e8902a 100%);color:#5b2b00;box-shadow:0 5px 0 #7a3f06,0 9px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.55)}
+.touch-b>span{background:radial-gradient(circle at 36% 30%,#d4f8ff 0%,#5fe0ff 40%,#2194b8 100%);color:#073447;box-shadow:0 5px 0 #0c4a62,0 9px 14px rgba(0,0,0,.45),inset 0 2px 0 rgba(255,255,255,.55)}
+.touch-action:active>span,.touch-b:active>span,.touch-b.pressed>span{transform:translateY(4px)}
+.touch-action:active>span{box-shadow:0 1px 0 #7a3f06,0 3px 6px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.4)}
+.touch-b:active>span,.touch-b.pressed>span{box-shadow:0 1px 0 #0c4a62,0 3px 6px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.4)}
+.touch-b small,.touch-action small{display:flex;align-items:center;gap:3px;font:400 11px/1 var(--pm-pixel)!important;color:#b6b9ea!important;letter-spacing:.04em}
+.console-speaker{position:absolute;right:2px;bottom:6px;display:flex;gap:7px;transform:rotate(-28deg);pointer-events:none}
+.console-speaker i{display:block;width:6px;height:42px;border-radius:999px;background:#14163a;box-shadow:inset 0 2px 3px rgba(0,0,0,.65),0 1px 0 rgba(255,255,255,.14)}
+body.in-battle .dpad{opacity:.55}
+
+/* Desktop & wide windows: the console shrink-wraps a screen that always fits. */
+html:not(.mobile-screen) .console-body{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"screen screen screen" "dpad brand ab" "dpad sys ab" "cap sys ab";column-gap:20px;row-gap:0;max-width:calc((100dvh - 340px) * 1.6 + 104px)}
+html:not(.mobile-screen) .touch-controls{display:contents}
+html:not(.mobile-screen) .console-screen{grid-area:screen;margin-bottom:12px}
+html:not(.mobile-screen) .console-brand{grid-area:brand;justify-self:center;align-self:start;margin:4px 0 0}
+html:not(.mobile-screen) .dpad{grid-row:2/4;align-self:center;width:108px;min-width:108px;height:108px;min-height:108px;grid-template-columns:repeat(3,36px);grid-template-rows:repeat(3,36px)}
+html:not(.mobile-screen) .console-caption{grid-row:4;margin-top:4px}
+html:not(.mobile-screen) .touch-commands{grid-row:2/5;align-self:center;padding-right:70px}
+html:not(.mobile-screen) .touch-b>span,html:not(.mobile-screen) .touch-action>span{width:50px;height:50px;font-size:20px!important}
+html:not(.mobile-screen) .touch-b{margin-top:26px}
+html:not(.mobile-screen) .console-system{grid-row:3/5;align-self:end}
+html:not(.mobile-screen) .console-speaker{right:22px;bottom:16px}
+html:not(.mobile-screen) .world-controls{display:none!important}
+
+/* Phones & tablets: the whole screen becomes the handheld. */
+.mobile-screen .play-column{position:relative;padding:12px 12px 14px;border-radius:20px 20px 52px 20px;background:
+  linear-gradient(180deg,rgba(255,255,255,.12) 0,rgba(255,255,255,0) 26%),
+  linear-gradient(180deg,#3b4192 0%,#2d3280 46%,#23276a 100%);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.24),inset 0 -6px 0 rgba(0,0,0,.3),0 0 0 2px #10123a}
+.mobile-screen .console-body{display:flex;flex:1;flex-direction:column;min-height:0;padding:0;border-radius:0;background:none;box-shadow:none}
+.mobile-screen .console-body::before{display:none}
+.mobile-screen .console-screen{display:flex;flex:1;flex-direction:column;min-height:0;padding:24px 14px 12px 24px;border-radius:10px 10px 30px 10px}
+.mobile-screen .console-screen-top{top:8px;left:12px;right:70px;font-size:8.5px}
+.mobile-screen .console-palette{top:3px;right:8px;height:18px;padding:0 7px;font-size:9px}
+.mobile-screen .console-led{left:6px;font-size:7px}
+.mobile-screen .console-led i{width:7px;height:7px}
+.mobile-screen .game-stage{flex:1;min-height:0;width:100%;max-width:none}
+.mobile-screen .console-brand{margin:7px 0 0 6px;font-size:12px}
+.mobile-screen .console-brand strong{font-size:16px}
+.mobile-screen .touch-controls{flex:0 0 auto;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"dpad ab" "sys sys";column-gap:8px;row-gap:2px;margin:6px 2px 0}
+.mobile-screen .in-battle .touch-controls,.mobile-screen .in-battle .console-brand{display:none}
+.mobile-screen .dpad{width:132px;min-width:132px;height:132px;min-height:132px;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}
+.mobile-screen .console-caption{display:none}
+.mobile-screen .touch-controls kbd{display:none}
+.mobile-screen .touch-commands{justify-self:end;padding-right:6px;gap:14px}
+.mobile-screen .touch-b{margin-top:34px}
+.mobile-screen .touch-b>span,.mobile-screen .touch-action>span{width:62px;height:62px;font-size:24px!important}
+.mobile-screen .console-system{justify-content:flex-start;padding-left:132px;gap:16px}
+.mobile-screen .console-pill>i{width:40px;height:12px}
+.mobile-screen .console-speaker{right:8px;bottom:2px;gap:6px}
+.mobile-screen .console-speaker i{width:5px;height:34px}
+.mobile-screen .battle-panel{margin-top:8px}
+@media (max-height:700px){
+  .mobile-screen .console-brand{display:none}
+  .mobile-screen .dpad{width:117px;min-width:117px;height:117px;min-height:117px;grid-template-columns:repeat(3,39px);grid-template-rows:repeat(3,39px)}
+  .mobile-screen .touch-b>span,.mobile-screen .touch-action>span{width:54px;height:54px}
+  .mobile-screen .console-system{padding-left:117px}
+}
+@media (orientation:landscape){
+  .mobile-screen .play-column{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);padding:8px 10px;border-radius:18px 18px 40px 18px}
+  .mobile-screen .in-battle .play-column{grid-template-columns:minmax(0,1fr) minmax(200px,36%)}
+  .mobile-screen .console-body{display:grid;grid-template-columns:132px minmax(0,1fr) 140px;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"dpad screen ab" "dpad screen sys";align-items:center;column-gap:10px}
+  .mobile-screen .in-battle .console-body{grid-template-columns:minmax(0,1fr);grid-template-areas:"screen" "screen"}
+  .mobile-screen .touch-controls{display:contents}
+  .mobile-screen .in-battle :is(.dpad,.touch-commands,.console-system){display:none}
+  .mobile-screen .console-screen{grid-area:screen;height:100%;padding:20px 12px 10px 20px}
+  .mobile-screen .dpad{justify-self:center}
+  .mobile-screen .touch-commands{grid-area:ab;justify-self:center;padding:0}
+  .mobile-screen .console-system{grid-area:sys;justify-content:center;padding:0 0 4px;gap:12px}
+  .mobile-screen .console-brand,.mobile-screen .console-speaker{display:none}
+  .mobile-screen .battle-panel{margin:0;height:100%}
 }
 
 /* ---------- Motion preferences ---------- */
