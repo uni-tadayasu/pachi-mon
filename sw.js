@@ -7,11 +7,12 @@
  * v21: the page also links the local link code and prefetches its QR code
  * libraries, so battles and trades with a nearby device work offline too.
  * v22: battle items and rhythm; the new code versions are stored on install.
+ * v23: the recorded title theme (assets/music, mp3) is stored with the page.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
 const KEEP = [SHELL, ART, FONTS];
-const ASSET = /\.(?:js|css|webp|png|svg|json|webmanifest|woff2?|ico)$/i;
+const ASSET = /\.(?:js|css|webp|png|svg|json|webmanifest|woff2?|ico|mp3)$/i;
 const scope = () => new URL(self.registration?.scope || self.location.href);
 const local = path => new URL(path, scope()).href;
 

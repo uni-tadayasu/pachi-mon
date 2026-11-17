@@ -61,7 +61,7 @@ function fire(type, init) {
 (async () => {
   // Serve the real page, its code and the offline list.
   serve(BASE + 'index.html', html); serve(BASE, html); // the host serves index.html for the root
-  const linked = [...html.matchAll(/\b(?:src|href)="([^"#]+)"/g)].map(m => m[1]).filter(v => !/^(?:[a-z]+:|\/\/|data:)/i.test(v) && /\.(?:js|css|webp|png|svg|json|webmanifest|woff2?|ico)$/i.test(v.split('?')[0]));
+  const linked = [...html.matchAll(/\b(?:src|href)="([^"#]+)"/g)].map(m => m[1]).filter(v => !/^(?:[a-z]+:|\/\/|data:)/i.test(v) && /\.(?:js|css|webp|png|svg|json|webmanifest|woff2?|ico|mp3)$/i.test(v.split('?')[0]));
   for (const url of linked) serve(BASE + url, 'asset:' + url);
   const offline = JSON.parse(fs.readFileSync(path.join(root, 'assets', 'offline-manifest.json'), 'utf8'));
   serve(BASE + 'manifest.webmanifest', fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
