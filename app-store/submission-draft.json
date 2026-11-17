@@ -1,0 +1,49 @@
+{
+  "status": "draft_not_submitted",
+  "platform": "IOS",
+  "supportedDevices": [
+    "iPhone",
+    "iPad"
+  ],
+  "minimumOS": "16.0",
+  "bundleIdDefault": "com.kasaisolutions.pachimon",
+  "marketingVersionDefault": "1.0.0",
+  "primaryLanguage": "ja",
+  "suggestedCategory": "Games",
+  "suggestedSubcategories": [
+    "Role Playing",
+    "Adventure"
+  ],
+  "copyright": "2026 KASAI SOLUTIONS INC.",
+  "appleAppId": null,
+  "sku": null,
+  "price": null,
+  "territories": null,
+  "supportURLCandidate": "https://www.kasai-solutions-inc.com/support.html",
+  "privacyPolicyURLCandidate": "https://www.kasai-solutions-inc.com/privacy.html",
+  "marketingURL": "https://www.kasai-solutions-inc.com/",
+  "publicURLsVerified": false,
+  "ageRatingFinal": null,
+  "encryptionComplianceFinal": null,
+  "appPrivacyFinal": null,
+  "reviewContact": null,
+  "screenshots": [],
+  "backendReadiness": {
+    "statusURL": "https://pachi-mon-admin-hub.hisa-0128-1996.chatgpt.site/api/status",
+    "requiredField": "accountDeletionSupported",
+    "requiredValue": true,
+    "productionDeploymentVerified": false
+  },
+  "automation": {
+    "uploadsSignedBuildOnly": true,
+    "uploadsMetadata": false,
+    "submitsForReview": false,
+    "publishesToAppStore": false,
+    "answersExportCompliance": false
+  },
+  "notes": [
+    "Apple account sign-in, membership, agreements and app registration have not been verified.",
+    "Initial implementation was saved through GitHub after the local execution environment became unavailable; use actual Actions results for build status.",
+    "Confirm all content and replace null values in App Store Connect before submitting for review."
+  ]
+}

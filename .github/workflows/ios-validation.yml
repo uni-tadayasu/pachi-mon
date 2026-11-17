@@ -1,0 +1,71 @@
+name: iOS validation
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Build and test the bundled iOS game
+    runs-on: macos-15
+    timeout-minutes: 35
+    env:
+      IOS_XCODE_VERSION: ${{ vars.IOS_XCODE_VERSION || '26.2' }}
+      IOS_BUILD_DIR: ${{ runner.temp }}/pachimon-ios-validation
+    steps:
+      - name: Check out this exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate the shell scripts
+        run: bash -n scripts/ios-select-xcode.sh scripts/ios-simulator-test.sh scripts/ios-app-store-upload.sh
+      - name: Verify Xcode and the submission SDK
+        run: bash scripts/ios-select-xcode.sh
+      - name: Check native bridge and deletion behavior
+        run: |
+          node scripts/check-native-bridge.cjs
+          node scripts/check-account-deletion.cjs
+          node --test server/tests/server.test.mjs server/tests/trades.test.mjs server/tests/account-deletion.test.mjs
+      - name: Bundle the current game resources
+        run: node scripts/prepare-ios.mjs
+      - name: Build and run WKWebView platform and native menu tests
+        run: bash scripts/ios-simulator-test.sh offline
+      - name: Exercise the real PeerJS and WebRTC data channel
+        run: bash scripts/ios-simulator-test.sh live
+      - name: Preserve simulator test results
+        if: always()
+        uses: actions/upload-artifact@v7.0.0
+        with:
+          name: ios-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/pachimon-ios-validation/offline.xcresult
+            ${{ runner.temp }}/pachimon-ios-validation/live.xcresult
+            ${{ runner.temp }}/pachimon-ios-validation/offline.log
+            ${{ runner.temp }}/pachimon-ios-validation/live.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Record the validation scope
+        if: always()
+        env:
+          NATIVE_JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo '## iOS validation'
+            echo "Job status: ${NATIVE_JOB_STATUS}"
+            echo 'Tests run inside the iOS Simulator with the bundled pachimon://app game.'
+            echo 'The live test uses the real PeerJS broker and WebRTC data channel; a network failure fails that test.'
+            echo 'Simulator results do not replace physical iPhone/iPad testing, cellular-network tests, TestFlight processing, or App Review.'
+            echo 'This workflow does not sign or upload an App Store build.'
+          } >> "$GITHUB_STEP_SUMMARY"
