@@ -97,5 +97,18 @@
       post({ command: 'ready' });
     },
   });
-  if (available) document.documentElement.classList.add('native-app');
+  if (available) {
+    document.documentElement.classList.add('native-app');
+    let lastHaptic = -Infinity;
+    document.addEventListener('pointerdown', event => {
+      if (event.isTrusted !== true || event.button !== 0) return;
+      const control = event.target?.closest?.('button,[role="button"]');
+      if (!control || control.disabled || control.matches?.(':disabled') || control.getAttribute?.('aria-disabled') === 'true') return;
+      const now = performance.now();
+      if (now - lastHaptic < 80) return;
+      lastHaptic = now;
+      // Passive feedback must not interrupt the game's D-pad or button handlers.
+      try { post({ command: 'haptic' }); } catch (_) {}
+    }, { passive: true });
+  }
 })();

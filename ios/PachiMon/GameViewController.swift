@@ -123,7 +123,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
     }
 
     deinit {
-        contentController.removeScriptMessageHandler(forName: "pachiNative")
+        // The installed handler holds only a weak delegate and is released
+        // with the WebKit configuration; deinit need not call main-actor APIs.
         api?.invalidate()
         if let exportedDirectory { try? FileManager.default.removeItem(at: exportedDirectory) }
     }

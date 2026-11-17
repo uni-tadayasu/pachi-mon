@@ -1,11 +1,17 @@
 import Foundation
 import WebKit
 
+private struct BundledResource: Sendable {
+    let response: URLResponse
+    let data: Data
+}
+
 /// Serves only packaged resources. This is not a proxy and never downloads game code.
+@MainActor
 final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
-    static let scheme = "pachimon"
-    static let host = "app"
-    static let home = URL(string: "pachimon://app/index.html")!
+    nonisolated static let scheme = "pachimon"
+    nonisolated static let host = "app"
+    nonisolated static let home = URL(string: "pachimon://app/index.html")!
 
     private let root: URL?
     private let workQueue = DispatchQueue(label: "com.kasaisolutions.pachimon.resources", qos: .userInitiated)
@@ -48,12 +54,7 @@ final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
         tasks.removeValue(forKey: ObjectIdentifier(urlSchemeTask as AnyObject))
     }
 
-    private struct Resource {
-        let response: URLResponse
-        let data: Data
-    }
-
-    private static func resource(for request: URLRequest, root: URL?) -> Result<Resource, Error> {
+    private nonisolated static func resource(for request: URLRequest, root: URL?) -> Result<BundledResource, Error> {
         guard let url = request.url, url.scheme == scheme, url.host == host,
               url.user == nil, url.password == nil, url.port == nil,
               request.httpMethod == nil || request.httpMethod == "GET" || request.httpMethod == "HEAD",
@@ -77,13 +78,13 @@ final class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
             let mime = mimeType(for: file.pathExtension)
             let response = URLResponse(url: url, mimeType: mime, expectedContentLength: bytes.count,
                                        textEncodingName: mime.hasPrefix("text/") || mime == "application/javascript" || mime == "application/json" ? "utf-8" : nil)
-            return .success(Resource(response: response, data: request.httpMethod == "HEAD" ? Data() : bytes))
+            return .success(BundledResource(response: response, data: request.httpMethod == "HEAD" ? Data() : bytes))
         } catch {
             return .failure(error)
         }
     }
 
-    private static func mimeType(for ext: String) -> String {
+    private nonisolated static func mimeType(for ext: String) -> String {
         switch ext.lowercased() {
         case "html", "htm": return "text/html"
         case "css": return "text/css"

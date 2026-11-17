@@ -5,6 +5,7 @@ final class NativeSmokeTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    @MainActor
     func testBundledGameHasWorkingWebPlatform() throws {
         let result = try diagnostics(live: false)
         for key in ["secureContext", "nativeBridge", "gameLoaded", "localStorage", "randomValues", "randomUUID", "webCrypto", "bundledImage", "canvasReadable", "rtcDataChannel"] {
@@ -14,12 +15,14 @@ final class NativeSmokeTests: XCTestCase {
     }
 
     /// Uses the shipped PeerJS broker and actual WebRTC data channels, not mocks.
+    @MainActor
     func testLivePeerLinkRoundTrip() throws {
         let result = try diagnostics(live: true)
         XCTAssertEqual(result["livePeerLink"] as? Bool, true, "Two-way live PeerLink exchange failed: \(result)")
         XCTAssertNil(result["error"], "\(result)")
     }
 
+    @MainActor
     func testNativePrivacyMenu() {
         let app = XCUIApplication()
         app.launch()
@@ -36,6 +39,7 @@ final class NativeSmokeTests: XCTestCase {
         add(attachment)
     }
 
+    @MainActor
     private func diagnostics(live: Bool) throws -> [String: Any] {
         let app = XCUIApplication()
         app.launchArguments = ["--native-smoke-test"] + (live ? ["--native-smoke-live"] : [])

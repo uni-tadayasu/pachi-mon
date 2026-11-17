@@ -210,6 +210,7 @@ for name, target in outputs:
     target.chmod(0o600)
 PY
 
+unset IOS_DISTRIBUTION_P12_BASE64 IOS_PROVISIONING_PROFILE_BASE64 ASC_PRIVATE_KEY_BASE64
 build_number="$(cat "$signing_dir/build-number.txt")"
 api_key_file="$signing_dir/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 if ! openssl pkey -in "$api_key_file" -noout >/dev/null 2>&1; then
@@ -226,6 +227,7 @@ security import "$signing_dir/distribution.p12" \
   -k "$keychain_path" \
   -P "$IOS_DISTRIBUTION_P12_PASSWORD" \
   -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+unset IOS_DISTRIBUTION_P12_PASSWORD
 security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$keychain_password" "$keychain_path" >/dev/null
 
 python3 - "$signing_dir/keychains.json" "$keychain_path" <<'PY'

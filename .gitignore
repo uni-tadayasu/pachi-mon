@@ -16,3 +16,6 @@ xcuserdata/
 node_modules/
 playwright-report/
 test-results/
+
+# Developer-specific signing/team settings.
+ios/Config/Local.xcconfig
