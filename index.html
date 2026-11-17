@@ -250,7 +250,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
-  <link rel="stylesheet" href="pachi-ui.css?v=20261117-mobile">
+  <link rel="stylesheet" href="pachi-ui.css?v=20261117-names">
 </head>
 <body>
   <!-- Original Pachi Monsters interface pixel icons. Copyright (c) 2026 KASAI SOLUTIONS INC. -->
@@ -457,8 +457,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
               <canvas id="game-canvas" width="768" height="480" tabindex="0" aria-label="冒険フィールド。矢印またはWASDで移動、スペースまたはEで調べる。">このゲームを遊ぶにはCanvasに対応したブラウザーが必要です。</canvas>
               <div id="world-label" class="world-label">風待ちの里</div><div id="world-hint" class="world-hint">旅は、小さな出会いから。</div>
               <div id="battle-ui" class="battle-ui" hidden>
-                <div class="combatant enemy-card"><div class="combatant-top"><strong id="enemy-name">モンスター</strong><span id="enemy-status" class="status-chip" hidden></span><span id="enemy-level">Lv. 5</span></div><div class="combatant-type"><span id="enemy-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="enemy-hp" class="hp-fill"></span></div><span id="enemy-hp-text" class="hp-text">— / —</span></div>
-                <div class="combatant ally-card"><div class="combatant-top"><strong id="ally-name">仲間のモンスター</strong><span id="ally-status" class="status-chip" hidden></span><span id="ally-level">Lv. 5</span></div><div class="combatant-type"><span id="ally-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="ally-hp" class="hp-fill"></span></div><span id="ally-hp-text" class="hp-text">— / —</span><div class="xp-track"><span id="ally-xp"></span></div></div>
+                <div class="combatant enemy-card"><div class="combatant-top"><strong id="enemy-name">モンスター</strong><span id="enemy-level">Lv. 5</span></div><div class="combatant-type"><span id="enemy-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="enemy-hp" class="hp-fill"></span></div><div class="hp-row"><span id="enemy-status" class="status-chip" hidden></span><span id="enemy-hp-text" class="hp-text">— / —</span></div></div>
+                <div class="combatant ally-card"><div class="combatant-top"><strong id="ally-name">仲間のモンスター</strong><span id="ally-level">Lv. 5</span></div><div class="combatant-type"><span id="ally-type" class="type-badge">芽</span><span class="hp-label">HP</span></div><div class="hp-track"><span id="ally-hp" class="hp-fill"></span></div><div class="hp-row"><span id="ally-status" class="status-chip" hidden></span><span id="ally-hp-text" class="hp-text">— / —</span></div><div class="xp-track"><span id="ally-xp"></span></div></div>
               </div>
               <span class="stage-corner tl"></span><span class="stage-corner tr"></span><span class="stage-corner bl"></span><span class="stage-corner br"></span>
             </div>
@@ -546,7 +546,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       </section>
       <section class="game-info-faq" aria-labelledby="faq-title">
         <div class="game-info-heading"><p class="eyebrow">BEFORE YOUR FIRST EXPEDITION</p><h3 id="faq-title">冒険をはじめる前に。</h3></div>
-        <details><summary>伝説のアルヴェリオンにはどう出会えますか？</summary><p>街・室内を含む全118マップで、移動が成功する1歩ごとに700分の1の確率で出現します。野生のレベルは70固定。捕獲率はHP満タン時1%、残り1HP時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。</p></details>
+        <details><summary>伝説のアルヴェリオンにはどう出会えますか？</summary><p>野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに700分の1の確率で出現し、道・街・室内では出現しません。野生のレベルは70固定。捕獲率はHP満タン時1%、残り1HP時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。</p></details>
         <details><summary>運営専用の幻パチモンとは？</summary><p>芽タイプのフロラヴェールです。運営だけが初期メンバーとしてLv70で受け取れます。野生出現・一般配布はなく、進化せずLv100まで育ちます。通常の図鑑収集課題には含みません。</p></details>
         <details><summary>色違いのパチモンはどうやって出会えますか？</summary><p>野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、捕獲後も進化後も色違いを引き継ぎます。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。</p></details>
         <details><summary>パチモンの名前や主人公は選べますか？</summary><p>冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。</p></details>
@@ -1880,7 +1880,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   'use strict';
   const D=globalThis.LT.DATA;
   D.legendary=Object.freeze({species:'arvelion',encounterOdds:700,minLevel:70,maxLevel:70,adminLevel:70,
-    captureMin:0.01,captureMax:0.06,rollUnit:'successful-walking-step'});
+    captureMin:0.01,captureMax:0.06,rollUnit:'wild-grass-step'});
   Object.assign(D.moves,{
     arvelion_rend:{id:'arvelion_rend',name:'灯皇裂爪',element:'ember',kind:'attack',category:'physical',effect:'pierce',power:140,accuracy:95,pp:8,description:'金色の灯焔を宿した三連の爪で一撃。相手の防御技によるダメージ軽減を無視する。灯・物理・威力140・命中95・PP8。'},
     arvelion_nova:{id:'arvelion_nova',name:'暁天の焔',element:'ember',kind:'attack',category:'special',power:160,accuracy:90,pp:5,description:'たてがみに集めた灯を灼熱の奔流に変え、相手の周囲で大きな火柱を咲かせる。灯・特殊・威力160・命中90・PP5。'},
@@ -1889,7 +1889,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   });
   D.species.arvelion={id:'arvelion',name:'アルヴェリオン',element:'ember',shape:'wolf',
     rarity:'legendary',atlasNumber:261,color:'#b7783c',accent:'#ffd166',
-    description:'焔色のたてがみと金色に輝く双角を持ち、白煙の尾をなびかせて世界中を巡る伝説の獅子。全マップで移動1歩ごとに1/700の確率で現れる。野生はLv.70固定。捕獲率はHPに応じて1〜6%。進化せず、Lv.100まで成長する。',
+    description:'焔色のたてがみと金色に輝く双角を持ち、白煙の尾をなびかせて世界中を巡る伝説の獅子。野生のパチモンが出る草むらにだけ潜み、草むらを1歩進むごとに1/700の確率で現れる。野生はLv.70固定。捕獲率はHPに応じて1〜6%。進化せず、Lv.100まで成長する。',
     base:{hp:320,atk:245,def:225,spAtk:265,spDef:235,speed:220,accuracy:110,evasion:105},
     moves:['arvelion_rend','arvelion_nova','arvelion_crown','arvelion_renewal']};
   D.content.species=Object.values(D.species).filter(species=>!species.specialOnly).length;
@@ -2319,7 +2319,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 
   // ── 16 secrets and 8 trick glitches. Hints stay readable before discovery.
   D.secrets=Object.freeze([
-    ['legendary','伝説との遭遇','どの土地でも、一歩ごとにごくまれに……。','伝説のパチモン・アルヴェリオンと出会った。'],
+    ['legendary','伝説との遭遇','野生の草むらを歩いていると、ごくまれに……。','伝説のパチモン・アルヴェリオンと出会った。'],
     ['shiny','色ちがいの輝き','野生のパチモンの中に、ごくまれに色のちがう個体がいる。','色ちがいのパチモンと出会った。'],
     ['glitchroom','地図にない部屋','風待ちの里の北東。何度もぶつかれば、壁も根負けする？','バグの裏部屋にたどり着いた。'],
     ['glitchkeeper','番人の正体','地図にない部屋には、誰かが住んでいる。','裏部屋の番人・ヌルに勝利した。'],
@@ -2863,19 +2863,21 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         this.encounterCooldown = 6;
         Object.assign(result,{mapChanged:true,message:`${this.map.name}に着いた。`});
       }
-      // Exactly one independent roll per successful walking step, including
-      // town/interior steps and arrival steps. Ordinary grass cooldowns do not
-      // alter this probability. A legendary encounter replaces the grass roll.
-      if(this.rng()<1/D.legendary.encounterOdds){
+      if(exit)return result;
+      // Arvelion lives in the wild grass: one independent roll per successful step
+      // onto a grass tile of a stage with wild monsters, never on roads, in towns or
+      // rooms, or on a map arrival. Ordinary grass cooldowns do not alter this
+      // probability. A legendary encounter replaces the grass roll.
+      const wildGrass=this.map.tiles[y][x]===':'&&this.map.encounters.length>0;
+      if(wildGrass&&this.rng()<1/D.legendary.encounterOdds){
         const level=D.legendary.minLevel+Math.floor(this.rng()*(D.legendary.maxLevel-D.legendary.minLevel+1));
         if(this.startBattle(D.legendary.species,level)){
           this.battle.title=`伝説の${D.species[D.legendary.species].name}との遭遇`;this.discover('legendary');
           return {...result,battleStarted:true,legendaryEncounter:true};
         }
-        return {...result,mapChanged:true};
+        return result;
       }
-      if(exit)return result;
-      if (this.map.tiles[y][x] === ':' && this.map.encounters.length && this.encounterCooldown === 0 && !(this.stealthSteps > 0) && this.rng() < 0.18*(holds(this.state.party[0],'repel')?.params.mul??1)) {
+      if (wildGrass && this.encounterCooldown === 0 && !(this.stealthSteps > 0) && this.rng() < 0.18*(holds(this.state.party[0],'repel')?.params.mul??1)) {
         const species = this.map.encounters[Math.floor(this.rng() * this.map.encounters.length)];
         const [min,max] = this.map.level;
         const level = min + Math.floor(this.rng() * (max - min + 1));
@@ -5849,6 +5851,33 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (engine.map.tiles[y]?.[x] === ':') return '草むらではモンスターに出会えます';
     return engine.map.interior?'室内を探索 · 人の近くで A / E · 扉から外へ':'道を歩いて探索 · 建物の扉で入室 · 人の近くで A / E';
   }
+  // Battle names, labels and commands are never cut off: a line that does not
+  // fit shrinks step by step (to `min` px), and only wraps if even that is too wide.
+  function fitBattleLine(el,min=9){
+    if(!el?.isConnected)return;
+    // The name row can be display:contents, so measure against the card (or the command grid).
+    const card=el.closest('.combatant'),box=card||el.parentElement;
+    const key=`${el.textContent}|${card?.querySelector('.combatant-top')?.textContent||''}|${card?.querySelector('.type-badge')?.textContent||''}|${box?.clientWidth||0}`;
+    if(el.dataset.fit===key)return;
+    el.style.fontSize='';el.classList.remove('fit-wrap');
+    if(!el.clientWidth){delete el.dataset.fit;return;}
+    const over=()=>el.scrollWidth>el.clientWidth+.5;
+    if(over()){
+      const base=parseFloat(getComputedStyle(el).fontSize)||14;let lo=Math.min(min,base),hi=base;
+      el.style.fontSize=lo+'px';
+      if(over())el.classList.add('fit-wrap');
+      else{for(let i=0;i<6;i++){const mid=(lo+hi)/2;el.style.fontSize=mid+'px';if(over())hi=mid;else lo=mid;}el.style.fontSize=Math.floor(lo*4)/4+'px';}
+    }
+    el.dataset.fit=key;
+  }
+  function refitBattleText(force=false){
+    for(const el of document.querySelectorAll('.combatant-top strong,.combatant-type .hp-label,#battle-actions>.btn.fit-line')){
+      if(force)delete el.dataset.fit;
+      fitBattleLine(el,el.matches('.hp-label')?9:el.matches('.btn')?10:8);
+    }
+  }
+  document.fonts?.ready?.then?.(()=>refitBattleText(true));
+  document.fonts?.addEventListener?.('loadingdone',()=>refitBattleText(true));
   function updateBattle() {
     const display=battleView||engine,b = display.battle; if (!b) return;
     const ally = display.state.party[b.activeIndex], enemy = b.enemy;
@@ -5871,6 +5900,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     $('ally-xp').style.width = `${nextXP ? Math.min(100,ally.xp/nextXP*100) : 100}%`;
     $('ally-xp').parentElement.title = nextXP ? `経験値 ${ally.xp} / ${nextXP}` : '最大レベル';
     document.querySelector('.enemy-card .hp-label').textContent = (b.towerFloor ? `TOWER ${b.towerFloor}` : b.champion ? 'PATH HEIR' : b.elite ? 'BOUNDARY KEEPERS' : b.guardian ? (b.rematch?'REMATCH':'WARDEN') : b.rival ? 'RIVAL' : 'WILD') + ((b.enemyTeam?.length||0)>1 ? ` ${b.enemyIndex+1}/${b.enemyTeam.length}` : '');
+    refitBattleText();
     if (!busy) battleActions();
   }
   function battleActions(view = 'main', itemId = null) {
@@ -5887,11 +5917,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
     const restricted=!!(b.guardian || b.rival || b.towerFloor || b.elite || b.champion);
     if (view === 'moves') {
-      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : m.kind==='boost' ? '自分の能力を強化' : `${m.category==='special'?'特殊':'物理'} · 威力 ${m.power} · 命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
+      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : m.kind==='boost' ? '自分の能力を強化' : `${m.category==='special'?'特殊':'物理'} · <span class="nb">威力 ${m.power}</span> · <span class="nb">命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%</span>`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
     } else if (view === 'switch') {
       box.innerHTML = engine.state.party.map((m,i) => `<button class="btn" data-switch="${i}" ${i===b.activeIndex || m.hp===0 ? 'disabled' : ''}>${escape(nameOf(m))} <small>Lv.${m.level} · HP ${m.hp}${(DATA.statuses||{})[m.status]?' · '+DATA.statuses[m.status].name:''}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
     } else if (view === 'items') {
-      box.innerHTML = `<button class="btn" data-battle="resonate" ${restricted || engine.state.inventory.chime===0 || (engine.state.party.length>=6 && engine.state.storage.length>=512) ? 'disabled' : ''}>${ico('resonate')} ${escape(DATA.items.chime.name)} ×${engine.state.inventory.chime}<small>${restricted?'調律士のパチモンには使えません':`つかまえる · 成功率 ${Math.round(engine.resonanceChance()*100)}%`}</small></button>`+['salve','tonic','remedy'].map(id => `<button class="btn" data-battle-item="${id}" ${engine.state.inventory[id] < 1 ? 'disabled' : ''}>${escape(DATA.items[id].name)} ×${engine.state.inventory[id]}<small>${escape(DATA.items[id].description)}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
+      box.innerHTML = `<button class="btn" data-battle="resonate" ${restricted || engine.state.inventory.chime===0 || (engine.state.party.length>=6 && engine.state.storage.length>=512) ? 'disabled' : ''}><span class="btn-line">${ico('resonate')} ${escape(DATA.items.chime.name)} ×${engine.state.inventory.chime}</span><small>${restricted?'調律士のパチモンには使えません':`つかまえる · 成功率 ${Math.round(engine.resonanceChance()*100)}%`}</small></button>`+['salve','tonic','remedy'].map(id => `<button class="btn" data-battle-item="${id}" ${engine.state.inventory[id] < 1 ? 'disabled' : ''}>${escape(DATA.items[id].name)} ×${engine.state.inventory[id]}<small>${escape(DATA.items[id].description)}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
     } else if (view === 'item-target' && DATA.items[itemId]) {
       box.innerHTML = `<p class="battle-item-target">${escape(DATA.items[itemId].name)}を誰に使いますか？</p>`+engine.state.party.map((m,i)=>`<button class="btn" data-battle-heal="${i}" data-item="${itemId}" ${engine.checkItem(itemId,i).ok?'':'disabled'}>${escape(nameOf(m))}<small>Lv.${m.level} · HP ${m.hp} / ${engine.stats(m).hp}${m.hp===0?' · ひんし':''}</small></button>`).join('')+'<button class="btn btn-quiet" data-battle="items">← バッグへ</button>';
     } else {
@@ -5900,6 +5930,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         `<button class="btn btn-quiet" data-battle="flee" ${restricted ? 'disabled' : ''}>${ico('flee')} にげる</button>`;
     }
     box.querySelectorAll('button').forEach(btn => { if(busy) btn.disabled = true; });
+    for(const btn of box.querySelectorAll(':scope>.btn:not(.move-btn)'))if(!btn.querySelector(':scope>small'))btn.classList.add('fit-line');
+    refitBattleText();
   }
   function captureBattleView() {
     const display=Object.create(engine);
@@ -6625,6 +6657,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(bounds.width>0&&bounds.height>0){const scale=Math.min(2,(field?720:1152)/Math.max(bounds.width,bounds.height));w=Math.max(1,Math.round(bounds.width*scale));h=Math.max(1,Math.round(bounds.height*scale));}
     }
     if(c.width!==w || c.height!==h){c.width=w;c.height=h;}
+    if(engine?.battle)refitBattleText();
   }
   window.addEventListener('resize',resize);
   if(typeof ResizeObserver==='function')new ResizeObserver(resize).observe($('game-canvas').parentElement);

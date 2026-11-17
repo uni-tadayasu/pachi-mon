@@ -916,3 +916,57 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
   .mobile-screen body.in-battle .combatant-top strong{font-size:11px}
   .mobile-screen body.in-battle .combatant-top span{font-size:10px}
 }
+
+/* ── Battle: names and labels are never cut off ───────────────────────────
+   The name line shrinks to fit (index.html fitBattleLine) and wraps only as a
+   last resort; the status chip sits beside the HP numbers so the top row
+   belongs to the name and level. */
+.combatant-top strong{flex:1 1 auto;min-width:0;text-overflow:clip}
+.combatant-top strong.fit-wrap{white-space:normal;overflow:visible;overflow-wrap:anywhere;line-height:1.15}
+.combatant-top>span{flex:none;white-space:nowrap}
+.combatant-type .type-badge{flex:none}
+.combatant-type .hp-label{flex:1 1 auto;min-width:0;margin-left:8px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:clip;line-height:1.35}
+.combatant-type .hp-label.fit-wrap{white-space:normal;overflow:visible;overflow-wrap:anywhere;line-height:1.2}
+.hp-row{display:flex;align-items:center;gap:6px;margin-top:3px}
+.hp-row .hp-text{margin:0 0 0 auto;white-space:nowrap}
+.combatant .status-chip{flex:none;margin:0;font-size:11px;line-height:1.35}
+.mobile-screen .combatant .status-chip{font-size:10px;padding:0 4px;border-width:1px}
+.move-meta{white-space:normal;overflow:visible;text-overflow:clip}
+/* Buttons with a second line (switch, items, capture): stack the lines so the
+   button grows with them instead of letting the note spill out. */
+.battle-actions>.btn:has(>small){flex-direction:column;flex-wrap:nowrap;align-items:flex-start;justify-content:center;gap:1px}
+.battle-actions>.btn:has(>small)>small{width:auto;max-width:100%}
+.battle-actions .btn-line{display:inline-flex;align-items:center;gap:6px}
+.link-combatant>b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+/* One-line battle commands shrink to fit instead of breaking a word (たたか/う). */
+.battle-actions>.btn.fit-line{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+.battle-actions>.btn.fit-line.fit-wrap{flex-wrap:wrap;white-space:normal;overflow:visible}
+/* HUD layout: the name has the whole first row; the level sits beside the type
+   badge on the second. Phones held upright also get slightly wider cards. */
+.combatant{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;column-gap:6px}
+.combatant-top,.combatant-type{display:contents}
+.combatant-top strong{grid-column:1/-1;grid-row:1}
+.combatant-type>.type-badge{grid-column:1;grid-row:2;margin:4px 0}
+.combatant-top>span{grid-column:2;grid-row:2}
+.combatant-type>.hp-label{grid-column:3;grid-row:2;margin-left:0}
+.combatant>:is(.hp-track,.hp-row,.xp-track){grid-column:1/-1}
+@media (orientation:portrait) and (max-width:520px){
+  .mobile-screen .combatant{width:52%;max-width:232px}
+  .mobile-screen .combatant-type>.type-badge{margin:3px 0}
+  .mobile-screen .combatant-top strong::before{font-size:9px;margin-right:3px}
+}
+/* Phones held sideways keep the compact one-row card (their type row is hidden). */
+@media (orientation:landscape) and (max-height:540px){
+  .mobile-screen body.in-battle .combatant{display:block}
+  .mobile-screen body.in-battle .combatant-top{display:flex}
+}
+/* Battle lists (moves, bag, switch): rows grow with their buttons' content and the
+   list scrolls, instead of squeezing every row into the window and cutting text. */
+.battle-actions{grid-auto-rows:minmax(min-content,auto)}
+/* Phones: the move details get a full-width line; PP sits on its own line. */
+.mobile-screen .move-btn{grid-template-areas:"name name" "meta meta" "pp pp"}
+.mobile-screen .move-pp{justify-self:end}
+/* Move details break only between items (威力 35 · 命中 92%). */
+.move-meta .nb{white-space:nowrap}
+/* A league label that cannot sit beside the type and level gets its own row. */
+.combatant-type>.hp-label.fit-wrap{grid-column:1/-1;grid-row:3;margin:0 0 3px;white-space:normal;overflow-wrap:normal;word-break:normal}
