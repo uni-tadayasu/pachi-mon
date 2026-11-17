@@ -250,7 +250,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
-  <link rel="stylesheet" href="pachi-ui.css?v=20261117-v16">
+  <link rel="stylesheet" href="pachi-ui.css?v=20261117-mobile">
 </head>
 <body>
   <!-- Original Pachi Monsters interface pixel icons. Copyright (c) 2026 KASAI SOLUTIONS INC. -->
@@ -6143,7 +6143,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const mon = engine.state.party[index]; if (!mon) return;
     const s = DATA.species[mon.species], stats = engine.stats(mon);
     const releaseBlocked = engine.state.party.length <= 1 ? '最後の1体は逃がせません。' : !engine.state.party.some((other,i)=>i!==index && other.hp>0) ? '動ける仲間を1体以上残してください。' : '';
-    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}</div></div><div class="stat-grid">${[['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
+    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><div class="party-vitals">${partyVitals(mon,stats)}</div></div></div><div class="stat-grid">${statCells(stats)}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
   }
   const HELD_ITEMS=DATA.heldItems||{};
   function genderMark(mon){const g=LT.genderOf?.(mon);return g==='male'?'<span class="gender-mark male" aria-label="オス">♂</span>':g==='female'?'<span class="gender-mark female" aria-label="メス">♀</span>':'';}
@@ -6157,7 +6157,29 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function allocationPanel(mon,index){
     if(mon.customStats!==undefined)return '<p class="notice">このパチモンは運営が設定した能力で戦います（振り分けなし）。</p>';
     const info=engine.allocationInfo(mon),labels={hp:'HP',atk:'こうげき',def:'ぼうぎょ',spAtk:'とくこう',spDef:'とくぼう',speed:'すばやさ'};
-    return `<section class="alloc-panel"><h4>振り分けポイント <small>残り <strong>${info.free}</strong> / ${info.total}（レベルごとに2・1能力${info.cap}まで・HPは1で+2）</small></h4><div class="alloc-grid">${info.keys.map(k=>`<div class="alloc-row"><span>${labels[k]}</span><strong>${info.alloc[k]||0}</strong><button class="btn btn-small" data-alloc="${index}:${k}:-5" ${(info.alloc[k]||0)<1?'disabled':''} aria-label="${labels[k]}を5戻す">−5</button><button class="btn btn-small" data-alloc="${index}:${k}:-1" ${(info.alloc[k]||0)<1?'disabled':''} aria-label="${labels[k]}を1戻す">−</button><button class="btn btn-small" data-alloc="${index}:${k}:1" ${info.free<1||(info.alloc[k]||0)>=info.cap?'disabled':''} aria-label="${labels[k]}に1振る">＋</button><button class="btn btn-small" data-alloc="${index}:${k}:5" ${info.free<1||(info.alloc[k]||0)>=info.cap?'disabled':''} aria-label="${labels[k]}に5振る">＋5</button></div>`).join('')}</div><div class="modal-actions"><button class="btn btn-small" data-alloc-auto="${index}" ${info.free<1?'disabled':''}>おまかせで振り分け</button><button class="btn btn-small btn-quiet" data-alloc-reset="${index}" ${info.used<1?'disabled':''}>リセット</button></div></section>`;
+    const step=(k,delta,text,label)=>`<button type="button" class="btn btn-small" data-alloc="${index}:${k}:${delta}"${allocStepAllowed(info,k,delta)?'':' disabled'} aria-label="${label}">${text}</button>`;
+    return `<section class="alloc-panel" data-alloc-index="${index}"><h4>振り分けポイント <small>残り <strong data-alloc-free>${info.free}</strong> / ${info.total}（レベルごとに2・1能力${info.cap}まで・HPは1で+2）</small></h4><p class="alloc-tip">この画面のまま続けて振り分けられます。＋・−を長押しすると連続で振り分けます。</p><div class="alloc-grid">${info.keys.map(k=>`<div class="alloc-row"><span>${labels[k]}</span><strong data-alloc-stat="${k}">${info.alloc[k]||0}</strong>${step(k,-5,'−5',`${labels[k]}を5戻す`)}${step(k,-1,'−',`${labels[k]}を1戻す`)}${step(k,1,'＋',`${labels[k]}に1振る`)}${step(k,5,'＋5',`${labels[k]}に5振る`)}</div>`).join('')}</div><div class="modal-actions"><button type="button" class="btn btn-small" data-alloc-auto="${index}"${info.free<1?' disabled':''}>おまかせで振り分け</button><button type="button" class="btn btn-small btn-quiet" data-alloc-reset="${index}"${info.used<1?' disabled':''}>リセット</button></div></section>`;
+  }
+  function allocStepAllowed(info,key,delta){const current=info.alloc[key]||0;return delta<0?current>0:info.free>0&&current<info.cap;}
+  function partyVitals(mon,stats=engine.stats(mon)){return `<p>HP ${mon.hp} / ${stats.hp}　·　経験値 ${mon.xp} / ${engine.xpToNext(mon.level)||'MAX'}</p>${hpBar(mon)}`;}
+  function statCells(stats){return [['HP',stats.hp],['こうげき',stats.atk],['ぼうぎょ',stats.def],['とくこう',stats.spAtk],['とくぼう',stats.spDef],['すばやさ',stats.speed],['めいちゅう',stats.accuracy+'%'],['かいひ',stats.evasion+'%']].map(([label,value]) => `<div class="stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('');}
+  // Allocation redraws only the numbers on the open detail screen, so the scroll
+  // position and the button under the finger stay put for the next tap.
+  function refreshPartyDetail(index){
+    const mon=engine.state.party[index],content=$('modal-content'),panel=content?.querySelector?.(`.alloc-panel[data-alloc-index="${index}"]`);
+    if(!mon||!panel||activePane!=='party'){showParty(index);return;}
+    const focused=document.activeElement,stats=engine.stats(mon),info=engine.allocationInfo(mon);
+    const vitals=content.querySelector('.party-vitals'),grid=content.querySelector('.stat-grid');
+    if(vitals)vitals.innerHTML=partyVitals(mon,stats);
+    if(grid)grid.innerHTML=statCells(stats);
+    const free=panel.querySelector('[data-alloc-free]');if(free)free.textContent=String(info.free);
+    for(const value of panel.querySelectorAll('[data-alloc-stat]'))value.textContent=String(info.alloc[value.dataset.allocStat]||0);
+    for(const button of panel.querySelectorAll('[data-alloc]')){const [,key,delta]=button.dataset.alloc.split(':');button.disabled=!allocStepAllowed(info,key,Number(delta));}
+    const auto=panel.querySelector('[data-alloc-auto]'),reset=panel.querySelector('[data-alloc-reset]');
+    if(auto)auto.disabled=info.free<1;
+    if(reset)reset.disabled=info.used<1;
+    // Keep keyboard and controller focus inside the panel when the pressed button just ran out.
+    if(focused?.disabled&&panel.contains(focused)){const row=focused.closest('.alloc-row'),next=[...(row?row.querySelectorAll('button'):[]),...panel.querySelectorAll('button')].find(button=>!button.disabled);next?.focus({preventScroll:true});}
   }
   function showStorage(slot = null) {
     if (engine.battle) return;
@@ -6440,6 +6462,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   });
   window.addEventListener('keyup',e=>{if(e.key==='Shift')sprint=false;if(directionSource===e.key){pressedDirection=null;directionSource=null;}});
   window.addEventListener('blur',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(playing)save();});
+  // Rotating the phone can swallow the pointerup of a held button; release every
+  // held input so the next tap is read as itself, then redraw at the new size.
+  const releaseHeldInputs=()=>{clearTouchDirections();pressedDirection=null;directionSource=null;sprint=false;padSprint=false;controller?.reset();$('touch-b')?.resetHold?.();document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));resize();};
+  window.addEventListener('orientationchange',releaseHeldInputs);
+  document.addEventListener('pachi-viewport-change',releaseHeldInputs);
   document.addEventListener('visibilitychange',()=>{clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.suspend();}else if(settings.sound&&sound.ctx)sound.setEnabled(true);});
   const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock())sound.setEnabled(true);};
   document.addEventListener('pointerdown',unlockSound,{capture:true});
@@ -6477,6 +6504,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   if(touchB){
     let heldB=null;
     const releaseB=event=>{if(heldB===null||(event&&event.pointerId!==heldB))return;heldB=null;sprint=false;touchB.classList.remove('pressed');};
+    touchB.resetHold=()=>{heldB=null;sprint=false;touchB.classList.remove('pressed');};
     touchB.addEventListener('pointerdown',event=>{
       event.preventDefault();
       if(tradeLocked()){LT.Trade?.open?.();return;}
@@ -6514,9 +6542,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.give!==undefined){showHeldPicker(Number(d.give));return;}
     if(d.giveItem){const [i,id]=d.giveItem.split(':');const r=engine.giveHeld(Number(i),id);toast(r.message||'持たせられません。');if(r.ok){sound.fx('click');save();updateAll();showParty(Number(i));}return;}
     if(d.take!==undefined){const r=engine.takeHeld(Number(d.take));toast(r.message||'外せません。');if(r.ok){save();updateAll();showParty(Number(d.take));}return;}
-    if(d.alloc){const [i,k,delta]=d.alloc.split(':');const r=engine.allocate(Number(i),k,Number(delta));if(!r.ok)toast(r.message);else{save();updateAll();}showParty(Number(i));return;}
-    if(d.allocAuto!==undefined){const r=engine.autoAllocate(Number(d.allocAuto));toast(r.message||'振り分けました。');if(r.ok){save();updateAll();}showParty(Number(d.allocAuto));return;}
-    if(d.allocReset!==undefined){const r=engine.resetAllocation(Number(d.allocReset));toast(r.message||'リセットしました。');if(r.ok){save();updateAll();}showParty(Number(d.allocReset));return;}
+    if(d.alloc){if(allocationHoldClick?.button===b&&performance.now()<allocationHoldClick.until){allocationHoldClick=null;return;}applyAllocation(d.alloc);return;}
+    if(d.allocAuto!==undefined){const index=Number(d.allocAuto),r=engine.autoAllocate(index);toast(r.message||'振り分けました。');if(r.ok){sound.fx('click');scheduleAllocationCommit();refreshPartyDetail(index);}return;}
+    if(d.allocReset!==undefined){const index=Number(d.allocReset),r=engine.resetAllocation(index);toast(r.message||'リセットしました。');if(r.ok){sound.fx('click');scheduleAllocationCommit();refreshPartyDetail(index);}return;}
     if(d.buyHeld){const result=engine.buyHeld(d.buyHeld,shopQuantity);toast(result.message||(result.ok?'購入しました。':'購入できません。'));if(result.ok){sound.fx('click');save();updateAll();showShop();}return;}
     if(d.storageDetail){showStorageDetail(d.storageDetail);return;}
     if(d.creatureView){const panel=b.closest('.creature-view'),canvas=panel?.querySelector('canvas[data-creature]');if(canvas){canvas.dataset.back=String(d.creatureView==='back');canvas.setAttribute('aria-label',`${DATA.species[canvas.dataset.creature].name}${canvas.dataset.shiny==='true'?'・色違い':''}の${d.creatureView==='back'?'後ろ':'前'}の姿`);for(const btn of panel.querySelectorAll('[data-creature-view]')){const active=btn===b;btn.classList.toggle('selected',active);btn.setAttribute('aria-pressed',String(active));}portraitLoader.invalidate();}return;}
@@ -6551,6 +6579,39 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
     if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
+  // ── Allocation points: taps and press-and-hold stay on the detail screen ──
+  let allocationCommit=0,allocationHold=null,allocationHoldClick=null;
+  function commitAllocation(){if(!allocationCommit)return;clearTimeout(allocationCommit);allocationCommit=0;save();updateAll();}
+  function scheduleAllocationCommit(){clearTimeout(allocationCommit);allocationCommit=setTimeout(commitAllocation,240);}
+  function applyAllocation(spec,quiet=false){
+    const [index,key,delta]=String(spec).split(':'),result=engine.allocate(Number(index),key,Number(delta));
+    if(!result.ok){if(!quiet)toast(result.message);return false;}
+    sound.fx('click');scheduleAllocationCommit();refreshPartyDetail(Number(index));return true;
+  }
+  function endAllocationHold(){
+    const hold=allocationHold;if(!hold)return;
+    clearTimeout(hold.timer);allocationHold=null;
+    // Once a hold has repeated, the click that follows the release belongs to it.
+    if(hold.repeats)allocationHoldClick={button:hold.button,until:performance.now()+800};
+  }
+  document.addEventListener('pointerdown',event=>{
+    const button=event.target?.closest?.('[data-alloc]');
+    allocationHoldClick=null;
+    if(!button||button.disabled||event.button>0||event.isPrimary===false)return;
+    endAllocationHold();
+    const hold={button,pointerId:event.pointerId,repeats:0,timer:0};allocationHold=hold;
+    const repeat=()=>{
+      if(allocationHold!==hold)return;
+      if(!$('modal').open||!button.isConnected||button.disabled||!applyAllocation(button.dataset.alloc,true)){endAllocationHold();return;}
+      hold.repeats++;hold.timer=setTimeout(repeat,hold.repeats<4?150:hold.repeats<12?95:60);
+    };
+    hold.timer=setTimeout(repeat,450);
+  });
+  for(const type of ['pointerup','pointercancel'])document.addEventListener(type,event=>{if(allocationHold&&event.pointerId===allocationHold.pointerId)endAllocationHold();});
+  document.addEventListener('pointerout',event=>{const hold=allocationHold;if(hold&&event.pointerId===hold.pointerId&&event.target===hold.button&&!hold.button.contains(event.relatedTarget))endAllocationHold();});
+  document.addEventListener('contextmenu',event=>{if(event.target?.closest?.('[data-alloc]'))event.preventDefault();});
+  window.addEventListener('blur',endAllocationHold);
+  $('modal').addEventListener('close',()=>{endAllocationHold();commitAllocation();});
   function resize() {
     const small=matchMedia('(max-width: 600px)').matches;
     const landscape=matchMedia('(max-height: 520px) and (orientation: landscape)').matches;
@@ -7804,6 +7865,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="secret-encounter.js?v=20261117-shiny"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261116-battle-trade">
 <script src="trade-client.js?v=20261116-battle-trade"></script>
-<script src="mobile-screen.js?v=20261116"></script>
+<script src="mobile-screen.js?v=20261117-rotate"></script>
 </body>
 </html>

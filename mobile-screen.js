@@ -6,18 +6,30 @@
   const viewport=document.querySelector('meta[name="viewport"]');
   const baseViewport='width=device-width, initial-scale=1, viewport-fit=cover';
   const editable=target=>target instanceof Element&&!!target.closest('input,textarea,select,[contenteditable="true"]');
-  let frame=0;
+  let frame=0,lastShape='';
+  const typing=()=>editable(document.activeElement);
   function fit(){
     frame=0;root.classList.toggle('mobile-screen',mobile.matches);
-    const height=Math.round(window.visualViewport?.height||window.innerHeight);
+    // The smaller of the layout and visible heights follows an open keyboard;
+    // the repeated fits after a rotation catch the final size once it settles.
+    const height=Math.round(Math.min(window.innerHeight||Infinity,window.visualViewport?.height||Infinity));
     root.style.setProperty('--app-height',height+'px');
     viewport?.setAttribute('content',baseViewport+(mobile.matches?', minimum-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content':''));
+    // A rotation or a closed keyboard can leave the page scrolled; the fixed
+    // layout then draws in one place and receives taps in another.
+    if(mobile.matches&&!typing()&&(window.scrollX||window.scrollY||document.scrollingElement?.scrollTop))window.scrollTo(0,0);
+    const shape=`${window.innerWidth>window.innerHeight?'landscape':'portrait'}:${mobile.matches}`;
+    if(shape!==lastShape){lastShape=shape;if(typeof CustomEvent==='function')document.dispatchEvent?.(new CustomEvent('pachi-viewport-change',{detail:{shape}}));}
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(fit);}
-  mobile.addEventListener('change',schedule);
+  // Phones report their final size a moment after rotating, so fit again as it settles.
+  function settle(){schedule();if(typeof setTimeout==='function')for(const delay of [120,360,800])setTimeout(schedule,delay);}
+  mobile.addEventListener('change',settle);
   window.addEventListener('resize',schedule);
   window.visualViewport?.addEventListener('resize',schedule);
-  window.addEventListener('orientationchange',schedule);
+  window.addEventListener('orientationchange',settle);
+  window.screen?.orientation?.addEventListener?.('change',settle);
+  document.addEventListener('focusout',event=>{if(mobile.matches&&editable(event.target)&&typeof setTimeout==='function')setTimeout(settle,250);});
   for(const name of ['contextmenu','selectstart','dragstart'])document.addEventListener(name,event=>{
     if(mobile.matches&&!editable(event.target))event.preventDefault();
   });
