@@ -2,6 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <script src="native-app.js?v=1"></script>
+  <link rel="stylesheet" href="native-app.css?v=1">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="copyright" content="KASAI SOLUTIONS INC.">
   <meta name="author" content="KASAI SOLUTIONS INC.">
@@ -6053,6 +6055,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function exportSave(data) {
     const content = data || (playing ? engine.serialize() : storedSave);
     if (!content) { toast('書き出す冒険記録がありません。'); return; }
+    if (window.PachiNative?.available) {
+      try { window.PachiNative.exportJSON(JSON.stringify(content,null,2)); toast('共有画面で保存先を選んでください。'); }
+      catch (error) { toast(error.message || '書き出せませんでした。'); }
+      return;
+    }
     const url = URL.createObjectURL(new Blob([JSON.stringify(content,null,2)],{type:'application/json'}));
     const link=document.createElement('a');link.href=url;link.download='Pachi_Monsters_Save.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('セーブデータを書き出しました。');
   }
@@ -6212,7 +6219,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt'){settings.crt=!settings.crt;if(tapStreak('mirror',9000)){document.documentElement.classList.toggle('mirror-world');noteTrick('mirror');toast(document.documentElement.classList.contains('mirror-world')?'……画面が左右反転した！ 鏡写しバグ。':'鏡写しを元に戻した。');}}else if(d.setting==='autoRun')settings.autoRun=!settings.autoRun;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
-    if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
+    if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>window.PachiNative?.available?window.PachiNative.requestImport():$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
   function resize() {
     const small=matchMedia('(max-width: 600px)').matches;
@@ -6345,7 +6352,16 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     refresh:()=>{if(playing)updateAll();else loadStored();},
     toast
   };
+  LT.nativeBridge = {
+    exportSave: () => exportSave(),
+    importSave,
+    openSettings: () => { if(busy){toast('処理が終わってから設定を開いてください。');return;} showSettings(); },
+    background: () => { clearTouchDirections();pressedDirection=null;directionSource=null;sprint=false;padSprint=false;controller?.reset();if(playing)save();sound.suspend(); },
+    foreground: () => { clearTouchDirections();pressedDirection=null;directionSource=null;resize();if(settings.sound&&sound.ctx)sound.setEnabled(true); },
+    toast
+  };
   resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
+  window.PachiNative?.bindGame(LT.nativeBridge);
   document.dispatchEvent(new CustomEvent('pachi-admin-bridge-ready'));
   const refreshArtwork=event=>{portraitLoader.invalidate(event?.speciesIds);paintPortraits();};
   document.addEventListener('pachi-art-ready',refreshArtwork);
@@ -7437,7 +7453,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     switch(b.id){
       case 'link-host':await connect(true);break;
       case 'link-join':if(joinCode.length!==6){error='6文字のルームコードを入力してください。';render();}else await connect(false);break;
-      case 'link-copy':try{await navigator.clipboard.writeText(room);announce('ルームコードをコピーしました。');}catch(_){announce('コピーできませんでした。表示された6文字を相手に伝えてください。');}break;
+      case 'link-copy':try{if(window.PachiNative?.available)window.PachiNative.copyCode(room);else await navigator.clipboard.writeText(room);announce('ルームコードをコピーしました。');}catch(_){announce('コピーできませんでした。表示された6文字を相手に伝えてください。');}break;
       case 'link-ready':{b.disabled=true;try{const result=await session?.setTeam({name:name.trim()||LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName),ids:selected.slice(0,mode==='double'?4:3)});if(!result?.ok)failure(result?.error||'チームを確認してください。');else error='';}catch(err){failure(err);}finally{render();}break;}
       case 'link-submit':{if(LT.BattleVFX?.onlineBusy?.(view?.battle,performance.now()))break;const result=await session?.submit(orders);if(result&&!result.ok)failure(result.error);else{error='';render();}break;}
       case 'link-reset':reset();break;

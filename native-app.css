@@ -1,0 +1,19 @@
+/* The WKWebView already lives inside iOS safe areas. */
+html.native-app {
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+.native-app body { overscroll-behavior: none; }
+.native-app .title-platform { font-size: 0; }
+.native-app .title-platform::after { content: "iPhone / iPad"; font: 700 11px system-ui, sans-serif; }
+.native-app .title-copy, .native-app button, .native-app input, .native-app select {
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+}
+.native-app .site-footer, .native-app .game-info { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .native-app *, .native-app *::before, .native-app *::after {
+    scroll-behavior: auto !important;
+  }
+}

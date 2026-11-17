@@ -1,0 +1,18 @@
+# Generated iOS web payload and local build products.
+ios/PachiMon/Resources/Web/
+ios/build/
+build/ios/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+*.ipa
+*.xcarchive
+*.xcresult
+# Never commit signing material.
+*.p12
+*.p8
+*.mobileprovision
+*.keychain-db
+node_modules/
+playwright-report/
+test-results/
