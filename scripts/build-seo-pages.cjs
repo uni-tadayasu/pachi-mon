@@ -39,7 +39,7 @@ const habitats = {};
 for (const m of Object.values(D.maps)) for (const sid of m.encounters || []) (habitats[sid] ||= new Map()).set(m.name, m.level);
 function obtain(id) {
   const s = D.species[id];
-  if (id === D.legendary?.species) return `街や室内を含む全マップで、移動1歩ごとに1/${D.legendary.encounterOdds}の確率で出現する伝説のパチモン（野生Lv.${D.legendary.minLevel}）。`;
+  if (id === D.legendary?.species) return `野生のパチモンが出る草むらだけに現れ、草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出現する伝説のパチモン（野生Lv.${D.legendary.minLevel}）。`;
   if (s.adminOnly) return '運営専用の幻のパチモン。一般の冒険で入手する方法はありません。';
   if (s.specialOnly) return '運営からの配布で受け取れる特別なパチモン。';
   if (D.starters.includes(id)) return '冒険の最初に選べる相棒の1体（野生には出現しません）。';
@@ -188,7 +188,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <h2 id="evolve">進化と育成</h2>
   <p>バトルの経験値はパーティー全員で分け合います。レベルの上限は100です。多くのパチモンはLv.8・12・16・22・24・32などで進化し、進化前の特徴を受け継いだ新しい姿になります。各パチモンの進化レベルは<a href="../monsters/">パチモン図鑑</a>で確認できます。</p>
   <h2 id="rare">伝説・幻・色違い</h2>
-  <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、街や室内を含むすべてのマップで、移動1歩ごとに1/${D.legendary.encounterOdds}の確率で現れます（Lv.${D.legendary.minLevel}）。HPを減らすほど捕まえやすくなりますが、捕獲率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
+  <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出会え（Lv.${D.legendary.minLevel}）、道・街・室内では現れません。HPを減らすほど捕まえやすくなりますが、捕獲率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
   <h2 id="journey">128ステージ・32の旅紋・2人のチャンピオン</h2>
   <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者、<strong>2人</strong>のチャンピオン。</p>
   <ul><li>4つのステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館の紋章守に勝つと旅紋がもらえます。深部からは自分の町へ戻る近道があります。</li>

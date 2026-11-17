@@ -23,7 +23,7 @@ function position(e,map,{grass=false}={}){
   return false;
 }
 
-assert.equal(L.encounterOdds,700);assert.equal(L.rollUnit,'successful-walking-step');
+assert.equal(L.encounterOdds,700);assert.equal(L.rollUnit,'wild-grass-step');
 assert.equal(L.minLevel,70);assert.equal(L.maxLevel,70,'Wild legendary level is fixed at 70');
 assert.equal(L.species,'arvelion');assert.equal(D.content.species,254);assert.equal(D.content.totalSpecies,256);
 assert.equal(D.species.arvelion.rarity,'legendary');assert(!D.species.arvelion.evolvesTo);assert(!D.species.arvelion.specialOnly);
@@ -36,10 +36,13 @@ assert.equal(D.species.arvelion.element,'ember');
 assert(D.species.arvelion.moves.every(id=>D.moves[id].element==='ember'),'All four legendary techniques are lamp type');
 assert.equal(D.moves.arvelion_rend.category,'physical');assert.equal(D.moves.arvelion_nova.category,'special');
 
-// A successful step rolls on all maps, even indoors and during grass cooldown.
+// Arvelion appears only from wild grass: a step onto grass rolls on every stage
+// with wild monsters, even during the ordinary grass cooldown.
+const wildGrassMaps=Object.values(D.maps).filter(map=>map.encounters.length&&map.tiles.some(row=>row.includes(':')));
+assert(wildGrassMaps.length>=120,'Every wild stage has grass');
 let mapsChecked=0;
-for(const map of Object.values(D.maps)){
-  const e=make();assert(position(e,map),`Need an ordinary path on ${map.id}`);
+for(const map of wildGrassMaps){
+  const e=make();assert(position(e,map,{grass:true}),`Need a grass step on ${map.id}`);
   e.encounterCooldown=99;const before=e.state.steps,calls=sequence(e,[0,.999999,.5]);
   const result=e.move(1,0);
   assert(result.ok&&result.battleStarted&&result.legendaryEncounter,map.id);
@@ -47,9 +50,18 @@ for(const map of Object.values(D.maps)){
   assert.equal(e.state.map,map.id);assert.equal(e.state.steps,before+1);assert.equal(calls(),3);
   mapsChecked++;
 }
+// Roads, towns, rooms and grass without wild monsters never roll at all.
+let quietMaps=0,tameGrass=0;
+for(const map of Object.values(D.maps)){
+  const e=make();assert(position(e,map),`Need an ordinary path on ${map.id}`);
+  e.encounterCooldown=0;e.rng=()=>{throw Error(`A step off the wild grass rolled on ${map.id}`);};
+  const result=e.move(1,0);assert(result.ok&&!result.battleStarted,map.id);quietMaps++;
+  if(!map.encounters.length&&position(e,map,{grass:true})){e.encounterCooldown=0;assert(e.move(1,0).ok);tameGrass++;}
+}
+assert.equal(quietMaps,Object.keys(D.maps).length);assert(tameGrass>=1,'Grass without wild monsters is covered');
 
 // Deterministic probability boundary: exactly one of 700 equally spaced rolls.
-let e=make(),legendaryCount=0;assert(position(e,D.maps.village));
+let e=make(),legendaryCount=0;assert(position(e,wildGrassMaps[0],{grass:true}));
 const origin={x:e.state.x,y:e.state.y};
 for(let i=0;i<700;i++){
   e.battle=null;Object.assign(e.state,origin);e.encounterCooldown=99;
@@ -60,7 +72,7 @@ for(let i=0;i<700;i++){
 }
 assert.equal(legendaryCount,1);
 for(const [roll,expected]of [[1/700-Number.EPSILON,true],[1/700,false]]){
-  e.battle=null;Object.assign(e.state,origin);sequence(e,expected?[roll,0,.5]:[roll]);
+  e.battle=null;Object.assign(e.state,origin);e.encounterCooldown=99;sequence(e,expected?[roll,0,.5]:[roll]);
   assert.equal(!!e.move(1,0).legendaryEncounter,expected);
 }
 
@@ -81,18 +93,18 @@ for(const map of Object.values(D.maps)){
 }
 assert(testedLockedGate);
 
-// A map arrival is one step and one legendary roll, using the destination map.
-e=make();e.state.seals=Object.keys(D.guardians);let testedExit=false;
+// A map arrival is a step onto a gate, not grass: it never rolls.
+e=make();e.state.seals=Object.keys(D.guardians);e.state.flags.championWon=true;let testedExits=0;
 for(const map of Object.values(D.maps)){
-  if(testedExit)break;e.state.map=map.id;
   for(const exit of map.exits){
     const x=exit.x-1,y=exit.y;if(!e.walkable(map,x,y)||!e.walkable(map,exit.x,exit.y))continue;
-    e.state.x=x;e.state.y=y;const calls=sequence(e,[0,0,.5]);
-    const result=e.move(1,0);assert(result.mapChanged&&result.legendaryEncounter);assert.equal(e.state.map,exit.to);assert.equal(calls(),3);
-    testedExit=true;break;
+    e.battle=null;e.state.map=map.id;e.state.x=x;e.state.y=y;e.encounterCooldown=0;
+    e.rng=()=>{throw Error(`A map arrival rolled: ${map.id} -> ${exit.to}`);};
+    const result=e.move(1,0);if(!result.ok)continue;
+    assert(result.mapChanged&&!result.battleStarted);assert.equal(e.state.map,exit.to);testedExits++;
   }
 }
-assert(testedExit);
+assert(testedExits>=100,`Arrivals checked: ${testedExits}`);
 
 // Missing the rare roll retains normal grass chance and original species pool.
 e=make();const grassy=Object.values(D.maps).find(map=>map.encounters.length&&position(e,map,{grass:true}));assert(grassy);
@@ -145,4 +157,4 @@ e.state.storage.pop();assert(e.receiveAdminLegendary(another).ok);
 const raw=e.serialize(),invalidCustom=copy(raw);invalidCustom.storage[0].customStats=copy(D.species.futo.base);assert.throws(()=>new Engine(invalidCustom));
 const invalidId=copy(raw);invalidId.storage[0].grantId='arbitrary-gift';assert.throws(()=>new Engine(invalidId));
 assert.equal(e.quests().find(quest=>quest.id==='all-voices').target,250);
-console.log(`Legendary checks passed: ${mapsChecked} maps, exact 1/700 walking roll, arrivals, independent shiny, 1–6% capture, all four moves, Lv100, save validation and once-only administrator membership.`);
+console.log(`Legendary checks passed: ${mapsChecked} maps, exact 1/700 roll on wild grass only (${quietMaps} maps quiet off the grass, ${testedExits} arrivals), independent shiny, 1–6% capture, all four moves, Lv100, save validation and once-only administrator membership.`);
