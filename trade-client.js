@@ -156,7 +156,7 @@
   function monName(mon){return mon?.nickname||LT.DATA.species[mon?.species]?.name||'未選択';}
   function card(person,label){
     const mon=person?.monster,species=LT.DATA.species[mon?.species],type=LT.DATA.elements[species?.element];
-    return `<article class="trade-card"><h3>${label}</h3><p class="trade-player">${escape(person?.name||'相手を待っています')}</p>${mon?`<canvas width="240" height="240" data-trade-portrait="${escape(mon.species)}" data-trade-shiny="${mon.shiny===true}" aria-label="${escape(monName(mon))}の姿"></canvas><strong>${escape(monName(mon))}${mon.shiny?' ✦':''}</strong><p>${escape(species?.name)} · ${escape(type?.name)}タイプ<br>Lv.${mon.level} · HP ${mon.hp}</p><span class="trade-confirmed">${person.confirmed?'確認済み':'未確認'}</span>`:'<p class="trade-empty">パチモンを選択中</p>'}</article>`;
+    return `<article class="trade-card"><h3>${label}</h3><p class="trade-player">${escape(person?.name||'相手を待っています')}</p>${mon?`<canvas width="240" height="240" data-trade-portrait="${escape(mon.species)}" data-trade-shiny="${mon.shiny===true}" aria-label="${escape(monName(mon))}の姿"></canvas><strong>${escape(monName(mon))}${mon.shiny?' ✦':''}</strong><p>${escape(species?.name)} · ${escape(type?.name)}タイプ<br>Lv.${mon.level} · 体力 ${mon.hp}</p><span class="trade-confirmed">${person.confirmed?'確認済み':'未確認'}</span>`:'<p class="trade-empty">パチモンを選択中</p>'}</article>`;
   }
   function ensureDialog(){
     if(dialog)return;
