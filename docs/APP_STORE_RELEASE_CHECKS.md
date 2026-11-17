@@ -6,15 +6,27 @@
 
 | 項目 | 記録 |
 | --- | --- |
-| 対象commit | 未記入 |
-| Marketing version / build | 未記入 |
+| 対象commit | `22ac035c1bf26245bda9f4fdf4334824094ca041`（PR #24、CI checkout: `b8278e28d8dceeecebe0d9271e675d045748d890`） |
+| Marketing version / build | Simulator設定: `1.0.0` / `1`。配布用の署名済みビルドは未作成 |
 | Bundle ID / Apple app numeric ID | 未確認 |
 | Apple会員資格・契約 | 未確認 |
-| iOS validationのURLと結論 | 未実行または結果未転記 |
+| iOS validationのURLと結論 | [Run 44052196023](https://github.com/uni-tadayasu/pachi-mon/actions/runs/44052196023) — **success**（2026-11-17 JST） |
 | 署名・アップロードrunのURLと結論 | 未送信または結果未転記 |
 | App Store Connect処理結果 | 未確認 |
 | 本番 accountDeletionSupported | 初回作成時点でサーバー更新未反映 |
 | 公開privacy/supportのURL | 到達確認待ち |
+
+## 自動検証の実施結果
+
+上記runはXcode 26.2、iPhoneOS SDK 26.2、iOS 26.2のiPhone SE（第3世代）Simulator（arm64）で実行しました。サーバーテスト42件、アカウント削除のクライアントテスト5件、ネイティブbridgeの契約テストが成功しました。ゲーム資産は613ファイル・53.69 MiBを同梱しました。
+
+| iOSテスト | 結果 |
+| --- | --- |
+| 同梱ゲーム・Secure Context・localStorage・乱数/UUID/SHA-256・画像/canvas・RTC | 成功 |
+| ネイティブメニューからプライバシーポリシーを開く | 成功 |
+| 実PeerJS brokerとWebRTCを使う双方向データ送受信 | 成功 |
+
+XCTestは3件、失敗0件です。[ログ・xcresultのartifact](https://github.com/uni-tadayasu/pachi-mon/actions/runs/44052196023/artifacts/14314204850)は2026-11-24までの7日間保存です。以下の実機欄とApple側の署名・アップロード欄は、このSimulator結果だけでは完了にしません。
 
 ## 実機で確認すること
 

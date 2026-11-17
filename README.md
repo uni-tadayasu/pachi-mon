@@ -4,6 +4,18 @@
 
 **公開ページ：<https://www.kasai-solutions-inc.com/>**
 
+## iPhone／iPadアプリ
+
+ゲーム資産を同梱するiOS 16以降向けのXcodeプロジェクトは `ios/PachiMon.xcodeproj`、共有schemeは `PachiMon` です。共有画面・ファイル読み込み、操作の振動、バックグラウンド時の保存、ゲーム設定とデータ削除のメニューに対応します。
+
+Macで確認する場合は、リポジトリのルートで `node scripts/prepare-ios.mjs` を実行してからXcodeプロジェクトを開きます。GitHub ActionsでもiOS Simulatorの検証を実行できます。
+
+- [App Storeへの提出・署名設定](docs/APP_STORE_JA.md)
+- [実機・公開前の確認項目](docs/APP_STORE_RELEASE_CHECKS.md)
+- [日本語ストア掲載文と申告の下書き](app-store/README.md)
+
+Appleの登録・署名設定と、既存の通信サービスへの削除API反映が別途必要です。App Store Connectへのアップロード、審査、一般公開の実施状況はPRとActionsの結果を参照してください。
+
 ## 収録内容
 
 | 項目 | 内容 |

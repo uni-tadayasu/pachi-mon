@@ -88,7 +88,7 @@ accountDeletionSupported: true
 
 ### 署名せずに検証
 
-Pull Requestまたはmain以外のブランチへのpushで `iOS validation` が起動します。Actionsから手動実行もできます。
+Pull Requestの作成・更新で `iOS validation` が起動します。Actionsから手動実行もできます。mainへのpush時は `iOS App Store upload` が同じ検証ワークフローを呼び出します。ブランチへのpush単独では重複実行しません。
 
 実行内容:
 
