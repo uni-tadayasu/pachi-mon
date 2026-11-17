@@ -1017,3 +1017,14 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
 /* Offline play (settings) */
 .offline-setting .offline-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:9.5em}
 .offline-setting #offline-status{margin:4px 0;color:var(--pm-text-2)}
+
+/* ---------- Publisher screen and title music note ---------- */
+.company-splash{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:#000;opacity:0;transition:opacity .3s ease;pointer-events:none}
+.company-splash.is-in{opacity:1}
+.company-splash.is-done{opacity:0;transition-duration:.38s}
+.company-splash-name{color:#fff;font-family:var(--pm-pixel);font-size:clamp(14px,3.2vw,30px);letter-spacing:.16em;text-align:center;text-shadow:none;opacity:0;transition:opacity .32s ease .14s;white-space:nowrap}
+.company-splash.is-in .company-splash-name{opacity:1}
+.company-splash.is-out .company-splash-name{opacity:0;transition-delay:0s}
+.reduce-motion .company-splash,.reduce-motion .company-splash-name{transition:none}
+@media (prefers-reduced-motion:reduce){.company-splash,.company-splash-name{transition:none}}
+.title-audio-hint{margin:6px 0 0;font-size:12px;line-height:1.6;color:var(--pm-gold)}
