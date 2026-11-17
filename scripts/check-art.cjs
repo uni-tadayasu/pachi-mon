@@ -136,9 +136,9 @@ async function main() {
   const { LT, engine, beforeLoad, afterLoad } = await runtime();
   await progress('Base artwork loaded');
   const species = Object.values(LT.DATA.species).filter(s => !s.specialOnly), maps = Object.values(LT.DATA.maps);
-  assert.equal(species.length, 260, 'Species count changed');
-  assert.equal(maps.filter(m => !m.interior).length, 64, 'Outdoor map count changed');
-  assert.equal(maps.filter(m => m.interior).length, 54, 'Interior map count changed');
+  assert.equal(species.length, 254, 'Species count changed');
+  assert.equal(maps.filter(m => !m.interior).length, 128, 'Outdoor map count changed');
+  assert.equal(maps.filter(m => m.interior).length, 104, 'Interior map count changed');
   assert.equal(new Set(species.map(s => s.shape)).size, 29, 'Expected 29 creature forms');
   assert(LT.CreatureArt.status().futoLoaded, 'Supplied Futo artwork did not load');
   visible(LT.CreatureArt.get('futo'), 'Supplied Futo illustration', true);

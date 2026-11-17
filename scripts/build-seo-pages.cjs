@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* Builds the indexable companion pages from the shipped game data:
- *   monsters/index.html       — the full encyclopedia (262 species)
+ *   monsters/index.html       — the full encyclopedia (256 species)
  *   monsters/<id>.html        — one page per species
  *   guide/index.html          — beginner and system guide
  *   sitemap.xml               — every public page
@@ -161,7 +161,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
 <article class="window guide">
   <h1>パチモン攻略ガイド｜遊び方・バトル・進化のコツ</h1>
   <p class="lead">「パチモン」はブラウザで遊べる無料のドット絵モンスター育成RPGです。登録やインストールは不要で、PC・スマートフォン・ゲームパッドで遊べます。このページでは、はじめての冒険に役立つ基本とコツをまとめています。</p>
-  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">パチモンの捕まえ方</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">旅紋と星路評議会</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
+  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">パチモンの捕まえ方</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">128ステージと2人のチャンピオン</a></li><li><a href="#stages">全128ステージ一覧</a></li><li><a href="#secrets">隠し要素と裏技</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
   <h2 id="start">冒険のはじめかた</h2>
   <p>トップページの「旅をはじめる」から主人公（男性・女性）と名前を決め、最初の相棒を3体から選びます。相棒は2回進化し、最後まで一緒に戦えます。</p>
   <ul>${starterLines.map(line => `<li>${line.map((id, i) => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>${i < line.length - 1 ? `（Lv.${D.species[id].evolveLevel}）→ ` : ''}`).join('')}（${esc(typeName(D.species[line[0]].element))}）</li>`).join('')}</ul>
@@ -189,8 +189,16 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>バトルの経験値はパーティー全員で分け合います。レベルの上限は100です。多くのパチモンはLv.8・12・16・22・24・32などで進化し、進化前の特徴を受け継いだ新しい姿になります。各パチモンの進化レベルは<a href="../monsters/">パチモン図鑑</a>で確認できます。</p>
   <h2 id="rare">伝説・幻・色違い</h2>
   <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、街や室内を含むすべてのマップで、移動1歩ごとに1/${D.legendary.encounterOdds}の確率で現れます（Lv.${D.legendary.minLevel}）。HPを減らすほど捕まえやすくなりますが、捕獲率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
-  <h2 id="journey">旅紋と星路評議会</h2>
-  <p>各地の紋章館にいる16人の紋章守に勝つと旅紋がもらえ、新しい地方への道が開きます。16個の旅紋を集めると、四境の守護者4人と星路の継承者に挑む「星路評議会」へ進めます。旅紋を手に入れた紋章守には何度でも再戦できます。50階の星詠みの塔や旅の依頼など、クリア後の遊びもあります。</p>
+  <h2 id="journey">128ステージ・32の旅紋・2人のチャンピオン</h2>
+  <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者、<strong>2人</strong>のチャンピオン。</p>
+  <ul><li>4つのステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館の紋章守に勝つと旅紋がもらえます。深部からは自分の町へ戻る近道があります。</li>
+  <li>子午線（第1〜64ステージ）の16旅紋を集めると、第64ステージ「${esc(D.maps.meridianleague.name)}」で四境の守護者4人と、1人目のチャンピオン「${esc(D.champion.name)}」に挑めます。</li>
+  <li>勝つと評議院の東門から卯酉線（第65〜128ステージ）へ。さらに16旅紋（合計32）を集めると、第128ステージ「${esc(D.maps.zenithcrossing.name)}」で2人目のチャンピオン「${esc(D.champion2.name)}」（Lv.100）が待っています。</li>
+  <li>旅紋を手に入れた紋章守には何度でも再戦できます。50階の星詠みの塔や旅の依頼など、クリア後の遊びもあります。</li></ul>
+  <h2 id="stages">全128ステージ一覧</h2>
+  <div class="table-wrap"><table><thead><tr><th>地方</th><th>旅紋</th><th>町</th><th>道</th><th>名所</th><th>深部</th></tr></thead><tbody>${Array.from({ length: 32 }, (_, d) => { const ms = D.regionIds.slice(d * 4, d * 4 + 4).map(id => D.maps[id]), g = Object.values(D.guardians)[d]; return `<tr><th>${d < 16 ? '子午線' : '卯酉線'} 第${d + 1}地方<br><small>${esc(ms[0].region)}</small></th><td>${esc(g.seal)}<br><small>${esc(g.name)}</small></td>${ms.map(m => `<td>${String(m.stage).padStart(3, '0')} ${esc(m.name)}${m.encounters.length ? `<br><small>Lv.${m.level[0]}〜${m.level[1]}</small>` : ''}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>
+  <h2 id="secrets">16の隠し要素と8つの裏技</h2>
+  <p>冒険中のメニュー「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。見つける前はヒントだけが表示されます。たとえば「${esc(D.secrets[2].hint)}」「${esc(D.secrets[13].hint)}」——世界のどこかで試してみてください。</p>
   <h2 id="online">オンライン対戦・交換</h2>
   <p>メニューの「オンライン対戦」では、6文字のルームコードで友だちと1対1のシングル・ダブルバトルができます。通常のパチモンはLv.50のレンタルで公平に戦えます。「オンライン交換」では、コードで参加した相手と育てたパチモンを交換できます。</p>
   <h2 id="settings">便利な設定</h2>
@@ -198,7 +206,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'guide'), { recursive: true });
-fs.writeFileSync(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。操作方法、バトルの基本、5タイプの相性表、捕まえ方、進化、伝説・色違い、オンライン対戦・交換、便利な設定をまとめています。', body: guideBody,
+fs.writeFileSync(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。全128ステージ一覧、32の旅紋と2人のチャンピオン、操作方法、バトルの基本、5タイプの相性表、捕まえ方、進化、伝説・色違い、隠し要素、オンライン対戦をまとめています。', body: guideBody,
   jsonld: [crumbs([['トップ', `${SITE}/`], ['攻略ガイド', `${SITE}/guide/`]]), { '@context': 'https://schema.org', '@type': 'Article', headline: 'パチモン攻略ガイド', inLanguage: 'ja', dateModified: DATE, author: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, publisher: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, mainEntityOfPage: `${SITE}/guide/` }] }));
 
 // ---------- sitemap ----------

@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'ind
 for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(s[1]))continue;vm.runInContext(s[2],ctx);if(ctx.LT?.Engine)break;}
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
-const all=Object.keys(D.species);assert.equal(all.length,262);
+const all=Object.keys(D.species);assert.equal(all.length,256);
 // Every registered species is selectable, capturable with one capsule, and
 // round-trippable, including starter bases, special species and every evolution.
 for(const [i,id] of all.entries()){
@@ -118,13 +118,13 @@ function ui(){
 async function main(){
  const settle=()=>new Promise(resolve=>setImmediate(resolve));
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
- u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,262);
+ u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,256);
  u.dialog.querySelector('#secret-species').value='floravelle';await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],'floravelle');assert.equal(u.startCalls[0][1],70);assert(!u.dialog.open);
  u=ui();u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);assert(u.messages.some(m=>m.includes('運営専用')));
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.admin=false;await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,0);assert(u.dialog.open);
  assert(u.dialog.querySelector('#secret-status').textContent.includes('運営専用'));
  u=ui();for(let n=0;n<6;n++)u.tap();u.now+=2501;u.tap();await settle();assert.equal(u.authCalls,0);
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-level').value='101';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 262 species capture/save, Lv1/100, owner/input/battle/capacity guards, private permit, special receipts, hidden Futo growth across sync/reload and legacy gift updates, normal odds restored, bridge identity checks, seven-tap UI and fresh authorization on submit.');
+ console.log('Secret encounter checks passed: all 256 species capture/save, Lv1/100, owner/input/battle/capacity guards, private permit, special receipts, hidden Futo growth across sync/reload and legacy gift updates, normal odds restored, bridge identity checks, seven-tap UI and fresh authorization on submit.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

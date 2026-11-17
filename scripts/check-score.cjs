@@ -43,7 +43,7 @@ function scoreEvents(audio,id) {
   for(let i=0;i<count;i++){audio.ctx.currentTime=Math.max(0,audio.group.next-.179);audio.tick();}
   return {events,track};
 }
-test('all 32 original themes have finite, distinct complete arrangements in both quality modes',()=>{
+test('all 64 original themes have finite, distinct complete arrangements in both quality modes',()=>{
   for(const quality of ['low','high']){
     const signatures=new Set();
     for(const m of make(quality).manifest){
@@ -54,7 +54,7 @@ test('all 32 original themes have finite, distinct complete arrangements in both
       assert(events.some(e=>e.time>track.duration*.8),'last section must be scheduled');
       signatures.add(JSON.stringify(events.filter(e=>!e.drum).slice(0,24).map(e=>[e.kind,e.midi,e.duration])));
     }
-    assert.equal(signatures.size,32);
+    assert.equal(signatures.size,64);
   }
 });
 test('real graph remains bounded with dense music and repeated layered move effects',()=>{

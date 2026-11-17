@@ -21,7 +21,7 @@ const canonical={hp:5000,atk:420,def:360,spAtk:520,spDef:410,speed:260,accuracy:
 const moves=['supernova','atlas_crystal_4','shell','starlight'];
 const grant=(id,overrides={})=>({grantId:id,species:'futo',level:100,stats:{...stats},moves:[...moves],...overrides});
 assert.equal(D.limits.level,100);
-assert.equal(Object.values(D.species).filter(s=>!s.specialOnly).length,260);
+assert.equal(Object.values(D.species).filter(s=>!s.specialOnly).length,254);
 assert.equal(D.species.futo.specialOnly,true);
 assert(Object.values(D.maps).every(m=>!m.encounters?.includes('futo')),'Futo is distribution-only');
 let e=engine(),m=e.state.party[0];e.battle={log:[],result:'won'};

@@ -821,3 +821,21 @@ html:not(.mobile-screen) .console-screen>.battle-panel.playing{grid-template-col
 .screen-mode-setting{display:block}
 .screen-mode-setting .screen-options{display:flex;flex-wrap:wrap;gap:6px}
 .screen-mode-setting .screen-options .btn{flex:0 1 auto}
+
+/* ── Power-of-two edition: records ladder, secrets, mirror trick ─────────── */
+.ladder{list-style:none;margin:10px 0 18px;padding:0;display:grid;gap:6px}
+.ladder-row{display:grid;grid-template-columns:4.2em 8.5em 1fr auto;align-items:center;gap:10px;padding:6px 10px;background:rgba(10,18,66,.35);border:2px solid rgba(247,248,255,.25);clip-path:var(--pm-notch-sm,none);font-family:var(--pixel,inherit)}
+.ladder-row.done{border-color:var(--pm-gold,#ffd23f);background:rgba(255,210,63,.12)}
+.ladder-count{font-size:1.25em;color:var(--pm-gold,#ffd23f);text-shadow:2px 2px 0 #0a1242;text-align:right}
+.ladder-meter{height:10px;background:rgba(10,18,66,.6);border:2px solid rgba(247,248,255,.5)}
+.ladder-meter span{display:block;height:100%;background:#42e08a}
+.secret-list{list-style:none;margin:8px 0 16px;padding:0;display:grid;gap:6px}
+.secret-row{display:flex;gap:10px;align-items:flex-start;padding:6px 10px;border:2px dashed rgba(247,248,255,.3)}
+.secret-row.found{border-style:solid;border-color:var(--pm-gold,#ffd23f)}
+.secret-row p{margin:2px 0 0;font-size:.92em;opacity:.9}
+.secret-no{min-width:2.2em;font-family:var(--pixel,inherit);color:var(--pm-gold,#ffd23f)}
+.mirror-world #game-canvas{transform:scaleX(-1)}
+@media (max-width:600px){.ladder-row{grid-template-columns:3.4em 1fr auto;}.ladder-meter{grid-column:1 / -1;order:4}}
+.map-district{margin:18px 0 8px}
+.map-district small{color:var(--pm-gold,#ffd23f);font-size:.8em;margin-left:6px}
+@media (min-width:900px){#modal .map-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}

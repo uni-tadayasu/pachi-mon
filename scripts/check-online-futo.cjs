@@ -25,7 +25,7 @@ function setup() {
   for (const marker of ['deterministic, save-independent rental-team duels', 'peer-to-peer casual duel protocol']) vm.runInContext(select(marker), context);
   const LT = context.LT;
   const normal = Object.keys(LT.DATA.species).filter(id => !LT.DATA.species[id].specialOnly);
-  assert.equal(normal.length,260,'Online test must load the full production species data');
+  assert.equal(normal.length,254,'Online test must load the full production species data');
   for(const id of ['komorizen','shizunaria','akehomura'])assert(normal.includes(id),`Missing starter final form ${id}`);
   const custom = { hp: 1300, atk: 220, def: 190, spAtk: 410, spDef: 305, speed: 276, accuracy: 130, evasion: 115 };
   const moves = LT.DATA.species.futo.moves.slice();
@@ -187,7 +187,7 @@ async function combatScenarios(env) {
     assert(LT.OnlineFuto.rosterIds(normal).includes('futo'));
     assert(normal.includes('arvelion'),'Legendary production data must be loaded');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'),'Unowned legendary is not a free rental');
-    assert.equal(LT.OnlineFuto.rosterIds(normal).filter(id=>id!=='futo').length,259);
+    assert.equal(LT.OnlineFuto.rosterIds(normal).filter(id=>id!=='futo').length,253);
     const savedState = JSON.stringify(state);
     const rentals = env.pair(); await rentals.start();
     assert((await rentals.sessions[0].setTeam({ name: 'A', ids: normal.slice(0, 3) })).ok);
