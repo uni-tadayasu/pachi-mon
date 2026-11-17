@@ -1,0 +1,17 @@
+// This Bundle ID is a project default. Register it in your Apple team, or
+// override PACHI_BUNDLE_IDENTIFIER before the first App Store app record.
+PACHI_BUNDLE_IDENTIFIER = com.kasaisolutions.pachimon
+PRODUCT_BUNDLE_IDENTIFIER = $(PACHI_BUNDLE_IDENTIFIER)
+MARKETING_VERSION = 1.0.0
+CURRENT_PROJECT_VERSION = 1
+IPHONEOS_DEPLOYMENT_TARGET = 16.0
+SWIFT_VERSION = 5.0
+SWIFT_STRICT_CONCURRENCY = minimal
+TARGETED_DEVICE_FAMILY = 1,2
+CODE_SIGN_STYLE = Automatic
+SUPPORTS_MACCATALYST = NO
+SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO
+SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO
+ENABLE_USER_SCRIPT_SANDBOXING = YES
+// Optional per-developer settings; never commit signing credentials.
+#include? "Local.xcconfig"
