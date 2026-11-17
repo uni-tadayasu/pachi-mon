@@ -131,3 +131,17 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+ローカル通信（QRコード）で使用する外部ライブラリー
+================================================
+local-link.js は、近くの端末どうしで接続用のコードをやり取りするために、
+次の2つのライブラリーを vendor/ に同梱しています（必要になった時だけ読み込みます）。
+
+qrcode-generator 1.4.4（vendor/qrcode-generator.js）
+  Copyright (c) 2009 Kazuhiko Arase — MIT License
+  全文：vendor/qrcode-generator.LICENSE.txt
+  The word "QR Code" is registered trademark of DENSO WAVE INCORPORATED.
+
+jsQR 1.4.0（vendor/jsQR.js）
+  Copyright Cosmo Wolfe and contributors — Apache License 2.0
+  全文：vendor/jsQR.LICENSE.txt

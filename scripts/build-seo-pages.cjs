@@ -172,7 +172,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
 <article class="window guide">
   <h1>パチモン攻略ガイド｜遊び方・バトル・進化のコツ</h1>
   <p class="lead">「パチモン」はブラウザで遊べる無料のドット絵モンスター育成RPGです。登録やインストールは不要で、PC・スマートフォン・ゲームパッドで遊べます。このページでは、はじめての冒険に役立つ基本とコツをまとめています。</p>
-  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">パチモンの捕まえ方</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">128ステージと2人のチャンピオン</a></li><li><a href="#stages">全128ステージ一覧</a></li><li><a href="#conditions">状態異常</a></li><li><a href="#held">持ち物48種</a></li><li><a href="#growth">性別と振り分けポイント</a></li><li><a href="#secrets">隠し要素と裏技</a></li><li><a href="#moves">技とエフェクト</a></li><li><a href="#offline">オフラインで遊ぶ</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
+  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">パチモンの捕まえ方</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">128ステージと2人のチャンピオン</a></li><li><a href="#stages">全128ステージ一覧</a></li><li><a href="#conditions">状態異常</a></li><li><a href="#held">持ち物48種</a></li><li><a href="#growth">性別と振り分けポイント</a></li><li><a href="#secrets">隠し要素と裏技</a></li><li><a href="#moves">技とエフェクト</a></li><li><a href="#offline">オフラインで遊ぶ</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#local">ローカル通信（近くの友だちと）</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
   <h2 id="start">冒険のはじめかた</h2>
   <p>トップページの「旅をはじめる」から主人公（男性・女性）と名前を決め、最初の相棒を3体から選びます。相棒は2回進化し、最後まで一緒に戦えます。</p>
   <ul>${starterLines.map(line => `<li>${line.map((id, i) => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>${i < line.length - 1 ? `（Lv.${D.species[id].evolveLevel}）→ ` : ''}`).join('')}（${esc(typeName(D.species[line[0]].element))}）</li>`).join('')}</ul>
@@ -220,10 +220,14 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>冒険中のメニュー「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。見つける前はヒントだけが表示されます。たとえば「${esc(D.secrets[2].hint)}」「${esc(D.secrets[13].hint)}」——世界のどこかで試してみてください。</p>
   <h2 id="online">オンライン対戦・交換</h2>
   <p>メニューの「オンライン対戦」では、6文字のルームコードで友だちと1対1のシングル・ダブルバトルができます。通常のパチモンはLv.50のレンタルで公平に戦えます。「オンライン交換」では、コードで参加した相手と育てたパチモンを交換できます。</p>
+  <h2 id="local">ローカル通信（インターネットなしで近くの友だちと）</h2>
+  <p>メニューの「ローカル通信」では、同じWi-Fi（またはスマホのテザリング）につないだ近くの端末どうしで、インターネットなしで対戦・交換できます。つなぎ方は3ステップです。</p>
+  <ol><li>片方が「部屋をつくる」を押して、画面にQRコードを表示します。</li><li>もう片方が「カメラで読み取って参加」でそのQRコードを読み取ると、参加する側の画面に別のQRコードが出ます。</li><li>部屋をつくった人がそのQRコードを読み取ると接続完了です。カメラがない端末は、表示されたコードを貼り付けても接続できます。</li></ol>
+  <p>対戦のルールはオンライン対戦と同じです（運営の確認が必要なフート・幻は編成できません）。交換は、お互いが出すパチモンを選んで「この内容で交換する」を押すと成立し、両方の冒険記録に保存されます。通信は2台の間だけで行い、サーバーは使いません。</p>
   <h2 id="moves">技（全${Object.keys(D.moves).length}種）とエフェクト</h2>
   <p>技は5タイプ×15種、無属性6種、特別な技15種の全${Object.keys(D.moves).length}種です。各タイプには、物理・特殊の弱い技から大技、捨て身の技（反動あり）、相手の体力を吸う技、守りを貫く技、回復、守りまでそろっています。攻撃技はタイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
   <h2 id="offline">オフラインで遊ぶ</h2>
-  <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像（約44MB）もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。オンライン対戦・通信交換はインターネット接続が必要です。</p>
+  <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像（約44MB）もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
   <h2 id="settings">便利な設定</h2>
   <ul><li><strong>画面モード</strong>：携帯機風の240ドット表示（標準）、16ビット風、4階調の液晶（若葉・セピア・月夜・モノクロ）、高精細フルカラーから選べます。本体の「液晶」ボタンでも切り替えられます。</li><li><strong>文字と演出の速さ</strong>：ゆっくり・ふつう・はやい・瞬間の4段階。演出中はA・Enterで早送りできます。</li><li><strong>常にダッシュ</strong>：移動を常に早足にします。</li><li><strong>灯渡り</strong>：ワールドマップから、一度訪れた地域へすぐに移動できます。</li></ul>
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>

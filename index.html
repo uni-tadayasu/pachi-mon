@@ -95,7 +95,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 }</style>
 <link rel="stylesheet" href="mobile-screen.css?v=20261116">
   <title>パチモン｜無料のドット絵モンスター育成RPG（ブラウザ・スマホで遊べる）</title>
-  <meta name="description" content="パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、96種の技、128のステージ、64曲のBGM、32の旅紋、四境の守護者4人とチャンピオン2人。一度開けばオフラインでも遊べ、携帯ゲーム機風の操作画面とレトロ表示でPC・スマホからすぐ遊べます。">
+  <meta name="description" content="パチモンは登録不要・無料で遊べるブラウザ用ドット絵RPG。256種のパチモン、96種の技、128のステージ、64曲のBGM、32の旅紋、四境の守護者4人とチャンピオン2人。一度開けばオフラインでも遊べ、近くの友だちとはローカル通信で対戦・交換。携帯ゲーム機風の操作画面とレトロ表示でPC・スマホからすぐ遊べます。">
   <link rel="canonical" href="https://www.kasai-solutions-inc.com/">
   <link rel="alternate" hreflang="ja" href="https://www.kasai-solutions-inc.com/">
   <link rel="alternate" hreflang="x-default" href="https://www.kasai-solutions-inc.com/">
@@ -246,6 +246,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         "96種の技と24種類の技エフェクト（技一覧ページあり）",
         "最初の相棒が二段進化で覚える特別な技",
         "オフラインプレイ（ホーム画面に追加して起動）",
+        "ローカル通信：インターネットなしで近くの友だちと対戦・交換（QRコードで接続）",
         "体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避の8能力と振り分けポイント",
         "全256種で異なる色違いの配色"
       ],
@@ -269,7 +270,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
   <link rel="stylesheet" href="pachi-ui.css?v=20261117-offline">
-  <script type="application/ld+json" id="faq-jsonld">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"伝説のアルヴェリオンにはどう出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに700分の1の確率で出現し、道・街・室内では出現しません。野生のレベルは70固定。捕獲率は体力満タン時1%、残り体力1の時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。"}},{"@type":"Question","name":"運営専用の幻パチモンとは？","acceptedAnswer":{"@type":"Answer","text":"芽タイプのフロラヴェールです。運営だけが初期メンバーとしてLv70で受け取れます。野生出現・一般配布はなく、進化せずLv100まで育ちます。通常の図鑑収集課題には含みません。"}},{"@type":"Question","name":"色違いのパチモンはどうやって出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、色違いの配色は256種すべてで異なります。捕獲後も進化後も色違いを引き継ぎます（進化すると色違いの色も変わります）。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。"}},{"@type":"Question","name":"パチモンの名前や主人公は選べますか？","acceptedAnswer":{"@type":"Answer","text":"冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。"}},{"@type":"Question","name":"レベル上限とフートの成長について教えてください。","acceptedAnswer":{"@type":"Answer","text":"すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。"}},{"@type":"Question","name":"オフラインでも遊べますか？","acceptedAnswer":{"@type":"Answer","text":"はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。オンライン対戦・通信交換はインターネット接続が必要です。"}},{"@type":"Question","name":"技は何種類ありますか？","acceptedAnswer":{"@type":"Answer","text":"全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。"}},{"@type":"Question","name":"登録やインストールは必要ですか？","acceptedAnswer":{"@type":"Answer","text":"アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。"}},{"@type":"Question","name":"冒険の記録を引き継ぐには？","acceptedAnswer":{"@type":"Answer","text":"同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。"}},{"@type":"Question","name":"建物の中には、どうやって入りますか？","acceptedAnswer":{"@type":"Answer","text":"建物の入口に向かって歩くと室内へ移動します。室内の出口から外へ戻れます。道具店、宿、住居などを探索し、近くの人には決定ボタンで話しかけましょう。"}},{"@type":"Question","name":"音が出ないときや、動作が重いときは？","acceptedAnswer":{"@type":"Answer","text":"ブラウザーの制限により、音声はクリックやタップの後に再生されます。サウンドをONにして、音量と端末側の設定を確認してください。「遊び方・設定」から画質を標準・軽量へ変更できます。音楽はWeb Audioで再生するオリジナル楽曲です。"}},{"@type":"Question","name":"対戦相手はほかのプレイヤーですか？","acceptedAnswer":{"@type":"Answer","text":"冒険の調律士はCPUです。「オンライン対戦」（冒険中はメニューから）では、6文字のルームコードを友だちに伝えてプレイヤー1人対1人で戦えます。シングルは1体ずつ、ダブルは2体ずつを場に出します。通常253種に加え、アルヴェリオンは所持している場合に編成できます。レベル50統一で戦い、冒険のセーブには影響しません。接続には外部のPeerJS共有サービスを利用し、サービスや回線の状況によって接続できない場合があります。交換機能はありません。"}}]}</script>
+  <script type="application/ld+json" id="faq-jsonld">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"伝説のアルヴェリオンにはどう出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに700分の1の確率で出現し、道・街・室内では出現しません。野生のレベルは70固定。捕獲率は体力満タン時1%、残り体力1の時6%です。進化せず、レベル100まで育ちます。運営は初期メンバーとして使えますが、配布はできません。"}},{"@type":"Question","name":"運営専用の幻パチモンとは？","acceptedAnswer":{"@type":"Answer","text":"芽タイプのフロラヴェールです。運営だけが初期メンバーとしてLv70で受け取れます。野生出現・一般配布はなく、進化せずLv100まで育ちます。通常の図鑑収集課題には含みません。"}},{"@type":"Question","name":"色違いのパチモンはどうやって出会えますか？","acceptedAnswer":{"@type":"Answer","text":"野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、色違いの配色は256種すべてで異なります。捕獲後も進化後も色違いを引き継ぎます（進化すると色違いの色も変わります）。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。"}},{"@type":"Question","name":"パチモンの名前や主人公は選べますか？","acceptedAnswer":{"@type":"Answer","text":"冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。"}},{"@type":"Question","name":"レベル上限とフートの成長について教えてください。","acceptedAnswer":{"@type":"Answer","text":"すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。"}},{"@type":"Question","name":"オフラインでも遊べますか？","acceptedAnswer":{"@type":"Answer","text":"はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。インターネットがなくても、近くの端末とは「ローカル通信」で対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。"}},{"@type":"Question","name":"技は何種類ありますか？","acceptedAnswer":{"@type":"Answer","text":"全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。"}},{"@type":"Question","name":"登録やインストールは必要ですか？","acceptedAnswer":{"@type":"Answer","text":"アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。"}},{"@type":"Question","name":"冒険の記録を引き継ぐには？","acceptedAnswer":{"@type":"Answer","text":"同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。"}},{"@type":"Question","name":"建物の中には、どうやって入りますか？","acceptedAnswer":{"@type":"Answer","text":"建物の入口に向かって歩くと室内へ移動します。室内の出口から外へ戻れます。道具店、宿、住居などを探索し、近くの人には決定ボタンで話しかけましょう。"}},{"@type":"Question","name":"音が出ないときや、動作が重いときは？","acceptedAnswer":{"@type":"Answer","text":"ブラウザーの制限により、音声はクリックやタップの後に再生されます。サウンドをONにして、音量と端末側の設定を確認してください。「遊び方・設定」から画質を標準・軽量へ変更できます。音楽はWeb Audioで再生するオリジナル楽曲です。"}},{"@type":"Question","name":"対戦相手はほかのプレイヤーですか？","acceptedAnswer":{"@type":"Answer","text":"冒険の調律士はCPUです。「オンライン対戦」（冒険中はメニューから）では、6文字のルームコードを友だちに伝えてプレイヤー1人対1人で戦えます。シングルは1体ずつ、ダブルは2体ずつを場に出します。通常253種に加え、アルヴェリオンは所持している場合に編成できます。レベル50統一で戦い、冒険のセーブには影響しません。接続には外部のPeerJS共有サービスを利用し、サービスや回線の状況によって接続できない場合があります。交換機能はありません。"}},{"@type":"Question","name":"インターネットがなくても友だちと対戦・交換できますか？","acceptedAnswer":{"@type":"Answer","text":"はい。メニューの「ローカル通信」から、同じWi-Fi（またはスマホのテザリング）につないだ近くの端末どうしで対戦・交換できます。部屋をつくった人と参加する人が、お互いの画面のQRコードをカメラで読み取ると接続します（カメラがない端末はコードの貼り付けでも接続できます）。通信は2台の間だけで行い、サーバーは使いません。交換はお互いが内容を確認してから成立し、両方の冒険記録に保存されます。"}}]}</script>
 </head>
 <body>
   <!-- Original Pachi Monsters interface pixel icons. Copyright (c) 2026 KASAI SOLUTIONS INC. -->
@@ -352,6 +353,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     <path fill="currentColor" stroke="none" opacity=".24" d="M11 6h10v1h-10zM11 7h5v1h-5zM17 7h5v1h-5zM10 8h5v1h-5zM18 8h4v1h-4zM10 9h5v1h-5zM18 9h5v1h-5zM9 10h5v1h-5zM19 10h4v1h-4zM9 11h4v1h-4zM19 11h5v1h-5zM8 12h5v1h-5zM20 12h4v1h-4zM8 13h4v1h-4zM21 13h4v1h-4zM7 14h4v1h-4zM21 14h4v1h-4zM7 15h4v1h-4zM22 15h1v1h-1zM21 16h5v1h-5zM6 17h5v1h-5zM21 17h4v1h-4zM7 18h5v1h-5zM20 18h5v1h-5zM7 19h5v1h-5zM20 19h4v1h-4zM8 20h5v1h-5zM19 20h5v1h-5zM8 21h6v1h-6zM19 21h4v1h-4zM9 22h6v1h-6zM18 22h5v1h-5zM9 23h6v1h-6zM18 23h4v1h-4zM10 24h6v1h-6zM17 24h5v1h-5zM10 25h1v1h-1z"/>
     <path fill="currentColor" stroke="none" opacity=".55" d="M28 5h3v1h-3zM28 6h3v1h-3zM28 7h3v1h-3zM23 15h4v1h-4zM5 16h5v1h-5zM2 25h3v1h-3zM2 26h3v1h-3zM2 27h3v1h-3z"/>
     <path fill="currentColor" stroke="none" opacity="1" d="M9 3h14v1h-14zM8 4h16v1h-16zM8 5h16v1h-16zM7 6h4v1h-4zM21 6h4v1h-4zM7 7h4v1h-4zM16 7h1v1h-1zM22 7h3v1h-3zM6 8h4v1h-4zM15 8h3v1h-3zM22 8h4v1h-4zM6 9h4v1h-4zM15 9h3v1h-3zM23 9h3v1h-3zM5 10h4v1h-4zM14 10h5v1h-5zM23 10h4v1h-4zM5 11h4v1h-4zM13 11h3v1h-3zM17 11h2v1h-2zM24 11h4v1h-4zM4 12h4v1h-4zM13 12h2v1h-2zM17 12h3v1h-3zM24 12h4v1h-4zM4 13h4v1h-4zM12 13h3v1h-3zM18 13h3v1h-3zM25 13h4v1h-4zM3 14h4v1h-4zM11 14h3v1h-3zM18 14h3v1h-3zM25 14h4v1h-4zM3 15h4v1h-4zM11 15h3v1h-3zM19 15h3v1h-3zM27 15h3v1h-3zM2 16h3v1h-3zM10 16h3v1h-3zM19 16h2v1h-2zM26 16h4v1h-4zM2 17h4v1h-4zM11 17h3v1h-3zM18 17h3v1h-3zM25 17h4v1h-4zM3 18h4v1h-4zM12 18h3v1h-3zM18 18h2v1h-2zM25 18h4v1h-4zM3 19h4v1h-4zM12 19h3v1h-3zM17 19h3v1h-3zM24 19h4v1h-4zM4 20h4v1h-4zM13 20h3v1h-3zM17 20h2v1h-2zM24 20h4v1h-4zM4 21h4v1h-4zM14 21h5v1h-5zM23 21h4v1h-4zM5 22h4v1h-4zM15 22h3v1h-3zM23 22h4v1h-4zM5 23h4v1h-4zM15 23h3v1h-3zM22 23h5v1h-5zM6 24h4v1h-4zM16 24h1v1h-1zM22 24h4v1h-4zM6 25h4v1h-4zM11 25h15v1h-15zM7 26h18v1h-18zM7 27h18v1h-18zM8 28h9v1h-9zM8 29h1v1h-1z"/>
+  </symbol>
+  <symbol id="i-link" viewBox="0 0 32 32" fill="currentColor" stroke="none" shape-rendering="crispEdges">
+    <path fill="currentColor" stroke="none" opacity=".24" d="M3 8h5v8h-5zM24 8h5v8h-5z"/>
+    <path fill="currentColor" stroke="none" opacity=".55" d="M11 12h1v8h-1zM12 11h1v1h-1zM12 20h1v1h-1zM20 12h1v8h-1zM19 11h1v1h-1zM19 20h1v1h-1z"/>
+    <path fill="currentColor" stroke="none" opacity="1" d="M1 6h9v2h-9zM1 24h9v2h-9zM1 8h2v16h-2zM8 8h2v16h-2zM3 18h2v2h-2zM6 20h2v2h-2zM22 6h9v2h-9zM22 24h9v2h-9zM22 8h2v16h-2zM29 8h2v16h-2zM24 18h2v2h-2zM27 20h2v2h-2zM15 15h2v2h-2zM13 14h1v4h-1zM14 13h1v1h-1zM14 18h1v1h-1zM18 14h1v4h-1zM17 13h1v1h-1zM17 18h1v1h-1z"/>
   </symbol>
   <symbol id="i-switch" viewBox="0 0 32 32" fill="currentColor" stroke="none" shape-rendering="crispEdges">
     <path fill="currentColor" stroke="none" opacity=".24" d="M5 9h15v1h-15zM12 21h14v1h-14z"/>
@@ -570,11 +576,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         <details><summary>色違いのパチモンはどうやって出会えますか？</summary><p>野生のパチモンとの遭遇ごとに、1/3000の確率で色違いが出現します。色合いと輝きの印で見分けられ、色違いの配色は256種すべてで異なります。捕獲後も進化後も色違いを引き継ぎます（進化すると色違いの色も変わります）。確率は毎回独立しており、3000回目に必ず出る仕組みではありません。能力は通常色と同じです。</p></details>
         <details><summary>パチモンの名前や主人公は選べますか？</summary><p>冒険を始めるときに12文字までの主人公名と男性・女性の姿を選び、その後に最初の相棒を選びます。主人公名は冒険中のメニュー「主人公の名前」または「設定」から変更できます。手持ち・ひかえのパチモンには詳細画面から5文字までのニックネームを付けられます。空欄で保存すると元の名前に戻ります。</p></details>
         <details><summary>レベル上限とフートの成長について教えてください。</summary><p>すべてのパチモンのレベル上限は100です。通常の進化には進化前の特徴を引き継ぐ正面・背面の姿があります。最初の相棒のコモリ・シズク・ヒバナはレベル8と32で2段階進化します。ほかのパチモンには進化なし・1段階進化・2段階進化の系列があります。特別なフートもレベルに応じて能力が成長しますが、進化はしません。フートは運営による配布で仲間にできます。</p></details>
-        <details><summary>オフラインでも遊べますか？</summary><p>はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。オンライン対戦・通信交換はインターネット接続が必要です。</p></details><details><summary>技は何種類ありますか？</summary><p>全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。</p></details><details><summary>登録やインストールは必要ですか？</summary><p>アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
+        <details><summary>オフラインでも遊べますか？</summary><p>はい。一度インターネットにつないで開くと、ゲーム本体が端末に保存され、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像（約44MB）もまとめて保存できます。インターネットがなくても、近くの端末とは「ローカル通信」で対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p></details><details><summary>技は何種類ありますか？</summary><p>全96種です。芽・潮・灯・風・晶の各タイプに15種ずつ、無属性が6種、特別な技が15種あります。最初の相棒のコモリ・シズク・ヒバナは、二段進化するとそれぞれ特別な技を覚えます。技の演出は24種類のエフェクトで表現されます。</p></details><details><summary>登録やインストールは必要ですか？</summary><p>アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要ですが、一度開けば次からはオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。1人用の冒険の進行は端末内で処理されます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。</p></details>
         <details><summary>冒険の記録を引き継ぐには？</summary><p>同じ端末・同じブラウザーに自動保存されます。メニューの「記録を書き出す」でJSONファイルを保存し、別の端末では「記録を読み込む」から移せます。ブラウザーのデータを削除する前に書き出してください。以前のバージョンの記録も引き継げます。自動的な端末間同期はありません。</p></details>
         <details><summary>建物の中には、どうやって入りますか？</summary><p>建物の入口に向かって歩くと室内へ移動します。室内の出口から外へ戻れます。道具店、宿、住居などを探索し、近くの人には決定ボタンで話しかけましょう。</p></details>
         <details><summary>音が出ないときや、動作が重いときは？</summary><p>ブラウザーの制限により、音声はクリックやタップの後に再生されます。サウンドをONにして、音量と端末側の設定を確認してください。「遊び方・設定」から画質を標準・軽量へ変更できます。音楽はWeb Audioで再生するオリジナル楽曲です。</p></details>
-        <details><summary>対戦相手はほかのプレイヤーですか？</summary><p>冒険の調律士はCPUです。「オンライン対戦」（冒険中はメニューから）では、6文字のルームコードを友だちに伝えてプレイヤー1人対1人で戦えます。シングルは1体ずつ、ダブルは2体ずつを場に出します。通常253種に加え、アルヴェリオンは所持している場合に編成できます。レベル50統一で戦い、冒険のセーブには影響しません。接続には外部のPeerJS共有サービスを利用し、サービスや回線の状況によって接続できない場合があります。交換機能はありません。</p></details>
+        <details><summary>対戦相手はほかのプレイヤーですか？</summary><p>冒険の調律士はCPUです。「オンライン対戦」（冒険中はメニューから）では、6文字のルームコードを友だちに伝えてプレイヤー1人対1人で戦えます。シングルは1体ずつ、ダブルは2体ずつを場に出します。通常253種に加え、アルヴェリオンは所持している場合に編成できます。レベル50統一で戦い、冒険のセーブには影響しません。接続には外部のPeerJS共有サービスを利用し、サービスや回線の状況によって接続できない場合があります。交換機能はありません。</p></details><details><summary>インターネットがなくても友だちと対戦・交換できますか？</summary><p>はい。メニューの「ローカル通信」から、同じWi-Fi（またはスマホのテザリング）につないだ近くの端末どうしで対戦・交換できます。部屋をつくった人と参加する人が、お互いの画面のQRコードをカメラで読み取ると接続します（カメラがない端末はコードの貼り付けでも接続できます）。通信は2台の間だけで行い、サーバーは使いません。交換はお互いが内容を確認してから成立し、両方の冒険記録に保存されます。</p></details>
       </section>
       <footer class="game-info-footer"><span class="copyright-line">© 2026 KASAI SOLUTIONS INC.</span><a href="LICENSES.txt" target="_blank" rel="noopener">制作・ライセンス</a><a href="monsters/">パチモン図鑑</a><a href="guide/">攻略ガイド</a><a href="#title-screen">相棒を選んで、旅をはじめる <span aria-hidden="true">↑</span></a><a href="https://github.com/uni-tadayasu/pachi-mon" target="_blank" rel="noopener noreferrer">Pachi Monsters / ソースコード</a></footer>
     </div>
@@ -6292,7 +6298,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     } else chooseAvatar(true);
   }
   function showPlayerName(){
-    if(!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())){toast('冒険中の移動できるときに名前を変更できます。');return;}
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに名前を変更できます。');return;}
     const expectedEngine=engine;
     openModal('主人公の名前を変更',`<form id="player-name-form"><label class="nickname-label" for="player-name-input">主人公の名前（12文字まで）</label><input id="player-name-input" class="nickname-input" type="text" value="${escape(engine.state.playerName)}" autocomplete="off" spellcheck="false" aria-describedby="player-name-input-count player-name-help player-name-result"><p id="player-name-input-count" class="muted" aria-live="polite"></p><p id="player-name-help" class="muted">この冒険の主人公名を変更します。仲間のニックネームや育成記録はそのままです。</p><p id="player-name-result" class="notice" role="status" hidden></p><div class="modal-actions"><button class="btn" type="button" id="player-name-cancel">やめる</button><button class="btn btn-primary" type="submit" id="player-name-save">この名前で保存</button></div></form>`,'player-name');
     const input=$('player-name-input'),button=$('player-name-save'),binding=bindPlayerNameInput('player-name-input',()=>{},()=>[button]);
@@ -6301,7 +6307,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       event.preventDefault();if(button.disabled||binding.isComposing())return;
       const status=$('player-name-result');
       try{
-        if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||tradeLocked()))throw Error('冒険の状態が変わりました。もう一度開いてください。');
+        if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))throw Error('冒険の状態が変わりました。もう一度開いてください。');
         const candidate=new Engine(engine.serialize()),result=candidate.renamePlayer(input.value);
         if(!result.ok)throw Error(result.message);
         const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -6353,7 +6359,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal(`${DATA.items[id].name}を使う`, '<div class="switch-list">'+engine.state.party.map((m,i) => `<button class="party-card" data-heal="${i}" data-item="${id}" ${engine.checkItem(id,i).ok ? '' : 'disabled'}>${portrait(m,60)}<span class="party-meta"><strong>${escape(nameOf(m))}</strong><span class="party-stats">体力 ${m.hp} / ${engine.stats(m).hp}</span>${hpBar(m)}</span></button>`).join('')+'</div>');
   }
   function persistPartyOrder(uid,from,to,expectedEngine,expectedOrder){
-    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||tradeLocked()))return {ok:false,message:'移動できるときに並べ替えてください。'};
+    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'移動できるときに並べ替えてください。'};
     if(!Array.isArray(expectedOrder)||expectedOrder.length!==engine.state.party.length||expectedOrder.some((id,i)=>engine.state.party[i].uid!==id)||engine.state.party[from]?.uid!==uid)return {ok:false,message:'仲間の並びが変わりました。もう一度開いてください。'};
     try{
       const candidate=new Engine(engine.serialize()),result=candidate.moveParty(from,to);
@@ -6364,7 +6370,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(_){return {ok:false,message:'端末に保存できません。並びは変更していません。空き容量を確認して、もう一度お試しください。'};}
   }
   function showPartyOrder(selectedUid=null,message=''){
-    if(!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())){toast('冒険中の移動できるときに並べ替えられます。');return;}
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに並べ替えられます。');return;}
     const expectedEngine=engine,expectedOrder=engine.state.party.map(mon=>mon.uid);
     openModal('パーティーの並べ替え',`<p class="notice">「前へ」「後ろへ」で順番を変更できます。戦闘では、先頭から最初に動ける仲間が登場します。</p><p id="party-order-result" class="notice" role="status" aria-live="polite"${message?'':' hidden'}>${escape(message)}</p><div id="party-order-list" class="party-order-list">`+engine.state.party.map((mon,i)=>`<article class="party-order-row" id="party-order-row-${i}" tabindex="-1"><button type="button" class="party-card" data-party="${i}" aria-label="${i+1}番目 ${escape(nameOf(mon))}の詳細"><strong class="party-order-number">${i+1}</strong>${portrait(mon,54)}<span class="party-meta"><strong>${escape(nameOf(mon))}${i===0?' <small>先頭</small>':''}</strong><span class="party-stats">Lv.${mon.level} · 体力 ${mon.hp}/${engine.stats(mon).hp}</span></span></button><div class="party-order-controls" role="group" aria-label="${escape(nameOf(mon))}の順番"><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="${i-1}" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を1つ前へ"${i===0?' disabled':''}>↑ 前へ</button><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="${i+1}" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を1つ後ろへ"${i===engine.state.party.length-1?' disabled':''}>↓ 後ろへ</button><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="0" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を先頭へ"${i===0?' disabled':''}>先頭へ</button></div></article>`).join('')+'<div class="modal-actions"><button type="button" class="btn btn-primary" data-ui="close">完了</button></div></div>','party-order');
     $('party-order-list').onclick=event=>{
@@ -6437,7 +6443,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal(nameOf(mon),`<div class="creature-card">${creatureView(mon,180)}<div><h3>${escape(nameOf(mon))}</h3><p class="species-name">${escape(species.name)} · Lv.${mon.level}</p>${shinyBadge(mon)}${typeBadge(species.element)}<p>${escape(creatureDescription(species))}</p></div></div><div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-storage-slot="-2">← ひかえへ</button></div>`,'storage-detail');
   }
   function showNickname(uid){
-    const mon=findOwned(uid);if(!mon||engine.battle||(LT.onlineActive||tradeLocked()))return;
+    const mon=findOwned(uid);if(!mon||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;
     const expectedEngine=engine,returnToOwner=()=>{const index=engine.state.party.findIndex(m=>m.uid===uid);if(index>=0)showParty(index);else showStorageDetail(uid);};
     openModal('ニックネームをつける',`<div class="nickname-summary">${portrait(mon,88)}<div><strong>${escape(nameOf(mon))}</strong><p class="muted">${escape(DATA.species[mon.species].name)}</p></div></div><form id="nickname-form"><label class="nickname-label" for="nickname-input">ニックネーム（5文字まで）</label><input id="nickname-input" class="nickname-input" type="text" value="${escape(mon.nickname||'')}" placeholder="${escape(DATA.species[mon.species].name)}" autocomplete="off" spellcheck="false" aria-describedby="nickname-count nickname-help nickname-result"><p id="nickname-count" class="muted" aria-live="polite"></p><p id="nickname-help" class="muted">空欄で保存すると、本来の名前に戻ります。</p><p id="nickname-result" class="notice" role="status" hidden></p><div class="modal-actions"><button class="btn" type="button" id="nickname-cancel">やめる</button><button class="btn btn-primary" type="submit" id="nickname-save">この名前で保存</button></div></form>`,'nickname');
     const input=$('nickname-input'),button=$('nickname-save'),counter=$('nickname-count');let composing=false;
@@ -6448,7 +6454,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       event.preventDefault();if(button.disabled||composing)return;
       const status=$('nickname-result');
       try{
-        if(engine!==expectedEngine||!playing||engine.battle||(LT.onlineActive||tradeLocked())||!findOwned(uid))throw Error('仲間の状態が変わりました。もう一度開いてください。');
+        if(engine!==expectedEngine||!playing||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())||!findOwned(uid))throw Error('仲間の状態が変わりました。もう一度開いてください。');
         const candidate=new Engine(engine.serialize()),result=candidate.renameMonster(uid,input.value);
         if(!result.ok)throw Error(result.message);
         const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -6457,7 +6463,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     };
   }
   function persistRelease(index, source, uid, expectedEngine) {
-    if (!playing || busy || engine.battle || (LT.onlineActive||tradeLocked())) return {ok:false,message:'バトルや通信を終えてから、仲間を逃がしてください。'};
+    if (!playing || busy || engine.battle || (LT.onlineActive||LT.localTradeActive||tradeLocked())) return {ok:false,message:'バトルや通信を終えてから、仲間を逃がしてください。'};
     if (!['party','storage'].includes(source) || engine!==expectedEngine || !uid || engine.state[source][index]?.uid!==uid) return {ok:false,message:'仲間の一覧が変わったため、操作を中止しました。'};
     try {
       // Keep the current party, storage and gift receipts intact until the
@@ -6585,11 +6591,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   globalThis.window?.addEventListener?.('beforeinstallprompt',event=>{event.preventDefault();offlinePlay.installPrompt=event;renderOfflineStatus();});
   globalThis.window?.addEventListener?.('appinstalled',()=>{offlinePlay.installPrompt=null;renderOfflineStatus();toast('ホーム画面に追加しました。');});
-  globalThis.window?.addEventListener?.('offline',()=>toast('オフラインになりました。冒険はそのまま続けられます（オンライン対戦・交換は通信が必要です）。'));
+  globalThis.window?.addEventListener?.('offline',()=>toast('オフラインになりました。冒険はそのまま続けられ、近くの端末とは「ローカル通信」で対戦・交換できます。'));
   globalThis.window?.addEventListener?.('online',()=>toast('通信が戻りました。'));
   globalThis.window?.addEventListener?.('load',registerOfflinePlay);
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${[...(LT.RetroScreen?.order||[]),...(settings.glitchUnlocked&&LT.RetroScreen?.isMode('glitch')?['glitch']:[])].map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="setting-row offline-setting"><div><strong>オフラインで遊ぶ</strong><p id="offline-status">${escape(offlineStatusText(offlinePlay.status))}</p><small>画像をすべて保存すると、通信がない場所でもモンスターの姿まで表示されます（約44MB）。オンライン対戦・通信交換は通信が必要です。iPhoneは共有ボタンの「ホーム画面に追加」でアプリのように起動できます。</small></div><div class="offline-actions"><button type="button" class="btn btn-small" id="offline-store-btn" data-ui="offline-store">画像をすべて保存</button><button type="button" class="btn btn-small" id="install-app-btn" data-ui="install-app" hidden>ホーム画面に追加</button></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>ドット絵の粗さと液晶の色数を選べます。本体の「液晶」ボタンでも切り替えられます。</p><div class="quality-options screen-options">${[...(LT.RetroScreen?.order||[]),...(settings.glitchUnlocked&&LT.RetroScreen?.isMode('glitch')?['glitch']:[])].map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面にレトロな走査線と周辺減光を重ねます</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="setting-row offline-setting"><div><strong>オフラインで遊ぶ</strong><p id="offline-status">${escape(offlineStatusText(offlinePlay.status))}</p><small>画像をすべて保存すると、通信がない場所でもモンスターの姿まで表示されます（約44MB）。オンライン対戦・通信交換は通信が必要です。iPhoneは共有ボタンの「ホーム画面に追加」でアプリのように起動できます。</small></div><div class="offline-actions"><button type="button" class="btn btn-small" id="offline-store-btn" data-ui="offline-store">画像をすべて保存</button><button type="button" class="btn btn-small" id="install-app-btn" data-ui="install-app" hidden>ホーム画面に追加</button></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();requestOfflineStatus();
   }
   function bindVolume(){
@@ -6644,20 +6650,23 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showMenu() {
     if(!playing){showSettings();return;}
     if(!engine.battle&&tapStreak('stealth',7000)){const r=engine.activateStealth();if(r.ok){closeModal();toast('……主人公の姿が透けた！ 128歩のあいだ、野生のパチモンと出会わない。');announceDiscoveries();return;}}
-    const list=[['online','gamepad','オンライン対戦'],['trade','switch','オンライン交換'],['player-name','lantern','主人公の名前'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','旅紋と頂の手帳'],['records','trophy','冒険の記録 256→1'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['party-order','switch','パーティーの並べ替え'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
+    const list=[['online','gamepad','オンライン対戦'],['local','link','ローカル通信'],['trade','switch','オンライン交換'],['player-name','lantern','主人公の名前'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','旅紋と頂の手帳'],['records','trophy','冒険の記録 256→1'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['party-order','switch','パーティーの並べ替え'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
     openModal('冒険のメニュー',`<p class="notice">主人公：${escape(engine.state.playerName)}</p><div class="menu-grid">`+list.map(([id,icon,label])=>`<button class="btn" data-ui="${id}">${ico(icon)}<span>${label}</span></button>`).join('')+`</div><p class="muted">冒険時間 ${Math.floor(engine.state.playSeconds/60)}分 · ${engine.state.steps.toLocaleString('ja-JP')}歩 · 旅紋 ${engine.state.seals.length}/${sealCount}<br>記録はこの端末のブラウザに保存されています。</p>`,'menu');
   }
 
   function openOnlineFromMenu(){
     if(busy){toast('現在の演出が終わってから開いてください。');return;}
-    if(globalThis.navigator?.onLine===false){toast('オフラインのため、オンライン対戦は使えません。通信がつながってから開いてください。');return;}
     if(!LT.OnlineUI){toast('通信対戦を準備できません。ページを再読み込みしてください。');return;}
+    if(globalThis.navigator?.onLine===false){toast('オフラインのため、ローカル対戦（近くの端末どうし）で開きます。');save();closeModal();LT.OnlineUI.open({returnToMenu:true,transport:'local'});return;}
     save();closeModal();LT.OnlineUI.open({returnToMenu:true});
+  }
+  function showLocalMenu(){
+    openModal('ローカル通信',`<p class="notice">同じWi-Fi（またはスマホのテザリング）につないだ近くの端末どうしで、インターネットなしで対戦・交換できます。つなぎ方は、お互いの画面のQRコードを読み取るだけです（カメラがない端末はコードの貼り付けでも接続できます）。</p><div class="menu-grid local-menu"><button type="button" class="btn" data-ui="local-battle">${ico('gamepad')}<span>ローカル対戦<small>シングル・ダブル</small></span></button><button type="button" class="btn" data-ui="local-trade">${ico('switch')}<span>ローカル交換<small>手持ち・ひかえから1体</small></span></button></div>`,'local');
   }
   function openTradeFromMenu(){
     if(!playing||busy||engine.battle||LT.onlineActive){toast('冒険中の移動できるときに交換できます。');return;}
     if(!LT.Trade){toast('交換を準備できません。ページを再読み込みしてください。');return;}
-    if(globalThis.navigator?.onLine===false){toast('オフラインのため、通信交換は使えません。通信がつながってから開いてください。');return;}
+    if(globalThis.navigator?.onLine===false){toast('オフラインのため、通信交換は使えません。メニューの「ローカル通信」から、近くの端末とローカル交換できます。');return;}
     save();closeModal();LT.Trade.open();
   }
   function commitTrade(receipt){
@@ -6674,6 +6683,17 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(playing)updateAll();else loadStored();
       return result;
     }catch(error){return {ok:false,pending:true,message:error?.message||'交換結果を保存できません。空き容量を確認して再試行してください。'};}
+  }
+  // A dry run of commitTrade: would this receipt apply to the stored save now?
+  // Local trades confirm only after both sides pass it, so neither side commits alone.
+  function checkTrade(receipt){
+    if(busy||engine.battle&&playing)return {ok:false,message:'バトルが終わってから交換してください。'};
+    try{
+      const raw=localStorage.getItem(SAVE_KEY);
+      if(!raw)return {ok:false,message:'冒険記録が見つかりません。'};
+      const result=new Engine(JSON.parse(raw)).applyTrade(receipt);
+      return result.ok?{ok:true}:{ok:false,message:result.message};
+    }catch(error){return {ok:false,message:error?.message||'交換の内容を確認できませんでした。'};}
   }
   function showCredits(){
     openModal('制作・ライセンス',`<section class="credits-panel"><div class="credits-emblem" aria-hidden="true">${ico('lantern')}</div><p class="eyebrow">PACHI MONSTERS / ORIGINAL WORLD</p><h3>KASAI SOLUTIONS INC.</h3><p class="copyright-notice">© 2026 KASAI SOLUTIONS INC.</p><p>本プロジェクトで制作したキャラクター・地形・UI・BGMを使用しています。市販ゲームのROM・画像・音源は同梱していません。</p><p>通信機能はPeerJSと、その依存ライブラリーを使用しています。それぞれの権利者の表記・ライセンス条件を保持しています。</p><div class="credits-components"><span>PeerJS <small>MIT</small></span><span>EventEmitter3 <small>MIT</small></span><span>peerjs-js-binarypack <small>MIT</small></span><span>webrtc-adapter <small>BSD-3-Clause</small></span></div><a class="btn" href="LICENSES.txt" target="_blank" rel="noopener">著作権・ライセンスの全文を読む</a></section>`,'credits');
@@ -6703,7 +6723,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     save();playing=false;endingActive=false;updateScene();closeModal();$('title-screen').hidden=false;document.body.classList.remove('is-playing');window.scrollTo({top:0,behavior:'instant'});loadStored();paintPortraits($('title-screen'));
   }
   function walk(dx,dy) {
-    if (!playing || engine.battle || $('modal').open || (LT.onlineActive||tradeLocked()) || busy) return;
+    if (!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()) || busy) return;
     const old={x:engine.state.x,y:engine.state.y,map:engine.state.map};
     const result=engine.move(dx,dy);updateFacing();
     if(result.glitch)sound.fx('hit');
@@ -6721,7 +6741,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let sprint=false;
   const keyDirs={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
   window.addEventListener('keydown', e=>{
-    if((LT.onlineActive||tradeLocked()))return;
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked()))return;
     if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
     if(e.key==='Shift'){sprint=true;return;}
     if($('modal').open){
@@ -6759,7 +6779,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     for(const [pointerId,btn] of held){btn.classList.remove('pressed');if(btn.hasPointerCapture(pointerId))btn.releasePointerCapture(pointerId);}
   }
   document.querySelectorAll('[data-dir]').forEach(btn=>{
-    btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open || (LT.onlineActive||tradeLocked()))return;touchDirections.delete(e.pointerId);touchDirections.set(e.pointerId,btn);pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()))return;touchDirections.delete(e.pointerId);touchDirections.set(e.pointerId,btn);pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
     for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{
       if(touchDirections.get(e.pointerId)!==btn)return;
       touchDirections.delete(e.pointerId);
@@ -6792,8 +6812,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     for(const type of ['pointerup','pointercancel','lostpointercapture'])touchB.addEventListener(type,releaseB);
     touchB.addEventListener('contextmenu',event=>event.preventDefault());
   }
-  if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
-  if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
+  if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
+  if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
   $('battle-panel')?.addEventListener('pointerdown',()=>{if(busy&&engine.battle)battleSkip=true;});
   if($('console-palette'))$('console-palette').onclick=()=>{if(!LT.RetroScreen)return;settings.screen=LT.RetroScreen.next(settings.screen);saveSettings();toast(`画面モード：${LT.RetroScreen.label(settings.screen)}`);if(activePane==='settings')showSettings();};
   if($('touch-select'))$('touch-select').onclick=()=>{if(!playing)return;if(engine.battle){toast('バトル中は「バッグ」から道具を使えます。');return;}showBag();};
@@ -6857,6 +6877,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.quality){settings.quality=d.quality;sound.setQuality(settings.quality==='low'?'low':'high');resize();saveSettings();showSettings();return;}
     if(d.setting){if(d.setting==='sound'){settings.sound=!settings.sound;sound.setEnabled(settings.sound);}else if(d.setting==='dayNight')settings.dayNight=!settings.dayNight;else if(d.setting==='crt'){settings.crt=!settings.crt;if(tapStreak('mirror',9000)){document.documentElement.classList.toggle('mirror-world');noteTrick('mirror');toast(document.documentElement.classList.contains('mirror-world')?'……画面が左右反転した！ 鏡写しバグ。':'鏡写しを元に戻した。');}}else if(d.setting==='autoRun')settings.autoRun=!settings.autoRun;else settings.reducedMotion=!settings.reducedMotion;saveSettings();updateSound();showSettings();return;}
     if(d.ui==='offline-store'){storeAllOffline();return;}
+    if(d.ui==='local'){showLocalMenu();return;}
+    if(d.ui==='local-battle'){if(busy){toast('現在の演出が終わってから開いてください。');return;}if(!LT.OnlineUI){toast('対戦を準備できません。ページを再読み込みしてください。');return;}if(playing)save();closeModal();LT.OnlineUI.open({returnToMenu:true,transport:'local'});return;}
+    if(d.ui==='local-trade'){closeModal();LT.LocalTrade?.open?.();return;}
     if(d.ui==='install-app'){const prompt=offlinePlay.installPrompt;if(prompt){offlinePlay.installPrompt=null;prompt.prompt?.();prompt.userChoice?.finally?.(renderOfflineStatus);}return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
     if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
@@ -6917,9 +6940,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(document.hidden)return;
     paintAnimatedPortraits(now);
     if(pressedDirection && now-lastStep>((settings.autoRun&&(sprint||padSprint))?56:(sprint||padSprint||settings.autoRun)?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
-    if(now-lastClock>=1000){if(playing && !$('modal').open && !(LT.onlineActive||tradeLocked()) && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
+    if(now-lastClock>=1000){if(playing && !$('modal').open && !(LT.onlineActive||LT.localTradeActive||tradeLocked()) && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
     else sound.tick();
-    if((LT.onlineActive||tradeLocked())||!playing)return;
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked())||!playing)return;
     if(now-lastFrame<(settings.quality==='low'?50:settings.quality==='balanced'?32:16))return;lastFrame=now;
     let options=sceneOptions();
     options.moving=false;options.walkPhase=engine.state.steps;
@@ -6936,12 +6959,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 
   function controllerContext(){
     if(tradeLocked()){const scope=document.getElementById('pachi-trade-dialog');return {mode:'modal',busy:!scope,scope:scope||document.body,defaultTarget:scope?.querySelector('button:not(:disabled),input,select')};}
-    if((LT.onlineActive||tradeLocked())){
+    if(LT.localTradeActive){const scope=document.getElementById('local-trade-dialog');if(scope)return {mode:'modal',busy:false,scope,defaultTarget:scope.querySelector('.btn-primary:not(:disabled)')||scope.querySelector('button:not(:disabled),select:not(:disabled),textarea')};}
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked())){
       const scope=$('online-modal'),active=document.activeElement;
       // Online selections rebuild their cards and restore DOM focus. Keep that
       // replacement focused without changing the adventure menus' defaults.
       const retained=active&&scope.contains(active)&&active.matches('button,select,summary')&&!active.disabled&&!active.closest('[hidden],[inert],[aria-hidden="true"]')&&active.getClientRects().length&&(active.id!=='online-close'||active.classList.contains('gamepad-focus'))?active:null;
-      const fallback=scope.querySelector('#link-submit:not(:disabled)')||scope.querySelector('#link-ready:not(:disabled)')||scope.querySelector('#link-host:not(:disabled)')||scope.querySelector('button:not(#online-close):not(:disabled),select:not(:disabled)');
+      const fallback=scope.querySelector('#link-submit:not(:disabled)')||scope.querySelector('#link-ready:not(:disabled)')||scope.querySelector('#link-host:not(:disabled)')||scope.querySelector('#link-local-host:not(:disabled)')||scope.querySelector('button:not(#online-close):not(:disabled),select:not(:disabled)');
       return {mode:'modal',busy:false,scope,defaultTarget:retained||fallback};
     }
     if($('modal').open){const scope=$('modal');return {mode:'modal',busy,scope,defaultTarget:$('dialogue-next')||scope.querySelector('.starter-card, .modal-actions .btn-primary, button:not(#modal-close):not(:disabled), select, input[type=range]')};}
@@ -6951,6 +6975,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   function controllerBack(){
     if(tradeLocked()){LT.Trade?.close?.();return;}
+    if(LT.localTradeActive){LT.LocalTrade?.close?.();return;}
     if(LT.onlineActive){LT.OnlineUI?.close();return;}
     if(busy)return;
     if($('modal').open){if(activePane==='shop-confirm'){returnToShop();return;}closeModal();return;}
@@ -6968,7 +6993,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(!LT.Gamepad)return;
     controller=new LT.Gamepad({context:controllerContext,onMove:(dir,run)=>{
       if(!dir){if(directionSource==='gamepad'){pressedDirection=null;directionSource=null;}padSprint=false;return;}
-      if(!playing||engine.battle||$('modal').open||(LT.onlineActive||tradeLocked())||busy)return;
+      if(!playing||engine.battle||$('modal').open||(LT.onlineActive||LT.localTradeActive||tradeLocked())||busy)return;
       padSprint=run;const changed=directionSource!=='gamepad'||pressedDirection!==dir;
       directionSource='gamepad';pressedDirection=dir;
       if(changed){lastStep=performance.now();walk(...directions[dir]);}
@@ -7015,7 +7040,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     commitTrade,
     getEngine:()=>playing?engine:storedSave?new Engine(storedSave):null,
     startSecretEncounter:(species,level,owner,options={})=>{
-      if(!playing||busy||engine.battle||(LT.onlineActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
+      if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
       if(!owner||owner.isAdmin!==true||LT.Admin?.player?.isAdmin!==true||owner.id!==LT.Admin.player.id)return {ok:false,message:'運営権限を確認できません。'};
       const result=engine.startAdminEncounter(species,level,owner,{shiny:options?.shiny===true});
       if(result.ok){closeModal();openBattle();}
@@ -7028,8 +7053,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     receiveAdminMythical:companion=>persistGiftMutation('receiveAdminMythical',companion),
     updateOwnedFuto:(grantId,config)=>persistGiftMutation('updateOwnedFuto',grantId,config),
     refresh:()=>{if(playing)updateAll();else loadStored();},
+    saveNow:()=>{if(playing)save();},
+    checkTrade,
+    isBusy:()=>busy||!!engine?.battle||!!LT.onlineActive||tradeLocked(),
     toast
   };
+  LT.portraitHTML=(mon,size=64)=>portrait(mon,size);
+  LT.paintPortraits=root=>paintPortraits(root);
   resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
   document.dispatchEvent(new CustomEvent('pachi-admin-bridge-ready'));
   const refreshArtwork=event=>{portraitLoader.invalidate(event?.speciesIds);paintPortraits();};
@@ -8043,6 +8073,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const dialog=$('online-modal'),body=$('online-content');
   const ids=Object.keys(D.species).filter(id=>!D.species[id].specialOnly),defaults=[...D.starters,ids.find(id=>!D.starters.includes(id))];
   let peer=null,session=null,view=null,mode='single',room='',status='',error='',connecting=false,leaving=false;
+  // transport: 'internet' (6-letter room codes via PeerJS) or 'local' (QR codes, same Wi-Fi, no server).
+  let transport='internet',localCode='',localPaste='',localRole=null;
+  const SPECIAL_ONLINE=['futo','floravelle'];
   let selected=[...defaults],orders=[],orderTurn=0,name='トラベラー',explicitName=false,joinCode='',generation=0,queue=[],lastDraw=0,animation=0,returnToMenu=false,playbackLocked=false;
   try{const saved=localStorage.getItem('pachi-link-name');if(saved?.trim()){name=saved;explicitName=true;}}catch(_){}
   const species=id=>D.species[id],label=id=>species(id)?.name||id;
@@ -8065,26 +8098,42 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   function render(){
     if(!dialog.open)return;
     const focus=document.activeElement?.id;
-    $('online-mode-label').textContent=view?.battle?`${modeName()} · TURN ${view.battle.turn}`:'PACHI LINK / ONLINE BATTLE';
-    announce(error||view?.message||status||'6文字のコードで、友だちと対戦。');
+    $('online-mode-label').textContent=view?.battle?`${modeName()} · TURN ${view.battle.turn}`:transport==='local'?'PACHI LINK / LOCAL BATTLE':'PACHI LINK / ONLINE BATTLE';
+    announce(error||view?.message||status||(transport==='local'?'QRコードで、近くの友だちと対戦。':'6文字のコードで、友だちと対戦。'));
     $('online-status').classList.toggle('is-error',!!error||view?.phase==='error');
     if(view?.battle)renderBattle();else renderLobby();
     $('online-leave-confirm').hidden=!leaving;
     if(focus&&$(focus)&&!$(focus).disabled)$(focus).focus({preventScroll:true});
-    paint();notify();
+    LT.LocalQR?.hydrate(body);paint();notify();
+  }
+  function transportToggle(){
+    if(peer||connecting)return '';
+    return `<div class="link-modes link-transport" aria-label="接続方法"><button type="button" data-link-transport="internet" aria-pressed="${transport==='internet'}"><b>インターネット</b><small>6文字のコード</small></button><button type="button" data-link-transport="local" aria-pressed="${transport==='local'}"><b>ローカル</b><small>近くの端末 · QRコード</small></button></div>`;
+  }
+  function localConnect(linked,terminal){
+    if(!LT.LocalLink?.supported?.())return '<p class="link-small">この端末・ブラウザーはローカル通信に対応していません。新しいChrome・Edge・Safari・Firefoxをお使いください。</p>';
+    const paste=(placeholder,disabled)=>`<label class="link-field">${placeholder==='PM1O…'?'コードを貼り付けて参加':'相手のコードを貼り付け'}<textarea id="link-local-code" rows="2" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="${placeholder}" ${disabled?'disabled':''}>${esc(localPaste)}</textarea></label>`;
+    if(!peer)return `<p class="link-small">同じWi-Fi（またはスマホのテザリング）につないだ近くの端末と、インターネットなしで対戦します。</p><button id="link-local-host" type="button" class="btn btn-primary" ${connecting?'disabled':''}>部屋をつくる（QRを表示）</button><div class="link-or">または、相手のQRで参加</div><button id="link-local-scan-offer" type="button" class="btn" ${connecting?'disabled':''}>カメラで読み取って参加</button>${paste('PM1O…',connecting)}<button id="link-local-join" type="button" class="btn" ${connecting?'disabled':''}>このコードで参加</button>`;
+    if(linked||peer.connected)return `<p class="link-small">近くの端末とつながりました。下でチームを決めよう。</p><button id="link-reset" type="button" class="link-text-button">${terminal?'接続をやり直す':'接続を切って戻る'}</button>`;
+    if(peer.state==='closed')return '<p class="link-small">接続は終了しました。</p><button id="link-reset" type="button" class="link-text-button">最初からやり直す</button>';
+    const qr=localCode?`<div class="local-qr" data-local-qr="${esc(localCode)}"></div><button id="link-local-copy" type="button" class="btn">コードをコピー</button>`:'<p class="link-small">接続用のコードを作っています…</p>';
+    const step=!localCode?'':localRole===0?`<p class="link-small">① 相手にこのQRを読み取ってもらう　② 相手の画面に出たQRを読み取る</p><button id="link-local-scan-answer" type="button" class="btn btn-primary">相手のQRを読み取る</button>${paste('PM1A…',false)}<button id="link-local-accept" type="button" class="btn">接続する</button>`:'<p class="link-small">部屋をつくった人に、このQRを読み取ってもらってください。つながると自動で次へ進みます。</p>';
+    return `${qr}${step}<button id="link-reset" type="button" class="link-text-button">やめて戻る</button>`;
   }
   function renderLobby(){
     const linked=!!view?.connected, locked=!!view?.localReady, count=mode==='double'?4:3;
     const terminal=view?.phase==='error'||view?.phase==='ended';
-    const available=LT.OnlineFuto?.rosterIds(ids)||ids.filter(id=>id!==D.legendary?.species);
+    let available=LT.OnlineFuto?.rosterIds(ids)||ids.filter(id=>id!==D.legendary?.species);
+    // Futo and the mythical need the operator service's pass, so they stay out of local battles.
+    if(transport==='local')available=available.filter(id=>!SPECIAL_ONLINE.includes(id));
     if(!locked){const kept=new Set(selected.filter(id=>available.includes(id)));selected=selected.map(id=>{if(available.includes(id))return id;const replacement=available.find(value=>!kept.has(value))||available[0];kept.add(replacement);return replacement;});}
-    body.innerHTML=`<div class="link-intro"><div><span class="link-kicker">FRIENDS. RIVALS. PARTNERS.</span><h3>きみのチームで、<br><em>友だちに挑もう。</em></h3><p>プレイヤー1人 対 1人。通常${ids.filter(id=>id!==D.legendary?.species).length}種から選べる<br>レベル50のフレンド対戦。伝説は所持時、幻は運営の所持確認後に編成できます。</p></div><div class="link-partners" aria-hidden="true">${D.starters.map(id=>portrait(id,92)).join('')}</div></div>
+    body.innerHTML=`<div class="link-intro"><div><span class="link-kicker">FRIENDS. RIVALS. PARTNERS.</span><h3>きみのチームで、<br><em>友だちに挑もう。</em></h3><p>プレイヤー1人 対 1人。通常${ids.filter(id=>id!==D.legendary?.species).length}種から選べる<br>レベル50のフレンド対戦。${transport==='local'?'伝説は所持時に編成できます（運営の確認が必要なフート・幻は、ローカル対戦では編成できません）。':'伝説は所持時、幻は運営の所持確認後に編成できます。'}</p></div><div class="link-partners" aria-hidden="true">${D.starters.map(id=>portrait(id,92)).join('')}</div></div>
       <div class="link-connect-grid"><section class="link-box"><h4>01 / バトルの準備</h4><label class="link-field">プレイヤー名<input id="link-name" maxlength="16" autocomplete="off" value="${esc(name)}" ${locked?'disabled':''}></label>
       <div class="link-modes" aria-label="対戦ルール"><button type="button" data-link-mode="single" aria-pressed="${mode==='single'}" ${peer?'disabled':''}><b>シングル</b><small>1体ずつ · チーム3体</small></button><button type="button" data-link-mode="double" aria-pressed="${mode==='double'}" ${peer?'disabled':''}><b>ダブル</b><small>2体ずつ · チーム4体</small></button></div>
       <p class="link-small">部屋を作った人がルールを決定します。</p></section>
-      <section class="link-box"><h4>02 / 友だちとつながる</h4>${peer?`<div class="link-code-wrap"><span>ルームコード</span><output id="link-room-code" class="link-room-code">${esc(room||'------')}</output><button id="link-copy" type="button" class="btn" ${room?'':'disabled'}>コードをコピー</button></div><p class="link-small">${linked?'接続できました。下でチームを決めよう。':'友だちにこの6文字を伝え、この画面で待ってください。'}</p><button id="link-reset" type="button" class="link-text-button">${terminal?'接続をやり直す':'部屋を閉じて戻る'}</button>`:`<button id="link-host" type="button" class="btn btn-primary" ${connecting?'disabled':''}>部屋をつくる</button><div class="link-or">または、コードで参加</div><label class="link-field">6文字のルームコード<input id="link-code-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：7KPM4R" value="${esc(joinCode)}" ${connecting?'disabled':''}></label><button id="link-join" type="button" class="btn" ${connecting?'disabled':''}>この部屋に参加</button>`}</section></div>
-      ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>通常 Lv.50 · 振り分けを反映 · フートは運営設定 · 同じ種類は1体まで</span></div><div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((id,i)=>`<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(id,100)}<label><span class="sr-only">チーム ${i+1} のモンスター</span><select id="link-species-${i}" data-link-species="${i}" ${locked?'disabled':''}>${available.map((value,n)=>`<option value="${esc(value)}" ${value===id?'selected':''}>${String(n+1).padStart(3,'0')} ${esc(label(value))} / ${esc(D.elements[species(value).element].name)}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(id).element].name)}タイプ</span>${allocBadge(id)}</article>`).join('')}</div><div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
-      <details class="link-rules"><summary>ルールと接続について</summary><p>通常のパチモンは共通のレベル50、フートと幻は運営設定の能力で対戦します。手持ち・ひかえに同じ種類がいる場合は、先頭の個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使用します。振り分けはLv.50で持てる上限（合計98・1能力64、体力は1ポイントで+2）まで反映し、超える分は配分の割合を保って縮めます。冒険のレベル・持ち物・状態異常は持ち込みません。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。持ち物・捕獲は使えません。100ターンで残り体力の割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
+      <section class="link-box"><h4>02 / 友だちとつながる</h4>${transportToggle()}${transport==='local'?localConnect(linked,terminal):peer?`<div class="link-code-wrap"><span>ルームコード</span><output id="link-room-code" class="link-room-code">${esc(room||'------')}</output><button id="link-copy" type="button" class="btn" ${room?'':'disabled'}>コードをコピー</button></div><p class="link-small">${linked?'接続できました。下でチームを決めよう。':'友だちにこの6文字を伝え、この画面で待ってください。'}</p><button id="link-reset" type="button" class="link-text-button">${terminal?'接続をやり直す':'部屋を閉じて戻る'}</button>`:`<button id="link-host" type="button" class="btn btn-primary" ${connecting?'disabled':''}>部屋をつくる</button><div class="link-or">または、コードで参加</div><label class="link-field">6文字のルームコード<input id="link-code-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：7KPM4R" value="${esc(joinCode)}" ${connecting?'disabled':''}></label><button id="link-join" type="button" class="btn" ${connecting?'disabled':''}>この部屋に参加</button>`}</section></div>
+      ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>通常 Lv.50 · 振り分けを反映${transport==='local'?'':' · フートは運営設定'} · 同じ種類は1体まで</span></div><div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((id,i)=>`<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(id,100)}<label><span class="sr-only">チーム ${i+1} のモンスター</span><select id="link-species-${i}" data-link-species="${i}" ${locked?'disabled':''}>${available.map((value,n)=>`<option value="${esc(value)}" ${value===id?'selected':''}>${String(n+1).padStart(3,'0')} ${esc(label(value))} / ${esc(D.elements[species(value).element].name)}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(id).element].name)}タイプ</span>${allocBadge(id)}</article>`).join('')}</div><div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
+      <details class="link-rules"><summary>ルールと接続について</summary><p>通常のパチモンは共通のレベル50、フートと幻は運営設定の能力で対戦します。手持ち・ひかえに同じ種類がいる場合は、先頭の個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使用します。振り分けはLv.50で持てる上限（合計98・1能力64、体力は1ポイントで+2）まで反映し、超える分は配分の割合を保って縮めます。冒険のレベル・持ち物・状態異常は持ち込みません。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。持ち物・捕獲は使えません。100ターンで残り体力の割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>ローカル対戦は、同じWi-Fi（またはスマホのテザリング）につないだ2台の端末を、お互いの画面のQRコード（またはコードの貼り付け）で直接つなぎます。インターネットや外部サービスとは通信せず、オフラインでも遊べます。カメラは読み取りのときだけ使い、映像は保存・送信しません。</p><p>インターネット対戦では、部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
   }
   function hp(mon){return `<div class="link-hp-track"><span style="width:${Math.max(0,mon.hp/mon.maxHp*100)}%" class="${mon.hp/mon.maxHp<.25?'low':''}"></span></div><small>体力 ${mon.hp} / ${mon.maxHp}</small>`;}
   function commandOptions(duel,team,slot){
@@ -8129,9 +8178,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
   function draw(){const canvas=$('link-battle-canvas');if(canvas&&view?.battle&&LT.PixelSprites.duel)LT.PixelSprites.duel(canvas,view.battle,peer.role,performance.now());}
   function loop(now){if(!dialog.open)return;if(now-lastDraw>70&&!document.hidden){lastDraw=now;draw();if(playbackLocked&&!LT.BattleVFX?.onlineBusy?.(view?.battle,now)){playbackLocked=false;render();}}animation=requestAnimationFrame(loop);}
-  function reset(){generation++;const oldSession=session,oldPeer=peer;session=null;peer=null;view=null;queue=[];oldSession?.close('対戦を終了しました');oldPeer?.close('退出しました');room='';status='';error='';connecting=false;leaving=false;orders=[];orderTurn=0;playbackLocked=false;render();}
+  function reset(){generation++;const oldSession=session,oldPeer=peer;session=null;peer=null;view=null;queue=[];oldSession?.close('対戦を終了しました');oldPeer?.close('退出しました');room='';status='';error='';connecting=false;leaving=false;orders=[];orderTurn=0;playbackLocked=false;localCode='';localPaste='';localRole=null;render();}
   function failure(err){error=err?.message||String(err||'接続できませんでした。');connecting=false;render();}
-  function open(options={}){if(LT.tradeActive||LT.Trade?.isLocked?.()){LT.adminBridge?.toast?.('交換が完了してから対戦を開いてください。');return;}if(dialog.open)return;if(!explicitName)name=LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);returnToMenu=options.returnToMenu===true;LT.onlineActive=true;dialog.showModal();render();cancelAnimationFrame(animation);animation=requestAnimationFrame(loop);}
+  function open(options={}){if(LT.tradeActive||LT.Trade?.isLocked?.()){LT.adminBridge?.toast?.('交換が完了してから対戦を開いてください。');return;}if(dialog.open)return;if(!explicitName)name=LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);returnToMenu=options.returnToMenu===true;transport=options.transport==='local'||(options.transport!=='internet'&&globalThis.navigator?.onLine===false)?'local':'internet';LT.onlineActive=true;dialog.showModal();render();cancelAnimationFrame(animation);animation=requestAnimationFrame(loop);}
   function close(){reset();dialog.close();cancelAnimationFrame(animation);notify();}
   function requestClose(){if(peer&&peer.state!=='closed'&&(peer.connected||room)&&!['ended','error'].includes(view?.phase)&&!view?.outcomeConfirmed){leaving=true;$('online-leave-confirm').hidden=false;$('link-stay').focus();}else close();}
   function setupSession(role){
@@ -8143,17 +8192,35 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
   async function connect(host){
     if(connecting||peer)return;
-    error='';connecting=true;const g=++generation;status='接続サービスへアクセスしています…';render();
+    const local=transport==='local';
+    if(local&&!LT.LocalLink?.supported?.()){error='この端末・ブラウザーはローカル通信に対応していません。';render();return;}
+    if(local&&!host&&!localPaste.trim()){error='部屋をつくった人のQRを読み取るか、コードを貼り付けてください。';render();return;}
+    error='';connecting=true;const g=++generation;status=local?'接続用のコードを作っています…':'接続サービスへアクセスしています…';render();
     try{
-      peer=new LT.PeerLink({onStatus:s=>{if(g===generation){status=s.message;if(s.code)room=s.code;render();}},onOpen:info=>{if(g!==generation)return;connecting=false;room=info.code;setupSession(info.role);},onMessage:message=>{if(g!==generation)return;if(session)session.receive(message);else queue.push(message);},onClose:info=>{if(g!==generation)return;connecting=false;session?.close(info.reason||'相手との接続が切れました');status=info.reason||'相手との接続が切れました';if(!view?.battle)error=status;render();},onError:err=>{if(g===generation)failure(err);}});
-      if(host)room=await peer.host();else room=await peer.join(joinCode.trim().toUpperCase());
+      const Transport=local?LT.LocalLink:LT.PeerLink;
+      if(local){localRole=host?0:1;if(host)localPaste='';}
+      peer=new Transport({onStatus:s=>{if(g===generation){status=s.message;if(s.code)room=s.code;render();}},onOpen:info=>{if(g!==generation)return;connecting=false;room=info.code;setupSession(info.role);},onMessage:message=>{if(g!==generation)return;if(session)session.receive(message);else queue.push(message);},onClose:info=>{if(g!==generation)return;connecting=false;session?.close(info.reason||'相手との接続が切れました');status=info.reason||'相手との接続が切れました';if(!view?.battle)error=status;render();},onError:err=>{if(g===generation)failure(err);}});
+      if(local){const code=host?await peer.host():await peer.join(localPaste);if(g!==generation)return;localCode=code;if(!host)localPaste='';}
+      else if(host)room=await peer.host();else room=await peer.join(joinCode.trim().toUpperCase());
       if(g!==generation)return;connecting=false;render();
-    }catch(err){if(g!==generation)return;const failedPeer=peer;peer=null;generation++;failedPeer?.close();failure(err);}
+    }catch(err){if(g!==generation)return;const failedPeer=peer;peer=null;generation++;failedPeer?.close();localCode='';localRole=null;failure(err);}
+  }
+  async function acceptLocal(code){
+    if(!peer||transport!=='local'||localRole!==0)return;
+    if(!String(code||'').trim()){error='相手の画面に出たQRを読み取るか、コードを貼り付けてください。';render();return;}
+    try{error='';await peer.accept(code);}catch(err){error=err?.message||'接続できませんでした。';render();}
+  }
+  async function scanLocal(kind){
+    try{
+      const text=await LT.LocalQR.scan(dialog,{title:kind==='offer'?'部屋のQRコードを読み取る':'相手のQRコードを読み取る'});
+      localPaste=text;if(kind==='offer')await connect(false);else await acceptLocal(text);
+    }catch(err){if(!err?.cancelled){error=err?.message||'読み取れませんでした。';render();}}
   }
   dialog.addEventListener('input',e=>{
     const t=e.target;
     if(t.id==='link-name'){name=t.value.slice(0,16);explicitName=!!name.trim();try{if(explicitName)localStorage.setItem('pachi-link-name',name);else localStorage.removeItem('pachi-link-name');}catch(_){}}
     if(t.id==='link-code-input'){joinCode=t.value.toUpperCase().replace(/[^A-Z2-9]/g,'').slice(0,6);t.value=joinCode;}
+    if(t.id==='link-local-code')localPaste=t.value;
   });
   dialog.addEventListener('change',e=>{
     const t=e.target;
@@ -8165,6 +8232,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   dialog.addEventListener('click',async e=>{
     const b=e.target.closest('button');if(!b||b.disabled)return;
     if(b.dataset.linkMode){mode=b.dataset.linkMode;render();return;}
+    if(b.dataset.linkTransport){if(!peer&&!connecting){transport=b.dataset.linkTransport==='local'?'local':'internet';error='';status='';render();}return;}
     switch(b.id){
       case 'link-host':await connect(true);break;
       case 'link-join':if(joinCode.length!==6){error='6文字のルームコードを入力してください。';render();}else await connect(false);break;
@@ -8172,6 +8240,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       case 'link-ready':{b.disabled=true;try{const result=await session?.setTeam({name:name.trim()||LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName),ids:selected.slice(0,mode==='double'?4:3)});if(!result?.ok)failure(result?.error||'チームを確認してください。');else error='';}catch(err){failure(err);}finally{render();}break;}
       case 'link-submit':{if(LT.BattleVFX?.onlineBusy?.(view?.battle,performance.now()))break;const result=await session?.submit(orders);if(result&&!result.ok)failure(result.error);else{error='';render();}break;}
       case 'link-reset':reset();break;
+      case 'link-local-host':await connect(true);break;
+      case 'link-local-join':await connect(false);break;
+      case 'link-local-scan-offer':await scanLocal('offer');break;
+      case 'link-local-scan-answer':await scanLocal('answer');break;
+      case 'link-local-accept':await acceptLocal(localPaste);break;
+      case 'link-local-copy':try{await navigator.clipboard.writeText(localCode);announce('接続コードをコピーしました。相手の端末に貼り付けてください。');}catch(_){announce('コピーできませんでした。QRコードを読み取ってもらってください。');}break;
       case 'online-close':requestClose();break;
       case 'link-stay':leaving=false;$('online-leave-confirm').hidden=true;break;
       case 'link-leave':close();break;
@@ -8193,7 +8267,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="online-futo.js?v=20261117-moves96"></script>
 <script src="secret-encounter.js?v=20261117-shiny"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261116-battle-trade">
+<link rel="stylesheet" href="local-link.css?v=20261117-local">
 <script src="trade-client.js?v=20261117-moves96"></script>
+<link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">
+<link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">
+<script src="local-link.js?v=20261117-local"></script>
 <script src="mobile-screen.js?v=20261117-rotate"></script>
 </body>
 </html>
