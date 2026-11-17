@@ -323,9 +323,44 @@ async function tradeRoute(request,env,path,method,player){
   return {trade:tradeView(await tradeRow(env,id),player.id)};
 }
 
+// Shared, non-authenticatable references preserve a surviving player's receipt
+// without retaining the deleted player's account/name/token. Two references are
+// needed because trades enforce host_id <> guest_id. Neither is a real player.
+const DELETED_HOST = '__deleted_host__', DELETED_GUEST = '__deleted_guest__';
+async function deleteAccount(request, env) {
+  const token = /^Bearer ([A-Za-z0-9_-]+)$/.exec(request.headers.get('Authorization') || '')?.[1];
+  if (!tokenValid(token)) fail(401, 'UNAUTHORIZED', 'プレイヤー情報を確認してください。');
+  const body = await bodyJSON(request);
+  if (body.confirmation !== 'DELETE' || !/^P[0-9a-f]{16}$/.test(body.playerId || '')) fail(400, 'DELETE_CONFIRMATION_REQUIRED', '削除するプレイヤーを確認してください。');
+  const player = await env.DB.prepare('SELECT id FROM players WHERE token_hash = ?').bind(await digest(token)).first();
+  // A lost successful response can safely be retried. No account exists under
+  // this token, so there is nothing further to delete or disclose.
+  if (!player) return {deleted:true};
+  if (player.id !== body.playerId) fail(409, 'IDENTITY_CHANGED', 'プレイヤー情報が切り替わりました。もう一度確認してください。');
+  const id = player.id;
+  await env.DB.batch([
+    env.DB.prepare("INSERT OR IGNORE INTO players (id,token_hash,name,created_at,updated_at) VALUES (?, '!deleted-host', '削除済みプレイヤー', 0, 0)").bind(DELETED_HOST),
+    env.DB.prepare("INSERT OR IGNORE INTO players (id,token_hash,name,created_at,updated_at) VALUES (?, '!deleted-guest', '削除済みプレイヤー', 0, 0)").bind(DELETED_GUEST),
+    env.DB.prepare("UPDATE trades SET state='cancelled',host_offer=NULL,guest_offer=NULL,host_confirm=NULL,guest_confirm=NULL WHERE (host_id=? OR guest_id=?) AND state<>'committed'").bind(id,id),
+    env.DB.prepare("DELETE FROM trade_active WHERE player_id=? OR trade_id IN (SELECT id FROM trades WHERE (host_id=? OR guest_id=?) AND state<>'committed')").bind(id,id,id),
+    env.DB.prepare("UPDATE trades SET host_id=?,request_id=id,host_ack=1 WHERE host_id=?").bind(DELETED_HOST,id),
+    env.DB.prepare("UPDATE trades SET guest_id=?,guest_ack=1 WHERE guest_id=?").bind(DELETED_GUEST,id),
+    env.DB.prepare('DELETE FROM trade_active WHERE trade_id IN (SELECT id FROM trades WHERE host_id=? AND (guest_id IS NULL OR guest_id=?))').bind(DELETED_HOST,DELETED_GUEST),
+    env.DB.prepare('DELETE FROM trades WHERE host_id=? AND (guest_id IS NULL OR guest_id=?)').bind(DELETED_HOST,DELETED_GUEST),
+    env.DB.prepare('DELETE FROM grants WHERE player_id=?').bind(id),
+    env.DB.prepare('UPDATE grant_batches SET creator_id=? WHERE creator_id=?').bind(DELETED_HOST,id),
+    env.DB.prepare('UPDATE grant_batches SET target=? WHERE target=?').bind(DELETED_HOST,id),
+    env.DB.prepare('DELETE FROM grant_batches WHERE NOT EXISTS (SELECT 1 FROM grants g WHERE g.batch_id=grant_batches.id)'),
+    env.DB.prepare('DELETE FROM admin_owner WHERE player_id=?').bind(id),
+    env.DB.prepare('DELETE FROM rate_limits WHERE instr(key,?)>0').bind(id),
+    env.DB.prepare('DELETE FROM players WHERE id=?').bind(id)
+  ]);
+  return {deleted:true};
+}
+
 async function route(request, env, url) {
   const path = url.pathname.replace(/\/$/, '') || '/', method = request.method;
-  if (path === '/api/status' && method === 'GET') return adminState(env, request);
+  if (path === '/api/status' && method === 'GET') return {...await adminState(env, request), accountDeletionSupported:true};
   if (path === '/api/register' && method === 'POST') {
     const body = await bodyJSON(request), name = safeName(body.name), token = body.token;
     if (!tokenValid(token)) fail(400, 'INVALID_TOKEN', '安全なプレイヤー識別情報を生成できませんでした。');
@@ -342,6 +377,7 @@ async function route(request, env, url) {
     await consumeLimit(env, request, 'duel-verify', 120, 60000);
     return verifyPass(env, await bodyJSON(request));
   }
+  if (path === '/api/me' && method === 'DELETE') return deleteAccount(request, env);
   const player = await authenticate(env, request);
   if(path==='/api/trades'||path.startsWith('/api/trades/'))return tradeRoute(request,env,path,method,player);
   if (path === '/api/me' && method === 'GET') {
@@ -413,7 +449,7 @@ async function route(request, env, url) {
   }
   if (path === '/api/admin/players' && method === 'GET') {
     const {cursor, limit} = paging(url);
-    const result = await env.DB.prepare('SELECT p.row_id, p.id, p.name, p.created_at, EXISTS (SELECT 1 FROM admin_owner a WHERE a.player_id = p.id) AS is_admin FROM players p WHERE p.row_id > ? ORDER BY p.row_id LIMIT ?').bind(cursor, limit + 1).all();
+    const result = await env.DB.prepare("SELECT p.row_id, p.id, p.name, p.created_at, EXISTS (SELECT 1 FROM admin_owner a WHERE a.player_id = p.id) AS is_admin FROM players p WHERE p.row_id > ? AND p.id LIKE 'P%' ORDER BY p.row_id LIMIT ?").bind(cursor, limit + 1).all();
     const rows = result.results || [];
     return {players:rows.slice(0, limit).map(row => ({...playerView(row), createdAt:row.created_at})), nextCursor:rows.length > limit ? rows[limit - 1].row_id : null};
   }
@@ -438,7 +474,7 @@ async function route(request, env, url) {
     if (!existing) await consumeLimit(env, request, 'grant-global', 60, 60000, true);
     await env.DB.batch([
       env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now(), player.id),
-      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(batchId, storedHash, player.id, player.id)
+      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND p.id LIKE 'P%' AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(batchId, storedHash, player.id, player.id)
     ]);
     await requireAdmin(env, player);
     const actual = await env.DB.prepare('SELECT payload_hash, creator_id, target, config_json FROM grant_batches WHERE id = ?').bind(batchId).first();
@@ -458,7 +494,7 @@ export default {
     if (origin && !allowed.has(origin)) return json({ok:false, error:{code:'ORIGIN_DENIED', message:'この送信元は許可されていません。'}}, 403);
     if (origin) headers.set('Access-Control-Allow-Origin', origin);
     if (request.method === 'OPTIONS') {
-      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
+      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
       headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       headers.set('Access-Control-Max-Age', '600');
       return new Response(null, {status:204, headers});

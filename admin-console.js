@@ -5,9 +5,12 @@
   const API = 'https://pachi-mon-admin-hub.hisa-0128-1996.chatgpt.site/api';
   const KEY = 'pachi-player-identity-v1';
   const PENDING_KEY = 'pachi-pending-distribution-v1';
+  const DISABLED_KEY = 'pachi-online-disabled-v1';
   const fields = [['hp','HP',99999],['atk','こうげき',9999],['def','ぼうぎょ',9999],['spAtk','とくこう',9999],['spDef','とくぼう',9999],['speed','すばやさ',9999],['accuracy','めいちゅう',300],['evasion','かいひ',300]];
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let identity = null, player = null, status = null, syncing = null, registration = null, pending = 0, lastError = '', consoleDialog = null, revision = 0, savedConfig = null, claimBusy = false;
+  let onlineDisabled=false, deleteBusy=false;
+  try{onlineDisabled=localStorage.getItem(DISABLED_KEY)==='1';}catch(_){}
   let identityEpoch=0, restoreAttempt=0, syncQueued=false, registerQueued=false, sendBusy=false, pendingGrant=null;
   const staleIdentity=()=>Object.assign(new Error('プレイヤー情報が切り替わりました。'),{staleIdentity:true});
   try { const x=JSON.parse(localStorage.getItem(KEY)); if(x && /^[A-Za-z0-9_-]{43}$/.test(x.token))identity=x; } catch (_) {}
@@ -32,7 +35,9 @@
       const headers={Accept:'application/json'};
       if(body!==undefined)headers['Content-Type']='application/json';
       if(auth && token)headers.Authorization='Bearer '+token;
-      const res=await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:abort.signal,credentials:'omit',cache:'no-store',referrerPolicy:'strict-origin-when-cross-origin'});
+      const res=window.PachiNative?.available===true
+        ?await window.PachiNative.apiRequest(path,{method,body,token:auth?token:undefined,signal:abort.signal})
+        :await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:abort.signal,credentials:'omit',cache:'no-store',referrerPolicy:'strict-origin-when-cross-origin'});
       const data=await res.json().catch(()=>null);
       if(guardIdentity&&epoch!==identityEpoch)throw staleIdentity();
       if(!res.ok || !data?.ok){const err=new Error(data?.error?.message || '通信できませんでした。少し待って再試行してください。');err.code=data?.error?.code;err.status=res.status;throw err;}
@@ -42,12 +47,15 @@
   }
   function proposedName(){return (identity?.name || LT.adminBridge?.getPlayerName?.() || '旅人').slice(0,24);}
   async function ensureIdentity(){
+    if(deleteBusy)throw new Error('アカウントの削除処理中です。');
+    if(onlineDisabled)throw new Error('オンライン登録を停止しています。冒険の設定から再開できます。');
     if(player)return player;
     if(registration)return registration;
     if(!identity)persist({token:randomToken(),name:proposedName()});
     const token=identity.token, epoch=identityEpoch;
     const task=(async()=>{
-      const data=await request('/register',{method:'POST',body:{token,name:identity.name||proposedName()},auth:false});
+      // A known account must authenticate, never silently recreate a deleted account.
+      const data=identity.id?await request('/me',{token}):await request('/register',{method:'POST',body:{token,name:identity.name||proposedName()},auth:false});
       if(epoch!==identityEpoch)throw staleIdentity();
       player=data.player;status=serviceStatus(data);persist({...identity,id:player.id,name:player.name});return player;
     })();
@@ -55,6 +63,7 @@
     try{return await task;}finally{if(registration===task)registration=null;}
   }
   async function sync({register=false,fresh=false}={}){
+    if(onlineDisabled||deleteBusy){refreshSettings();return;}
     if(syncing){if(register||fresh){syncQueued=true;registerQueued=registerQueued||register;}return syncing;}
     syncQueued=true;registerQueued=registerQueued||register;
     const task=(async()=>{
@@ -67,6 +76,7 @@
     return task;
   }
   async function syncOnce(register){
+      if(onlineDisabled||deleteBusy){refreshSettings();return;}
       let epoch=identityEpoch;
       try{
         status=serviceStatus(await request('/status',{auth:false}));lastError='';
@@ -121,10 +131,11 @@
   function refreshSettings(){
     const root=settingsRoot()?.querySelector('#pachi-service');if(!root)return;
     const body=root.querySelector('[data-service-body]');
-    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending].join('|');
+    if(onlineDisabled){body.dataset.signature='disabled';body.innerHTML='<p>オンラインアカウントは削除され、自動登録・自動同期を停止しています。端末内の冒険記録は一人用で続けられます。</p><button class="btn btn-small" data-admin-action="resume-online">新しいアカウントでオンラインを再開</button><p><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> · <a href="support.html" target="_blank" rel="noopener">サポート</a></p>';const line=root.querySelector('.pachi-status');line.textContent=lastError||'オンライン登録停止中';line.dataset.error=String(!!lastError);return;}
+    const signature=[deleteBusy,!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending].join('|');
     if(body.dataset.signature!==signature){
       body.dataset.signature=signature;
-      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
+      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button>${identity?.id?'<button class="btn btn-small" data-admin-action="delete-account">オンラインアカウントを削除</button>':''}</div><p><a href="privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> · <a href="support.html" target="_blank" rel="noopener">サポート</a></p>`;
     }
     const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
   }
@@ -236,9 +247,11 @@
   }
   function backup(){
     const payload={kind:'pachi-player-identity',version:1,token:identity.token,playerId:player.id,name:player.name};
+    if(window.PachiNative?.available===true){window.PachiNative.exportJSON(JSON.stringify(payload,null,2),'playerIdentity');say('共有画面で保存先を選んでください。このファイルを他の人へ渡さないでください。冒険の記録は別に書き出してください。');return;}
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Pachi_Player_Identity.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say('プレイヤー情報を書き出しました。このファイルを他の人へ渡さないでください。冒険の記録は別に書き出してください。');
   }
   async function restore(){
+    if(deleteBusy)throw new Error('アカウントの削除処理が終わってから操作してください。');
     if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
     if(sendBusy)throw new Error('配布結果の確認が終わってから、プレイヤー情報を復元してください。');
     const file=document.createElement('input');file.type='file';file.accept='.json,application/json';
@@ -250,7 +263,7 @@
         const data=JSON.parse(await f.text());
         if(data.kind!=='pachi-player-identity'||!/^[A-Za-z0-9_-]{43}$/.test(data.token))throw new Error('プレイヤー情報の形式が違います。');
         const me=await request('/me',{token:data.token,guardIdentity:false});
-        if(attempt!==restoreAttempt)throw staleIdentity();
+        if(attempt!==restoreAttempt||deleteBusy)throw staleIdentity();
         if(sendBusy)throw new Error('配布結果の確認が終わってから、プレイヤー情報を復元してください。');
         if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
         adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists,me.adminRecoveryAvailable);
@@ -259,10 +272,58 @@
       }catch(err){if(!err.staleIdentity)say(err.message,true);}
     };file.click();
   }
+  async function deleteOwnAccount(confirmedId){
+    if(deleteBusy)throw new Error('アカウントを削除しています。');
+    if(!identity?.id||identity.id!==confirmedId)throw new Error('プレイヤー情報が切り替わりました。もう一度確認してください。');
+    if(LT.Trade?.isLocked?.()||LT.tradeActive||LT.onlineActive||sendBusy)throw new Error('対戦・交換・配布を終了してから削除してください。');
+    deleteBusy=true;identityEpoch++;restoreAttempt++;syncQueued=false;registerQueued=false;
+    const token=identity.token;
+    try{
+      await request('/me',{method:'DELETE',token,body:{confirmation:'DELETE',playerId:confirmedId}});
+      // Do not drop the identity on network/server failure. Persist the opt-out
+      // before erasing credentials so reloads do not create a replacement user.
+      onlineDisabled=true;identityEpoch++;identity=null;player=null;status=null;pending=0;registration=null;pendingGrant=null;lastError='';
+      if(consoleDialog?.open)consoleDialog.close();
+      try{localStorage.setItem(DISABLED_KEY,'1');localStorage.removeItem(KEY);localStorage.removeItem(PENDING_KEY);}
+      catch(_){lastError='サーバーのアカウントは削除済みです。端末への保存ができないため、再起動後に削除の確認をもう一度行ってください。';}
+      document.dispatchEvent(new CustomEvent('pachi-account-deleted'));
+      return true;
+    }finally{deleteBusy=false;refreshSettings();}
+  }
+  function requestDeletion(){
+    if(!identity?.id)throw new Error('削除するプレイヤー情報がありません。オンライン情報を確認してください。');
+    if(deleteBusy)return;
+    const confirmedId=identity.id;
+    const prior=document.getElementById('pachi-account-delete');if(prior){if(!prior.open)prior.showModal();return;}
+    const dialog=document.createElement('dialog');dialog.id='pachi-account-delete';dialog.setAttribute('aria-label','オンラインアカウントの削除');
+    dialog.style.cssText='width:min(520px,calc(100% - 24px));max-height:90dvh;overflow:auto;padding:24px;color:#17283e;background:#fffdf8;border:2px solid #238978';
+    dialog.innerHTML=`<h2>オンラインアカウントを削除</h2><p>プレイヤーID ${escape(confirmedId)} の名前・認証情報・本人のお届けものをサーバーから削除します。${player?.isAdmin?'運営権限も失われます。':''}この操作は取り消せません。</p><p>端末内の冒険記録は残り、一人用で遊べます。相手が保有する交換・配布の記録は、その相手のデータとして必要な範囲で残ります。削除後の自動登録・同期は停止します。</p><p>削除する場合は「削除」と入力してください。</p><label for="pachi-delete-confirm-text">確認入力</label><input id="pachi-delete-confirm-text" autocomplete="off" autocapitalize="off" style="display:block;width:100%;min-height:44px;margin:8px 0 16px;font-size:16px"><div class="pachi-actions"><button type="button" class="btn" data-delete-cancel>やめる</button><button type="button" class="btn" data-delete-confirm disabled>アカウントを完全に削除</button></div><p role="status" aria-live="polite" data-delete-status></p>`;
+    const field=dialog.querySelector('input'),button=dialog.querySelector('[data-delete-confirm]'),line=dialog.querySelector('[data-delete-status]');
+    field.addEventListener('input',()=>{button.disabled=field.value.trim()!=='削除';});
+    dialog.querySelector('[data-delete-cancel]').onclick=()=>{if(!deleteBusy)dialog.close();};
+    dialog.addEventListener('cancel',e=>{if(deleteBusy)e.preventDefault();});
+    dialog.addEventListener('close',()=>dialog.remove());
+    button.onclick=async()=>{if(field.value.trim()!=='削除'||deleteBusy)return;button.disabled=true;field.disabled=true;line.textContent='アカウントを削除しています…';
+      try{await deleteOwnAccount(confirmedId);dialog.close();LT.adminBridge?.toast?.('オンラインアカウントを削除しました。自動登録を停止しています。');}
+      catch(error){line.textContent=error.message||'削除できませんでした。接続を確認して再試行してください。';button.disabled=false;field.disabled=false;}
+    };
+    document.body.append(dialog);dialog.showModal();field.focus();
+  }
+  async function resumeOnline(){
+    if(deleteBusy)return;
+    // The button explicitly starts a new account; old/deleted backups are not
+    // registered again. Removing stale credentials first is intentional.
+    localStorage.removeItem(KEY);localStorage.removeItem(PENDING_KEY);localStorage.removeItem(DISABLED_KEY);
+    onlineDisabled=false;identity=null;player=null;identityEpoch++;lastError='';
+    await sync({register:true,fresh:true});
+  }
   document.addEventListener('click',event=>{const button=event.target.closest?.('#pachi-service [data-admin-action]');if(!button)return;
     const action=button.dataset.adminAction;
+    if(deleteBusy)return;
     if(action==='claim'){void claim(button);return;}
     void withButton(button,async()=>{
+      if(action==='resume-online')await resumeOnline();
+      if(action==='delete-account')requestDeletion();
       if(action==='console')await openConsole();
       if(action==='refresh'){await sync({register:true});if(!lastError)say(pending?'空き枠や冒険の開始を待っているお届けものがあります。':'お届けものを確認しました。');}
       if(action==='name'){await ensureIdentity();const name=document.getElementById('pachi-player-name').value.trim();if(!name)throw new Error('名前を入力してください。');const data=await request('/me',{method:'PATCH',body:{name}});player=data.player;status=serviceStatus(data);persist({...identity,name:player.name});refreshSettings();say('プレイヤー名を保存しました。');}
@@ -273,7 +334,7 @@
   for(const name of ['pachi-game-ready','pachi-admin-bridge-ready'])document.addEventListener(name,()=>{void sync({fresh:true});});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync();});
   setInterval(()=>{if(!document.hidden)void sync();},30000);
-  LT.Admin={sync,open:openConsole,get player(){return player;},get pending(){return pending;},
+  LT.Admin={sync,open:openConsole,requestDeletion,get onlineDisabled(){return onlineDisabled;},get player(){return player;},get pending(){return pending;},
     async tradeIdentity(){const current=await ensureIdentity();return {...current};},
     async tradeRequest(path,options={}){
       if(typeof path!=='string'||!/^\/trades(?:\/(?:active|join|[a-zA-Z0-9-]+)(?:\/(?:offer|confirm|cancel|ack))?)?$/.test(path))throw new Error('交換先の指定が正しくありません。');

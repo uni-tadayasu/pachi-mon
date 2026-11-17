@@ -185,6 +185,12 @@ final class GameViewController: UIViewController, WKNavigationDelegate, WKUIDele
     @objc private func showMenu() {
         guard presentedViewController == nil else { return }
         let menu = UIAlertController(title: "アプリメニュー", message: "ゲーム内の冒険の設定から、音・表示・プレイヤー情報も変更できます。", preferredStyle: .actionSheet)
+        if !ready {
+            menu.addAction(UIAlertAction(title: "ゲームを再読み込み", style: .default) { [weak self] _ in
+                self?.progress.startAnimating()
+                self?.webView.load(URLRequest(url: LocalSchemeHandler.home))
+            })
+        }
         let export = UIAlertAction(title: "冒険記録を書き出す", style: .default) { [weak self] _ in self?.deliver(["type": "requestExport"]) }
         export.isEnabled = ready
         menu.addAction(export)
