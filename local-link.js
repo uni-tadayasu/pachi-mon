@@ -42,7 +42,10 @@
 
   // ── The transport, with the same interface as the online PeerLink.
   class LocalLink {
-    static supported() { return typeof globalThis.RTCPeerConnection === 'function' && typeof globalThis.CompressionStream === 'function' && typeof globalThis.DecompressionStream === 'function'; }
+    static supported() {
+      if (typeof globalThis.RTCPeerConnection !== 'function' || typeof globalThis.CompressionStream !== 'function' || typeof globalThis.DecompressionStream !== 'function') return false;
+      try { new CompressionStream('deflate-raw'); new DecompressionStream('deflate-raw'); return true; } catch (_) { return false; } // older browsers lack deflate-raw
+    }
     constructor(callbacks = {}) { Object.assign(this, { callbacks, role: null, code: '', connected: false, state: 'idle', _active: true, _pc: null, _channel: null, _heartbeat: null, _deadline: null, _lastSeen: 0 }); }
     _emit(name, value) { try { this.callbacks[name]?.(value); } catch (error) { console.error('LocalLink callback:', error); } }
     _status(state, message) { this.state = state; this._emit('onStatus', { state, message }); }
