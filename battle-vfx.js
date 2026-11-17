@@ -100,9 +100,10 @@
   function anchors(width,height,e,options={}) {
     const online=options.online===true,me=options.side===1?1:0,doubled=options.double===true;
     const own=online?(e.side===me):(e.side!=='enemy');
+    const inset=Math.max(0,Math.min(.4,Number(globalThis.LT?.battleInset)||0));
     function at(ours,slot=0) {
       return {x:width*(doubled?(ours?(slot===1?.47:.19):(slot===1?.82:.57)):(ours?.28:.73)),
-        y:height*(doubled?(ours?.75:.37):(ours?.71:.42))};
+        y:height*(doubled?(ours?.75:.37):((ours?.71:.42)-(online?0:inset)*.3))};
     }
     const source=at(own,e.slot),self=['heal','guard','boost','recoil','faint','switch'].includes(e.kind);
     return {source,target:self?source:at(!own,e.target),own};
