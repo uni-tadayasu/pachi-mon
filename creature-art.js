@@ -323,19 +323,29 @@
     return cv;
   }
   // Shiny coats are an instance property, never a change to shared species
-  // data. A family keeps one alternate palette through every evolution/view.
+  // data. Every species has its own coat: one of 32 hue turns (always at least
+  // 50° away from the normal colours) combined with one of 8 saturation and
+  // brightness styles, both taken from its dex position. 32 × 8 = 256 coats, so
+  // no two species share one, and neighbouring entries (usually one family)
+  // land far apart on the colour wheel.
+  const SHINY_STYLES=Object.freeze([[1,1],[1.28,.94],[.62,1.12],[1.12,.82],[.8,1.05],[1.4,1.08],[.5,.92],[1.05,1.17]]);
+  function shinyPalette(id){
+    const ids=Object.keys(LT.DATA?.species||{}),index=Math.max(0,ids.indexOf(id));
+    const hueStep=(index*13)%32,style=Math.floor(index/32)%SHINY_STYLES.length;
+    return {index,hueStep,style,turn:50+hueStep*260/31,saturation:SHINY_STYLES[style][0],brightness:SHINY_STYLES[style][1]};
+  }
   function alternate(source,id){
     const cv=canvas(SIZE,SIZE),c=cv.getContext('2d',{willReadFrequently:true});
     c.drawImage(source,0,0);
     const im=c.getImageData(0,0,SIZE,SIZE),p=im.data;
-    const turn=130+hash(lineage(id)?.rootId||id)%91;
+    const {turn,saturation,brightness}=shinyPalette(id);
     for(let i=0;i<p.length;i+=4){
       if(p[i+3]<12)continue;
       const [h,s,v]=hsv(p[i],p[i+1],p[i+2]);
       // Preserve dark ink, white clothing and eye glints. The alternate
-      // colored materials retain their authored luminance and shading.
+      // colored materials retain their authored shading.
       if(v<.16||(s<.13&&v>.84))continue;
-      const color=rgb(h+turn,clamp(s<.18?s+.16:s*.92+.08,0,1),clamp(v*1.025,0,1));
+      const color=rgb(h+turn,clamp((s<.18?s+.16:s*.92+.08)*saturation,0,1),clamp(v*1.025*brightness,0,1));
       p[i]=color[0];p[i+1]=color[1];p[i+2]=color[2];
     }
     c.putImageData(im,0,0);return cv;
@@ -370,7 +380,7 @@
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
   const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261116-mythical',root).href)]);
-  LT.CreatureArt={ready,get,preload,lineage,alternate,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
+  LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
