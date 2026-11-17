@@ -970,3 +970,7 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
 .move-meta .nb{white-space:nowrap}
 /* A league label that cannot sit beside the type and level gets its own row. */
 .combatant-type>.hp-label.fit-wrap{grid-column:1/-1;grid-row:3;margin:0 0 3px;white-space:normal;overflow-wrap:normal;word-break:normal}
+
+/* Online team builder: the allocation each member brings (Lv.50 limits). */
+.link-alloc{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:var(--pm-gold);overflow-wrap:anywhere}
+.link-alloc.is-none,.link-alloc.is-fixed{color:var(--pm-text-3)}

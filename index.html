@@ -250,7 +250,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
-  <link rel="stylesheet" href="pachi-ui.css?v=20261117-names">
+  <link rel="stylesheet" href="pachi-ui.css?v=20261117-online">
 </head>
 <body>
   <!-- Original Pachi Monsters interface pixel icons. Copyright (c) 2026 KASAI SOLUTIONS INC. -->
@@ -7190,7 +7190,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
   const fail = error => ({ ok: false, error });
   const STRUGGLE = Object.freeze({ id: 'struggle', name: '踏ん張り打ち', kind: 'attack', power: 22, accuracy: 100, element: null, category: 'physical', effect: 'recoil' });
-  const RULES = Object.freeze({ version: 3, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint' });
+  // Allocation points from the adventure count online, limited to what a Lv.50
+  // monster can hold (2 per level, 64 per stat, HP +2 per point).
+  const ALLOC = D.allocation || { pointsPerLevel: 2, capPerStat: 64, keys: ['hp', 'atk', 'def', 'spAtk', 'spDef', 'speed'], hpPerPoint: 2 };
+  const ALLOC_KEYS = Object.freeze([...ALLOC.keys]);
+  const RULES = Object.freeze({ version: 4, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
+    allocation: Object.freeze({ budget: ALLOC.pointsPerLevel * (50 - 1), cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'first-owned-individual-scaled-down-to-budget' }) });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
     if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stable(value[key])).join(',') + '}';
@@ -7202,11 +7207,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     for (let i = 0; i < text.length; i++) { a = Math.imul(a ^ text.charCodeAt(i), 16777619); b = Math.imul(b ^ text.charCodeAt(i), 3266489917); }
     return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
   }
-  function stats(species) {
-    const b = D.species[species].base, level = RULES.level;
-    return { hp: b.hp + level * 5, atk: b.atk + level * 3, def: b.def + level * 2,
-      spAtk: (b.spAtk ?? b.atk) + level * 3, spDef: (b.spDef ?? b.def) + level * 2,
-      speed: b.speed + level * 2, accuracy: b.accuracy ?? 100, evasion: b.evasion ?? 100 };
+  function stats(species, alloc = null) {
+    const b = D.species[species].base, level = RULES.level, a = alloc || {};
+    return { hp: b.hp + level * 5 + (a.hp || 0) * RULES.allocation.hpPerPoint, atk: b.atk + level * 3 + (a.atk || 0), def: b.def + level * 2 + (a.def || 0),
+      spAtk: (b.spAtk ?? b.atk) + level * 3 + (a.spAtk || 0), spDef: (b.spDef ?? b.def) + level * 2 + (a.spDef || 0),
+      speed: b.speed + level * 2 + (a.speed || 0), accuracy: b.accuracy ?? 100, evasion: b.evasion ?? 100 };
   }
   function maxPP(move) { return integer(move.pp, 1, 99) ? move.pp : move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
   function effectiveness(element, defender) {
@@ -7231,6 +7236,30 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       if (new Set(ids).size !== size) return fail('同じパチモンは1体まで編成できます。');
       return { ok: true };
     }
+    // null (no points) or all six stats as whole numbers within the Lv.50 limits.
+    static validateAllocation(value) {
+      if (value === null) return { ok: true };
+      const A = RULES.allocation;
+      if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== ALLOC_KEYS.length || !ALLOC_KEYS.every(key => own(value, key) && integer(value[key], 0, A.cap))) return fail('振り分けポイントのデータが正しくありません。');
+      const total = ALLOC_KEYS.reduce((sum, key) => sum + value[key], 0);
+      if (total < 1) return fail('振り分けポイントのデータが正しくありません。');
+      if (total > A.budget) return fail(`振り分けポイントは合計${A.budget}までです。`);
+      return { ok: true };
+    }
+    // An adventure allocation as carried online: unchanged up to the Lv.50 budget,
+    // otherwise scaled down keeping its proportions (largest remainders get the rest).
+    static scaleAllocation(alloc) {
+      const A = RULES.allocation;
+      const source = Object.fromEntries(ALLOC_KEYS.map(key => [key, Number.isSafeInteger(alloc?.[key]) ? Math.max(0, Math.min(A.cap, alloc[key])) : 0]));
+      const used = ALLOC_KEYS.reduce((sum, key) => sum + source[key], 0);
+      if (!used) return null;
+      if (used <= A.budget) return source;
+      const exact = ALLOC_KEYS.map(key => source[key] * A.budget / used), result = Object.fromEntries(ALLOC_KEYS.map((key, i) => [key, Math.floor(exact[i])]));
+      let left = A.budget - ALLOC_KEYS.reduce((sum, key) => sum + result[key], 0);
+      const order = ALLOC_KEYS.map((_, i) => i).sort((p, q) => (exact[q] - Math.floor(exact[q])) - (exact[p] - Math.floor(exact[p])) || p - q);
+      for (const i of order) { if (left <= 0) break; const key = ALLOC_KEYS[i]; if (result[key] < source[key]) { result[key] += 1; left -= 1; } }
+      return result;
+    }
     static rulesFingerprint() {
       return checksum({ rules: RULES, elements: D.elements,
         species: Object.keys(D.species).sort().map(id => ({ id, element: D.species[id].element, base: D.species[id].base, moves: D.species[id].moves })),
@@ -7241,10 +7270,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       if (!Array.isArray(config.teams) || config.teams.length !== 2) throw new Error('両プレイヤーのチームが必要です。');
       if (!integer(config.seed, 0, 0xffffffff)) throw new Error('対戦シードが正しくありません。');
       for (const team of config.teams) { const check = Duel.validateTeam(team, config.mode); if (!check.ok) throw new Error(check.error); }
+      const allocation = config.allocation ?? [null, null];
+      if (!Array.isArray(allocation) || allocation.length !== 2) throw new Error('振り分けポイントのデータが正しくありません。');
+      allocation.forEach((list, side) => {
+        if (list === null || list === undefined) return;
+        if (!Array.isArray(list) || list.length !== config.teams[side].length) throw new Error('振り分けポイントのデータが正しくありません。');
+        for (const item of list) { const check = Duel.validateAllocation(item ?? null); if (!check.ok) throw new Error(check.error); }
+      });
       const slots = config.mode === 'double' ? 2 : 1;
       this.state = { version: RULES.version, mode: config.mode, turn: 1, round: 1, phase: 'action', seed: config.seed, rng: config.seed,
         teams: config.teams.map((team, side) => ({ name: cleanName(config.names?.[side], `プレイヤー${side + 1}`),
-          monsters: team.map(species => { const s = stats(species); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, stages: STAGES.empty(),
+          monsters: team.map((species, index) => { const alloc = allocation[side]?.[index] ?? null, s = stats(species, alloc); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, ...(alloc ? { alloc: clone(alloc) } : {}), stages: STAGES.empty(),
             pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false }; }),
           active: Array.from({ length: slots }, (_, slot) => slot) })), winner: null, reason: null, log: [], events: [] };
     }
@@ -7760,6 +7796,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   let selected=[...defaults],orders=[],orderTurn=0,name='トラベラー',explicitName=false,joinCode='',generation=0,queue=[],lastDraw=0,animation=0,returnToMenu=false,playbackLocked=false;
   try{const saved=localStorage.getItem('pachi-link-name');if(saved?.trim()){name=saved;explicitName=true;}}catch(_){}
   const species=id=>D.species[id],label=id=>species(id)?.name||id;
+  // What each team member brings from the adventure: allocation points at the Lv.50 limits.
+  const ALLOC_LABEL={hp:'HP',atk:'攻撃',def:'防御',spAtk:'特攻',spDef:'特防',speed:'素早さ'};
+  function allocBadge(id){
+    if(id==='futo'||id==='floravelle')return '<span class="link-alloc is-fixed">運営設定の能力</span>';
+    const alloc=LT.OnlineFuto?.allocationFor?.([id])?.[0];
+    if(!alloc)return '<span class="link-alloc is-none">振り分けなし（手持ち・ひかえに同じ種類なし／未振り分け）</span>';
+    const budget=LT.Duel?.rules?.allocation?.budget??98,total=Object.values(alloc).reduce((sum,value)=>sum+value,0);
+    const parts=Object.entries(alloc).filter(([,value])=>value>0).map(([key,value])=>`${ALLOC_LABEL[key]}+${key==='hp'?value*2:value}`);
+    return `<span class="link-alloc" title="冒険の振り分けポイントを、Lv.50の上限（合計${budget}・1能力64）で反映します">振り分け ${total}/${budget}pt · ${esc(parts.join(' '))}</span>`;
+  }
   const monLabel=mon=>(mon?.shiny?'✦ ':'')+(LT.MonsterIdentity?.displayName(mon)||label(mon.species));
   const modeName=()=>mode==='double'?'ダブルバトル':'シングルバトル';
   const portrait=(id,size=88,mon=null)=>`<canvas data-online-shiny="${mon?.shiny===true}" data-online-creature="${esc(id)}" width="256" height="256" style="width:${size}px;height:${size}px" aria-label="${esc(mon?monLabel(mon):label(id))}"></canvas>`;
@@ -7787,8 +7833,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       <div class="link-modes" aria-label="対戦ルール"><button type="button" data-link-mode="single" aria-pressed="${mode==='single'}" ${peer?'disabled':''}><b>シングル</b><small>1体ずつ · チーム3体</small></button><button type="button" data-link-mode="double" aria-pressed="${mode==='double'}" ${peer?'disabled':''}><b>ダブル</b><small>2体ずつ · チーム4体</small></button></div>
       <p class="link-small">部屋を作った人がルールを決定します。</p></section>
       <section class="link-box"><h4>02 / 友だちとつながる</h4>${peer?`<div class="link-code-wrap"><span>ルームコード</span><output id="link-room-code" class="link-room-code">${esc(room||'------')}</output><button id="link-copy" type="button" class="btn" ${room?'':'disabled'}>コードをコピー</button></div><p class="link-small">${linked?'接続できました。下でチームを決めよう。':'友だちにこの6文字を伝え、この画面で待ってください。'}</p><button id="link-reset" type="button" class="link-text-button">${terminal?'接続をやり直す':'部屋を閉じて戻る'}</button>`:`<button id="link-host" type="button" class="btn btn-primary" ${connecting?'disabled':''}>部屋をつくる</button><div class="link-or">または、コードで参加</div><label class="link-field">6文字のルームコード<input id="link-code-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="例：7KPM4R" value="${esc(joinCode)}" ${connecting?'disabled':''}></label><button id="link-join" type="button" class="btn" ${connecting?'disabled':''}>この部屋に参加</button>`}</section></div>
-      ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>通常 Lv.50 · フートは運営設定 · 同じ種類は1体まで</span></div><div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((id,i)=>`<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(id,100)}<label><span class="sr-only">チーム ${i+1} のモンスター</span><select id="link-species-${i}" data-link-species="${i}" ${locked?'disabled':''}>${available.map((value,n)=>`<option value="${esc(value)}" ${value===id?'selected':''}>${String(n+1).padStart(3,'0')} ${esc(label(value))} / ${esc(D.elements[species(value).element].name)}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(id).element].name)}タイプ</span></article>`).join('')}</div><div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
-      <details class="link-rules"><summary>ルールと接続について</summary><p>通常のパチモンは共通のレベル50、フートは運営設定の能力で対戦します。冒険で育てたレベル・能力は持ち込みません。手持ち・ひかえに同じ種類がいる場合は、先頭の個体のニックネームと色違いの見た目を使用します。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。持ち物・捕獲は使えません。100ターンで残りHP割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
+      ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>通常 Lv.50 · 振り分けを反映 · フートは運営設定 · 同じ種類は1体まで</span></div><div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((id,i)=>`<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(id,100)}<label><span class="sr-only">チーム ${i+1} のモンスター</span><select id="link-species-${i}" data-link-species="${i}" ${locked?'disabled':''}>${available.map((value,n)=>`<option value="${esc(value)}" ${value===id?'selected':''}>${String(n+1).padStart(3,'0')} ${esc(label(value))} / ${esc(D.elements[species(value).element].name)}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(id).element].name)}タイプ</span>${allocBadge(id)}</article>`).join('')}</div><div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
+      <details class="link-rules"><summary>ルールと接続について</summary><p>通常のパチモンは共通のレベル50、フートと幻は運営設定の能力で対戦します。手持ち・ひかえに同じ種類がいる場合は、先頭の個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使用します。振り分けはLv.50で持てる上限（合計98・1能力64、HPは1ポイントで+2）まで反映し、超える分は配分の割合を保って縮めます。冒険のレベル・持ち物・状態異常は持ち込みません。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。持ち物・捕獲は使えません。100ターンで残りHP割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
   }
   function hp(mon){return `<div class="link-hp-track"><span style="width:${Math.max(0,mon.hp/mon.maxHp*100)}%" class="${mon.hp/mon.maxHp<.25?'low':''}"></span></div><small>${mon.hp} / ${mon.maxHp} HP</small>`;}
   function commandOptions(duel,team,slot){
@@ -7894,7 +7940,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-vfx.js?v=20261116-battle-trade"></script>
 <script src="admin-console.js?v=20261116-battle-trade"></script>
-<script src="online-futo.js?v=20261116-mythical-secret"></script>
+<script src="online-futo.js?v=20261117-alloc"></script>
 <script src="secret-encounter.js?v=20261117-shiny"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261116-battle-trade">
 <script src="trade-client.js?v=20261116-battle-trade"></script>

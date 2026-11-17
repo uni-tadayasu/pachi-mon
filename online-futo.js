@@ -32,6 +32,22 @@
     const party=[...(state?.party||[]),...(state?.storage||[])];
     return ids.map(id=>{const mon=party.find(m=>m.species===id);return {nickname:mon?.nickname||'',shiny:mon?.shiny===true};});
   }
+  // Allocation points of the same individual as the appearance, carried at the
+  // Lv.50 limits (Duel.scaleAllocation). Futo and the mythical keep their admin stats.
+  function allocationFor(ids){
+    const state=LT.adminBridge?.getEngine?.()?.state;
+    const party=[...(state?.party||[]),...(state?.storage||[])];
+    return ids.map(id=>{
+      if(Object.hasOwn(specialFields,id))return null;
+      const mon=party.find(m=>m.species===id);
+      return mon&&mon.customStats===undefined?Duel.scaleAllocation(mon.alloc):null;
+    });
+  }
+  function validAllocation(team){
+    if(team.allocation===undefined)return true;
+    return Array.isArray(team.allocation)&&Array.isArray(team.ids)&&team.allocation.length===team.ids.length&&
+      team.allocation.every((item,index)=>item===null||(!Object.hasOwn(specialFields,team.ids[index])&&Duel.validateAllocation(item).ok));
+  }
   function validAppearance(team){
     if(team.appearance===undefined)return true;
     return Array.isArray(team.appearance)&&team.appearance.length===team.ids?.length&&team.appearance.every(item=>{
@@ -100,8 +116,8 @@
       this._futoChecking = false;
     }
     _validTeam(team) {
-      if(!validAppearance(team||{}))return false;
-      const clean=plain(team)?{...team}:team;if(clean)delete clean.appearance;
+      if(!validAppearance(team||{})||!validAllocation(team||{}))return false;
+      const clean=plain(team)?{...team}:team;if(clean){delete clean.appearance;delete clean.allocation;}
       const specials=specialIds(team);
       if(!specials.length)return super._validTeam(clean)&&team.ids.every(id=>!LT.DATA.species[id]?.specialOnly);
       return only(clean,['name','ids',...specials.map(id=>specialFields[id])])&&team.name===cleanName(team.name)&&!!team.name&&
@@ -116,7 +132,7 @@
       const specials=specialIds(input),locals={futo:owned(),floravelle:ownedMythical()};
       if(specials.some(id=>!locals[id]))return fail('特別な仲間を受け取ってから編成してください。');
       if(specials.length&&(typeof LT.Admin?.requestDuelPass!=='function'||typeof LT.Admin?.verifyDuelPass!=='function'))return fail('仲間の所持確認サービスを読み込めません。');
-      const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:appearanceFor(input.ids)};
+      const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:appearanceFor(input.ids),allocation:allocationFor(input.ids)};
       for(const id of specials)team[specialFields[id]]={pass:'0'.repeat(32)};
       if(!this._validTeam(team))return fail('異なる種類のパチモンでチームを編成してください。');
       this._futoChecking=true;
@@ -167,14 +183,14 @@
           if(!record||record.pass!==team[specialFields[id]].pass)throw new Error('仲間の所持確認が完了していません。');
           return [id,validateSnapshot(record.snapshot,this.sessionId,side,Date.now(),id)];
         })));
-        this.duel=createVerifiedDuel({mode:this.mode,teams:this._teams.map(team=>team.ids),names:this._teams.map(team=>team.name),seed:this.seed,appearance:this._teams.map(team=>team.appearance)},verified);
+        this.duel=createVerifiedDuel({mode:this.mode,teams:this._teams.map(team=>team.ids),names:this._teams.map(team=>team.name),seed:this.seed,appearance:this._teams.map(team=>team.appearance),allocation:this._teams.map(team=>team.allocation||null)},verified);
         this._beginSync(0);
       }catch(_){this._fail('特別な仲間の編成確認に失敗しました。部屋を作り直してください。');}
     }
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':special-server-pass-v4-owner-mythical';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':special-server-pass-v5-owner-mythical-allocation';
   LT.DuelSession = FutoSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, validateSnapshot, version: 4 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, validateSnapshot, allocationFor, version: 5 };
 })();
