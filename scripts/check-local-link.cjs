@@ -180,7 +180,7 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   for (const needle of ['<script src="local-link.js?v=', '<link rel="stylesheet" href="local-link.css?v=', '<link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">', '<link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">',
     "['local','link','ローカル通信']", 'data-ui="local-battle"', 'data-ui="local-trade"', 'data-link-transport="local"', "transport:'local'", 'checkTrade', 'LT.localTradeActive', '<symbol id="i-link"'])
     assert(html.includes(needle), `index.html: ${needle}`);
-  assert(/if\(transport==='local'\)available=available\.filter\(id=>!SPECIAL_ONLINE\.includes\(id\)\)/.test(html) && /SPECIAL_ONLINE=\['futo','floravelle'\]/.test(html), 'operator-verified monsters stay out of local battles');
+  assert(html.includes("if(transport==='local')for(const id of SPECIAL_ONLINE)allowed.delete(id);") && /SPECIAL_ONLINE=\['futo','floravelle'\]/.test(html), 'operator-verified monsters stay out of local battles');
   assert.equal((html.match(/\(LT\.onlineActive\|\|LT\.localTradeActive\|\|tradeLocked\(\)\)/g) || []).length, 18, 'the adventure pauses during a local trade wherever it pauses for online play');
   const licenses = fs.readFileSync(path.join(root, 'LICENSES.txt'), 'utf8');
   assert(/qrcode-generator/.test(licenses) && /jsQR/.test(licenses) && fs.existsSync(path.join(root, 'vendor', 'jsQR.LICENSE.txt')) && fs.existsSync(path.join(root, 'vendor', 'qrcode-generator.LICENSE.txt')), 'bundled library licenses');

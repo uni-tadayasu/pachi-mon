@@ -617,19 +617,31 @@
     onlineKey=key;onlineSeed=state?.seed;
     if(!continuing){onlineQueue=[];onlineEnd=now;}
     let start=continuing?onlineEnd:now,previous=events.find(item=>item.visual?.teams)?.visual||{teams:state?.teams};
-    const options=settings(),reduced=motionReduced(options),tempo={slow:1.2,normal:1,fast:.72,instant:.5}[options.textSpeed]||1;
     onlineStarts=[];onlineTotal=events.length;
-    for(const [index,item] of events.entries()){
-      const after=item.visual?.teams?item.visual:previous,e=fromEvent(item,null,start)||textBeat(item,start);
-      if(reduced&&e.kind!=='text')e.duration=Math.min(e.duration,180);
-      // The beat lasts until its message has been read, then pauses before the next.
-      if(e.kind==='text')e.duration=Math.round(e.duration*tempo);
-      const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo));
-      e.index=index;e.before=previous;e.after=after;e.until=start+beat+Math.round((['damage','faint','recoil'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
-      onlineQueue.push(e);onlineStarts.push(start);start=e.until;
-      previous=after;
+    for(const e of planOnline(events,start)){
+      const item=events[e.index],after=item.visual?.teams?item.visual:previous;
+      e.before=previous;e.after=after;onlineQueue.push(e);onlineStarts.push(e.started);start=e.until;previous=after;
     }
     onlineEnd=onlineQueue.length?start+120:now;lastOnlineTime=now;
+  }
+  // The timeline of one state's messages from `start`: each beat lasts until its
+  // message has been read (or its effect has played), then pauses before the next.
+  function planOnline(events,start=0){
+    const options=settings(),reduced=motionReduced(options),tempo={slow:1.2,normal:1,fast:.72,instant:.5}[options.textSpeed]||1,beats=[];
+    for(const [index,item] of (events||[]).entries()){
+      const e=fromEvent(item,null,start)||textBeat(item,start);
+      if(reduced&&e.kind!=='text')e.duration=Math.min(e.duration,180);
+      if(e.kind==='text')e.duration=Math.round(e.duration*tempo);
+      const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo));
+      e.index=index;e.until=start+beat+Math.round((['damage','faint','recoil'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
+      beats.push(e);start=e.until;
+    }
+    return beats;
+  }
+  // For checks and the interface: offsets of every beat and the whole playback length.
+  function onlinePlan(state){
+    const beats=planOnline(state?.events||[],0);
+    return {beats:beats.map(e=>({kind:e.kind,index:e.index,start:e.started,until:e.until})),total:beats.length?beats.at(-1).until+120:0};
   }
   // How many messages of the current turn have started playing (for the battle log).
   function onlineProgress(state,now=globalThis.performance?.now?.()||0){
@@ -684,7 +696,7 @@
     globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;onlineStarts=[];onlineTotal=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
+  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();
