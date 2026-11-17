@@ -151,6 +151,19 @@
     close(reason = '退出しました。') { if (this.connected) this._raw({ pachi: 'L1', kind: 'bye' }); this._finish(reason); }
   }
 
+  // ── How to put two devices on one network. Browsers cannot pair two phones over
+  // Bluetooth directly (Web Bluetooth only reaches accessories), so Bluetooth play
+  // uses Bluetooth tethering: one phone shares a small network over Bluetooth and
+  // the link runs over it exactly as over Wi-Fi.
+  const GUIDE = `<details class="local-howto"><summary>つなぎ方：Wi-Fi・テザリング・Bluetooth</summary>
+    <p><strong>Wi-Fi</strong>：2台を同じWi-Fiにつなぎます（インターネットにつながっていなくてもかまいません）。</p>
+    <p><strong>テザリング</strong>：片方のスマホの「インターネット共有（テザリング）」に、もう片方をWi-Fiでつなぎます。</p>
+    <p><strong>Bluetooth</strong>：Wi-Fiが使えない場所では、Bluetoothテザリングで2台をつなげます。</p>
+    <ol><li>2台ともBluetoothをオンにして、ペアリングします。</li>
+      <li>片方で Bluetoothテザリングをオンにします（Android：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」／iPhone：設定 →「インターネット共有」→「ほかの人の接続を許可」）。</li>
+      <li>もう片方の Bluetooth設定で、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
+      <li>あとは、いつもどおりQRコードを読み取って接続します。</li></ol>
+    <p class="local-note">ブラウザーの仕組み上、Bluetoothだけで端末どうしを直接つなぐことはできないため、Bluetoothテザリングで作ったネットワークを使います。iPhoneのインターネット共有は、モバイルデータ通信の契約がないと使えない場合があります。公共・会社のWi-Fiでは、端末どうしの通信が禁止されていてつながらないことがあります。</p></details>`;
   // ── QR codes: draw them, and read them with the camera.
   const scripts = new Map();
   function loadScript(src) {
@@ -298,7 +311,7 @@
     function eligible(mon) { try { bridge().getEngine().toTradeWire(mon); return true; } catch (_) { return false; } }
     function label(mon) { const s = LT.DATA.species[mon.species]; return `${mon.shiny ? '✦ ' : ''}${mon.nickname || s?.name || mon.species}${mon.nickname ? `（${s?.name}）` : ''} Lv.${mon.level}`; }
     function connectHtml() {
-      if (!link) return `<p class="local-lead">同じWi-Fi（またはスマホのテザリング）につないだ近くの端末と、インターネットなしで交換できます。</p>
+      if (!link) return `<p class="local-lead">同じWi-Fi・スマホのテザリング・Bluetoothテザリングでつないだ近くの端末と、インターネットなしで交換できます。</p>${GUIDE}
         <div class="local-actions"><button type="button" class="btn btn-primary" data-local="host" ${connecting ? 'disabled' : ''}>部屋をつくる</button></div>
         <div class="link-or">または、相手のコードで参加</div>
         <div class="local-actions"><button type="button" class="btn" data-local="scan-offer" ${connecting ? 'disabled' : ''}>カメラで読み取る</button></div>
@@ -399,7 +412,7 @@
 
   LT.LocalLink = LocalLink;
   LT.LocalSignal = Object.freeze({ encode: encodeSignal, decode: decodeSignal, trim: trimSdp, prefix: PREFIX });
-  LT.LocalQR = Object.freeze({ svg: qrSvg, hydrate, scan, vendor: VENDOR });
+  LT.LocalQR = Object.freeze({ svg: qrSvg, hydrate, scan, vendor: VENDOR, guide: GUIDE });
   LT.LocalTradeSession = LocalTradeSession;
   LT.LocalTrade = Trade;
   if (typeof module !== 'undefined' && module.exports) module.exports = { LocalLink, LocalTradeSession, encodeSignal, decodeSignal, trimSdp, stable };

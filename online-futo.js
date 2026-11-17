@@ -48,6 +48,34 @@
     return Array.isArray(team.allocation)&&Array.isArray(team.ids)&&team.allocation.length===team.ids.length&&
       team.allocation.every((item,index)=>item===null||(!Object.hasOwn(specialFields,team.ids[index])&&Duel.validateAllocation(item).ok));
   }
+  // Members are the player's own individuals (party and storage), chosen by uid.
+  function ownedList(){const state=LT.adminBridge?.getEngine?.()?.state;return [...(state?.party||[]),...(state?.storage||[])];}
+  function membersFor(ids,uids){
+    if(!Array.isArray(uids)||uids.length!==ids.length||uids.some(uid=>typeof uid!=='string'))return {ok:false,error:'チームのパチモンを選び直してください。'};
+    if(new Set(uids).size!==uids.length)return {ok:false,error:'同じパチモンは1体まで編成できます。'};
+    const all=ownedList(),list=uids.map(uid=>all.find(mon=>mon.uid===uid)||null);
+    if(list.some((mon,i)=>!mon||mon.species!==ids[i]))return {ok:false,error:'手持ち・ひかえにいるパチモンだけを編成できます。'};
+    return {ok:true,list};
+  }
+  const lookOf=mon=>({nickname:mon?.nickname||'',shiny:mon?.shiny===true});
+  const allocationOf=(id,mon)=>Object.hasOwn(specialFields,id)?null:(mon&&mon.customStats===undefined?Duel.scaleAllocation(mon.alloc):null);
+  // Held items the player owns: in the bag, or held by any of their monsters.
+  function ownedItems(){
+    const state=LT.adminBridge?.getEngine?.()?.state,bag=state?.held||{},held=LT.DATA.heldItems||{};
+    const ids=new Set([...Object.keys(bag).filter(id=>(bag[id]||0)>0),...ownedList().map(mon=>mon.heldItem).filter(Boolean)]);
+    return [...ids].filter(id=>Object.hasOwn(held,id)).sort((a,b)=>held[a].no-held[b].no);
+  }
+  function itemsFor(input,list){
+    const size=input.ids.length;let items=input.items;
+    if(items===undefined)items=list?list.map(mon=>mon?.heldItem||null):Array(size).fill(null);
+    if(!Array.isArray(items)||items.length!==size)return {ok:false,error:'持ち物の選び方が正しくありません。'};
+    items=items.map(id=>id||null);
+    const check=Duel.validateItems(items,size);if(!check.ok)return {ok:false,error:check.error};
+    const mine=new Set(ownedItems()),missing=items.find(id=>id&&!mine.has(id));
+    if(missing)return {ok:false,error:`${LT.DATA.heldItems[missing].name}を持っていません。冒険で手に入れた持ち物だけを使えます。`};
+    return {ok:true,items};
+  }
+  const validItems=team=>team.items===undefined||(Array.isArray(team.ids)&&Duel.validateItems(team.items,team.ids.length).ok&&team.items.some(Boolean));
   function validAppearance(team){
     if(team.appearance===undefined)return true;
     return Array.isArray(team.appearance)&&team.appearance.length===team.ids?.length&&team.appearance.every(item=>{
@@ -97,7 +125,7 @@
       const snapshot = verified[side][species];
       duel.state.teams[side].monsters[index] = { species, level: snapshot.level, hp: snapshot.stats.hp, maxHp: snapshot.stats.hp,
         stats: clone(snapshot.stats), stages: LT.BattleStages.empty(), customMoves: snapshot.moves.slice(),
-        pp: Object.fromEntries(snapshot.moves.map(id => [id, maxPP(LT.DATA.moves[id])])), guard: false };
+        pp: Object.fromEntries(snapshot.moves.map(id => [id, maxPP(LT.DATA.moves[id])])), guard: false, ...(config.items?.[side]?.[index] ? { item: config.items[side][index] } : {}) };
     }));
     // Cosmetics are carried separately from combat data. They can never alter
     // rental stats, levels, PP or the server-authorized Futo snapshot.
@@ -117,8 +145,8 @@
       this._futoChecking = false;
     }
     _validTeam(team) {
-      if(!validAppearance(team||{})||!validAllocation(team||{}))return false;
-      const clean=plain(team)?{...team}:team;if(clean){delete clean.appearance;delete clean.allocation;}
+      if(!validAppearance(team||{})||!validAllocation(team||{})||!validItems(team||{}))return false;
+      const clean=plain(team)?{...team}:team;if(clean){delete clean.appearance;delete clean.allocation;delete clean.items;}
       const specials=specialIds(team);
       if(!specials.length)return super._validTeam(clean)&&team.ids.every(id=>!LT.DATA.species[id]?.specialOnly);
       return only(clean,['name','ids',...specials.map(id=>specialFields[id])])&&team.name===cleanName(team.name)&&!!team.name&&
@@ -133,7 +161,14 @@
       const specials=specialIds(input),locals={futo:owned(),floravelle:ownedMythical()};
       if(specials.some(id=>!locals[id]))return fail('特別な仲間を受け取ってから編成してください。');
       if(specials.length&&(typeof LT.Admin?.requestDuelPass!=='function'||typeof LT.Admin?.verifyDuelPass!=='function'))return fail('仲間の所持確認サービスを読み込めません。');
-      const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:appearanceFor(input.ids),allocation:allocationFor(input.ids)};
+      // Chosen individuals (by uid) bring their own look, points and item; without uids,
+      // the first owned individual of each species is used.
+      const members=input.uids===undefined?null:membersFor(input.ids,input.uids);
+      if(members&&!members.ok)return fail(members.error);
+      const list=members?.list||null,items=itemsFor(input,list);
+      if(!items.ok)return fail(items.error);
+      const team={name:cleanName(input.name)||`プレイヤー${this.role+1}`,ids:input.ids.slice(),appearance:list?list.map(lookOf):appearanceFor(input.ids),allocation:list?list.map((mon,i)=>allocationOf(input.ids[i],mon)):allocationFor(input.ids)};
+      if(items.items.some(Boolean))team.items=items.items;
       for(const id of specials)team[specialFields[id]]={pass:'0'.repeat(32)};
       if(!this._validTeam(team))return fail('異なる種類のパチモンでチームを編成してください。');
       this._futoChecking=true;
@@ -184,14 +219,14 @@
           if(!record||record.pass!==team[specialFields[id]].pass)throw new Error('仲間の所持確認が完了していません。');
           return [id,validateSnapshot(record.snapshot,this.sessionId,side,Date.now(),id)];
         })));
-        this.duel=createVerifiedDuel({mode:this.mode,teams:this._teams.map(team=>team.ids),names:this._teams.map(team=>team.name),seed:this.seed,appearance:this._teams.map(team=>team.appearance),allocation:this._teams.map(team=>team.allocation||null)},verified);
+        this.duel=createVerifiedDuel({mode:this.mode,teams:this._teams.map(team=>team.ids),names:this._teams.map(team=>team.name),seed:this.seed,appearance:this._teams.map(team=>team.appearance),allocation:this._teams.map(team=>team.allocation||null),items:this._teams.map(team=>team.items||null)},verified);
         this._beginSync(0);
       }catch(_){this._fail('特別な仲間の編成確認に失敗しました。部屋を作り直してください。');}
     }
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':special-server-pass-v5-owner-mythical-allocation';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':special-server-pass-v5-owner-mythical-allocation-owned-items';
   LT.DuelSession = FutoSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, validateSnapshot, allocationFor, version: 5 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, validateSnapshot, allocationFor, ownedList, ownedItems, version: 6 };
 })();

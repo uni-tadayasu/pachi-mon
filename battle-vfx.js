@@ -114,7 +114,7 @@
       || globalThis.document?.body?.classList?.contains('reduce-motion')===true;
   }
   function render(c,w,h,time,event,options={}) {
-    if(!c||!event||!Number.isFinite(time)||motionReduced(options))return false;
+    if(!c||!event||event.kind==='text'||!Number.isFinite(time)||motionReduced(options))return false;
     const duration=clamp(Number(event.duration)||940,300,2400),t=(time-event.started)/duration;
     if(t<0||t>1)return false;
     const e=event.style?event:{...event,style:classify(resolveMove(event)||{element:event.element},event.kind)};
@@ -600,7 +600,16 @@
 
   // Playback snapshots remain separate from gameplay state. The event visuals
   // contain only team data, so they cannot recursively include their own queue.
-  let onlineKey=null,onlineSeed=null,onlineQueue=[],lastOnlineTime=0,onlineEnd=0;
+  let onlineKey=null,onlineSeed=null,onlineQueue=[],lastOnlineTime=0,onlineEnd=0,onlineStarts=[],onlineTotal=0;
+  // Player battles keep a steady rhythm: every message gets its own beat. Moves play
+  // their effect and stay up until the line is read; plain messages (conditions,
+  // items, the turn header) hold for their reading time; a short pause separates beats.
+  const ONLINE_GAP=300,ONLINE_SETTLE=420;
+  const readTime=text=>Math.max(900,Math.min(2000,620+Array.from(String(text||'')).length*34));
+  function textBeat(item,start){
+    const duration=item?.kind==='turn'?850:['result','limit'].includes(item?.kind)?1900:readTime(item?.text);
+    return {kind:'text',style:'text',started:start,duration,side:item?.side??0,slot:item?.slot||0,target:0,move:''};
+  }
   function queueOnline(state,now) {
     const events=state?.events||[],key=JSON.stringify([state?.seed,state?.round,state?.turn,state?.winner,events.map(item=>[item.kind,item.side,item.slot,item.index,item.move,item.text])]);
     if(key===onlineKey)return;
@@ -608,16 +617,25 @@
     onlineKey=key;onlineSeed=state?.seed;
     if(!continuing){onlineQueue=[];onlineEnd=now;}
     let start=continuing?onlineEnd:now,previous=events.find(item=>item.visual?.teams)?.visual||{teams:state?.teams};
-    const reduced=motionReduced(settings());
-    for(const item of events){
-      const after=item.visual?.teams?item.visual:previous,e=fromEvent(item,null,start);
-      if(e){
-        if(reduced)e.duration=Math.min(e.duration,180);
-        e.before=previous;e.after=after;onlineQueue.push(e);start+=e.duration+75;
-      }
+    const options=settings(),reduced=motionReduced(options),tempo={slow:1.2,normal:1,fast:.72,instant:.5}[options.textSpeed]||1;
+    onlineStarts=[];onlineTotal=events.length;
+    for(const [index,item] of events.entries()){
+      const after=item.visual?.teams?item.visual:previous,e=fromEvent(item,null,start)||textBeat(item,start);
+      if(reduced&&e.kind!=='text')e.duration=Math.min(e.duration,180);
+      // The beat lasts until its message has been read, then pauses before the next.
+      if(e.kind==='text')e.duration=Math.round(e.duration*tempo);
+      const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo));
+      e.index=index;e.before=previous;e.after=after;e.until=start+beat+Math.round((['damage','faint','recoil'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
+      onlineQueue.push(e);onlineStarts.push(start);start=e.until;
       previous=after;
     }
-    onlineEnd=onlineQueue.length?start+180:now;lastOnlineTime=now;
+    onlineEnd=onlineQueue.length?start+120:now;lastOnlineTime=now;
+  }
+  // How many messages of the current turn have started playing (for the battle log).
+  function onlineProgress(state,now=globalThis.performance?.now?.()||0){
+    if(!state?.teams)return null;
+    queueOnline(state,now);
+    return {shown:onlineStarts.filter(start=>now>=start).length,total:onlineTotal};
   }
   function onlineBusy(state,now=globalThis.performance?.now?.()||0){
     if(!state?.teams)return false;
@@ -625,19 +643,19 @@
   }
   function onlineFrame(state,now){
     queueOnline(state,now);
-    while(onlineQueue.length&&now>=onlineQueue[0].started+onlineQueue[0].duration+75)onlineQueue.shift();
+    while(onlineQueue.length&&now>=(onlineQueue[0].until??onlineQueue[0].started+onlineQueue[0].duration+75))onlineQueue.shift();
     return onlineQueue[0];
   }
   function onlineView(state,now=globalThis.performance?.now?.()||0){
     if(!state?.teams)return state;
     const e=onlineFrame(state,now);
     if(!e)return state;
-    const visual=e.kind==='switch'||now>=e.started+e.duration?e.after:e.before;
+    const visual=now<e.started?e.before:e.kind==='switch'||e.kind==='text'||now>=e.started+e.duration?e.after:e.before;
     return visual?.teams?{...state,teams:visual.teams}:state;
   }
   function settings() {
     let value={};try{value=JSON.parse(globalThis.localStorage?.getItem('lumina-trail-settings-v1')||'{}');}catch(_){}
-    return {quality:['high','balanced','low'].includes(value.quality)?value.quality:'balanced',reducedMotion:value.reducedMotion===true};
+    return {quality:['high','balanced','low'].includes(value.quality)?value.quality:'balanced',reducedMotion:value.reducedMotion===true,textSpeed:['slow','normal','fast','instant'].includes(value.textSpeed)?value.textSpeed:'normal'};
   }
   function install() {
     if(!LT.Art?.battle||!LT.PixelSprites?.duel||LT.Art.battle._pachiVFX)return false;
@@ -650,7 +668,7 @@
     LT.PixelSprites.duel=function(canvas,value,side=0,time=0) {
       const state=value?.state||value;
       if(!canvas||!state?.teams)return duel(canvas,value,side,time);
-      if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;onlineSeed=null;onlineEnd=0;}
+      if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;onlineSeed=null;onlineEnd=0;onlineStarts=[];onlineTotal=0;}
       const e=time?onlineFrame(state,time):undefined,shown=time?onlineView(state,time):state;
       const options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
       duel(canvas,shown,side,time,options);
@@ -663,10 +681,10 @@
       }
       if(e&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,e,options);
     };
-    globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;}});
+    globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;onlineStarts=[];onlineTotal=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
+  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();

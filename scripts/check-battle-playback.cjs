@@ -15,7 +15,7 @@ function harness(engine,reducedMotion=false){
  const c=vm.createContext({engine,LT,DATA,battleView:null,battleEffect:null,busy:false,evolutionUntil:0,settings:{reducedMotion},performance:{now:()=>100},
   $:id=>nodes[id],document:{createElement:()=>({textContent:''})},toast:msg=>out.toasts.push(msg),updateScene(){},
   updateAll(){out.draws.push({busy:c.busy,enemy:(c.battleView||engine).battle.enemy.species});},updateBattle(){},save(){out.saves++;},
-  sound:{fx:name=>out.sounds.push(name),move(){}},setTimeout(fn,duration){out.frames.push({duration,busy:c.busy,effect:copy(c.battleEffect),visual:copy(c.battleView.battle),party:copy(c.battleView.state.party)});return setTimeout(fn,0);}});
+  sound:{fx:name=>out.sounds.push(name),move(){}},setTimeout(fn,duration){out.frames.push({duration,busy:c.busy,effect:copy(c.battleEffect),visual:copy(c.battleView.battle),party:copy(c.battleView.state.party)});return setTimeout(fn,0);},clearTimeout(id){clearTimeout(id);}});
  const start=html.indexOf('  function captureBattleView()'),end=html.indexOf('  function openBattle()',start);
  assert(start>0&&end>start);vm.runInContext(html.slice(start,end),c);
  return {c,out};
@@ -35,12 +35,17 @@ async function run(){
  assert.equal(arrivals[1].visual.enemy.species,'shizuku');assert.equal(e.battle.activeIndex,2);assert.equal(e.battle.enemy.species,'shizuku');
  assert.equal(out.saves,2);assert.equal(c.busy,false);
  // Motion-reduced settings still settle the two states in order and release controls.
- e=make();({c,out}=harness(e,true));await c.doBattle({type:'move',index:0});assert(out.frames.every(f=>f.duration<=180));assert(e.battle.pendingReplacement);assert(!c.busy);
+ e=make();({c,out}=harness(e,true));await c.doBattle({type:'move',index:0});assert(out.frames.every(f=>f.duration>=300&&f.duration<=2600),'Motion-reduced playback has no effects but keeps each line up long enough to read');assert(e.battle.pendingReplacement);assert(!c.busy);
  const before=out.frames.length;await c.doBattle({type:'move',index:0});assert.equal(out.frames.length,before);assert(out.toasts.length);
+ // Rhythm: each line stays at least its reading time; a hit waits for its effect plus a pause.
+ e=make();({c,out}=harness(e));await c.doBattle({type:'move',index:0});
+ const waits=out.frames.filter(f=>f.duration>=300);assert(waits.length>=2,'every message has its own beat');
+ const lethal=out.frames.find(f=>f.effect?.kind==='damage');assert(lethal.duration>=lethal.effect.duration+400,'a hit is followed by a visible pause');
+ assert(html.includes('const fatal=(event.visual?.ally?.hp??1)<=0||(event.visual?.enemy?.hp??1)<=0'),'a knockout keeps its faint motion for its own event');
  // Duplicate inputs while playback is outstanding cannot run a second engine turn.
  e=make();({c,out}=harness(e));const pending=c.doBattle({type:'move',index:0});const turn=e.battle.turn;await c.doBattle({type:'move',index:0});await pending;assert.equal(e.battle.turn,turn);
  assert(html.includes("battleView||engine,settings.reducedMotion?0:now"),'Canvas must render the staged view');
  assert(html.includes("if(b.pendingReplacement){"));assert(html.includes('data-replacement='));assert(html.includes("chooseBattleReplacement(Number(d.replacement))"));
- console.log('Battle playback passed: lethal hit before collapse, retained participants, selected arrivals after animation, no duplicate input, motion-reduced completion, staged canvas and choice UI.');
+ console.log('Battle playback passed: lethal hit before collapse, retained participants, selected arrivals after animation, no duplicate input, motion-reduced completion with reading time, staged canvas and choice UI.');
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
