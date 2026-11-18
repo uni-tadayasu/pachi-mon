@@ -13,7 +13,8 @@
     ember: ['#fff2bc', '#ffb247', '#ed5b64', '#fffaf0'],
     wind: ['#f0ffe3', '#aae6c5', '#69a9da', '#ffffff'],
     crystal: ['#fff2ff', '#d6acff', '#7685ec', '#fff9cf'],
-    neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff']
+    neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff'],
+    void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0']
   };
   // Exactly 24 move effects. Every move maps to one, by its role in the type's
   // roster (or a named exception); colours come from the move or its type.
@@ -35,7 +36,8 @@
   };
   const NAMED_EFFECTS = {nudge:'impact',pulse:'ripples',dawnstep:'impact',dew:'ripples',struggle:'impact',
     futo_breaker:'impact',futo_burst:'beam',arvelion_rend:'astral-rend',arvelion_nova:'creation-nova',
-    verdant_lance:'astral-rend',root_drain:'roots',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova'};
+    verdant_lance:'astral-rend',root_drain:'roots',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova',
+    null_curse:'astral-rend',null_ray:'beam',null_scorch:'flame'};
   const movePalettes = {
     futo_breaker:['#fff1fb','#ff8bcf','#913eb7','#ffecbd'],
     futo_burst:['#fff5ff','#ee7bda','#873ed4','#ffd6ed'],
@@ -47,22 +49,27 @@
     arvelion_renewal:['#fff4ca','#ffc963','#e08a32','#fff9e9'],
     sig_leaf:['#fbffe0','#b6f26a','#2f9e4f','#ffe9a3'],
     sig_tide:['#eefcff','#7ee3ff','#1f6fd1','#fff2b8'],
-    sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a']
+    sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a'],
+    null_restore:['#f1edff','#b4a8e0','#594d91','#a6fff0'],
+    null_ray:['#f5efff','#b2a0ef','#5a448e','#9dfff0'],
+    null_scorch:['#ffeddc','#e7799e','#6c376f','#ffdf9b']
   };
   // Conditions show on the afflicted monster every turn they hold: when they land,
   // when they stop a move, as a damage tick, as an end-of-turn reminder, and when they end.
   const CONDITIONS = Object.freeze(['bloom','bubble','scorch','dizzy','crystal']);
-  const CONDITION_ELEMENTS = {bloom:'leaf',bubble:'tide',scorch:'ember',dizzy:'wind',crystal:'crystal'};
-  const CONDITION_NAMES = {bloom:'花毒',bubble:'水封',scorch:'灯焼け',dizzy:'目眩',crystal:'結晶化'};
+  const VOLATILE_CONDITIONS = Object.freeze(['curse']);
+  const CONDITION_ELEMENTS = {bloom:'leaf',bubble:'tide',scorch:'ember',dizzy:'wind',crystal:'crystal',curse:'void'};
+  const CONDITION_NAMES = {bloom:'花毒',bubble:'水封',scorch:'灯焼け',dizzy:'目眩',crystal:'結晶化',curse:'呪縛'};
   const conditionPalettes = {
     bloom: ['#f6e6ff', '#b98ae6', '#6d3ea6', '#ff9fd6'],
     bubble: ['#effcff', '#7fd2f2', '#2f86c4', '#ffffff'],
     scorch: ['#fff1c7', '#ff9a4a', '#d4452a', '#ffe08a'],
     dizzy: ['#fffbe0', '#f2d65a', '#b98a1e', '#ffffff'],
-    crystal: ['#fbf4ff', '#c8b2f4', '#7b62c8', '#fff9cf']
+    crystal: ['#fbf4ff', '#c8b2f4', '#7b62c8', '#fff9cf'],
+    curse: ['#f5eaff', '#bb8be0', '#60377d', '#a6fff0']
   };
   const MOMENT_DURATION = {inflict:1100,blocked:1000,ongoing:950,tick:1000,cure:820};
-  const CONDITION_INK = {bloom:'#3d1d63',bubble:'#164a73',scorch:'#6e1d10',dizzy:'#5a3d00',crystal:'#3b2c7a'};
+  const CONDITION_INK = {bloom:'#3d1d63',bubble:'#164a73',scorch:'#6e1d10',dizzy:'#5a3d00',crystal:'#3b2c7a',curse:'#291a45'};
   const clamp = (n,a=0,b=1) => Math.max(a,Math.min(b,n));
   const ease = n => 1-Math.pow(1-clamp(n),3);
   const smooth = n => { n=clamp(n); return n*n*(3-2*n); };
@@ -224,7 +231,7 @@
     return effectOf(move);
   }
   function conditionOf(event) {
-    const known=kind=>CONDITIONS.includes(kind)?kind:null;
+    const known=kind=>CONDITIONS.includes(kind)||VOLATILE_CONDITIONS.includes(kind)?kind:null;
     if(event?.kind==='status'&&event.status==='cure')return known(event.was)||(/泡/.test(event.text||'')?'bubble':/結晶/.test(event.text||'')?'crystal':null);
     return known(event?.status);
   }
@@ -468,6 +475,22 @@
           for(let j=0;j<=steps;j++){const v=j/steps,a=side*(-spin*1.3)+v*TAU*1.6,r=v*H*.2;points.push([cx+side*W*.72+Math.cos(a)*r,orbitY+H*.05+Math.sin(a)*r*.7]);}
           stroke(points,ink,4.2,env*.7);stroke(points,p[1],2.2,env);
         }
+      }else if(kind==='curse'){
+        // Two crossing chains draw tight around the afflicted body. The pulse
+        // marks its damage tick without resembling an ice or movement seal.
+        veil(env*.32,p[2]);
+        const loosen=cure?ease(phase(t,.18,.9)):0,tight=1-.08*hurt;
+        for(const direction of [-1,1])for(let i=0,n=low?7:10;i<n;i++){
+          const v=i/(n-1),spread=1+loosen*.7;
+          const x=cx+(v-.5)*W*1.75*spread*grow* tight;
+          const y=cy+direction*(v-.5)*H*1.2*spread+Math.sin(v*Math.PI)*H*.08;
+          const rx=(8+2*Math.sin(v*Math.PI))*u,ry=5*u;
+          ellipse(x,y,rx,ry,ink,4,env*(1-loosen));
+          ellipse(x,y,rx,ry,i%2?p[1]:p[0],2,env*(1-loosen));
+        }
+        const seal=Math.sin(phase(t,.12,.9)*Math.PI);
+        ellipse(cx,cy,W*.24,H*.2,p[3],2.6,env*seal);
+        star(cx,cy,12*u,p[3],t*1.4,env*seal);
       }else if(kind==='crystal'){
         // Outlined shards rise around the body inside a pale prism; they scatter when the crystal breaks.
         const form=moment==='inflict'?ease(phase(t,0,.45)):1,burst=cure?ease(phase(t,.16,.85)):0;
@@ -490,7 +513,7 @@
         if(cure)for(let i=0;i<(low?5:9);i++){const a=TAU*i/(low?5:9),r=H*(.4+burst*.95);star(cx+Math.cos(a)*r,cy-H*.1+Math.sin(a)*r*.7,9*u,p[3],a,env*(1-burst*.8));}
       }
       // A short label over the monster: its condition, "can't move", or the damage it took.
-      const name=globalThis.LT?.DATA?.statuses?.[kind]?.name||CONDITION_NAMES[kind]||'';
+      const name=globalThis.LT?.DATA?.statuses?.[kind]?.name||globalThis.LT?.DATA?.volatileConditions?.[kind]?.name||CONDITION_NAMES[kind]||'';
       const label=moment==='tick'?(e.amount?String(e.amount):''):moment==='blocked'?'動けない':cure?'':name;
       if(label&&t>.3){
         const alpha=smooth(phase(t,.3,.42))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
@@ -1031,7 +1054,7 @@
     return true;
   }
   const api={classify,fromEvent,anchors,render,install,preload,artStatus,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival'],
-    conditions:CONDITIONS,conditionPalettes,conditionOf};
+    conditions:CONDITIONS,volatileConditions:VOLATILE_CONDITIONS,conditionPalettes,conditionOf};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();

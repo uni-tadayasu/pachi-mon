@@ -198,7 +198,7 @@ async function pair() {
     'onlineProgress?.(b,performance.now())', 'class="is-current"', '対戦には、種類の違うパチモンが', '（対戦では効果なし）', 'LT.LocalQR?.guide'])
     assert(html.includes(needle), `index.html: ${needle}`);
   const local = fs.readFileSync(path.join(root, 'local-link.js'), 'utf8');
-  assert(/Bluetoothテザリング/.test(local) && /ブラウザーの仕組み上、Bluetoothだけで端末どうしを直接つなぐことはできない/.test(local), 'the Bluetooth guide explains tethering and its limit');
+  assert(/Bluetoothテザリング/.test(local) && /テザリングなしのBluetooth直接通信は、このブラウザー版では利用できません。/.test(local), 'the Bluetooth guide explains tethering and its limit');
   for (const id of timers) clearTimeout(id);
   console.log(JSON.stringify({ ok: true, battleItems: BATTLE.length, idleItems: INERT.length, duelTurns: turns, itemEvents, conditionEvents,
     checks: ['item lists and uniqueness', 'boost/shield/orb/stat/critical', 'endurance and pinch berries', 'thorns/bell/hourglass/guard charm', 'regeneration', 'quick claw', 'idle items', 'conditions (inflict, ward, berry, immunity, crystal, bubble, dizzy, scorch, faint)', 'identical peers over a full double duel', 'owned members and items only', 'ready packet items and look', 'forged item lists refused', 'one beat per message', 'page wiring and Bluetooth guide'] }));

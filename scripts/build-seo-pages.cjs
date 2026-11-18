@@ -27,6 +27,7 @@ const { LT } = context, D = LT.DATA, engine = new LT.Engine();
 // Glitch companions exist in saves and battle data, but have no public dex page,
 // learner listing, dex number or sitemap entry.
 const ids = Object.keys(D.species).filter(id=>!D.species[id].hiddenDex), no = id => ids.indexOf(id) + 1, pad = n => String(n).padStart(3, '0');
+const publicMoveCount = Object.values(D.moves).filter(move=>!move.hiddenDex).length;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const typeName = el => el ? (D.elements[el]?.name || el) + 'タイプ' : '無属性';
 const typeChip = el => `<span class="chip t-${esc(el || 'none')}">${esc(el ? D.elements[el].name : '無')}</span>`;
@@ -235,8 +236,8 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>画面には「部屋をつくる人」「参加する人」の役割と現在の手順を表示します。カメラを使えない場合は「カメラを使わずコードで接続」を開き、表示されたコードを互いにコピー・貼り付けできます。公共Wi-Fiなどで端末同士の通信が制限されている場合は、別のWi-Fiを使ってください。</p>
   <p>対戦のルールはオンライン対戦と同じです（アルヴェリオン・キラシード・フートも、持っていれば編成できます）。交換は、お互いが出すパチモンを選んで「この内容で交換する」を押すと成立し、両方の冒険記録に保存されます。通信は2台の間だけで行い、サーバーは使いません。</p>
   <p><strong>Bluetoothテザリングは、対応端末での設定が必要です。</strong>共有する側・接続する側の両方がBluetoothテザリングによるネットワーク接続に対応している必要があり、対応はOS・機種・端末の組み合わせにより異なります。各端末の公式手順でネットワーク接続を確認してから、ゲームの接続画面で「Bluetoothテザリング」を選び、QRコードを読み取ります。ゲーム内の選択だけでOSの接続設定は変わりません。<strong>ブラウザー版は、テザリングなしのBluetooth直接通信には対応していません。</strong>BluetoothのペアリングやQRコードの読み取りだけでは、端末間のネットワークは作られません。</p>
-  <h2 id="moves">技（全${Object.keys(D.moves).length}種）とエフェクト</h2>
-  <p>技は5タイプ×15種、無属性6種、特別な技15種の全${Object.keys(D.moves).length}種です。各タイプには、物理・特殊の弱い技から大技、捨て身の技（反動あり）、相手の体力を吸う技、守りを貫く技、回復、守りまでそろっています。攻撃技はタイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
+  <h2 id="moves">技（全${publicMoveCount}種）とエフェクト</h2>
+  <p>技は5タイプ×15種、無属性6種、特別な技15種の全${publicMoveCount}種です。各タイプには、物理・特殊の弱い技から大技、捨て身の技（反動あり）、相手の体力を吸う技、守りを貫く技、回復、守りまでそろっています。攻撃技はタイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
   <h2 id="offline">オフラインで遊ぶ</h2>
   <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。同じネットワークにつないだ近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
   <h2 id="settings">便利な設定</h2>
@@ -253,7 +254,7 @@ for (const id of ids) for (const mid of D.species[id].moves) (learners[mid] ||= 
 const moveGroups = [...['leaf', 'tide', 'ember', 'wind', 'crystal'].map(el => [typeName(el), m => m.element === el && !['special', 'signature'].includes(m.role)]),
   ['無属性', m => !m.element && !['special', 'signature'].includes(m.role)], ['特別な技', m => ['special', 'signature'].includes(m.role)]];
 const moveRow = m => `<tr id="${esc(m.id)}"><th>${esc(m.name)}</th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${m.kind === 'attack' ? m.power : '—'}</td><td>${m.kind === 'attack' ? Math.round(m.accuracy) : '—'}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td><td>${(learners[m.id] || []).slice(0, 8).map(id => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>`).join('、')}${(learners[m.id] || []).length > 8 ? ` ほか${learners[m.id].length - 8}種` : ''}</td></tr>`;
-const allMoves = Object.values(D.moves);
+const allMoves = Object.values(D.moves).filter(move=>!move.hiddenDex);
 const movesBody = `${crumbNav([['トップ', '../'], ['技一覧', '']], 1)}
 <article class="window">
   <h1>パチモン技一覧（全${allMoves.length}種）</h1>
