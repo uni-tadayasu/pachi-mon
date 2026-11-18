@@ -11,13 +11,27 @@
     '(max-width:1400px) and (max-height:1100px) and (any-pointer:coarse)',
     '(max-width:1000px) and (max-height:550px)'
   ].join(', '));
+  // Text-selection protection must also cover larger tablets and touch PCs
+  // without changing their layout or disabling desktop zoom/scrolling.
+  const touch=matchMedia('(any-pointer:coarse)');
+  const guarded=()=>mobile.matches||touch.matches||(navigator.maxTouchPoints||0)>0;
   const viewport=document.querySelector('meta[name="viewport"]');
   const baseViewport='width=device-width, initial-scale=1, viewport-fit=cover';
-  const editable=target=>target instanceof Element&&!!target.closest('input,textarea,select,[contenteditable="true"]');
+  const editable=target=>{
+    const element=target instanceof Element?target:target?.parentElement;
+    return element instanceof Element&&!!(element.closest('input,textarea,select')||element.isContentEditable);
+  };
   let frame=0,lastShape='';
   const typing=()=>editable(document.activeElement);
+  function clearSelection(){
+    if(!guarded()||typing())return;
+    const selection=document.getSelection?.();
+    if(selection?.rangeCount&&!editable(selection.anchorNode)&&!editable(selection.focusNode))selection.removeAllRanges();
+  }
   function fit(){
     frame=0;root.classList.toggle('mobile-screen',mobile.matches);
+    root.classList.toggle('touch-guard',guarded());
+    clearSelection();
     // The smaller of the layout and visible heights follows an open keyboard;
     // the repeated fits after a rotation catch the final size once it settles.
     const height=Math.round(Math.min(window.innerHeight||Infinity,window.visualViewport?.height||Infinity));
@@ -33,14 +47,16 @@
   // Phones report their final size a moment after rotating, so fit again as it settles.
   function settle(){schedule();if(typeof setTimeout==='function')for(const delay of [120,360,800])setTimeout(schedule,delay);}
   mobile.addEventListener('change',settle);
+  touch.addEventListener('change',settle);
   window.addEventListener('resize',schedule);
   window.visualViewport?.addEventListener('resize',schedule);
   window.addEventListener('orientationchange',settle);
   window.screen?.orientation?.addEventListener?.('change',settle);
   document.addEventListener('focusout',event=>{if(mobile.matches&&editable(event.target)&&typeof setTimeout==='function')setTimeout(settle,250);});
   for(const name of ['contextmenu','selectstart','dragstart'])document.addEventListener(name,event=>{
-    if(mobile.matches&&!editable(event.target))event.preventDefault();
-  });
+    if(guarded()&&!editable(event.target))event.preventDefault();
+  },{capture:true,passive:false});
+  document.addEventListener('selectionchange',clearSelection);
   for(const name of ['gesturestart','gesturechange','gestureend'])document.addEventListener(name,event=>{
     if(mobile.matches)event.preventDefault();
   },{passive:false});
@@ -51,7 +67,7 @@
     const controlsOnly=Array.from(event.touches).every(touch=>touch.target instanceof Element&&touch.target.closest('.touch-controls'));
     if(!controlsOnly)event.preventDefault();
   },{passive:false});
-  document.addEventListener('dblclick',event=>{if(mobile.matches&&!editable(event.target))event.preventDefault();},{passive:false});
+  document.addEventListener('dblclick',event=>{if(guarded()&&!editable(event.target))event.preventDefault();},{capture:true,passive:false});
   document.addEventListener('wheel',event=>{if(mobile.matches&&event.ctrlKey)event.preventDefault();},{passive:false});
   fit();window.dispatchEvent(new Event('resize'));
 })();
