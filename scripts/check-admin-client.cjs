@@ -270,12 +270,14 @@ test('eight presses of お届けものを確認 in a row open the admin recovery
   tap(1);assert(shown(),'the eighth press opens it');
   assert(h.serviceBody.innerHTML.includes('運営の復元'));assert(h.serviceBody.innerHTML.includes('運営を再登録'));assert(h.serviceBody.innerHTML.includes('data-admin-action="recovery-close"'));
   assert.match(h.statusLine.textContent,/運営の復元画面を開きました/);
-  // Without the server's recovery setting, the claim is refused with an explanation and the screen stays.
+  // The screen asks for the operator seat explicitly, with the key. A server not yet updated
+  // refuses: the reason is shown and the screen stays.
   h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
-  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);assert.match(h.statusLine.textContent,/復元が有効になっていない/);assert(shown());assert.equal(h.keyField.value,'');
+  assert.deepEqual({...h.calls.find(c=>c.path==='/admin/claim').body},{key:'owner-key',recover:true});
+  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);assert.match(h.statusLine.textContent,/最新版に更新/);assert(shown());assert.equal(h.keyField.value,'');
   // Closing hides it; eight more presses bring it back.
   h.press('recovery-close');assert(!shown());tap(8);assert(shown());
-  // With recovery enabled on the server, the key moves the admin role here and the screen closes.
+  // An updated server accepts the explicit request: the key moves the admin role here and the screen closes.
   recovery=true;h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
   assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert(!shown());assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,2);
   // An administrator is simply told so.

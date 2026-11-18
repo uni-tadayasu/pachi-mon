@@ -374,13 +374,19 @@ async function route(request, env, url) {
     return {pass:`${encodeURL(payload)}.${encodeURL(signature)}`, expiresAt};
   }
   if (path === '/api/admin/claim' && method === 'POST') {
-    const previousOwner = await ownerRecord(env), recovering = recoveryAllowed(env, request, previousOwner);
+    const previousOwner = await ownerRecord(env), configured = recoveryAllowed(env, request, previousOwner);
     if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
+    // The game's hidden recovery screen asks for the operator seat explicitly (recover: true).
+    // That request is always open, with or without ADMIN_RECOVERY_* settings: the operator key,
+    // player authentication and the rate limits below still decide. Ordinary claims still stop
+    // at an existing operator.
+    const early = previousOwner && !configured ? await bodyJSON(request) : null;
+    const recovering = configured || (!!previousOwner && early?.recover === true);
     if (previousOwner && !recovering) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
     if (typeof env.ADMIN_CLAIM_KEY !== 'string' || env.ADMIN_CLAIM_KEY.length < 12) fail(503, 'ADMIN_NOT_CONFIGURED', '運営登録は準備中です。');
     await consumeLimit(env, request, 'claim-ip', 8, 900000);
     await consumeLimit(env, request, 'claim-global', 100, 900000, true);
-    const body = await bodyJSON(request);
+    const body = early || await bodyJSON(request);
     if (typeof body.key !== 'string' || body.key.length > 256 || !await sameSecret(body.key, env.ADMIN_CLAIM_KEY)) fail(403, 'INVALID_ADMIN_KEY', '運営キーが正しくありません。');
     const now = Date.now(), config = JSON.stringify((await configRecord(env)).config);
     const batchId = recovering ? `admin-recovery:${previousOwner.player_id}:${player.id}` : `admin-initial:${player.id}`;
