@@ -17,6 +17,7 @@ class FakeResponse {
   async json() { return JSON.parse(this.body); }
 }
 const keyOf = request => typeof request === 'string' ? request : request.url;
+const cacheWriteFailures = new Set();
 class FakeCache {
   constructor() { this.entries = new Map(); }
   async match(request, options = {}) {
@@ -24,7 +25,10 @@ class FakeCache {
     if (options.ignoreSearch) { const bare = key.split('?')[0]; for (const [k, v] of this.entries) if (k.split('?')[0] === bare) return v.clone(); }
     return undefined;
   }
-  async put(request, response) { this.entries.set(keyOf(request), response.clone()); }
+  async put(request, response) {
+    if (cacheWriteFailures.has(keyOf(request))) throw Object.assign(new Error('Storage quota exceeded'), { name: 'QuotaExceededError' });
+    this.entries.set(keyOf(request), response.clone());
+  }
   async keys() { return [...this.entries.keys()].map(url => ({ url })); }
   async delete(request) { return this.entries.delete(keyOf(request)); }
 }
@@ -94,18 +98,68 @@ function fire(type, init) {
   const lionUrl = BASE + offline.files.find(f => f.url.startsWith('assets/arvelion.png')).url;
   assert.equal(await (await fire('fetch', { request: { url: lionUrl, method: 'GET', mode: 'no-cors' } }).responded()).text(), 'old-lion');
 
-  // ── Online again: pages refresh from the network and older versions are pruned.
+  // ── An update must remain usable if the connection drops after its HTML but
+  // before its newly versioned assets. Prune only after replacement is stored.
   online = true;
   await shell.put(BASE + 'pachi-ui.css?v=19990101', new FakeResponse('stale'));
   const updated = html.replace(/pachi-ui\.css\?v=[^"]+/, 'pachi-ui.css?v=29990101');
   serve(BASE + 'index.html', updated); serve(BASE, updated); serve(BASE + 'pachi-ui.css?v=29990101', 'new-css');
   const nav = fire('fetch', { request: { url: BASE, method: 'GET', mode: 'navigate' } });
   assert.equal(await (await nav.responded()).text(), updated, 'online pages come from the network');
-  await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(await (await shell.match(BASE + 'index.html')).text(), updated, 'the stored page follows the update');
-  assert.equal(await shell.match(BASE + 'pachi-ui.css?v=19990101'), undefined, 'older versions of linked files are pruned');
+  assert(await shell.match(cssUrl), 'the prior working version survives before the new URL is cached');
+  assert(await shell.match(BASE + 'pachi-ui.css?v=19990101'), 'an HTML update alone cannot discard older variants');
+  online = false;
+  const interrupted = await fire('fetch', { request: { url: BASE + 'pachi-ui.css?v=29990101', method: 'GET', mode: 'no-cors' } }).responded();
+  assert.equal(await interrupted.text(), 'asset:' + cssUrl.slice(BASE.length), 'the new HTML can still obtain its older stylesheet offline');
+  online = true;
   const fresh = await fire('fetch', { request: { url: BASE + 'pachi-ui.css?v=29990101', method: 'GET', mode: 'no-cors' } }).responded();
   assert.equal(await fresh.text(), 'new-css'); assert(await shell.match(BASE + 'pachi-ui.css?v=29990101'), 'new versions are stored on first use');
+  await fire('fetch', { request: { url: BASE, method: 'GET', mode: 'navigate' } }).responded();
+  assert.equal(await shell.match(cssUrl), undefined, 'a secured replacement permits cleanup on the next visit');
+  assert.equal(await shell.match(BASE + 'pachi-ui.css?v=19990101'), undefined, 'all older variants are removed once their replacement is safe');
+
+  // ── A full cache is not a failed network connection. Return fresh content,
+  // even when an older image exists and the new response cannot be persisted.
+  const quotaArt = BASE + 'assets/traveller-hero-v33.png?v=quota-check';
+  serve(quotaArt, 'fresh-network-pixels'); cacheWriteFailures.add(quotaArt);
+  const uncacheableImage = await fire('fetch', { request: { url: quotaArt, method: 'GET', mode: 'no-cors' } }).responded();
+  assert.equal(await uncacheableImage.text(), 'fresh-network-pixels', 'cache quota failure must not discard a successful image response');
+  assert.equal(await art.match(quotaArt), undefined, 'the failing write was exercised');
+  cacheWriteFailures.delete(quotaArt);
+  const storedPage = await (await shell.match(BASE + 'index.html')).text(), livePage = updated + '\n<!-- network-only update -->';
+  serve(BASE, livePage); cacheWriteFailures.add(BASE + 'index.html');
+  const uncacheablePage = await fire('fetch', { request: { url: BASE, method: 'GET', mode: 'navigate' } }).responded();
+  assert.equal(await uncacheablePage.text(), livePage, 'cache quota failure must not replace a fresh page with the older cached page');
+  assert.equal(await (await shell.match(BASE + 'index.html')).text(), storedPage, 'the previous offline page remains intact after a failed write');
+  // A replacement stylesheet might already be cached (for example by another
+  // open tab). That is not permission to prune the old shell's stylesheet when
+  // the HTML that refers to the replacement could not itself be committed.
+  const speculativeCss = 'pachi-ui.css?v=29990102-quota-check';
+  await shell.put(BASE + speculativeCss, new FakeResponse('already-cached-new-css'));
+  const speculativePage = updated.replace('pachi-ui.css?v=29990101', speculativeCss);
+  assert.notEqual(speculativePage, storedPage); serve(BASE, speculativePage);
+  const uncommittedUpdate = await fire('fetch', { request: { url: BASE, method: 'GET', mode: 'navigate' } }).responded();
+  assert.equal(await uncommittedUpdate.text(), speculativePage, 'the live network page still wins');
+  assert.equal(await (await shell.match(BASE + 'index.html')).text(), storedPage, 'the failed HTML write keeps the old offline page');
+  assert(await shell.match(BASE + 'pachi-ui.css?v=29990101'), 'an uncommitted page cannot prune CSS required by the retained offline page');
+  cacheWriteFailures.delete(BASE + 'index.html'); serve(BASE, updated);
+
+  // ── Installation has a stricter contract than a live request. A missing or
+  // uncacheable required script cannot overwrite the working offline page or
+  // force the new worker to take over.
+  const installScript = 'traveller-art.js?v=install-failure';
+  const installPage = updated.replace(/traveller-art\.js\?v=[^"]+/, installScript);
+  assert.notEqual(installPage, updated, 'the install probe must request a new script version');
+  serve(BASE + 'index.html', installPage); self.skipped = false;
+  await assert.rejects(waitFor(fire('install', {})), /Required offline shell assets unavailable/, 'a missing required script rejects installation');
+  assert.equal(self.skipped, false, 'an incomplete shell cannot activate');
+  assert.equal(await (await shell.match(BASE + 'index.html')).text(), storedPage, 'a rejected install preserves the working offline page');
+  serve(BASE + installScript, 'valid-install-script'); cacheWriteFailures.add(BASE + installScript);
+  await assert.rejects(waitFor(fire('install', {})), /Required offline shell assets unavailable/, 'a script that cannot be cached also rejects installation');
+  assert.equal(self.skipped, false, 'a failed shell write cannot activate');
+  assert.equal(await (await shell.match(BASE + 'index.html')).text(), storedPage, 'a failed shell write preserves the working offline page');
+  cacheWriteFailures.delete(BASE + installScript); serve(BASE + 'index.html', updated);
 
   // ── Server and peer traffic is never intercepted; fonts are kept.
   for (const url of ['https://pachi-mon-admin-hub.example/api/player', 'https://0.peerjs.com/peerjs/id', 'https://trades.example/api/trades']) {
@@ -136,5 +190,5 @@ function fire(type, init) {
   assert(/register\('sw\.js'\)/.test(html) && /offline-store-all/.test(html), 'the page registers the worker and offers storing everything');
   for (const file of offline.files) assert.equal(fs.statSync(path.join(root, file.url.split('?')[0])).size, file.bytes, `offline list is current for ${file.url}`);
   console.log(JSON.stringify({ ok: true, shellFiles: linked.length + 1, coreArt: offline.core.length, allArt: offline.files.length,
-    checks: ['install stores page/code/core art', 'offline launch (root, index, start_url)', 'cache-first code', 'older-version fallback', 'network-first pages with pruning', 'server/peer traffic bypassed', 'fonts kept', 'store all with progress', 'manifest/icons/registration', 'offline list current'] }));
+    checks: ['install stores page/code/core art', 'offline launch (root, index, start_url)', 'cache-first code', 'older-version fallback', 'interrupted updates preserve older assets', 'secured replacements allow pruning', 'cache quota preserves network image/page', 'uncommitted HTML cannot prune the working shell', 'failed installs preserve the working shell', 'server/peer traffic bypassed', 'fonts kept', 'store all with progress', 'manifest/icons/registration', 'offline list current'] }));
 })().catch(error => { console.error(error); process.exit(1); });

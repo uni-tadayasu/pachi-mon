@@ -15,12 +15,12 @@
   }
   function eligible(mon,data=LT.DATA){
     const species=data?.species?.[mon?.species];
-    return !!species&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&
+    return !!species&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&mon.heldItem===undefined&&
       !['grantId','customStats','customMoves','customStatsLevel','futoConfigLevel'].some(key=>mon[key]!==undefined);
   }
   class TradeController {
-    constructor({storage,request,identify,getEngine,commit,changed=()=>{},uuid=()=>crypto.randomUUID(),data=LT.DATA}){
-      Object.assign(this,{storage,request,identify,getEngine,commit,changed,uuid,data});
+    constructor({storage,request,identify,getEngine,commit,check,changed=()=>{},uuid=()=>crypto.randomUUID(),data=LT.DATA}){
+      Object.assign(this,{storage,request,identify,getEngine,commit,check,changed,uuid,data});
       this.pending=null;this.trade=null;this.error='';this.busy=false;this.corrupt=false;this.completed=false;
       try{const raw=storage.getItem(KEY);if(raw)this.pending=parsePending(raw);}
       catch(_){this.corrupt=true;this.error='交換の確認情報を読み込めません。冒険記録を消さず、交換画面を開き直して確認してください。';}
@@ -45,6 +45,15 @@
     own(trade=this.trade){return trade?.[trade.you]||null;}
     other(trade=this.trade){return trade?.[trade.you==='host'?'guest':'host']||null;}
     inventory(){const state=this.getEngine()?.state;return [...(state?.party||[]),...(state?.storage||[])];}
+    offerSnapshot(mon){
+      if(mon?.heldItem!==undefined)throw Error('持ち物を持たせたままでは交換できません。先に持ち物を外してください。');
+      if(!eligible(mon,this.data))throw Error('このパチモンは交換できません。運営専用・配布個体は対象外です。');
+      const engine=this.getEngine();
+      // Validate the owned individual before the server snapshot omits local-only fields.
+      // Server echoes already use the exchange catalog and must not pass through this check.
+      if(typeof engine?.toTradeWire==='function')engine.toTradeWire(mon);
+      return snapshot(mon,engine);
+    }
     async run(action){
       if(this.busy)return {ok:false,busy:true};
       this.busy=true;this.error='';this.emit();
@@ -117,9 +126,9 @@
     offer(uid){return this.run(async()=>{
       const trade=this.trade;if(!trade||trade.state!=='open')throw Error('交換相手との接続を確認してください。');
       const mon=this.inventory().find(item=>item.uid===uid);
-      if(!eligible(mon,this.data))throw Error('このパチモンは交換できません。運営専用・配布個体は対象外です。');
+      const monster=this.offerSnapshot(mon);
       const owner=await this.identity();
-      const result=await this.request('/trades/'+trade.id+'/offer',{method:'POST',body:{revision:trade.revision,monster:snapshot(mon,this.getEngine())}});
+      const result=await this.request('/trades/'+trade.id+'/offer',{method:'POST',body:{revision:trade.revision,monster}});
       await this.accept(result.trade,owner);
     });}
     checkConfirmation(){
@@ -127,7 +136,7 @@
       if(!trade||trade.state!=='open'||!own?.monster||!other?.monster)throw Error('お互いのパチモンが選ばれるまでお待ちください。');
       const state=this.getEngine()?.state,mon=this.inventory().find(item=>item.uid===own.monster.uid);
       const engine=this.getEngine();
-      if(!eligible(mon,this.data)||stable(snapshot(mon,engine))!==stable(snapshot(own.monster,engine)))throw Error('選んだパチモンの状態が変わりました。選び直してください。');
+      if(stable(this.offerSnapshot(mon))!==stable(snapshot(own.monster,engine)))throw Error('選んだパチモンの状態が変わりました。選び直してください。');
       if(!eligible(other.monster,this.data))throw Error('相手のパチモンを交換できません。');
       if((state.tradeReceipts||[]).length>=(LT.TradeRules?.receiptLimit||4096))throw Error('交換記録が上限に達しています。');
       if(state.party.some(item=>item.uid===mon.uid)&&!state.party.some(item=>item.uid!==mon.uid&&item.hp>0)&&other.monster.hp<=0)throw Error('動ける仲間がいなくなるため、相手のパチモンを回復してから選び直してください。');
@@ -137,6 +146,16 @@
       if(expectedRevision!==this.trade?.revision)throw Error('交換内容が更新されました。最新のパチモンを見てから、もう一度確認してください。');
       const trade=this.checkConfirmation();if(this.own().confirmed)return;
       const owner=await this.identity();
+      // Before this player consents, check the durable save using the same
+      // receipt shape as the service. Recovery of a committed receipt bypasses
+      // this guard: accept() still retries the durable commit before its ACK.
+      if(this.check){
+        const own=this.own(trade),other=this.other(trade),suffix=trade.you==='host'?'h':'g';
+        const receipt={id:'trade:'+trade.id,revision:trade.revision,outgoingUid:own.monster.uid,
+          outgoing:copy(own.monster),incoming:{...copy(other.monster),uid:'tr-'+trade.id+'-'+suffix}};
+        const checked=await this.check(receipt);
+        if(!checked?.ok)throw Error(checked?.message||'交換内容を冒険記録に反映できません。内容を確認してからやり直してください。');
+      }
       const result=await this.request('/trades/'+trade.id+'/confirm',{method:'POST',body:{revision:trade.revision}});
       await this.accept(result.trade,owner);
     });}
@@ -154,7 +173,7 @@
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let dialog=null,poll=null,selected='',renderKey='',renderedRevision=null,deferredRender=false;
   const controller=new TradeController({storage:localStorage,request:(path,options)=>LT.Admin.tradeRequest(path,options),identify:()=>LT.Admin.tradeIdentity(),
-    getEngine:()=>LT.adminBridge?.getEngine?.(),commit:receipt=>LT.adminBridge?.commitTrade?.(receipt),changed:()=>{LT.tradeActive=controller.isLocked()||dialog?.open===true;render();schedule();}});
+    getEngine:()=>LT.adminBridge?.getEngine?.(),commit:receipt=>LT.adminBridge?.commitTrade?.(receipt),check:receipt=>LT.adminBridge?.checkTrade?.(receipt),changed:()=>{LT.tradeActive=controller.isLocked()||dialog?.open===true;render();schedule();}});
   LT.tradeActive=controller.isLocked();
   function monName(mon){return mon?.nickname||LT.DATA.species[mon?.species]?.name||'未選択';}
   function card(person,label){
@@ -198,7 +217,7 @@
     if(nextKey!==renderKey&&editing&&trade?.state==='open'){deferredRender=true;}
     else if(nextKey!==renderKey){
       const scrollTop=dialog.querySelector('.trade-body')?.scrollTop||0;
-      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
+      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
       renderKey=nextKey;renderedRevision=trade?.revision??null;deferredRender=false;
       if(codeDraft&&dialog.querySelector('#trade-code-input'))dialog.querySelector('#trade-code-input').value=codeDraft;
       if(editing)dialog.querySelector('#'+focusId)?.focus?.({preventScroll:true});
