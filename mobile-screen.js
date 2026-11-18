@@ -2,7 +2,15 @@
 (() => {
   'use strict';
   const root=document.documentElement;
-  const mobile=matchMedia('(max-width:700px), (max-width:1024px) and (pointer:coarse), (max-width:1000px) and (max-height:550px)');
+  // Keep tablet touch controls through rotation and trackpad use. Bounding
+  // both axes (long <= 1400, short <= 1100) leaves large touch PCs in the
+  // desktop layout; narrow Split View windows retain the phone layout.
+  const mobile=matchMedia([
+    '(max-width:700px)',
+    '(max-width:1100px) and (max-height:1400px) and (any-pointer:coarse)',
+    '(max-width:1400px) and (max-height:1100px) and (any-pointer:coarse)',
+    '(max-width:1000px) and (max-height:550px)'
+  ].join(', '));
   const viewport=document.querySelector('meta[name="viewport"]');
   const baseViewport='width=device-width, initial-scale=1, viewport-fit=cover';
   const editable=target=>target instanceof Element&&!!target.closest('input,textarea,select,[contenteditable="true"]');
