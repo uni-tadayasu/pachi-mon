@@ -22,7 +22,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const quarter = n => Math.max(1, Math.floor(n / 4));
 const move = id => { assert(D.moves[id], `${id} is registered`); return D.moves[id]; };
 const isRecharging = mon => (mon.rechargeTurns || 0) > 0;
-const cleanVolatile = mon => { assert(!mon.curse, 'Curse cleared'); assert(!isRecharging(mon), 'Recovery delay cleared'); };
+const assertLifecycleCleanup = mon => { assert.equal(mon.curse === true, !ConditionRules.isImmune(mon), 'Curse persists except on immune types'); assert(!isRecharging(mon), 'Recovery delay cleared'); };
 function hero() { const e = new Engine(); assert(e.newGame('komori').ok); return e; }
 function solo(id = 'nullmie', target = 'komori') {
   const e = hero(); e.state.party = [e.makeMonster(id, 50)]; e.markCaught(id);
@@ -197,22 +197,22 @@ test('curse can knock out its user and correctly resolves the loss for the last 
   }
 });
 
-test('curse and recharge are battle-only: switch, fainting, healing, finish and save-load remove them', () => {
+test('curse persists through switch, fainting, healing, finish and save-load while recharge remains battle-only', () => {
   const { e, actor } = solo('komori'); e.state.party.push(e.makeMonster('shizuku', 50)); e.markCaught('shizuku'); e.enemyTurn = () => {};
-  actor.curse = true; assert(e.action({ type: 'switch', index: 1 }).ok); assert(!actor.curse);
-  actor.curse = true; actor.rechargeTurns = 1; actor.hp = 0; e.faint(actor, 'ally', []); cleanVolatile(actor);
-  actor.curse = true; actor.rechargeTurns = 1; e.restoreMonster(actor); cleanVolatile(actor);
+  actor.curse = true; assert(e.action({ type: 'switch', index: 1 }).ok); assert.equal(actor.curse, true);
+  actor.curse = true; actor.rechargeTurns = 1; actor.hp = 0; e.faint(actor, 'ally', []); assertLifecycleCleanup(actor);
+  actor.curse = true; actor.rechargeTurns = 1; e.restoreMonster(actor); assertLifecycleCleanup(actor);
   for (const mon of [...e.state.party, e.battle.enemy]) { mon.curse = true; mon.rechargeTurns = 1; }
-  e.endBattle('fled', []); [...e.state.party, e.battle.enemy].forEach(cleanVolatile);
+  e.endBattle('fled', []); [...e.state.party, e.battle.enemy].forEach(assertLifecycleCleanup);
   e.battle = null; e.state.party.forEach(mon => { mon.curse = true; mon.rechargeTurns = 1; });
-  new Engine(e.serialize()).state.party.forEach(cleanVolatile);
+  new Engine(e.serialize()).state.party.forEach(assertLifecycleCleanup);
   for (const mode of ['single', 'double']) {
     const d = duel(mode, 0), side = 1, team = d.state.teams[side], outgoing = d.active(side)[0]; outgoing.curse = true;
     const bench = team.monsters.findIndex((mon, i) => !team.active.includes(i)), orders = [d.legalOrders(0), d.legalOrders(1)];
-    orders[side][0] = { type: 'switch', slot: 0, index: bench }; d.resolve(orders); assert(!outgoing.curse);
-    outgoing.curse = true; outgoing.rechargeTurns = 1; outgoing.hp = 0; d._faint(side, 0, outgoing); cleanVolatile(outgoing);
+    orders[side][0] = { type: 'switch', slot: 0, index: bench }; d.resolve(orders); assert.equal(outgoing.curse, true);
+    outgoing.curse = true; outgoing.rechargeTurns = 1; outgoing.hp = 0; d._faint(side, 0, outgoing); assertLifecycleCleanup(outgoing);
     d.state.teams.forEach(t => t.monsters.forEach(mon => { mon.curse = true; mon.rechargeTurns = 1; }));
-    d._finish(0, 'knockout'); d.state.teams.forEach(t => t.monsters.forEach(cleanVolatile));
+    d._finish(0, 'knockout'); d.state.teams.forEach(t => t.monsters.forEach(assertLifecycleCleanup));
   }
 });
 

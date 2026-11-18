@@ -10,7 +10,7 @@ const css = fs.readFileSync(path.join(root, 'pachi-ui.css'), 'utf8');
 
 // ── The fitting routine, run against a fake element whose text width scales with its font size.
 const start = html.indexOf('  // Battle names, labels and commands are never cut off');
-const end = html.indexOf('  function updateBattle() {', start);
+const end = html.indexOf('  function updateBattle(', start);
 assert(start > 0 && end > start, 'fitBattleLine block exists before updateBattle');
 let writes = 0;
 function fakeLine({ chars, base, width, kind = 'name' }) {
@@ -63,7 +63,7 @@ const fit = (el, min) => { el.base = el.base ?? 13; c.fitBattleLine(el, min); };
 }
 
 // ── Wiring: every HUD update and every command menu refits; a resize refits during battles.
-const updateBattle = html.slice(html.indexOf('  function updateBattle() {'), html.indexOf('  function battleActions('));
+const updateBattle = html.slice(html.indexOf('  function updateBattle('), html.indexOf('  function battleActions('));
 assert(/hp-label'\)\.textContent = [\s\S]*?\n\s*refitBattleText\(\);\n\s*if \(!busy\) battleActions\(\);/.test(updateBattle), 'HUD refits after names, levels and the label are written');
 const actions = html.slice(html.indexOf('  function battleActions('), html.indexOf('  function captureBattleView()'));
 assert(/classList\.add\('fit-line'\);\s*refitBattleText\(\);/.test(actions), 'one-line commands are fitted after each menu render');

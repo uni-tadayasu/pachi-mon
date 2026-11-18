@@ -15,7 +15,7 @@
   }
   function eligible(mon,data=LT.DATA){
     const species=data?.species?.[mon?.species];
-    return !!species&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&mon.heldItem===undefined&&
+    return !!species&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&mon.heldItem===undefined&&(mon.curse===undefined||mon.curse===false)&&
       !['grantId','customStats','customMoves','customStatsLevel','futoConfigLevel'].some(key=>mon[key]!==undefined);
   }
   class TradeController {
@@ -46,6 +46,7 @@
     other(trade=this.trade){return trade?.[trade.you==='host'?'guest':'host']||null;}
     inventory(){const state=this.getEngine()?.state;return [...(state?.party||[]),...(state?.storage||[])];}
     offerSnapshot(mon){
+      if(mon?.curse!==undefined&&mon.curse!==false)throw Error('呪縛中のパチモンは交換できません。呪縛は永久に残ります。');
       if(mon?.heldItem!==undefined)throw Error('持ち物を持たせたままでは交換できません。先に持ち物を外してください。');
       if(!eligible(mon,this.data))throw Error('このパチモンは交換できません。運営専用・配布個体は対象外です。');
       const engine=this.getEngine();
@@ -225,7 +226,7 @@
     if(nextKey!==renderKey&&editing&&trade?.state==='open'){deferredRender=true;}
     else if(nextKey!==renderKey){
       const scrollTop=dialog.querySelector('.trade-body')?.scrollTop||0;
-      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
+      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。呪縛中の個体・運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
       renderKey=nextKey;renderedRevision=trade?.revision??null;deferredRender=false;
       if(dialog.querySelector('#trade-code-input'))dialog.querySelector('#trade-code-input').value=joinDraft;
       replaceJoinDraft=false;

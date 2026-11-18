@@ -145,7 +145,7 @@ test('displayed solo swaps preserve normal music and online victory still waits 
   const display=Object.create(e);display.state={...e.state,party:copy(e.state.party)};display.battle=copy(e.battle);e.battle.activeIndex=1;
   let now=100;const ui=vm.createContext({LT:w.context.LT,sound:a,engine:e,battleView:display,playing:true,healingUntil:0,evolutionUntil:0,endingActive:false,performance:{now:()=>now},dayPhase:()=>.3,noteHeard(){},updateBattle(){}});
   const scene=html.slice(html.indexOf('  function updateScene(){'),html.indexOf('  function sceneOptions(){'));vm.runInContext(scene,ui);
-  const visual=html.slice(html.indexOf('  function applyBattleVisual(visual)'),html.indexOf('  // Handheld-style message pacing.'));vm.runInContext(visual,ui);
+  const visual=html.slice(html.indexOf('  function applyBattleVisual('),html.indexOf('  // Handheld-style message pacing.'));vm.runInContext(visual,ui);
   ui.updateScene();assert.equal(a.currentId,'battle');
   ui.applyBattleVisual({activeIndex:1,ally:e.state.party[1],enemy:e.battle.enemy,enemyIndex:0});assert.equal(a.currentId,'battle');
   ui.applyBattleVisual({activeIndex:0,ally:e.state.party[0],enemy:e.makeMonster('zeroveil',5),enemyIndex:0});assert.equal(a.currentId,'battle');

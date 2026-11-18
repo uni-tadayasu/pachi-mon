@@ -208,7 +208,7 @@ assert.equal(V.fromEvent({ kind: 'status', side: 'ally', status: 'cure', text: '
     const nodes = { 'battle-log': log, 'battle-actions': { querySelectorAll: () => [] }, 'game-canvas': { classList: { remove() {} } } };
     const out = { frames: [], sounds: [] };
     const c = vm.createContext({ engine, LT, DATA: D, battleView: null, battleEffect: null, busy: false, evolutionUntil: 0, settings: { reducedMotion: false }, performance: { now: () => 100 },
-      $: id => nodes[id], document: { createElement: () => ({ textContent: '' }) }, toast() {}, updateScene() {}, updateAll() {}, updateBattle() {}, save() {},
+      $: id => nodes[id], document: { createElement: () => ({ textContent: '' }) }, toast() {}, updateScene() {}, updateAll() {}, updateBattle() {}, paintBattleHealth() {}, battleHealthDuration() { return 0; }, save() {},
       sound: { fx: (name, detail) => out.sounds.push(name === 'status' ? `status:${detail?.condition}:${detail?.moment}` : name), move() {} },
       setTimeout(fn, duration) { out.frames.push({ duration, effect: c.battleEffect && copy(c.battleEffect), hp: c.battleView && copy(c.battleView.state.party[c.battleView.battle.activeIndex].hp) }); return setTimeout(fn, 0); },
       clearTimeout(id) { clearTimeout(id); } });
