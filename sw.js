@@ -40,6 +40,8 @@
  *   effects refresh together; existing move PP is migrated on save loading.
  * v43: the operator's secret grass includes all three off-dex Null forms;
  *   its refreshed picker keeps the existing server authorization checks.
+ * v44: the secret grass gender selector refreshes with validated spawn options;
+ *   fixed genderless species keep their existing identity rules.
  * v40: the source-arranged 16-bit Void battle recording is linked as an offline
  *   shell asset; active-combatant priority and recording lifecycle update together.
  * © 2026 KASAI SOLUTIONS INC. */

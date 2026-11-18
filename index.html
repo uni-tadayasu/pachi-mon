@@ -3251,12 +3251,16 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!this.state.started||this.battle)return fail('冒険中の移動できるときに使えます。');
       if(!Object.hasOwn(D.species,species)||!finiteInt(level,1,MAX_LEVEL))return fail('種類とレベルを確認してください。');
       if(D.species[species].glitchOnly&&!D.glitchLine?.ids.includes(species))return fail('このパチモンは幻の草むらでは出現させられません。');
+      const gender=options?.gender===undefined?'auto':options.gender;
+      if(!['auto','male','female'].includes(gender))return fail('性別を選んでください。');
+      if(gender!=='auto'&&(D.genderless||[]).includes(species))return fail('このパチモンは性別なしです。');
       if(this.state.party.length>=MAX_PARTY&&this.state.storage.length>=MAX_STORAGE)return fail('仲間とひかえに空きを作ってください。');
       if(!this.state.party.some(mon=>mon.hp>0))return fail('先に仲間を回復してください。');
       const grantId=species===D.mythical.species?'admin-mythical:'+owner.id:species==='futo'?'admin-initial:'+owner.id:null;
       if(grantId&&!this.state.giftReceipts.includes(grantId)&&this.state.giftReceipts.length>=GIFT_LIMIT)return fail('受け取り記録が上限です。');
       if(!this.startBattle(species,level,null,{secretPermit:SECRET_ENCOUNTER}))return fail('出現できませんでした。');
       this.battle.secretEncounter=true;
+      if(gender!=='auto')this.battle.enemy.gender=gender;
       if(options?.shiny===true){this.battle.enemy.shiny=true;this.discover('shiny');}
       if(grantId)this.battle.enemy.grantId=grantId;
       this.battle.title='裏技・幻の草むら';
@@ -7703,7 +7707,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     startSecretEncounter:(species,level,owner,options={})=>{
       if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
       if(!owner||owner.isAdmin!==true||LT.Admin?.player?.isAdmin!==true||owner.id!==LT.Admin.player.id)return {ok:false,message:'運営権限を確認できません。'};
-      const result=engine.startAdminEncounter(species,level,owner,{shiny:options?.shiny===true});
+      const result=engine.startAdminEncounter(species,level,owner,{shiny:options?.shiny===true,gender:options?.gender});
       if(result.ok){closeModal();openBattle();}
       return result;
     },
@@ -9208,7 +9212,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="battle-vfx.js?v=20261119-null-moves-v42"></script>
 <script src="admin-console.js?v=20261119-null-moves-v42"></script>
 <script src="online-futo.js?v=20261119-void-line-v39"></script>
-<script src="secret-encounter.js?v=20261119-null-grass-v43"></script>
+<script src="secret-encounter.js?v=20261119-secret-gender-v44"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261118-easy-connect-v37"></script>
