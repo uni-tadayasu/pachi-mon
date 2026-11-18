@@ -14,6 +14,7 @@
  * v27: Floravelle's art finished in high detail (a new image version).
  * v28: held-key fix, the hidden admin recovery screen and the キラシード name.
  * v29: the hidden recovery screen asks the server for the operator seat explicitly.
+ * v30: キラシード redrawn after the owner's design (new image and code versions).
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
