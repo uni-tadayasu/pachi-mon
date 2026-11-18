@@ -60,13 +60,13 @@ assert.throws(() => Duel.create({ mode: 'single', teams, seed: 7, allocation: [[
 const state = { party: [], storage: [] };
 const trained = { species: 'komori', level: 100, uid: 'p-1', nickname: 'もりの', shiny: true, alloc: big };
 state.party.push(trained, { species: 'fuwari', level: 30, uid: 'p-2', alloc: { spAtk: 20, spDef: 10 } }, { species: 'kirari', level: 60, uid: 'p-3' });
-state.storage.push({ species: 'komori', level: 5, uid: 's-1', alloc: { def: 8 } }, { species: 'futo', level: 70, uid: 's-2', grantId: 'gift-1', alloc: { atk: 30 } });
+state.storage.push({ species: 'komori', level: 5, uid: 's-1', alloc: { def: 8 } }, { species: 'futo', level: 70, uid: 's-2', grantId: 'gift-1', customStats: { hp: 900, atk: 200, def: 150, spAtk: 220, spDef: 150, speed: 160, accuracy: 110, evasion: 100 } });
 LT.adminBridge = { getEngine: () => ({ state }) };
-LT.Admin = { async requestDuelPass() { throw Error('not used'); }, async verifyDuelPass() { throw Error('not used'); } };
 vm.runInContext(fs.readFileSync(path.join(root, 'online-futo.js'), 'utf8'), context);
 const { allocationFor } = LT.OnlineFuto;
-assert.deepEqual(copy(allocationFor(['komori', 'fuwari', 'kirari', 'hibana', 'futo'])), [copy(scaled), full({ spAtk: 20, spDef: 10 }), null, null, null],
-  'party first (the same individual as the look), unowned and Futo carry nothing');
+assert.deepEqual(copy(allocationFor(['komori', 'fuwari', 'kirari', 'hibana', 'futo'])), [copy(scaled), full({ spAtk: 20, spDef: 10 }), null, null, copy(LT.OnlineFuto.linkAllocation)],
+  'party first (the same individual as the look), unowned carry nothing, Futo (operator stats) spreads the whole budget evenly');
+assert.equal(Object.values(LT.OnlineFuto.linkAllocation).reduce((a, b) => a + b, 0), Duel.rules.allocation.budget); assert(Duel.validateAllocation(copy(LT.OnlineFuto.linkAllocation)).ok);
 assert.match(Duel.rulesFingerprint(), /allocation/, 'peers on the old rules are turned away');
 
 async function pair(mode = 'single') {

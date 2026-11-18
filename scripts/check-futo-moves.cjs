@@ -25,7 +25,7 @@ assert.deepEqual(plain(D.species.futo.moves),defaults);
 assert.deepEqual(plain(FutoRules.defaultMoves),defaults);
 const values=defaults.map(id=>D.moves[id]);
 assert.deepEqual(plain(values.map(m=>[m.kind,m.category,m.power,m.accuracy,m.pp])),[
-  ['attack','physical',100,100,15],['attack','special',100,100,15],['boost','status',0,100,5],['heal','status',50,100,10]
+  ['attack','physical',62,100,10],['attack','special',62,100,10],['boost','status',0,100,2],['heal','status',45,100,5]
 ]);
 assert.equal(D.moves.futo_ascend.effect,'allStats');
 assert.deepEqual(plain(FutoRules.normalizeMoves(legacy)),defaults);
@@ -33,10 +33,10 @@ assert.deepEqual(plain(FutoRules.normalizeMoves(custom)),custom);
 assert.deepEqual(plain(FutoRules.normalizeMoves([...legacy].reverse())),[...legacy].reverse());
 
 let {e,ally,enemy}=fight();
-assert.deepEqual(plain(e.moveDetails(ally).map(m=>m.maxPP)),[15,15,5,10]);
+assert.deepEqual(plain(e.moveDetails(ally).map(m=>m.maxPP)),[10,10,2,5]);
 const permanent=JSON.stringify(ally.customStats);
 let events=cast(e,ally,enemy,'futo_ascend');
-assert.equal(ally.pp.futo_ascend,4);assert.equal(events[0].kind,'boost');assert.equal(events[0].changed,true);
+assert.equal(ally.pp.futo_ascend,1);assert.equal(events[0].kind,'boost');assert.equal(events[0].changed,true);
 assert.equal(events[0].moveId,'futo_ascend');assert.equal(events[0].side,'ally');
 assert.deepEqual(plain(e.battleStats(ally)),{hp:1001,atk:150,def:150,spAtk:300,spDef:150,speed:150,accuracy:133,evasion:133});
 assert.deepEqual(plain(e.stats(ally)),base);assert.equal(JSON.stringify(ally.customStats),permanent);
@@ -72,20 +72,20 @@ assert.equal(ally.hp,0);assert(Object.values(e.battle.stages.ally).every(n=>n===
 ally.hp=1001;cast(e,ally,enemy,'futo_ascend');e.endBattle('fled',[]);
 assert(Object.values(e.battle.stages.ally).every(n=>n===0));assert.equal(e.battleStats(ally).atk,100);e.finishBattle();assert.equal(e.battle,null);
 
-({e,ally,enemy}=fight());ally.hp=1;cast(e,ally,enemy,'futo_restore');assert.equal(ally.hp,502);assert.equal(ally.pp.futo_restore,9);
+({e,ally,enemy}=fight());ally.hp=1;cast(e,ally,enemy,'futo_restore');assert.equal(ally.hp,1+Math.ceil(1001*.45));assert.equal(ally.pp.futo_restore,4);
 ally.hp=950;cast(e,ally,enemy,'futo_restore');assert.equal(ally.hp,1001);cast(e,ally,enemy,'futo_restore');assert.equal(ally.hp,1001);
 
 e=game();e.grantFuto({grantId:'old',level:50,stats:base,moves:custom});
 let old=e.serialize();old.party[1].customMoves=legacy;old.party[1].pp={supernova:4,atlas_crystal_4:7,starlight:8,shell:2};
 const original=JSON.stringify(old);let migrated=new Engine(old),mon=migrated.state.party[1];
 assert.equal(JSON.stringify(old),original,'Migration must not alter input data');
-assert.deepEqual(plain(mon.customMoves),defaults);assert.deepEqual(plain(mon.pp),{futo_breaker:4,futo_burst:7,futo_ascend:5,futo_restore:2});
+assert.deepEqual(plain(mon.customMoves),defaults);assert.deepEqual(plain(mon.pp),{futo_breaker:4,futo_burst:7,futo_ascend:2,futo_restore:2}); // never above the new maximum
 old.party[1].customMoves=custom;old.party[1].pp={shell:3,supernova:2,starlight:1,atlas_crystal_4:0};migrated=new Engine(old);mon=migrated.state.party[1];
 assert.deepEqual(plain(mon.customMoves),custom);assert.deepEqual(plain(mon.pp),old.party[1].pp);
 old.party[1].customMoves=legacy;old.party[1].pp={supernova:0,atlas_crystal_4:0,starlight:0,shell:0};
 migrated=new Engine(old);assert(Object.values(migrated.state.party[1].pp).every(n=>n===0),'Migration must never refill exhausted PP');
 mon=e.state.party[1];mon.customMoves=legacy;mon.pp={supernova:6,atlas_crystal_4:5,starlight:4,shell:3};e.syncPP(mon);
-assert.deepEqual(plain(mon.customMoves),defaults);assert.deepEqual(plain(mon.pp),{futo_breaker:6,futo_burst:5,futo_ascend:4,futo_restore:3});
+assert.deepEqual(plain(mon.customMoves),defaults);assert.deepEqual(plain(mon.pp),{futo_breaker:6,futo_burst:5,futo_ascend:2,futo_restore:3});
 
 e=game();assert.equal(e.releaseParty(0).ok,false);assert.equal(e.releaseParty(-1).ok,false);assert.equal(e.releaseParty(1).ok,false);assert.equal(e.releaseParty(.5).ok,false);
 e.grantFuto({grantId:'admin-initial:test',level:50,stats:base});e.state.party[1].hp=0;assert.equal(e.releaseParty(0).ok,false,'Keep last able member');

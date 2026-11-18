@@ -20,7 +20,9 @@ assert(Object.values(D.collectionRoutes.starters).every(ids=>!ids.includes('flor
 for(const pool of [D.guardians,D.rivals,D.elites,{champion:D.champion}])assert(!JSON.stringify(pool).includes('floravelle'));
 let e=make();assert(!e.startBattle('floravelle',70));assert(!e.startBattle('floravelle',70,null,{wild:false}));
 assert(!e.startTeamBattle([{species:'komori',level:5},{species:'floravelle',level:70}]));assert.equal(e.battle,null);
-assert.throws(()=>new Duel({mode:'single',seed:7,teams:[['floravelle','komori','shizuku'],['arvelion','hibana','komori']]}));
+// Link battles take the mythical at standard Lv.50 stats from its (balanced) species data.
+{const d=new Duel({mode:'single',seed:7,teams:[['floravelle','komori','shizuku'],['arvelion','hibana','komori']]}),fl=d.state.teams[0].monsters[0],b=D.species.floravelle.base;
+ assert.equal(fl.level,50);assert.deepEqual(copy(fl.stats),{hp:b.hp+250,atk:b.atk+150,def:b.def+100,spAtk:b.spAtk+150,spDef:b.spDef+100,speed:b.speed+100,accuracy:b.accuracy,evasion:b.evasion});}
 assert(new Engine().receiveAdminMythical(grant).pending);
 for(const invalid of [{...grant,grantId:'admin-legendary:operator-test'},{...grant,grantId:'admin-mythical:'},{...grant,species:'arvelion'},{...grant,level:71}]){assert(!e.receiveAdminMythical(invalid).ok);assert(!get(e));}
 assert(e.receiveAdminMythical(grant).ok);let mon=get(e);assert.equal(mon.level,70);assert.equal(mon.shiny,false);assert.equal(mon.grantId,grant.grantId);
@@ -40,10 +42,10 @@ function cast(e,mon,enemy,id){const events=[];e.applyMove(mon,enemy,D.moves[id],
 function damage(guard){const {e,mon,enemy}=fight();e.battle.enemyGuard=guard;const hp=enemy.hp;cast(e,mon,enemy,ids[0]);return hp-enemy.hp;}
 assert.equal(damage(true),damage(false),'翠天の槍 pierces guard');
 let f=fight();cast(f.e,f.mon,f.enemy,ids[1]);assert(Object.values(f.e.battle.stages.ally).every(v=>v===1));assert(f.e.battle.allyGuard);
-assert(f.e.battle.log.at(-1).includes('葉の結界'));assert.equal(f.mon.pp[ids[1]],2);
+assert(f.e.battle.log.at(-1).includes('葉の結界'));assert.equal(f.mon.pp[ids[1]],1);
 for(const k of Object.keys(f.e.battle.stages.ally))f.e.battle.stages.ally[k]=6;
 cast(f.e,f.mon,f.enemy,ids[1]);assert(Object.values(f.e.battle.stages.ally).every(v=>v===6));
-f=fight();f.mon.hp=1;cast(f.e,f.mon,f.enemy,ids[2]);assert.equal(f.mon.hp,1+Math.ceil(f.e.stats(f.mon).hp*.65));
+f=fight();f.mon.hp=1;cast(f.e,f.mon,f.enemy,ids[2]);assert.equal(f.mon.hp,1+Math.ceil(f.e.stats(f.mon).hp*.45));
 f.mon.hp=f.e.stats(f.mon).hp-1;cast(f.e,f.mon,f.enemy,ids[2]);assert.equal(f.mon.hp,f.e.stats(f.mon).hp);
 f=fight();f.mon.hp=1;const enemyHP=f.enemy.hp;cast(f.e,f.mon,f.enemy,ids[3]);assert.equal(f.mon.hp,1+Math.floor((enemyHP-f.enemy.hp)*.25));
 const initialStats=f.e.stats(f.mon);f.e.giveXP(f.mon,999999,[]);assert.equal(f.mon.level,100);assert.equal(f.mon.species,'floravelle');assert.equal(f.mon.xp,0);assert.equal(f.e.state.stats.evolutions,0);
@@ -55,7 +57,7 @@ const d=new Duel({mode:'single',seed:7,teams:[['arvelion','komori','shizuku'],['
 const actor=d.active(0)[0];actor.pp=Object.fromEntries(ids.map(id=>[id,D.moves[id].pp]));d._random=()=>.5;
 function apply(id){d._apply({side:0,slot:0,target:0,technique:D.moves[id]},actor);}
 apply(ids[1]);assert(Object.values(actor.stages).every(v=>v===1));assert(actor.guard);assert(d.state.log.at(-1).includes('葉の結界'));
-actor.hp=1;apply(ids[2]);assert.equal(actor.hp,1+Math.ceil(actor.maxHp*.65));
+actor.hp=1;apply(ids[2]);assert.equal(actor.hp,1+Math.ceil(actor.maxHp*.45));
 actor.hp=1;const enemy=d.active(1)[0],hp=enemy.hp;apply(ids[3]);assert.equal(actor.hp,1+Math.floor((hp-enemy.hp)*.25));
 // Real bridge transaction must leave both in-memory and persisted saves intact
 // on quota failure, then deliver once on retry.
@@ -68,4 +70,4 @@ for(const playing of [true,false]){
  failWrite=false;assert(bridge.persistGiftMutation('receiveAdminMythical',grant).ok);assert.equal(writes,1);assert(stored.giftReceipts.includes(grant.grantId));
  assert(bridge.persistGiftMutation('receiveAdminMythical',grant).alreadyReceived);assert.equal(writes,1);
 }
-console.log('Mythical checks passed: owner entitlement validation, 256/254 counts, no ordinary acquisition/rental, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, leaf moves and solo/duel effects.');
+console.log('Mythical checks passed: owner entitlement validation, 256/254 counts, no ordinary acquisition, link battles at standard Lv.50 stats, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, leaf moves and solo/duel effects.');

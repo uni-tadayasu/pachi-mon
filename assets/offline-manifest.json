@@ -1,5 +1,5 @@
 {
- "version": "2026-11-17",
+ "version": "2026-11-18",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -214,8 +214,8 @@
    "bytes": 978966
   },
   {
-   "url": "assets/floravelle.png?v=20261116-mythical",
-   "bytes": 1740319
+   "url": "assets/floravelle.png?v=20261118-elephant",
+   "bytes": 41003
   },
   {
    "url": "assets/futo-back-v2.png",
@@ -254,6 +254,6 @@
   "assets/traveller-hero.webp",
   "assets/traveller-npcs.webp"
  ],
- "totalBytes": 46303611,
+ "totalBytes": 44604295,
  "coreBytes": 7296515
 }
