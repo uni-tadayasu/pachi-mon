@@ -271,6 +271,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 /* Keep exchanging and depositing separate, with reasons beside unavailable actions. */
 .storage-party-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0;padding:10px;border:1px solid var(--line);background:var(--paper)}.storage-party-row>.party-card{min-width:0;margin:0;box-shadow:none;cursor:default}.storage-party-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:center;min-width:0}.storage-party-actions .btn{min-width:0;min-height:44px;padding:9px 6px;font-size:12px;white-space:normal;overflow-wrap:anywhere}.storage-party-reason{grid-column:1/-1;margin:0;font-size:12px}
 @media(min-width:700px){.storage-party-row{grid-template-columns:minmax(0,1fr) minmax(245px,.85fr);align-items:center}}
+.move-order-list{display:grid;gap:12px;min-width:0}.move-order-row{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0;padding:12px;border:1px solid var(--line);background:var(--paper)}.move-order-row:focus{outline:2px solid var(--gold);outline-offset:-2px}.move-order-info{min-width:0}.move-order-info h3{margin:0;font-size:16px;overflow-wrap:anywhere}.move-order-info p{margin:6px 0 0;font-size:13px;line-height:1.6;overflow-wrap:anywhere}.move-order-number{display:inline-grid;place-items:center;min-width:1.6em;margin-right:6px;color:var(--azure)}.move-order-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}.move-order-controls .btn{min-width:0;min-height:44px;padding:9px 6px;font-size:13px;white-space:normal;overflow-wrap:anywhere}
+@media(min-width:700px){.move-order-row{grid-template-columns:minmax(0,1fr) minmax(200px,.65fr);align-items:center}}
 </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2723,6 +2725,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const clone = value => JSON.parse(JSON.stringify(value));
   const finiteInt = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max;
   const fail = message => ({ ok: false, message });
+  // Store a permutation of the four learned slots, never a different moveset.
+  // Keeping slot positions also carries the layout through evolution/config updates.
+  function normalizeMoveOrder(value){
+    if(value===undefined)return [0,1,2,3];
+    if(!Array.isArray(value)||value.length!==4||![0,1,2,3].every(i=>Object.hasOwn(value,i)&&finiteInt(value[i],0,3))||new Set(value).size!==4)throw Error('技の順番は4つの技を重複なく指定してください。');
+    return value.slice();
+  }
   const GIFT_ID=/^[a-zA-Z0-9_.:-]{1,120}$/;
   const GIFT_LIMIT=10000;
   const TRADE_ID=/^trade:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -2899,7 +2908,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       else this.battle.stages={ally:BattleStages.empty(),enemy:BattleStages.empty()};
     }
     xpToNext(level) { return level >= MAX_LEVEL ? 0 : 24 + level * 12; }
-    moves(mon) { return (mon.species==='futo'&&mon.customMoves!==undefined?futoMoves(mon.customMoves):D.species[mon.species].moves).map(id => D.moves[id]); }
+    baseMoves(mon) { return (mon.species==='futo'&&mon.customMoves!==undefined?futoMoves(mon.customMoves):D.species[mon.species].moves).map(id => D.moves[id]); }
+    moves(mon) { const moves=this.baseMoves(mon);return normalizeMoveOrder(mon.moveOrder).map(slot=>moves[slot]); }
+    moveMove(uid,from,to){
+      if(!this.state.started)return fail('冒険を始めてから技を並べ替えてください。');
+      if(this.battle)return fail('バトルを終えてから技を並べ替えてください。');
+      const mon=typeof uid==='string'?[...this.state.party,...this.state.storage].find(other=>other.uid===uid):null;
+      if(!mon||!finiteInt(from,0,3)||!finiteInt(to,0,3))return fail('並べ替える技と移動先を選んでください。');
+      let order;try{order=normalizeMoveOrder(mon.moveOrder);}catch(error){return fail(error.message);}
+      if(from===to)return {ok:true,unchanged:true,message:'技の順番はそのままです。'};
+      const [slot]=order.splice(from,1);order.splice(to,0,slot);mon.moveOrder=order;
+      return {ok:true,message:`「${this.baseMoves(mon)[slot].name}」を${to+1}番目に移動しました。`};
+    }
     grantFuto(grant){
       if(!this.state.started)return {...fail('冒険を始めると受け取れます。'),pending:true};
       const id=grant?.grantId??grant?.id;
@@ -2978,7 +2998,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       // experience. Old saves learn the config level once while retaining the
       // current-level growth baseline established during migration.
       const sameStats=mon.customStats&&Object.keys(FUTO_GROWTH).every(key=>mon.customStats[key]===next.customStats[key]);
-      const sameMoves=this.moves(mon).every((move,i)=>move.id===next.customMoves[i]);
+      const sameMoves=this.baseMoves(mon).every((move,i)=>move.id===next.customMoves[i]);
       const knownConfig=mon.futoConfigLevel!==null&&mon.futoConfigLevel!==undefined;
       if(sameStats&&sameMoves&&(!knownConfig||mon.futoConfigLevel===next.level)){
         mon.futoConfigLevel=next.level;
@@ -3000,9 +3020,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       return move.power>=42?10:move.power>=33?15:move.power>=27?20:30;
     }
     syncPP(mon) {
-      const previous=mon.pp || {}, next={},legacy=legacyFutoRecord(mon);
-      const oldNull=D.nullLegacyMovesets?.[mon.species],migrateNull=oldNull&&!this.moves(mon).every(move=>Object.hasOwn(previous,move.id))&&oldNull.every(([id])=>Object.hasOwn(previous,id));
-      for(const [i,move]of this.moves(mon).entries()){
+      const previous=mon.pp || {}, next={},legacy=legacyFutoRecord(mon),current=this.baseMoves(mon);
+      const oldNull=D.nullLegacyMovesets?.[mon.species],migrateNull=oldNull&&!current.every(move=>Object.hasOwn(previous,move.id))&&oldNull.every(([id])=>Object.hasOwn(previous,id));
+      for(const [i,move]of current.entries()){
         const oldId=legacy?LEGACY_FUTO_MOVES[i]:migrateNull?oldNull[i][0]:move.id,oldMax=legacy?this.maxPP(D.moves[oldId]):migrateNull?oldNull[i][1]:this.maxPP(move);
         next[move.id]=finiteInt(previous[oldId],0,oldMax)?(migrateNull?scalePP(previous[oldId],oldMax,this.maxPP(move)):Math.min(previous[oldId],this.maxPP(move))):this.maxPP(move);
       }
@@ -3839,7 +3859,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       mon=this.migrateRetired(mon,true);
       if(mon&&typeof mon==='object'&&!Array.isArray(mon)){
         if(mon.heldItem!==undefined)throw Error('持ち物を持たせたままでは交換できません。先に持ち物を外してください。');
-        const {status,statusTurns,gender,alloc,bonusPoints,...rest}=mon;mon=rest;
+        const {status,statusTurns,gender,alloc,bonusPoints,moveOrder,...rest}=mon;mon=rest;
       }
       if(!mon || typeof mon!=='object' || Array.isArray(mon) || Object.keys(mon).some(key=>!TRADE_FIELDS.has(key)))throw Error('特別な受け取り情報を持つパチモンは交換できません。');
       const species=D.species[mon.species];
@@ -4154,7 +4174,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           if(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))special.shiny=true;
         }
         if(!finiteInt(mon.level,1,MAX_LEVEL) || !finiteInt(mon.xp,0,mon.level===MAX_LEVEL?0:this.xpToNext(mon.level)-1) || !finiteInt(mon.hp,0,this.stats(mon).hp))error('モンスターの能力が正しくありません。');
-        const pp={},legacy=legacyFutoRecord(mon),current=this.moves(mon);
+        if(mon.moveOrder!==undefined){try{special.moveOrder=normalizeMoveOrder(mon.moveOrder);}catch(_){error('技の順番が正しくありません。');}}
+        const pp={},legacy=legacyFutoRecord(mon),current=this.baseMoves(mon);
         if(mon.pp!==undefined && (!mon.pp || typeof mon.pp!=='object' || Array.isArray(mon.pp)))error('技のPPが正しくありません。');
         // Saves from before the 96-move rework hold the old four moves: carry their PP over slot by slot.
         const oldSet=!legacy&&mon.pp&&!current.every(move=>Object.hasOwn(mon.pp,move.id))?(D.nullLegacyMovesets?.[mon.species]||D.legacyMovesets?.[mon.species]):null;
@@ -4245,6 +4266,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
   }
   LT.Engine=Engine;
+  LT.MoveOrder=Object.freeze({normalize:normalizeMoveOrder});
   LT.TradeRules=Object.freeze({receiptLimit:TRADE_LIMIT,isEligible:mon=>{try{new Engine().tradeMonster(mon);return true;}catch(_){return false;}},
     wirePP:mon=>new Engine().tradeWirePP(mon),toWire:mon=>new Engine().toTradeWire(mon),fromWire:mon=>new Engine().fromTradeWire(mon)});
   LT.MonsterIdentity=Object.freeze({normalizeNickname,countNickname,displayName,maxNicknameLength:5,shinyOdds:SHINY_ODDS});
@@ -6961,6 +6983,42 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const selected=engine.state.party.findIndex(mon=>mon.uid===selectedUid);
     if(selected>=0)$('party-order-row-'+selected)?.focus({preventScroll:true});
   }
+  function persistMoveOrder(uid,from,to,expectedEngine,expectedMoves){
+    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに、技を並べ替えられます。'};
+    const mon=[...engine.state.party,...engine.state.storage].find(other=>other.uid===uid);
+    if(!mon)return {ok:false,message:'仲間の状態が変わりました。もう一度詳細を開いてください。'};
+    const moves=engine.moves(mon);
+    if(!Array.isArray(expectedMoves)||expectedMoves.length!==4||moves.length!==4||moves.some((move,i)=>move.id!==expectedMoves[i]))return {ok:false,message:'技の並びや内容が変わりました。もう一度「技の並べ替え」を開いてください。'};
+    if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||from<0||from>=4||to<0||to>=4)return {ok:false,message:'動かす技と移動先を選んでください。'};
+    try{
+      const candidate=new Engine(engine.serialize()),result=candidate.moveMove(uid,from,to);
+      if(!result.ok)return result;
+      const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+      engine.state=candidate.state;storedSave=data;lastSave=performance.now();updateAll();
+      return {ok:true,message:`${moves[from].name}を${to+1}番目に移動しました。保存しました。`};
+    }catch(_){return {ok:false,message:'端末に保存できません。技の並びは変更していません。空き容量を確認して、もう一度お試しください。'};}
+  }
+  function showMoveOrder(uid,selectedMove=null,message=''){
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに、技を並べ替えられます。');return;}
+    const mon=[...engine.state.party,...engine.state.storage].find(other=>other.uid===uid);
+    if(!mon){toast('仲間の状態が変わりました。もう一度詳細を開いてください。');return;}
+    const expectedEngine=engine,expectedMoves=engine.moves(mon).map(move=>move.id),details=engine.moveDetails(mon);
+    if(expectedMoves.length!==4){toast('技の情報を確認できません。もう一度詳細を開いてください。');return;}
+    openModal('技の並べ替え',`<p class="notice"><strong>${escape(nameOf(mon))}</strong>の技を「上へ」「下へ」で並べ替えます。変更はその場で保存され、バトルの技選択にも反映されます。</p><p id="move-order-result" class="notice" role="status" aria-live="polite"${message?'':' hidden'}>${escape(message)}</p><div id="move-order-list" class="move-order-list">`+details.map((move,i)=>`<article class="move-order-row" id="move-order-row-${i}" tabindex="-1"><div class="move-order-info"><h3><span class="move-order-number">${i+1}</span>${escape(move.name)} ${typeBadge(move.element)}</h3><p>PP ${move.pp} / ${move.maxPP}</p><p>${escape(move.description)}</p></div><div class="move-order-controls" role="group" aria-label="${escape(move.name)}の順番"><button type="button" class="btn btn-small" data-move-order="${i}" data-move-to="${i-1}" aria-label="${escape(move.name)}を1つ上へ"${i===0?' disabled':''}>↑ 上へ</button><button type="button" class="btn btn-small" data-move-order="${i}" data-move-to="${i+1}" aria-label="${escape(move.name)}を1つ下へ"${i===details.length-1?' disabled':''}>↓ 下へ</button></div></article>`).join('')+'</div><div class="modal-actions"><button type="button" class="btn btn-primary" id="move-order-back">← パチモンの詳細へ</button></div>','move-order');
+    $('move-order-list').onclick=event=>{
+      const button=event.target.closest('[data-move-order]');if(!button||button.disabled)return;
+      const from=Number(button.dataset.moveOrder),to=Number(button.dataset.moveTo),result=persistMoveOrder(uid,from,to,expectedEngine,expectedMoves);
+      if(result.ok)showMoveOrder(uid,expectedMoves[from],result.message);
+      else{const status=$('move-order-result');if(status){status.textContent=result.message;status.hidden=false;}}
+    };
+    $('move-order-back').onclick=()=>{
+      if(engine!==expectedEngine){toast('冒険の状態が変わりました。もう一度詳細を開いてください。');return;}
+      const index=engine.state.party.findIndex(other=>other.uid===uid);
+      if(index>=0)showParty(index);else if(engine.state.storage.some(other=>other.uid===uid))showStorageDetail(uid);else toast('仲間の状態が変わりました。もう一度詳細を開いてください。');
+    };
+    const selected=details.findIndex(move=>move.id===selectedMove);
+    if(selected>=0){const row=$('move-order-row-'+selected);row?.focus({preventScroll:true});row?.scrollIntoView?.({block:'nearest'});}
+  }
   function partyDepositReason(index){
     const party=engine.state.party;
     if(!Number.isSafeInteger(index)||!party[index])return '仲間の状態が変わりました。もう一度開いてください。';
@@ -6996,7 +7054,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const expectedEngine=engine,depositBlocked=partyDepositReason(index);
     const s = DATA.species[mon.species], stats = engine.stats(mon);
     const releaseBlocked = engine.state.party.length <= 1 ? '最後の1体は逃がせません。' : !engine.state.party.some((other,i)=>i!==index && other.hp>0) ? '動ける仲間を1体以上残してください。' : '';
-    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">${s.hiddenDex?'図鑑未登録 · バグ技で出会ったパチモン':`モンスター記録　No.${String(Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).indexOf(mon.species)+1).padStart(3,'0')}`}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><div class="party-vitals">${partyVitals(mon,stats)}</div></div></div><div class="stat-grid">${statCells(stats)}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<p class="notice">パーティー <strong>${engine.state.party.length} / 6 体</strong> · 1〜6体で冒険できます。ひかえに送った仲間は、あとで迎えられます。</p><div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button type="button" class="btn" id="party-deposit-${index}" data-party-deposit="${index}" data-party-uid="${escape(mon.uid)}"${depositBlocked?` disabled aria-describedby="party-deposit-reason-${index}"`:''}>ひかえに送る</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${depositBlocked?`<p class="notice" id="party-deposit-reason-${index}">${escape(depositBlocked)}</p>`:''}${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
+    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">${s.hiddenDex?'図鑑未登録 · バグ技で出会ったパチモン':`モンスター記録　No.${String(Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).indexOf(mon.species)+1).padStart(3,'0')}`}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><div class="party-vitals">${partyVitals(mon,stats)}</div></div></div><div class="stat-grid">${statCells(stats)}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<p class="notice">パーティー <strong>${engine.state.party.length} / 6 体</strong> · 1〜6体で冒険できます。ひかえに送った仲間は、あとで迎えられます。</p><div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button type="button" class="btn" data-move-order-open="${escape(mon.uid)}">技の並べ替え</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button type="button" class="btn" id="party-deposit-${index}" data-party-deposit="${index}" data-party-uid="${escape(mon.uid)}"${depositBlocked?` disabled aria-describedby="party-deposit-reason-${index}"`:''}>ひかえに送る</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${depositBlocked?`<p class="notice" id="party-deposit-reason-${index}">${escape(depositBlocked)}</p>`:''}${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
     bindPartyDeposit(index,mon.uid,expectedEngine);
   }
   const HELD_ITEMS=DATA.heldItems||{};
@@ -7060,7 +7118,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showStorageDetail(uid){
     const mon=findOwned(uid);if(!mon||engine.battle)return;
     const species=DATA.species[mon.species];
-    openModal(nameOf(mon),`<div class="creature-card">${creatureView(mon,180)}<div><h3>${escape(nameOf(mon))}</h3><p class="species-name">${escape(species.name)} · Lv.${mon.level}</p>${shinyBadge(mon)}${typeBadge(species.element)}<p>${escape(creatureDescription(species))}</p></div></div><div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-storage-slot="-2">← ひかえへ</button></div>`,'storage-detail');
+    openModal(nameOf(mon),`<div class="creature-card">${creatureView(mon,180)}<div><h3>${escape(nameOf(mon))}</h3><p class="species-name">${escape(species.name)} · Lv.${mon.level}</p>${shinyBadge(mon)}${typeBadge(species.element)}<p>${escape(creatureDescription(species))}</p></div></div><div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button type="button" class="btn" data-move-order-open="${escape(mon.uid)}">技の並べ替え</button><button class="btn" data-storage-slot="-2">← ひかえへ</button></div>`,'storage-detail');
   }
   function showNickname(uid){
     const mon=findOwned(uid);if(!mon||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;
@@ -7521,6 +7579,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(tradeLocked()){if(!b.closest('#pachi-trade-dialog'))LT.Trade?.open?.();return;}
     if(d.avatar){try{selectedPlayerName=LT.PlayerIdentity.normalizeName(selectedPlayerName);}catch(error){toast(error.message);return;}selectedAvatar=d.avatar==='female'?'female':'male';chooseStarter();return;}
     if(d.nickname){showNickname(d.nickname);return;}
+    if(d.moveOrderOpen){showMoveOrder(d.moveOrderOpen);return;}
     if(d.give!==undefined){showHeldPicker(Number(d.give));return;}
     if(d.giveItem){const [i,id]=d.giveItem.split(':');const r=engine.giveHeld(Number(i),id);toast(r.message||'持たせられません。');if(r.ok){sound.fx('click');save();updateAll();showParty(Number(i));}return;}
     if(d.take!==undefined){const r=engine.takeHeld(Number(d.take));toast(r.message||'外せません。');if(r.ok){save();updateAll();showParty(Number(d.take));}return;}
@@ -8191,6 +8250,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const ALLOC_KEYS = Object.freeze([...ALLOC.keys]);
   const RULES = Object.freeze({ version: 8, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
     items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn-void-immune-v41', nullMoves: 'full-heal-then-one-recharge-turn-quarter-hp-curse-stacks-clears-on-switch-faint-end-forced-scorch-v41', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
+    moveOrder: 'selected-owned-individual-four-slot-permutation-v48',
     allocation: Object.freeze({ budget: ALLOC.capPerStat * ALLOC_KEYS.length, cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'selected-owned-individual-full-allocation' }) });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
@@ -8231,6 +8291,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       // Every species may battle, the special three included (their stats are balanced like everyone's).
       if (ids.some(id => typeof id !== 'string' || !own(D.species, id))) return fail('対戦で使えないパチモンが含まれています。');
       if (new Set(ids).size !== size) return fail('同じパチモンは1体まで編成できます。');
+      return { ok: true };
+    }
+    static validateMoveOrder(value) {
+      try { LT.MoveOrder.normalize(value); return { ok: true }; }
+      catch (_) { return fail('技の並びのデータが正しくありません。'); }
+    }
+    // Omitted metadata is the original order. A present list must describe
+    // every member, using each of the four species-move slots exactly once.
+    static validateMoveOrders(list, size) {
+      if (list === undefined) return { ok: true };
+      if (!Array.isArray(list) || list.length !== size) return fail('技の並びのデータが正しくありません。');
+      for (let i = 0; i < size; i++) {
+        if (!own(list, i) || !Array.isArray(list[i]) || !Duel.validateMoveOrder(list[i]).ok) return fail('技の並びのデータが正しくありません。');
+      }
       return { ok: true };
     }
     // null (no points) or all six stats as whole numbers within adventure stat caps.
@@ -8284,10 +8358,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const items = config.items ?? [null, null];
       if (!Array.isArray(items) || items.length !== 2) throw new Error('持ち物のデータが正しくありません。');
       items.forEach((list, side) => { const check = Duel.validateItems(list ?? null, config.teams[side].length); if (!check.ok) throw new Error(check.error); });
+      const moveOrders = config.moveOrders === undefined ? [undefined, undefined] : config.moveOrders;
+      if (!Array.isArray(moveOrders) || moveOrders.length !== 2 || !own(moveOrders, 0) || !own(moveOrders, 1)) throw new Error('技の並びのデータが正しくありません。');
+      moveOrders.forEach((list, side) => { const check = Duel.validateMoveOrders(list, config.teams[side].length); if (!check.ok) throw new Error(check.error); });
       const slots = config.mode === 'double' ? 2 : 1;
       this.state = { version: RULES.version, mode: config.mode, turn: 1, round: 1, phase: 'action', seed: config.seed, rng: config.seed,
         teams: config.teams.map((team, side) => ({ name: cleanName(config.names?.[side], `プレイヤー${side + 1}`),
-          monsters: team.map((species, index) => { const alloc = allocation[side]?.[index] ?? null, item = items[side]?.[index] ?? null, s = stats(species, alloc); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, ...(alloc ? { alloc: clone(alloc) } : {}), ...(item ? { item } : {}), stages: STAGES.empty(),
+          monsters: team.map((species, index) => { const alloc = allocation[side]?.[index] ?? null, item = items[side]?.[index] ?? null, s = stats(species, alloc); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, ...(alloc ? { alloc: clone(alloc) } : {}), ...(item ? { item } : {}), moveOrder: LT.MoveOrder.normalize(moveOrders[side]?.[index]), stages: STAGES.empty(),
             pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false }; }),
           active: Array.from({ length: slots }, (_, slot) => slot) })), winner: null, reason: null, log: [], events: [] };
     }
@@ -8302,7 +8379,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       return out;
     }
     resetStages(mon) { mon.stages = STAGES.empty(); }
-    moves(mon) { return D.species[mon.species].moves.map(id => ({ ...D.moves[id], pp: mon.pp[id], maxPP: maxPP(D.moves[id]) })); }
+    moves(mon) { return LT.MoveOrder.normalize(mon.moveOrder).map(slot => D.species[mon.species].moves[slot]).map(id => ({ ...D.moves[id], pp: mon.pp[id], maxPP: maxPP(D.moves[id]) })); }
     canStruggle(mon) { return this.moves(mon).every(move => move.pp <= 0); }
     active(side) { return this.state.teams[side].active.map(index => this.state.teams[side].monsters[index]); }
     replacementSlots(side) {
@@ -9250,7 +9327,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-vfx.js?v=20261119-null-moves-v42"></script>
 <script src="admin-console.js?v=20261119-null-moves-v42"></script>
-<script src="online-futo.js?v=20261119-void-line-v39"></script>
+<script src="online-futo.js?v=20261119-move-order-v48"></script>
 <script src="secret-encounter.js?v=20261119-secret-gender-v44"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">

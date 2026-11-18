@@ -1,7 +1,7 @@
 /* Pachi Monsters: link-battle teams (online and local) from the player's own monsters.
  * Arvelion, Floravelle and Futo join like every other species: fixed Lv.50 stats
  * from their species data, their species moves, the individual's allocation
- * points, look and held item. Futo's adventure stats are set by the operator and
+ * points, look, held item and move-slot order. Futo's adventure stats are set by the operator and
  * take no allocation points, so in link battles it brings an even spread of the
  * Lv.50 budget. Nothing here needs a server, so the same rules work offline over
  * a local link. Ownership comes from the player's save, as for every species.
@@ -35,6 +35,8 @@
   const firstOf = id => ownedList().find(mon => mon.species === id) || null;
   const appearanceFor = ids => ids.map(id => lookOf(firstOf(id)));
   const allocationFor = ids => ids.map(id => allocationOf(id, firstOf(id)));
+  const moveOrderOf = mon => LT.MoveOrder.normalize(mon?.moveOrder);
+  const moveOrdersFor = ids => ids.map(id => moveOrderOf(firstOf(id)));
   function validAllocation(team) {
     if (team.allocation === undefined) return true;
     return Array.isArray(team.allocation) && Array.isArray(team.ids) && team.allocation.length === team.ids.length &&
@@ -92,8 +94,8 @@
   }
   class LinkSession extends BaseSession {
     _validTeam(team) {
-      if (!plain(team) || !validAppearance(team) || !validAllocation(team) || !validItems(team)) return false;
-      const clean = { ...team }; delete clean.appearance; delete clean.allocation; delete clean.items;
+      if (!plain(team) || !validAppearance(team) || !validAllocation(team) || !validItems(team) || !Duel.validateMoveOrders(team.moveOrders, team.ids?.length).ok) return false;
+      const clean = { ...team }; delete clean.appearance; delete clean.allocation; delete clean.items; delete clean.moveOrders;
       return super._validTeam(clean) && Duel.validateTeam(team.ids, this.mode).ok;
     }
     async setTeam(input = {}) {
@@ -103,13 +105,16 @@
       if (input.ids.includes('floravelle') && !ownedMythical()) return fail(`${LT.DATA.species.floravelle?.name || '幻のパチモン'}を迎えてから編成してください。`);
       if (input.ids.some(id => LT.DATA.species[id]?.glitchOnly && !firstOf(id))) return fail('そのパチモンを仲間にしてから編成してください。');
       if (this._closed || !this._started || !this._connected || this.duel || this._teams[this.role]) return fail('現在は編成を変更できません。');
-      // Chosen individuals (by uid) bring their own look, points and item.
+      // Chosen individuals (by uid) bring their own look, points, item and order.
       const members = input.uids === undefined ? null : membersFor(input.ids, input.uids);
       if (members && !members.ok) return fail(members.error);
       const list = members?.list || null, items = itemsFor(input, list);
       if (!items.ok) return fail(items.error);
+      let moveOrders;
+      try { moveOrders = list ? list.map(moveOrderOf) : moveOrdersFor(input.ids); }
+      catch (_) { return fail('技の並びが正しくありません。仲間の技を並べ直してください。'); }
       const team = { name: cleanName(input.name) || `プレイヤー${this.role + 1}`, ids: input.ids.slice(),
-        appearance: list ? list.map(lookOf) : appearanceFor(input.ids), allocation: list ? list.map((mon, i) => allocationOf(input.ids[i], mon)) : allocationFor(input.ids) };
+        appearance: list ? list.map(lookOf) : appearanceFor(input.ids), allocation: list ? list.map((mon, i) => allocationOf(input.ids[i], mon)) : allocationFor(input.ids), moveOrders };
       if (items.items.some(Boolean)) team.items = items.items;
       if (!this._validTeam(team)) return fail('異なる種類のパチモンでチームを編成してください。');
       this._teams[this.role] = team; this._phase = 'ready'; this._message = '編成を確定しました。対戦相手の準備を待っています。';
@@ -121,14 +126,14 @@
       if (this.duel || !this._teams.every(Boolean)) return;
       try {
         this.duel = createDuel({ mode: this.mode, teams: this._teams.map(team => team.ids), names: this._teams.map(team => team.name), seed: this.seed,
-          appearance: this._teams.map(team => team.appearance), allocation: this._teams.map(team => team.allocation || null), items: this._teams.map(team => team.items || null) });
+          appearance: this._teams.map(team => team.appearance), allocation: this._teams.map(team => team.allocation || null), items: this._teams.map(team => team.items || null), moveOrders: this._teams.map(team => team.moveOrders) });
         this._beginSync(0);
       } catch (_) { this._fail('チームを準備できませんでした。部屋を作り直してください。'); }
     }
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items-glitch-line-v39';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 8 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, moveOrdersFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 8 };
 })();

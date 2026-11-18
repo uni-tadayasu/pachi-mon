@@ -206,7 +206,7 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
     "['local','link','ローカル通信']", 'data-ui="local-battle"', 'data-ui="local-trade"', 'data-link-transport="local"', "transport:'local'", 'checkTrade', 'LT.localTradeActive', '<symbol id="i-link"'])
     assert(html.includes(needle), `index.html: ${needle}`);
   assert(!html.includes('SPECIAL_ONLINE') && html.includes('const allowed=new Set(LT.OnlineFuto?.rosterIds?.(ids)'), 'Arvelion, Floravelle and Futo join local battles too, by the same roster as online ones');
-  assert.equal((html.match(/\(LT\.onlineActive\|\|LT\.localTradeActive\|\|tradeLocked\(\)\)/g) || []).length, 18, 'the adventure pauses during a local trade wherever it pauses for online play');
+  assert.equal((html.match(/\(LT\.onlineActive\|\|LT\.localTradeActive\|\|tradeLocked\(\)\)/g) || []).length, 21, 'the adventure, reserve deposit and move ordering pause during local trades and online play');
   const licenses = fs.readFileSync(path.join(root, 'LICENSES.txt'), 'utf8');
   assert(/qrcode-generator/.test(licenses) && /jsQR/.test(licenses) && fs.existsSync(path.join(root, 'vendor', 'jsQR.LICENSE.txt')) && fs.existsSync(path.join(root, 'vendor', 'qrcode-generator.LICENSE.txt')), 'bundled library licenses');
   console.log(JSON.stringify({ ok: true, codeChars: { offer: offer.length, answer: answer.length },
