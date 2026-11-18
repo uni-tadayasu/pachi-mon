@@ -2646,22 +2646,22 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.hiddenMoves=Object.freeze(techniques.map(move=>move.id));
   D.volatileConditions=Object.freeze({curse:Object.freeze({id:'curse',name:'呪縛',color:'#9c73d6',description:'毎ターン末に最大体力の1/4を失う。ほかの状態異常と重なり、交代・戦闘不能・戦闘終了で解ける。'})});
   const entries=[
-    {id:'nullmie',name:'ヌルミィ',color:'#b8b9db',accent:'#79f0e4',
-      description:'記録の隙間からこぼれた、小さな無の影。欠けた輪のような尾を振り、まだ名前のない音を追いかける。図鑑には映らず、ある裏技でだけ仲間になる。',
+    {id:'nullmie',name:'ヌルミィ',color:'#8764aa',accent:'#d9f4ff',
+      description:'記録の隙間からこぼれた、小さな無の怪物。暗い顔の奥に青白い目を光らせ、短い鉤爪と尾を揺らして忍び寄る。図鑑には映らず、ある裏技で仲間になる。',
       base:{hp:28,atk:12,def:15,spAtk:21,spDef:19,speed:17,accuracy:100,evasion:100},
       moves:['nudge','dew','focus','restsong'],evolvesTo:'nullva',evolveLevel:24},
-    {id:'nullva',name:'ヌルヴァ',color:'#7168ad',accent:'#7ff3e4',
-      description:'ヌルミィが成長し、ほどけた記録を淡い外套に編み直した姿。足音の代わりに、小さな光の欠片を残す。図鑑には登録されない。',
+    {id:'nullva',name:'ヌルヴァ',color:'#76529c',accent:'#cfeeff',
+      description:'頭の稜線が後ろへ伸び、影をまとった腕と尾が発達した姿。青白い目で相手の動きを読み、曲がった鉤爪を静かに構える。図鑑には登録されない。',
       base:{hp:40,atk:18,def:22,spAtk:31,spDef:27,speed:26,accuracy:100,evasion:100},
       moves:['pulse','dew','focus','restsong'],evolvesTo:'zeroveil',evolveLevel:48},
-    {id:'zeroveil',name:'ゼロヴェイル',color:'#333456',accent:'#8af6ed',
-      description:'ヌルヴァがまとった外套は、世界の空白を映すヴェールになった。存在を記す文字だけがすり抜けるが、旅人と結んだ絆は消えない。図鑑には登録されない。',
+    {id:'zeroveil',name:'ゼロヴェイル',color:'#563679',accent:'#d6f3ff',
+      description:'反り返った頭の稜線と大きな鉤爪を備えた無の怪物。暗い顔に不敵な笑みを浮かべ、力強い腕と尾で空白を切り開く。図鑑には登録されない。',
       base:{hp:56,atk:25,def:30,spAtk:40,spDef:35,speed:34,accuracy:100,evasion:100},
       moves:['dawnstep','dew','focus','restsong']}
   ];
   entries.forEach((entry,stage)=>{
     if(entry.moves.some(id=>!D.moves[id]||['special','signature'].includes(D.moves[id].role)))throw Error('Invalid Null-line move');
-    D.species[entry.id]={...entry,moves:D.hiddenMoves.slice(),description:entry.description+' 無属性のため、呪縛を含むすべての状態異常を受けない。',element:'void',shape:'cat',family:'null',pattern:'constellation',variant:300+stage,
+    D.species[entry.id]={...entry,moves:D.hiddenMoves.slice(),description:entry.description+' 無属性のため、呪縛を含むすべての状態異常を受けない。',element:'void',shape:'golem',family:'null',pattern:'constellation',variant:300+stage,
       hiddenDex:true,glitchOnly:true,specialOnly:true,evolutionOnly:stage>0,evolved:stage>0,rarity:'glitch',visual:{stage}};
   });
   D.glitchLine=Object.freeze({ids:Object.freeze(entries.map(entry=>entry.id)),starter:'nullmie',level:5});
@@ -4242,7 +4242,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 })();
 
 </script>
-<script src="creature-art.js?v=20261119-void-line-v39"></script>
+<script src="creature-art.js?v=20261119-null-beast-v46"></script>
 <script src="assets/creatures-individual-catalog.js?v=20261117-256"></script>
 <script src="individual-creature-art.js?v=20261117-shiny-coats"></script>
 <script src="traveller-art.js?v=20261118-world-audio-ui-v33"></script>

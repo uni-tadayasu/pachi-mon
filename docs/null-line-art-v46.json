@@ -1,0 +1,43 @@
+{
+  "version": "20261119-null-beast-v46",
+  "method": "built-in imagegen",
+  "background": "transparent RGBA; original generated PNG bytes retained",
+  "layout": "Two independently drawn poses per image: left square is front facing screen left; right square is rear facing screen right.",
+  "design": "Original dark-violet void beasts with recessed charcoal faces, icy-blue eyes, a single swept skull ridge, crescent tails and growing ivory claws.",
+  "images": [
+    {
+      "species": "nullmie",
+      "file": "assets/nullmie-v46.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 532138,
+      "sha256": "2db949b4716b4a60c2dab5c5aa2ae329b1c379f314428f562757a695eb34f262",
+      "name": "ヌルミィ",
+      "reference": "Final-stage atlas assets/zeroveil-v46.png",
+      "prompt": "Use case: stylized-concept. Transparent production two-view battle sprite atlas for the original RPG Pachi Monsters. The attached image is the final adult evolution Zeroveil. Create a younger form of exactly this family, preserving its visual identity and pixel-art finish but with genuinely distinct younger anatomy. Shared traits: smoky dark-violet body, recessed charcoal-violet face, narrow luminous pale icy-blue eyes under organic brow ridges, wicked dark curved grin with a few small slender ivory fangs rather than a white tooth grid, NO ears or paired horns, NO human hair or eyebrows; a single low swept-back fin/blade ridge of the skull; little dark diamond indentation on the chest, powerful developing forearms with ivory claws, low sturdy feet, a short tail with a crescent-hook shape. Creature-like, mysterious and charismatic, not a human mascot or smooth toy. Restrained ink-purple, slate-violet, plum, ivory and icy-blue palette. Exceptionally polished 16-bit/32-bit handheld RPG pixel art, native-like 128x128 logic per pose, crisp square clusters, clean dark outlines, deliberate palette ramps. EXACTLY 2:1 transparent landscape canvas with TWO equal square cells. LEFT: complete FRONT three-quarter view facing screen LEFT, face visible. RIGHT: independently drawn complete REAR three-quarter view facing screen RIGHT, back/head/tail visible, NO face on back, not a mirrored front. Same anatomy, scale and proportions, aligned feet; ample transparent margins and clear empty midpoint. Genuine transparent alpha, no ground, cast shadow, caption, label, watermark, checkerboard or frame. No pompadour, human-like face, rounded cartoon eyebrows, bright pale belly, armor, clothing, wings, cape or floating decorations. Render ONLY Stage 1 Nullmie: a small compact almost round infant void beast with tiny short arms, small feet and only little ivory claw tips. Its dark face mask is soft-edged, with big pale-blue mischievous eyes and a tiny curved grin showing ONE small fang. A VERY LOW little ridge on the skull, not the adult's long fin. A short rounded hook tail bud, little chest mark, broad baby face and clearly youthful proportions. Slightly lighter smoky violet than the adult, lovable but uncanny, with solid creature anatomy. No large adult shoulder hood or oversized hands; silhouette simple enough to be recognizable at thumbnail size."
+    },
+    {
+      "species": "nullva",
+      "file": "assets/nullva-v46.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 684990,
+      "sha256": "8d1a48d5d9b2fbcc191d9c392e3083c52f31116da333f517cfec7380cd89a5c3",
+      "name": "ヌルヴァ",
+      "reference": "Final-stage atlas assets/zeroveil-v46.png",
+      "prompt": "Use case: stylized-concept. Transparent production two-view battle sprite atlas for the original RPG Pachi Monsters. The attached image is the final adult evolution Zeroveil. Create a younger form of exactly this family, preserving its visual identity and pixel-art finish but with genuinely distinct younger anatomy. Shared traits: smoky dark-violet body, recessed charcoal-violet face, narrow luminous pale icy-blue eyes under organic brow ridges, wicked dark curved grin with a few small slender ivory fangs rather than a white tooth grid, NO ears or paired horns, NO human hair or eyebrows; a single low swept-back fin/blade ridge of the skull; little dark diamond indentation on the chest, powerful developing forearms with ivory claws, low sturdy feet, a short tail with a crescent-hook shape. Creature-like, mysterious and charismatic, not a human mascot or smooth toy. Restrained ink-purple, slate-violet, plum, ivory and icy-blue palette. Exceptionally polished 16-bit/32-bit handheld RPG pixel art, native-like 128x128 logic per pose, crisp square clusters, clean dark outlines, deliberate palette ramps. EXACTLY 2:1 transparent landscape canvas with TWO equal square cells. LEFT: complete FRONT three-quarter view facing screen LEFT, face visible. RIGHT: independently drawn complete REAR three-quarter view facing screen RIGHT, back/head/tail visible, NO face on back, not a mirrored front. Same anatomy, scale and proportions, aligned feet; ample transparent margins and clear empty midpoint. Genuine transparent alpha, no ground, cast shadow, caption, label, watermark, checkerboard or frame. No pompadour, human-like face, rounded cartoon eyebrows, bright pale belly, armor, clothing, wings, cape or floating decorations. Render ONLY Stage 2 Nullva: a compact adolescent void beast, midway between a small round infant and the attached heavy adult. More athletic crouched stance, developing broad shoulders and substantial forearms with three modest claws, narrower torso and hands than the adult. The single swept-back skull ridge is now medium-sized, with a developing angular hood framing its dark face. Narrow icy-blue eyes, confident crooked dark grin with TWO thin ivory fangs. A modest crescent-hook tail, shorter and less heavily cut than the adult's. Keep clear family continuity but distinct intermediate anatomy: muscular rather than fat, nimble rather than massive, no fully developed huge adult talons."
+    },
+    {
+      "species": "zeroveil",
+      "file": "assets/zeroveil-v46.png",
+      "width": 1774,
+      "height": 887,
+      "bytes": 1017139,
+      "sha256": "9dcd53eeadb6195f9ea8c972ab0f589b3ddfafed70bf58eecebd923770cef043",
+      "name": "ゼロヴェイル",
+      "reference": "Text-only redesign",
+      "prompt": "Create a premium original monster design for the Japanese creature-collecting RPG Pachi Monsters, FINAL EVOLUTION Zeroveil. Direction: dark, powerful, mischievous, iconic and immediately readable. A compact, heavy purple VOID BEAST standing on two short robust legs, low wide barrel torso and huge strong forearms with three ivory talons. It has an organic hood-like cranial silhouette merging into broad shoulders, NO ears, NO paired horns, NO hair or forelock. One low swept-back obsidian-violet blade ridge on top of its skull gives a distinct asymmetrical outline. The face is a dark charcoal-violet recessed mask with two narrow, luminous pale icy-blue eyes under heavy organic brow ridges. An off-center wicked black crescent mouth with just THREE irregular slender ivory fangs, not a broad white tooth grid. Saturated but restrained ink-purple skin, slate-violet highlights, very dark plum shadows, a tiny dark diamond indentation at the chest. A short thick tail sweeps low to one side and curls into a blunt crescent hook; a few clean geometric cuts at the tip suggest a void glitch, but no floating debris. No human-like smiling face, curved cartoon eyebrows, cute pompadour, big pale belly, pear-shaped toy body, human clothing, cape, armor, wings or jewelry. No red triangular eyes, pointed animal ears, spiny round ball shape, or huge wall of white teeth. The impression should be a charismatic small boss monster, muscular and supernatural, not a human mascot. Keep the anatomy simple and the silhouette bold, with refined shape design rather than lots of decorations. Render in exceptionally polished hand-placed 16-bit/32-bit Japanese RPG PIXEL ART, native-like 128x128 pixel logic per pose, crisp square clusters, carefully limited palette, dark outline and intentional lighting. A genuine transparent 2:1 landscape sprite atlas with TWO equal square cells. LEFT cell: full body front three-quarter view facing screen LEFT, face visible. RIGHT cell: full body independently drawn REAR three-quarter view facing screen RIGHT, show back/head/tail, no face on back, not a mirrored front. Same character, proportions and scale in both cells; feet aligned; generous transparent padding at edges and a clear empty central gap. No background, ground, cast shadows, words, names, labels, watermark, checkerboard or frame."
+    }
+  ]
+}
+

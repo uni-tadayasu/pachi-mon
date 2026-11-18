@@ -55,9 +55,9 @@
   // These off-dex forms have their own front/rear sheets. Keep them lazy so
   // undiscovered monsters never add image requests to ordinary startup.
   const glitchArt=Object.freeze({
-    nullmie:{file:'assets/nullmie-v39.png',stage:0},
-    nullva:{file:'assets/nullva-v39.png',stage:1},
-    zeroveil:{file:'assets/zeroveil-v39.png',stage:2}
+    nullmie:{file:'assets/nullmie-v46.png',stage:0},
+    nullva:{file:'assets/nullva-v46.png',stage:1},
+    zeroveil:{file:'assets/zeroveil-v46.png',stage:2}
   });
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
