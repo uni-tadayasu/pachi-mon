@@ -1,0 +1,20 @@
+/* Shared online battle/trade invitations. */
+.online-invite-share,.online-invite-notice{box-sizing:border-box;min-width:0;border:2px solid var(--pm-frame-faint,#6b7bd8);background:#17235b;color:#f4f4ff;box-shadow:inset 0 0 0 2px #0a123b;padding:14px;text-align:left}
+.online-invite-share{margin:12px 0}
+.online-invite-heading{margin:0 0 10px;font-size:13px;line-height:1.6;color:var(--pm-gold,#ffd34d)}
+.online-invite-field{display:grid;gap:6px;min-width:0;margin:0;font-size:11px;line-height:1.6;color:#d6e2ff}
+.online-invite-share .online-invite-url{box-sizing:border-box;width:100%;min-width:0;min-height:46px;margin:0;padding:9px 10px;border:2px solid #8ba1ea;border-radius:0;background:#f8f4df;color:#1c3053;font:16px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;text-overflow:ellipsis;user-select:all;-webkit-user-select:all}
+.online-invite-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0;min-width:0}
+.online-invite-actions>.btn{flex:1 1 150px;box-sizing:border-box;min-width:0;min-height:46px;padding:10px 12px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.online-invite-help,.online-invite-status{margin:9px 0 0;font-size:12px;line-height:1.7;overflow-wrap:anywhere;color:#d0dcff}
+.online-invite-status:empty{display:none}
+.online-invite-status{color:#c7f6db}
+.online-invite-notice{position:fixed;z-index:1000;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(480px,calc(100% - 24px));max-height:calc(100svh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;box-shadow:4px 4px 0 #09123680,inset 0 0 0 2px #0a123b}
+.online-invite-eyebrow{margin:0 0 5px;font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px;color:#7fe7ff}
+.online-invite-notice h2{margin:0;font-size:16px;line-height:1.65;font-weight:600;color:#fff6bd;overflow-wrap:anywhere}
+.online-invite-code{margin:6px 0 0;font-size:12px;line-height:1.6;color:#d0dcff}
+.online-invite-code strong{margin-left:6px;font:700 18px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;color:#fff}
+.online-invite-share :focus-visible,.online-invite-notice :focus-visible{outline:3px solid #ffdf63;outline-offset:3px}
+body.is-booting .online-invite-notice,body:has(dialog[open]) .online-invite-notice{display:none}
+@media(max-width:420px){.online-invite-share,.online-invite-notice{padding:11px}.online-invite-actions>.btn{flex-basis:100%}.online-invite-notice h2{font-size:14px}}
+@media(max-height:480px) and (orientation:landscape){.online-invite-notice{top:max(6px,env(safe-area-inset-top));max-height:calc(100svh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:10px}.online-invite-notice .online-invite-actions>.btn{flex-basis:150px}}

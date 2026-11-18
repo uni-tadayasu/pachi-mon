@@ -176,7 +176,7 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   guestOnly.receive({ t: 'hello', v: 1, name: 'x', tradeId: 'not-a-uuid' }); assert.equal(guestOnly.phase, 'error', 'the trade id must be a UUID');
   assert.equal(new LocalTradeSession({ role: 1, send: () => true, getEngine: () => B.engine, commit: B.commit }).offer(B.engine.state.party[0]).ok, false, 'no offers before the partner says hello');
 
-  // ── Bluetooth only (Bluetooth tethering, no Wi-Fi): the choice is remembered; the status line
+  // ── Bluetooth tethering: the choice is remembered; the device's connection type
   // follows the Network Information API; the camera is asked once, released at once, and
   // never asked again once denied (it only makes this device's code carry its real address).
   const store = new Map();
@@ -188,14 +188,14 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
       const track = { stopped: false, stop() { this.stopped = true; } }; tracks.push(track); return { getTracks: () => [track] }; } } });
   const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const setNav = value => Object.defineProperty(globalThis, 'navigator', { configurable: true, value });
-  setNav(nav('bluetooth', 'prompt')); assert.equal(LocalNet.type(), 'bluetooth'); assert.match(LocalNet.panel(), /この端末の接続：Bluetooth ✓ Bluetoothでつながっています/);
+  setNav(nav('bluetooth', 'prompt')); assert.equal(LocalNet.type(), 'bluetooth'); assert.match(LocalNet.panel(), /この端末の接続種別：Bluetooth<\/p>/);
   assert.equal(await LocalNet.reveal(), true); assert.equal(asked, 1); assert(tracks.length === 1 && tracks.every(t => t.stopped), 'the camera is released at once');
-  setNav(nav('wifi', 'denied')); assert.match(LocalNet.panel(), /この端末の接続：Wi-Fi/); assert.equal(await LocalNet.reveal(), false); assert.equal(asked, 1, 'a denied camera is not asked again');
+  setNav(nav('wifi', 'denied')); assert.match(LocalNet.panel(), /この端末の接続種別：Wi-Fi/); assert.equal(await LocalNet.reveal(), false); assert.equal(asked, 1, 'a denied camera is not asked again');
   setNav(nav(null, 'prompt', true)); assert.equal(await LocalNet.reveal(), false); assert.equal(LocalNet.type(), null); assert(!/この端末の接続/.test(LocalNet.panel()), 'no status line without the API');
   setNav({}); assert.equal(await LocalNet.reveal(), false, 'no camera API: carry on without it');
   if (realNavigator) Object.defineProperty(globalThis, 'navigator', realNavigator);
-  assert.match(LocalNet.toggle('bluetooth', 'data-x'), /data-x="wifi" aria-pressed="false">.*data-x="bluetooth" aria-pressed="true"><b>Bluetoothのみ<\/b><small>Wi-Fi不要<\/small>/);
-  assert.match(LocalNet.panel(), /Wi-Fiは不要・オフのままで大丈夫/); assert.match(LocalNet.panel(), /Wi-Fiやインターネットは使いません/); assert.match(LocalNet.hint, /入れ替えて/);
+  assert.match(LocalNet.toggle('bluetooth', 'data-x'), /data-x="wifi" aria-pressed="false"><b>同じWi-Fi<\/b><small>おすすめ・テザリング不要<\/small>.*data-x="bluetooth" aria-pressed="true"><b>Bluetoothテザリング<\/b><small>対応端末で設定が必要<\/small>/);
+  assert.match(LocalNet.panel(), /テザリングなしのBluetooth直接通信は、このブラウザー版では利用できません/); assert.match(LocalNet.panel(), /利用可否は端末・OS・接続相手の組み合わせによって異なります/); assert.match(LocalNet.hint, /入れ替えて/);
   const localSource = fs.readFileSync(path.join(root, 'local-link.js'), 'utf8');
   assert(localSource.includes("if (net === 'bluetooth' && (action === 'host' || action === 'join') && !link)") && localSource.includes('if (!link) net = preferredNet();'), 'the trade dialog prepares Bluetooth and follows the remembered choice');
   for (const needle of ["LT.LocalNet?.toggle?.(netChoice(),'data-link-net')", "case 'link-local-host':await prepareBluetooth();await connect(true);break;", "case 'link-local-join':await prepareBluetooth();await connect(false);break;", 'LT.LocalNet?.hint'])
@@ -210,5 +210,5 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   const licenses = fs.readFileSync(path.join(root, 'LICENSES.txt'), 'utf8');
   assert(/qrcode-generator/.test(licenses) && /jsQR/.test(licenses) && fs.existsSync(path.join(root, 'vendor', 'jsQR.LICENSE.txt')) && fs.existsSync(path.join(root, 'vendor', 'qrcode-generator.LICENSE.txt')), 'bundled library licenses');
   console.log(JSON.stringify({ ok: true, codeChars: { offer: offer.length, answer: answer.length },
-    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'invalid partners', 'cancel', 'Bluetooth-only choice, status and camera permission', 'page wiring and licenses'] }));
+    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'invalid partners', 'cancel', 'Bluetooth tethering requirements, device connection type and camera permission', 'page wiring and licenses'] }));
 })().catch(error => { console.error(error); process.exit(1); });

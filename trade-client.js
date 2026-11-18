@@ -171,7 +171,7 @@
   LT.TradeClientCore=core;
   if(!globalThis.document?.createElement||!LT.DATA)return;
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  let dialog=null,poll=null,selected='',renderKey='',renderedRevision=null,deferredRender=false;
+  let dialog=null,poll=null,selected='',renderKey='',renderedRevision=null,deferredRender=false,joinDraft='',replaceJoinDraft=false;
   const controller=new TradeController({storage:localStorage,request:(path,options)=>LT.Admin.tradeRequest(path,options),identify:()=>LT.Admin.tradeIdentity(),
     getEngine:()=>LT.adminBridge?.getEngine?.(),commit:receipt=>LT.adminBridge?.commitTrade?.(receipt),check:receipt=>LT.adminBridge?.checkTrade?.(receipt),changed:()=>{LT.tradeActive=controller.isLocked()||dialog?.open===true;render();schedule();}});
   LT.tradeActive=controller.isLocked();
@@ -184,10 +184,11 @@
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.id='pachi-trade-dialog';dialog.className='pachi-trade';dialog.setAttribute('aria-labelledby','trade-title');document.body.append(dialog);
     dialog.addEventListener('cancel',event=>{if(controller.isLocked()||controller.busy){event.preventDefault();controller.error='交換を終えるには「交換をキャンセル」を選んでください。';render();}});
-    dialog.addEventListener('close',()=>{if(controller.isLocked()){dialog.showModal();return;}LT.tradeActive=false;clearTimeout(poll);poll=null;});
+    dialog.addEventListener('close',()=>{if(controller.isLocked()){dialog.showModal();return;}LT.tradeActive=false;clearTimeout(poll);poll=null;joinDraft='';replaceJoinDraft=true;renderKey='';deferredRender=false;});
     dialog.addEventListener('change',event=>{if(event.target.id==='trade-monster')selected=event.target.value;});
     dialog.addEventListener('focusout',()=>{if(deferredRender)setTimeout(render,0);});
     dialog.addEventListener('click',async event=>{
+      if(await LT.OnlineInvites?.handleClick?.(event))return;
       const button=event.target.closest('[data-trade]');if(!button||button.disabled)return;
       const action=button.dataset.trade;
       if(action==='close'){if(!controller.isLocked()&&!controller.busy)dialog.close();return;}
@@ -203,23 +204,31 @@
     if(!dialog)return;
     const trade=controller.trade,locked=controller.isLocked(),busy=controller.busy;
     let body='';
-    if(!locked&&!trade){body=`<p>6文字のコードで相手とつながり、お互いのパチモンを確認して交換します。</p><button class="btn btn-primary" data-trade="create">交換コードを作る</button><form class="trade-join" onsubmit="return false"><label for="trade-code-input">相手の交換コード</label><input id="trade-code-input" maxlength="12" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="6文字のコード"><button type="button" class="btn" data-trade="join">コードで参加</button></form>`;}
+    if(!locked&&!trade){body=`<p>交換の部屋をつくり、招待リンクを相手に送ると参加してもらえます。お互いのパチモンを確認してから交換します。</p><div class="trade-entry-grid"><section class="trade-entry-card"><h3>部屋をつくる人</h3><p>部屋をつくると、相手に送る招待リンクが表示されます。</p><button type="button" class="btn btn-primary" data-trade="create">交換の部屋をつくる</button></section><form class="trade-entry-card trade-join" onsubmit="return false"><h3>招待された人</h3><p>招待リンクのコードが入っていることを確認して参加してください。手入力もできます。</p><label for="trade-code-input">相手の交換コード（6文字）</label><input id="trade-code-input" maxlength="12" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="6文字のコード"><button type="button" class="btn" data-trade="join">参加する</button></form></div>`;}
     else if(!trade){body='<p>交換の接続・結果を確認しています。通信が途切れても、記録を保持して再確認します。</p><button class="btn" data-trade="refresh">結果を再確認</button>';}
     else if(trade.state==='open'){
       const own=controller.own(),other=controller.other(),inventory=controller.inventory().filter(mon=>eligible(mon));
       if(!inventory.some(mon=>mon.uid===selected))selected=own?.monster?.uid||inventory[0]?.uid||'';
-      body=`<p class="trade-code-label">相手に伝える交換コード</p><p class="trade-code">${escape(trade.code)}</p><p class="trade-note">有効期限 ${new Date(trade.expiresAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} · 交換中は冒険を一時停止します。</p><div class="trade-pair">${card(own,'自分が渡す')}${card(other,'相手から受け取る')}</div><div class="trade-offer"><label for="trade-monster">渡すパチモン（手持ち・ひかえ）</label><select id="trade-monster">${inventory.map(mon=>`<option value="${escape(mon.uid)}" ${mon.uid===selected?'selected':''}>${escape(monName(mon))} · Lv.${mon.level}${mon.shiny?' · 色違い':''}${controller.getEngine()?.state.party.some(item=>item.uid===mon.uid)?' · 手持ち':' · ひかえ'}</option>`).join('')}</select><button class="btn" data-trade="offer" ${!inventory.length?'disabled':''}>このパチモンを提示</button></div><p class="trade-note">どちらかが選び直すと、お互いの確認が解除されます。両方が確認すると交換が成立します。</p><div class="trade-actions"><button class="btn btn-primary" data-trade="confirm" ${!own?.monster||!other?.monster||own.confirmed?'disabled':''}>${own?.confirmed?'確認済み · 相手を待っています':'この内容で交換を確認'}</button><button class="btn" data-trade="refresh">結果を再確認</button><button class="btn btn-quiet" data-trade="cancel">交換をキャンセル</button></div>`;
+      const canInvite=trade.you==='host'&&!trade.guest;
+      let share='';
+      if(canInvite){try{share=LT.OnlineInvites?.shareHtml?.('trade',trade.code)||'';}catch(_){/* The room code remains usable if a link cannot be created. */}}
+      body=`${share}<p class="trade-code-label">${canInvite?'リンクが使えないときの6文字コード':'この交換のコード'}</p><p class="trade-code">${escape(trade.code)}</p><p class="trade-note">有効期限 ${new Date(trade.expiresAt).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} · 交換中は冒険を一時停止します。</p><div class="trade-pair">${card(own,'自分が渡す')}${card(other,'相手から受け取る')}</div><div class="trade-offer"><label for="trade-monster">渡すパチモン（手持ち・ひかえ）</label><select id="trade-monster">${inventory.map(mon=>`<option value="${escape(mon.uid)}" ${mon.uid===selected?'selected':''}>${escape(monName(mon))} · Lv.${mon.level}${mon.shiny?' · 色違い':''}${controller.getEngine()?.state.party.some(item=>item.uid===mon.uid)?' · 手持ち':' · ひかえ'}</option>`).join('')}</select><button class="btn" data-trade="offer" ${!inventory.length?'disabled':''}>このパチモンを提示</button></div><p class="trade-note">どちらかが選び直すと、お互いの確認が解除されます。両方が確認すると交換が成立します。</p><div class="trade-actions"><button class="btn btn-primary" data-trade="confirm" ${!own?.monster||!other?.monster||own.confirmed?'disabled':''}>${own?.confirmed?'確認済み · 相手を待っています':'この内容で交換を確認'}</button><button class="btn" data-trade="refresh">結果を再確認</button><button class="btn btn-quiet" data-trade="cancel">交換をキャンセル</button></div>`;
     }else if(trade.state==='committed'){
       body=`<p class="trade-result">${controller.completed?'交換が完了しました':'交換成立 · 受け取りを確認中'}</p><div class="trade-pair">${card(controller.own(),'渡したパチモン')}${card(controller.other(),'受け取ったパチモン')}</div><p>${controller.completed?'受け取ったパチモンと交換記録を保存しました。':'この画面から再確認すると、成立済みの交換を重複させずに受け取れます。'}</p>${locked?'<button class="btn btn-primary" data-trade="refresh">結果を再確認</button>':'<button class="btn btn-primary" data-trade="close">冒険へ戻る</button>'}`;
     }else{body=`<p class="trade-result">${trade.state==='expired'?'交換の有効期限が切れました':'交換をキャンセルしました'}</p><p>パチモンは交換されていません。</p><button class="btn btn-primary" data-trade="close">冒険へ戻る</button>`;}
-    const codeDraft=dialog.querySelector('#trade-code-input')?.value||'',focusId=document.activeElement?.id;
+    const codeInput=dialog.querySelector('#trade-code-input'),focusId=document.activeElement?.id;
+    if(codeInput&&!replaceJoinDraft)joinDraft=codeInput.value;
+    // A focused monster selector may defer the preview, but an occupied room
+    // must stop offering its invitation immediately.
+    if(!(trade?.state==='open'&&trade.you==='host'&&!trade.guest))dialog.querySelector('.online-invite-share')?.remove?.();
     const nextKey=String(locked)+body,editing=['trade-monster','trade-code-input'].includes(focusId);
     if(nextKey!==renderKey&&editing&&trade?.state==='open'){deferredRender=true;}
     else if(nextKey!==renderKey){
       const scrollTop=dialog.querySelector('.trade-body')?.scrollTop||0;
       dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
       renderKey=nextKey;renderedRevision=trade?.revision??null;deferredRender=false;
-      if(codeDraft&&dialog.querySelector('#trade-code-input'))dialog.querySelector('#trade-code-input').value=codeDraft;
+      if(dialog.querySelector('#trade-code-input'))dialog.querySelector('#trade-code-input').value=joinDraft;
+      replaceJoinDraft=false;
       if(editing)dialog.querySelector('#'+focusId)?.focus?.({preventScroll:true});
       dialog.querySelector('.trade-body').scrollTop=scrollTop;
       for(const button of dialog.querySelectorAll('button'))button._tradeUnavailable=button.disabled;
@@ -233,11 +242,28 @@
     if(controller.busy||!controller.isLocked()||document.hidden)return;
     poll=setTimeout(()=>{void controller.resume();},4000);
   }
-  async function open(){
+  async function open(options={}){
+    const invited=options?.joinCode!==undefined;
+    let inviteCode='';
+    if(invited){
+      try{
+        inviteCode=LT.OnlineInvites?.normalizeCode?LT.OnlineInvites.normalizeCode(options.joinCode):typeof options.joinCode==='string'?options.joinCode.toUpperCase():'';
+        if(!/^[A-HJ-NP-Z2-9]{6}$/.test(inviteCode))throw Error('招待のコードが正しくありません。相手に招待リンクを送り直してもらってください。');
+      }catch(error){LT.adminBridge?.toast?.(error?.message||'招待のコードを確認してください。');return false;}
+    }
     controller.refreshPending();
-    if(LT.onlineActive||(!controller.isLocked()&&(!LT.adminBridge?.isPlaying?.()||controller.getEngine()?.battle))){LT.adminBridge?.toast?.('冒険中の移動できるときに交換できます。');return;}
-    if(!controller.isLocked()){controller.trade=null;controller.completed=false;controller.error='';}
+    if(controller.busy)return false;
+    const hadPending=controller.isLocked();
+    if(LT.onlineActive||LT.localTradeActive||(!hadPending&&(!LT.adminBridge?.isPlaying?.()||controller.getEngine()?.battle||(!dialog?.open&&LT.adminBridge?.isBusy?.())))){LT.adminBridge?.toast?.('冒険中の移動できるときに交換できます。');return false;}
+    if(!hadPending){controller.trade=null;controller.completed=false;controller.error='';}
     ensureDialog();if(!dialog.open)dialog.showModal();LT.tradeActive=true;render();await controller.resume();
+    if(invited){
+      // Recovery takes priority, including a room discovered on the server.
+      // The link itself never joins, saves, or confirms an exchange.
+      if(hadPending||controller.isLocked()||controller.trade||!dialog.open)return false;
+      joinDraft=inviteCode;replaceJoinDraft=true;renderKey='';render();
+    }
+    return true;
   }
   async function resume(){
     controller.refreshPending();

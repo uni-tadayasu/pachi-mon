@@ -27,7 +27,8 @@
 .local-trade .link-field{display:grid;gap:6px;margin:10px 0;font-size:12px}
 .local-trade .link-or{display:flex;gap:9px;align-items:center;margin:14px 0;font-size:11px;color:var(--pm-text-3,#b8c4ff)}
 .local-trade .link-or::before,.local-trade .link-or::after{content:"";flex:1;height:1px;background:currentColor;opacity:.5}
-.local-trade .link-text-button{padding:8px 0;background:none;border:0;color:var(--pm-cyan,#7fe7ff);text-decoration:underline;cursor:pointer;font:inherit}
+.local-trade .link-text-button{min-width:44px;min-height:44px;padding:8px 0;background:none;border:0;color:var(--pm-cyan,#7fe7ff);text-decoration:underline;cursor:pointer;font:inherit}
+#online-modal #link-reset{min-width:44px;min-height:44px}
 .local-offers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
 .local-offer{display:grid;justify-items:center;align-content:start;gap:6px;min-width:0;padding:12px 8px;border:2px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.35);text-align:center;clip-path:var(--pm-notch-sm,none)}
 .local-offer.empty{min-height:150px;align-content:center;color:var(--pm-text-3,#b8c4ff)}
@@ -51,14 +52,33 @@
 .mobile-screen .menu-grid button[data-ui="local"]::after{content:none}
 /* How to connect (Wi-Fi, hotspot, Bluetooth tethering). */
 .local-howto{margin:10px 0;padding:8px 12px;border:2px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.35);font-size:12px;line-height:1.7;text-align:left}
-.local-howto summary{cursor:pointer;color:var(--pm-cyan,#7fe7ff)}
+.local-howto summary{box-sizing:border-box;min-height:44px;padding:10px 0;cursor:pointer;color:var(--pm-cyan,#7fe7ff);overflow-wrap:anywhere}
 .local-howto p,.local-howto ol{margin:6px 0}
 .local-howto ol{padding-left:1.4em}
-/* Connection choice: Wi-Fi/hotspot or Bluetooth only (Bluetooth tethering, no Wi-Fi). */
-.local-net-toggle{margin:10px 0}
+/* Connection choice and the shared three-step QR setup. */
+.local-net-toggle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+#online-modal .local-net-toggle button,.local-trade .local-net-toggle button{min-width:0;min-height:64px;padding:9px 8px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.local-net-toggle button b,.local-net-toggle button small{display:block;white-space:normal;overflow-wrap:anywhere}
+.local-setup-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px;list-style:none;margin:14px 0;padding:0;text-align:left}
+.local-setup-steps li{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center;gap:8px;min-width:0;margin:0;padding:8px;border:1px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.35);font-size:12px;line-height:1.6}
+.local-setup-steps li.is-current{border-color:var(--pm-gold,#ffd34d);box-shadow:inset 0 0 0 1px var(--pm-gold,#ffd34d)}
+.local-step-number{display:grid;place-items:center;box-sizing:border-box;width:26px;height:26px;border:1px solid var(--pm-frame-faint,#6b7bd8);color:var(--pm-text-3,#b8c4ff);font-weight:700}
+.local-setup-steps .is-current .local-step-number{border-color:var(--pm-gold,#ffd34d);background:var(--pm-gold,#ffd34d);color:var(--pm-gold-ink,#29304c)}
+.local-step-copy{min-width:0;overflow-wrap:anywhere}
+.local-step-copy small{display:block;margin-top:2px;color:var(--pm-gold,#ffd34d);font-size:10px}
+.local-role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:14px 0}
+.local-role-card{display:flex;flex-direction:column;gap:10px;min-width:0;padding:12px;border:2px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.35);text-align:left}
+.local-role-title{margin:0;color:var(--pm-gold,#ffd34d);font-size:16px;line-height:1.6;overflow-wrap:anywhere}
+.local-role-help{margin:0;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.local-role-card>.btn{width:100%;min-width:0;min-height:48px;margin-top:auto;padding:10px 8px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.local-manual-code{margin:12px 0;border:2px solid var(--pm-frame-faint,#6b7bd8);background:rgba(10,18,66,.25);text-align:left}
+.local-manual-code>summary{box-sizing:border-box;min-height:44px;padding:10px 12px;color:var(--pm-cyan,#7fe7ff);font-size:12px;line-height:1.7;cursor:pointer;overflow-wrap:anywhere}
+.local-manual-code>.link-field,.local-manual-code>.local-actions,.local-manual-code>.local-role-help{margin:10px 12px}
+.local-manual-code>.btn{display:block;box-sizing:border-box;width:calc(100% - 24px);margin:10px 12px}
+.local-manual-code .btn{min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+@media(max-width:520px){.local-role-grid{grid-template-columns:minmax(0,1fr)}.local-role-card{padding:10px}.local-role-title{font-size:15px}}
 .local-bt{margin:10px 0;padding:10px 12px;border:2px solid var(--pm-cyan,#7fe7ff);background:rgba(10,18,66,.45);font-size:12px;line-height:1.7;text-align:left}
 .local-bt-title{margin:0 0 6px;color:var(--pm-cyan,#7fe7ff);font-weight:700}
 .local-bt ol{margin:6px 0;padding-left:1.4em}
 .local-bt li{margin:3px 0}
 .local-net-status{margin:8px 0 0;padding:4px 8px;border:1px dashed var(--pm-frame-faint,#6b7bd8);color:var(--pm-text-3,#b8c4ff)}
-.local-net-status.is-ok{border-color:#6df0a8;color:#c9ffe0}

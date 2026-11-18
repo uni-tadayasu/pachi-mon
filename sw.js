@@ -27,6 +27,9 @@
  *   battle arrangements refresh with the versioned battle effects client.
  * v36: tablet touch detection, portrait/landscape controls and visible-height
  *   dialogs update together for iPad-sized screens.
+ * v37: online battle/trade invitation links and the same-Wi-Fi QR flow refresh
+ *   together. Bluetooth tethering requirements are explicit; the browser client
+ *   does not provide direct Bluetooth peer communication.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
