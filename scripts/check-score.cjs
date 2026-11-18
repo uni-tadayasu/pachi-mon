@@ -82,6 +82,48 @@ test('battle rhythm sections combine independent drums and moving bass in both q
     }
   }
 });
+test('the remix starts with sixteenth-note bass and kick pickups without moving the tempo grid',()=>{
+  for(const quality of ['high','low'])for(const id of ['battle','rival','guardian','elite','champion','tower','glitchbattle']){
+    const {audio}=make(quality),{events,track}=scoreEvents(audio,id),unit=30/track.bpm;
+    const opening=events.filter(e=>e.time<.065+unit*8-.0001);
+    const halfTick=e=>Math.abs((((e.time-.065)/unit)%1)-.5)<.00001;
+    assert(opening.filter(e=>e.kind==='wavebass'&&halfTick(e)).length>=2,`${id}/${quality}: immediate bass pickups`);
+    assert(opening.some(e=>e.kind==='kick'&&halfTick(e)),`${id}/${quality}: immediate kick anticipation`);
+    assert(opening.some(e=>['marcato','rhythmguitar'].includes(e.kind)&&e.pan>0&&halfTick(e)),`${id}/${quality}: the accompaniment answers offbeat`);
+    for(const e of events.filter(e=>e.drum)){
+      const ticks=(e.time-.065)/unit*2;
+      assert(Math.abs(ticks-Math.round(ticks))<.00001,`${id}/${quality}: percussion must remain on the shared clock`);
+    }
+  }
+});
+test('the action band leaves a half-tick after its section fill and answers with a different bass bar',()=>{
+  for(const quality of ['high','low']){
+    const {audio}=make(quality),{events,track}=scoreEvents(audio,'battle'),unit=30/track.bpm;
+    const lastHalf=.065+(7*8+7.5)*unit;
+    assert(!events.some(e=>e.drum&&Math.abs(e.time-lastHalf)<.001),'a rhythmic breath must separate the fill and next downbeat');
+    const first=events.filter(e=>e.kind==='wavebass'&&e.time<.065+unit*8-.0001).map(e=>e.midi);
+    const second=events.filter(e=>e.kind==='wavebass'&&e.time>=.065+unit*8-.0001&&e.time<.065+unit*16-.0001).map(e=>e.midi);
+    assert.notDeepEqual(first,second,'two bars with the same chord have different bass performances');
+    const held=events.filter(e=>e.kind==='strings'&&Math.abs(e.time-(.065+7*8*unit))<.05);
+    assert(held.length>0&&held.every(e=>e.duration<=unit*5.001),'sustained inner parts release before the fill ends');
+  }
+});
+test('complete battle remixes play without dropping music notes in either quality mode',()=>{
+  for(const quality of ['high','low'])for(const id of ['battle','rival','guardian','elite','champion','tower','glitchbattle','zenith','legend']){
+    const {audio}=make(quality);let peak=0,dropped=0;
+    for(const method of ['instrument','drum']){
+      const original=audio[method];
+      audio[method]=function(...args){if(args[0]&&this.voices.size>=this.maxVoices-8)dropped++;return original.apply(this,args);};
+    }
+    audio.switchTrack(id,true);const track=audio.getCurrentTrack(),count=track.bars*Number(track.meter.split('/')[0])*2;
+    for(let step=0;step<count;step++){
+      audio.ctx.currentTime=Math.max(0,audio.group.next-.179);audio.tick();peak=Math.max(peak,audio.voices.size);
+      if(step%64===0)audio.ctx.created=[];
+    }
+    assert.equal(dropped,0,`${id}/${quality}: preserve every scheduled music note`);
+    assert(peak<=audio.maxVoices-8,`${id}/${quality}: reserve eight effect voices`);
+  }
+});
 test('the quiet bridge, section fills and final return produce musical contrast',()=>{
   for(const quality of ['high','low']){
     const {audio}=make(quality),{events,track}=scoreEvents(audio,'champion'),barSeconds=240/track.bpm;

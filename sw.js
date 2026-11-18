@@ -23,6 +23,8 @@
  *   default, detailed responsive UI and the 192-slot reserve update together.
  * v34: a failed cache write preserves successful network responses; an older
  *   asset stays available until its replacement has actually been cached.
+ * v35: effectiveness impact sounds, fielded-party growth bonuses and remixed
+ *   battle arrangements refresh with the versioned battle effects client.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
