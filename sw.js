@@ -21,6 +21,8 @@
  *   and lazy elemental effect art; versioned clients and styles refresh together.
  * v33: newly drawn travellers and environments, arranged score, full-color
  *   default, detailed responsive UI and the 192-slot reserve update together.
+ * v34: a failed cache write preserves successful network responses; an older
+ *   asset stays available until its replacement has actually been cached.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
@@ -48,10 +50,15 @@ function pageKey(url) {
   if (u.origin === base.origin && path === new URL('index.html', base).pathname) return local('index.html');
   return u.origin + path;
 }
-async function store(cacheName, request, response) {
+async function store(cacheName, request, response, onStored) {
   if (!response || (!response.ok && response.type !== 'opaque')) return response;
-  const cache = await caches.open(cacheName);
-  await cache.put(request, response.clone());
+  // Cache storage is an enhancement to a successful network request. A full
+  // disk must not turn a valid page, script or image into a failed response.
+  try {
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response.clone());
+    if (onStored) await onStored();
+  } catch (_) {}
   return response;
 }
 async function addAll(cacheName, urls, progress) {
@@ -73,15 +80,20 @@ async function offlineManifest() {
   try { const response = await fetch(url, { cache: 'no-cache' }); if (response.ok) { await store(SHELL, url, response.clone()); return await response.json(); } } catch (_) {}
   const cached = await caches.match(url); return cached ? cached.json() : { files: [], core: [] };
 }
-// Drop older versions (same path, different query) of the files the stored page uses.
+// Drop an older URL only after the stored page's exact replacement is secured.
+// New URLs may still be downloading when the new HTML reaches the browser.
 async function prune(html) {
   const wanted = new Set(shellUrls(html)), byPath = new Map();
+  const secured = new Map();
   for (const url of wanted) byPath.set(new URL(url).pathname, url);
   for (const name of [SHELL, ART]) {
     const cache = await caches.open(name);
     for (const request of await cache.keys()) {
       const u = new URL(request.url), current = byPath.get(u.pathname);
-      if (current && current !== request.url) await cache.delete(request);
+      if (current && current !== request.url) {
+        if (!secured.has(current)) secured.set(current, !!(await caches.match(current)));
+        if (secured.get(current)) await cache.delete(request);
+      }
     }
   }
 }
@@ -91,10 +103,15 @@ self.addEventListener('install', event => {
     const page = await fetch(local('index.html'), { cache: 'reload' });
     if (!page.ok) throw new Error('index.html unavailable');
     const html = await page.clone().text();
-    await (await caches.open(SHELL)).put(local('index.html'), page);
-    await addAll(SHELL, shellUrls(html));
+    // Do not replace the known-working offline page or activate this worker if
+    // its linked code cannot be secured. Core art may use the built-in fallback.
+    const shell = await addAll(SHELL, shellUrls(html));
+    if (shell.failed) throw new Error('Required offline shell assets unavailable');
     const manifest = await offlineManifest();
     await addAll(ART, (manifest.core || []).map(local));
+    // Installation deliberately keeps this write strict; unlike a live network
+    // request, there is no usable offline shell unless the page was committed.
+    await (await caches.open(SHELL)).put(local('index.html'), page);
     await self.skipWaiting();
   })());
 });
@@ -110,8 +127,11 @@ async function page(request) {
   try {
     const response = await fetch(request);
     if (response.ok && response.type === 'basic') {
-      await store(SHELL, key, response.clone());
-      if (key === local('index.html')) response.clone().text().then(prune).catch(() => {});
+      // Only a committed page may prune the versions its offline shell needs.
+      // Keep cleanup inside the respondWith promise, once per page rather than
+      // per art download; later replacements are pruned on the next visit.
+      await store(SHELL, key, response.clone(), key === local('index.html')
+        ? () => response.clone().text().then(prune) : undefined);
     }
     return response;
   } catch (error) {

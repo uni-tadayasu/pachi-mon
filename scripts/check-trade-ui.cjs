@@ -24,7 +24,7 @@ function harness(){
  const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}},ctx={console,crypto:webcrypto,document:doc,
   localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},addEventListener(){},
   LT:{DATA:{species:{komori:{name:'コモリ',element:'leaf'},shizuku:{name:'シズク',element:'tide'},futo:{name:'フート',specialOnly:true}},elements:{leaf:{name:'草'},tide:{name:'水'}}},Art:{creature(){}},
-   Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
+   Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,checkTrade:()=>({ok:true}),commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
  let source=fs.readFileSync(require.resolve('../trade-client.js'),'utf8');source=source.replace('\n  if(controller.isLocked())void resume();','\n  globalThis.__tradeController=controller;');vm.createContext(ctx);vm.runInContext(source,ctx);
  return{ctx,doc,memory,calls,engine,timers,async click(action){const button=doc.dialog.children.find(x=>x.dataset.trade===action);assert(button,'Missing action '+action);await doc.dialog.listeners.click({target:button});},blur(){doc.activeElement=null;doc.dialog.listeners.focusout();for(const timer of timers.filter(t=>t.delay===0))timer.fn();}};
 }
@@ -34,6 +34,12 @@ test('exchange dialog is accessible, labels both offers and escapes player conte
  await h.ctx.LT.Trade.open();assert.equal(h.doc.dialog.id,'pachi-trade-dialog');assert.equal(h.doc.dialog['aria-labelledby'],'trade-title');assert(h.doc.dialog.open);assert(h.ctx.LT.tradeActive);
  assert.match(h.doc.dialog.innerHTML,/自分が渡す/);assert.match(h.doc.dialog.innerHTML,/相手から受け取る/);assert.match(h.doc.dialog.innerHTML,/水タイプ/);assert.match(h.doc.dialog.innerHTML,/Lv\.10/);assert.match(h.doc.dialog.innerHTML,/&lt;img src=x&gt;/);assert.match(h.doc.dialog.innerHTML,/&lt;花&gt;/);assert(!h.doc.dialog.innerHTML.includes('<img'));
  assert(h.doc.dialog.children.find(x=>x.dataset.trade==='close').disabled);
+});
+
+test('held individuals are absent from the selector and the existing item restriction is explained',async()=>{
+ const h=harness();h.ctx.serverTrade=room();h.engine.state.storage.push({...mon('holding','shizuku'),heldItem:'leafcrown'},mon('available','shizuku'));
+ await h.ctx.LT.Trade.open();assert(!h.doc.dialog.innerHTML.includes('<option value="holding"'));
+ assert(h.doc.dialog.innerHTML.includes('<option value="available"'));assert.match(h.doc.dialog.innerHTML,/先に持ち物を外して/);
 });
 
 test('polling preserves selected element, focus and input code draft',async()=>{

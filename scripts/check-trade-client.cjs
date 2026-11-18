@@ -11,11 +11,11 @@ const room=()=>({id:ID,code:'ABC234',state:'open',revision:2,expiresAt:Date.now(
 const pending=()=>({version:1,ownerId:PLAYER.id,roomId:ID,code:'ABC234',action:null});
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject};};
 const error=(status,code='ERROR')=>Object.assign(Error(code),{status,code});
-function make({stored,handle,commit,owner=PLAYER,storageFailure=false}={}){
+function make({stored,handle,commit,check,owner=PLAYER,storageFailure=false}={}){
  const memory=new Map(stored===undefined?[]:[[key,typeof stored==='string'?stored:JSON.stringify(stored)]]),calls=[],commits=[],changes=[];
  const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}};
  const storage={getItem:k=>memory.get(k)||null,setItem(k,v){if(storageFailure)throw Error('disk full');memory.set(k,v)},removeItem:k=>memory.delete(k)};
- const c=new TradeController({storage,data:DATA,uuid:()=>ID,getEngine:()=>engine,identify:async()=>owner,
+ const c=new TradeController({storage,data:DATA,uuid:()=>ID,getEngine:()=>engine,identify:async()=>owner,check,
   request:async(path,options={})=>{calls.push({path,...clone(options)});if(handle)return handle(path,options,c);return{trade:null};},
   commit:async receipt=>{commits.push(clone(receipt));return commit?commit(receipt):{ok:true};},changed:()=>changes.push(c.isLocked())});
  return{c,memory,calls,commits,changes,engine};
@@ -49,14 +49,29 @@ test('storage failure prevents room mutation request',async()=>{
  assert.equal(h.calls.filter(x=>x.path==='/trades').length,0);assert(!h.c.isLocked());
 });
 
-test('catalog excludes operator and granted creatures but permits wild legendary',()=>{
- for(const value of [mon('a','futo'),mon('a','floravelle'),{...mon(),grantId:'gift'}, {...mon(),customStats:{}},{...mon(),customMoves:['x']},{...mon(),customStatsLevel:5}])assert(!eligible(value,DATA));
+test('catalog excludes held items, operator and granted creatures but permits wild legendary',()=>{
+ for(const value of [mon('a','futo'),mon('a','floravelle'),{...mon(),heldItem:'leafcrown'},{...mon(),grantId:'gift'}, {...mon(),customStats:{}},{...mon(),customMoves:['x']},{...mon(),customStatsLevel:5}])assert(!eligible(value,DATA));
  assert(eligible(mon('a','arvelion'),DATA));assert(eligible(mon(),DATA));
 });
 
 test('offer rejects forbidden or missing local creatures without request',async()=>{
  const h=make({stored:pending()});h.c.trade=room();h.engine.state.party=[mon('owned','futo')];
  assert(!(await h.c.offer('owned')).ok);assert(!(await h.c.offer('missing')).ok);assert.equal(h.calls.length,0);
+});
+
+test('a held item is rejected before offering or confirming even if the wire snapshot omits it',async()=>{
+ const h=make({stored:pending()});h.c.trade=room();h.engine.state.party[0].heldItem='leafcrown';
+ const before=JSON.stringify(h.engine.state);
+ assert(!(await h.c.offer('owned')).ok);assert.match(h.c.error,/持ち物.*外して/);
+ assert(!(await h.c.confirm()).ok);assert.match(h.c.error,/持ち物.*外して/);
+ assert.equal(h.calls.length,0);assert.equal(h.commits.length,0);assert.equal(JSON.stringify(h.engine.state),before);
+});
+
+test('owned offers and confirmations use the Engine trade validator before sending',async()=>{
+ const h=make({stored:pending()});h.c.trade=room();let validations=0;
+ h.engine.toTradeWire=value=>{assert.equal(value,h.engine.state.party[0]);validations++;throw Error('Engine rejected the individual');};
+ assert(!(await h.c.offer('owned')).ok);assert(!(await h.c.confirm()).ok);
+ assert.equal(validations,2);assert.equal(h.calls.length,0);assert.equal(h.commits.length,0);
 });
 
 test('offer uses immutable local snapshot and expected room revision',async()=>{
@@ -72,6 +87,30 @@ test('confirmation requires current unchanged offer and living-party safety',asy
  assert(!(await h.c.confirm()).ok);assert.equal(h.calls.length,0);
  h.c.trade.guest.monster=mon('other','floravelle');assert(!(await h.c.confirm()).ok);assert.equal(h.calls.length,0);
  h.c.trade=room();h.engine.state.tradeReceipts=Array(4096).fill('old');assert(!(await h.c.confirm()).ok);assert.equal(h.calls.length,0);
+});
+
+test('confirmation checks the durable receipt without committing or sending rejected consent',async()=>{
+ for(const side of ['host','guest']){
+  let allowed=false;const previews=[];
+  const h=make({stored:side==='host'?pending():{...pending(),ownerId:OTHER.id},owner:side==='host'?PLAYER:OTHER,
+   handle:()=>({trade:{...room(),you:side}}),check:receipt=>{previews.push(clone(receipt));return allowed?{ok:true}:{ok:false,message:'保存済みの個体に持ち物があります。'};}});
+  h.c.trade={...room(),you:side};if(side==='guest')h.engine.state.party=[mon('other','shizuku')];
+  const before=JSON.stringify(h.engine.state);
+  assert(!(await h.c.confirm()).ok);assert.match(h.c.error,/持ち物/);assert.equal(h.calls.length,0);assert.equal(h.commits.length,0);
+  const p=previews[0];assert.equal(p.id,'trade:'+ID);assert.equal(p.revision,2);
+  assert.equal(p.outgoingUid,side==='host'?'owned':'other');assert.deepEqual(p.outgoing,h.c.own().monster);
+  assert.deepEqual(p.incoming,{...h.c.other().monster,uid:'tr-'+ID+(side==='host'?'-h':'-g')});
+  assert.equal(JSON.stringify(h.engine.state),before);
+  allowed=true;assert((await h.c.confirm()).ok);assert.equal(previews.length,2);
+  assert.equal(h.calls.filter(call=>call.path.endsWith('/confirm')).length,1);assert.equal(h.commits.length,0);
+ }
+});
+
+test('new confirmation checks cannot block already committed receipt recovery',async()=>{
+ let checks=0;const h=make({stored:pending(),handle:()=>({trade:committed()}),check:()=>{checks++;throw Error('The outgoing individual is no longer present');}});
+ h.engine.state.party=[];
+ assert((await h.c.resume()).ok);assert.equal(checks,0);assert.equal(h.commits.length,1);
+ assert.equal(h.calls.filter(call=>call.path.endsWith('/ack')).length,1);assert(!h.c.isLocked());
 });
 
 test('stale revision is never silently re-confirmed or locally applied',async()=>{
