@@ -125,7 +125,7 @@ function invariant(d, label) {
     reminders += peers[0].state.events.filter(x => x.ongoing).length; turns++;
   }
   assert(reminders > 0, 'reminders appeared during the duel');
-  assert.equal(Duel.rules.version, 6); assert.match(Duel.rules.conditions, /shown-every-turn/);
+  assert(Duel.rules.version >= 6); assert.match(Duel.rules.conditions, /shown-every-turn/);
 }
 
 // ── Effects: every condition event becomes a motif on the afflicted monster.

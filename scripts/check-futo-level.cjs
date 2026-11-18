@@ -91,7 +91,8 @@ assert(strong>weak*2,'Configured special attack must affect actual damage');
 const quest=e.quests().find(q=>q.id==='all-voices');
 assert.equal(quest.target,questBeforeGift.target);assert.equal(quest.progress,questBeforeGift.progress);assert.equal(quest.progress,1);
 const duelScript=scripts.find(s=>s[2].includes('class Duel {'));
-if(duelScript){vm.runInContext(duelScript[2],context);assert.equal(context.LT.Duel.validateTeam(['futo',...D.starters.slice(0,2)],'single').ok,false);}
+// Link battles accept Futo like any species, at standard Lv.50 stats (its operator-set adventure stats stay out of them).
+if(duelScript){vm.runInContext(duelScript[2],context);assert.equal(context.LT.Duel.validateTeam(['futo',...D.starters.slice(0,2)],'single').ok,true);}
 // Exercise the real browser bridge with failing storage: no in-memory grant or
 // receipt may commit before persistence succeeds, even when the API retries.
 const bridgeSource=html.slice(html.indexOf('  function persistGiftMutation('),html.indexOf('  resize();updateSound();loadStored();'));

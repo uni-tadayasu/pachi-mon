@@ -211,22 +211,30 @@
   }
   // A small dedicated silhouette remains available offline; it does not borrow
   // another species or use the front as a rear. The full atlas replaces it on load.
+  // Without its sheet, Floravelle still reads as itself: a white elephant with leaf ears,
+  // a leaf crown and brow flower, jade tusks and a green saddle cloth (front faces left).
   function floravelleFallback(back){
     const key=`floravelle:${back?1:0}:fallback`;if(cache.has(key))return cache.get(key);
-    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');
-    const ellipse=(x,y,rx,ry,color)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();};
-    const leaf=(x,y,w,h,angle,color)=>{c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();c.moveTo(0,-h);c.quadraticCurveTo(w,-h*.4,0,h*.3);c.quadraticCurveTo(-w,-h*.4,0,-h);c.fill();c.restore();};
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d'),ink='#3a2a3c';
+    const ellipse=(x,y,rx,ry,color,line=true)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();if(line){c.strokeStyle=ink;c.lineWidth=3;c.stroke();}};
+    const leaf=(x,y,w,h,angle,color)=>{c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();c.moveTo(0,-h);c.quadraticCurveTo(w,-h*.4,0,h*.3);c.quadraticCurveTo(-w,-h*.4,0,-h);c.fill();c.strokeStyle=ink;c.lineWidth=2.5;c.stroke();c.restore();};
+    const flower=(x,y,r,color)=>{for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ellipse(x+Math.cos(a)*r*.6,y+Math.sin(a)*r*.6,r*.5,r*.4,color,false);}ellipse(x,y,r*.32,r*.32,'#f5c95a',false);};
     if(back){c.translate(SIZE,0);c.scale(-1,1);}
-    c.strokeStyle='#376c49';c.lineWidth=12;c.beginPath();c.moveTo(218,215);c.bezierCurveTo(286,214,292,111,252,119);c.stroke();
-    for(let i=0;i<5;i++)leaf(254,112,15,32,i*Math.PI*2/5,'#f1edcf');ellipse(254,109,9,9,'#d4bb63');
-    for(const x of [130,163,204,232]){ellipse(x,264,13,28,'#376b4b');ellipse(x-3,285,15,8,'#c4a95b');}
-    ellipse(180,206,68,58,'#2c6246');
-    for(let i=0;i<5;i++)for(let j=0;j<3;j++)leaf(136+i*20,161+j*29,20,34,.2+(i-2)*.16,(i+j)%2?'#6c9c5b':'#40784d');
-    ellipse(119,120,43,46,back?'#376b4b':'#e9e7c6');
-    leaf(91,96,21,42,-.9,'#719d5b');leaf(149,97,20,40,.9,'#719d5b');
-    for(let i=0;i<3;i++)leaf(119+(i-1)*15,80,17,48,(i-1)*.48,'#80b87c');ellipse(117,72,10,11,'#e9dfaa');
-    if(back){for(let i=0;i<4;i++)leaf(96+i*17,111,20,40,(i-1.5)*.3,'#3b774c');}
-    else{ellipse(96,132,21,13,'#e9e7c6');ellipse(81,129,5,4,'#23473a');ellipse(104,112,7,5,'#286649');ellipse(103,111,2,2,'#ffffff');}
+    for(const [x,far] of [[118,true],[214,true],[142,false],[238,false]]){c.fillStyle=far?'#ddd0c6':'#f3eadc';c.strokeStyle=ink;c.lineWidth=3;const h=far?82:90;c.beginPath();c.moveTo(x-17,206);c.lineTo(x+17,206);c.lineTo(x+17,206+h-10);c.quadraticCurveTo(x+17,206+h,x+7,206+h);c.lineTo(x-7,206+h);c.quadraticCurveTo(x-17,206+h,x-17,206+h-10);c.closePath();c.fill();c.stroke();c.fillStyle='#f5c95a';c.fillRect(x-17,far?262:270,34,6);}
+    c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(270,182);c.quadraticCurveTo(286,214,282,240);c.stroke();leaf(282,248,12,22,.2,'#62ad5c');
+    ellipse(196,196,84,62,'#f3eadc');
+    c.save();c.beginPath();c.ellipse(196,196,84,62,0,0,Math.PI*2);c.clip();c.fillStyle='#62ad5c';c.fillRect(150,120,104,96);c.fillStyle='#f5c95a';c.fillRect(150,212,104,6);c.restore();
+    ellipse(206,170,11,12,'#86e2c0');
+    leaf(back?150:60,150,30,52,back?.9:-.9,back?'#3d7f4c':'#62ad5c');leaf(back?84:150,152,32,56,back?-.8:.8,back?'#3d7f4c':'#9ad66e');
+    ellipse(110,138,52,48,'#f3eadc');
+    for(let i=0;i<5;i++)leaf(78+i*16,96-Math.sin(i/4*Math.PI)*8,8,16,(i-2)*.35,'#62ad5c');flower(back?126:100,96,16,'#ffb3cb');
+    if(!back){
+      c.strokeStyle=ink;c.lineWidth=20;c.lineCap='round';c.beginPath();c.moveTo(104,168);c.bezierCurveTo(100,214,74,226,64,204);c.stroke();
+      c.strokeStyle='#f3eadc';c.lineWidth=14;c.stroke();
+      c.strokeStyle='#86e2c0';c.lineWidth=6;c.beginPath();c.moveTo(124,178);c.lineTo(114,196);c.stroke();
+      ellipse(90,136,7,9,'#1f1a2e');ellipse(126,140,8,10,'#1f1a2e');ellipse(88,133,2.5,3,'#ffffff',false);ellipse(124,137,3,3.5,'#ffffff',false);
+      ellipse(78,156,8,4,'#f7a8bb',false);ellipse(138,160,9,4,'#f7a8bb',false);
+    }else{ellipse(110,138,30,22,'#ddd0c6',false);}
     cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);return cv;
   }
   function uniqueSprite(id,back){
@@ -379,7 +387,7 @@
     const key=`${location.group}:${stage}:${back?1:0}`;
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261116-mythical',root).href)]);
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261118-elephant',root).href)]);
   LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,

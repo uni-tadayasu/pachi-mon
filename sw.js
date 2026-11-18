@@ -9,6 +9,8 @@
  * v22: battle items and rhythm; the new code versions are stored on install.
  * v23: the recorded title theme (assets/music, mp3) is stored with the page.
  * v25: condition effects every turn; the new effects code version is stored on install.
+ * v26: the special three join link battles and Floravelle has new art; the new
+ *   code and image versions are stored on install.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

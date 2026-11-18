@@ -15,7 +15,7 @@ for (const file of sources) {
   // Manifests list sheet files relative to assets/.
   if (file.endsWith('.json')) for (const m of text.matchAll(/"([A-Za-z0-9_-]+\.(?:webp|png))"/g)) urls.add(`assets/${m[1]}`);
 }
-const skip = /^assets\/(dex\/|ogp-|apple-touch|favicon|icon-|cover-pixel)/;
+const skip = /^assets\/(dex\/|ogp-|apple-touch|favicon|icon-|cover-pixel|offline-manifest\.json)/; // the list never lists itself
 const files = [...urls].filter(url => !skip.test(url)).filter(url => fs.existsSync(path.join(root, url.split('?')[0]))).sort()
   .map(url => ({ url, bytes: fs.statSync(path.join(root, url.split('?')[0])).size }));
 const core = files.filter(f => /^assets\/(traveller-|environment-|battle-landscapes|cover-handheld|creatures-(individual-)?(catalog|manifest|designs)|creatures-evolution-manifest|creatures-manifest)/.test(f.url)).map(f => f.url);

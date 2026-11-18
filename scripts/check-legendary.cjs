@@ -28,8 +28,19 @@ assert.equal(L.minLevel,70);assert.equal(L.maxLevel,70,'Wild legendary level is 
 assert.equal(L.species,'arvelion');assert.equal(D.content.species,254);assert.equal(D.content.totalSpecies,256);
 assert.equal(D.species.arvelion.rarity,'legendary');assert(!D.species.arvelion.evolvesTo);assert(!D.species.arvelion.specialOnly);
 assert(Object.values(D.maps).every(map=>!map.encounters.includes('arvelion')),'Separate rare roll must not leak into normal pools');
-for(const species of Object.values(D.species).filter(species=>species.id!=='arvelion'))for(const [stat,value]of Object.entries(species.base)){
-  assert(D.species.arvelion.base[stat]>=value,`Strongest fixed base ${stat}: ${species.id}`);
+// Balanced: a little above the strongest ordinary species, never far beyond it
+// (Floravelle and Futo follow the same rule).
+const SIX=['hp','atk','def','spAtk','spDef','speed'],baseOf=(s,k)=>s.base[k]??(k==='spAtk'?s.base.atk:k==='spDef'?s.base.def:100);
+const total=s=>SIX.reduce((sum,k)=>sum+baseOf(s,k),0),ordinary=Object.values(D.species).filter(s=>!['arvelion','floravelle','futo'].includes(s.id));
+const strongest=Math.max(...ordinary.map(total));
+for(const id of ['arvelion','floravelle','futo']){
+  const s=D.species[id];assert(total(s)>strongest&&total(s)<=strongest*1.12,`${id}: base total ${total(s)} vs strongest ordinary ${strongest}`);
+  for(const k of [...SIX,'accuracy','evasion'])assert(baseOf(s,k)<=Math.max(...ordinary.map(o=>baseOf(o,k)))+6,`${id}: ${k} stays near the ordinary range`);
+  for(const move of s.moves.map(m=>D.moves[m])){
+    if(move.kind==='attack')assert(move.power>=56&&move.power<=72,`${move.id}: attack power ${move.power} near the starters' special moves`);
+    if(move.kind==='heal')assert.equal(move.power,45,`${move.id}: heals like the strongest ordinary heal`);
+    if(move.kind==='boost')assert(move.pp<=2,`${move.id}: the all-stat boost is limited`);
+  }
 }
 assert.equal(new Set(D.species.arvelion.moves).size,4);
 assert.equal(D.species.arvelion.element,'ember');
@@ -135,7 +146,7 @@ for(const id of ['arvelion_rend','arvelion_nova']){
 }
 e.applyMove(mon,e.battle.enemy,D.moves.arvelion_crown,'ally',[]);
 assert(Object.values(e.battle.stages.ally).every(stage=>stage===1));assert.equal(e.battle.allyGuard,true);
-mon.hp=1;e.applyMove(mon,e.battle.enemy,D.moves.arvelion_renewal,'ally',[]);assert.equal(mon.hp,1+Math.ceil(e.stats(mon).hp*.65));
+mon.hp=1;e.applyMove(mon,e.battle.enemy,D.moves.arvelion_renewal,'ally',[]);assert.equal(mon.hp,1+Math.ceil(e.stats(mon).hp*.45));
 e.battle={log:[],result:'won'};e.giveXP(mon,1000000,[]);assert.equal(mon.level,100);assert.equal(mon.species,'arvelion');assert.equal(mon.xp,0);
 e.battle=null;assert.equal(new Engine(e.serialize()).state.party[1].level,100);
 
