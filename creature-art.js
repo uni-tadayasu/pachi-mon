@@ -52,6 +52,13 @@
     scorpion:'tide',dragon:'ember',serpent:'tide',gecko:'leaf',lizard:'ember'
   };
   const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map();
+  // These off-dex forms have their own front/rear sheets. Keep them lazy so
+  // undiscovered monsters never add image requests to ordinary startup.
+  const glitchArt=Object.freeze({
+    nullmie:{file:'assets/nullmie-v39.png',stage:0},
+    nullva:{file:'assets/nullva-v39.png',stage:1},
+    zeroveil:{file:'assets/zeroveil-v39.png',stage:2}
+  });
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
   function lineage(id) {
@@ -81,11 +88,16 @@
     }
     return evolutionSheets.get(key);
   }
+  function requestGlitch(id){
+    if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(glitchArt[id].file,root).href,true);
+    return uniqueSheets.get(id);
+  }
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
       if(id==='futo'){for(const rear of back==='both'?[false,true]:[!!back])requests.push(futoRecords[rear?'back':'front'].promise);continue;}
       if(id==='arvelion'||id==='floravelle'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
+      if(glitchArt[id]&&LT.DATA?.species?.[id]){requests.push(requestGlitch(id).promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
@@ -240,7 +252,7 @@
   function uniqueSprite(id,back){
     const record=uniqueSheets.get(id);if(!record?.loaded)return id==='floravelle'?floravelleFallback(back):null;
     const key=`${id}:${back?1:0}`;
-    if(cache.has(key))return cache.get(key);
+    if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
     const image=record.image,half=Math.floor(image.naturalWidth/2),sx=back?half:0;
     const raw=canvas(half,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
     rc.drawImage(image,sx,0,half,image.naturalHeight,0,0,half,image.naturalHeight);
@@ -262,6 +274,7 @@
     if(!d)return null;
     if(id==='futo')return futoSprite(back);
     if(id==='arvelion'||id==='floravelle')return uniqueSprite(id,back);
+    if(glitchArt[id]){requestGlitch(id);return uniqueSprite(id,back);}
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -378,6 +391,9 @@
     if(id==='arvelion')return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'arvelion-original',authoredBack:!!back,stage:0}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
+    if(glitchArt[id])return uniqueSheets.get(id)?.loaded
+      ? {direction:back?1:-1,source:'glitch-authored',authoredBack:!!back,stage:glitchArt[id].stage}
+      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:glitchArt[id].stage};
     const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
     const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
     let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
@@ -391,6 +407,7 @@
   LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
+      glitchRequested:Object.keys(glitchArt).filter(id=>uniqueSheets.has(id)).length,glitchLoaded:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.loaded).length,glitchFailed:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.failed).length,
       futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
       futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };

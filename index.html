@@ -2337,7 +2337,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     lines:['ｺｺﾊ…ﾁｽﾞﾆﾅｲ…ﾍﾔ…','……ようこそ。ここは作られなかったはずの部屋。勝てたら、この部屋のことを覚えていていい。'],
     team:nullTeam.map(species=>({species,level:100})),portrait:15,tactic:7,hidden:true};
   K.placeNPC(glitch,{id:'glitch-keeper',name:'裏部屋の番人・ヌル',kind:'rival',rivalId:'glitch-keeper',lines:D.rivals['glitch-keeper'].lines,portrait:15},[9,4]);
-  K.placeNPC(glitch,{id:'glitch-note',name:'？？？',kind:'dialogue',lines:['ｦｦｦ……ﾊﾟﾁﾓﾝ ﾉ ｾｶｲﾆ ﾖｳｺｿ。','8つの裏技、16の秘密。数字はいつも、半分ずつ小さくなる。']},[4,10]);
+  K.placeNPC(glitch,{id:'glitch-note',name:'？？？',kind:'dialogue',lines:['ｦｦｦ……ｽｳｼﾞﾆ ﾅｲ ｶｹﾞｶﾞ ｲﾙ。','一歩も動かず、私に8回続けて話しかけて。図鑑の外側に、言葉のすきまが開く。']},[4,10]);
   K.placeNPC(glitch,{id:'glitch-cache',name:'化けた宝箱',kind:'cache',lines:['ﾀｶﾗﾊﾞｺ……のはずのもの。'],reward:{coins:8888,chime:8,tonic:8}},[14,10]);
 
   // An unseen keepsake in the first town (south-west corner).
@@ -2628,6 +2628,36 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.signatureMoves=Object.freeze(Object.fromEntries(Object.entries(SIGNATURE).map(([owner,sig])=>[sig.id,owner])));
   if(D.content&&!Object.isFrozen(D.content))D.content.moves=count;
   D.moveRoster=Object.freeze({total:count,perElement:15,neutral:6,special:special.length,signature:Object.keys(SIGNATURE).length,roles:Object.freeze(ROLES.slice())});
+})();
+
+/* Pachi Monsters — the off-dex Null lineage, found only through an intentional glitch. */
+(() => {
+  'use strict';
+  const D=globalThis.LT.DATA;
+  if(D.glitchLine)return;
+  D.elements.void={name:'無',color:'#aeb2c8',strongAgainst:null,weakAgainst:null,hiddenDex:true};
+  const entries=[
+    {id:'nullmie',name:'ヌルミィ',color:'#b8b9db',accent:'#79f0e4',
+      description:'記録の隙間からこぼれた、小さな無の影。欠けた輪のような尾を振り、まだ名前のない音を追いかける。図鑑には映らず、ある裏技でだけ仲間になる。',
+      base:{hp:28,atk:12,def:15,spAtk:21,spDef:19,speed:17,accuracy:100,evasion:100},
+      moves:['nudge','dew','focus','restsong'],evolvesTo:'nullva',evolveLevel:24},
+    {id:'nullva',name:'ヌルヴァ',color:'#7168ad',accent:'#7ff3e4',
+      description:'ヌルミィが成長し、ほどけた記録を淡い外套に編み直した姿。足音の代わりに、小さな光の欠片を残す。図鑑には登録されない。',
+      base:{hp:40,atk:18,def:22,spAtk:31,spDef:27,speed:26,accuracy:100,evasion:100},
+      moves:['pulse','dew','focus','restsong'],evolvesTo:'zeroveil',evolveLevel:48},
+    {id:'zeroveil',name:'ゼロヴェイル',color:'#333456',accent:'#8af6ed',
+      description:'ヌルヴァがまとった外套は、世界の空白を映すヴェールになった。存在を記す文字だけがすり抜けるが、旅人と結んだ絆は消えない。図鑑には登録されない。',
+      base:{hp:56,atk:25,def:30,spAtk:40,spDef:35,speed:34,accuracy:100,evasion:100},
+      moves:['dawnstep','dew','focus','restsong']}
+  ];
+  entries.forEach((entry,stage)=>{
+    if(entry.moves.some(id=>!D.moves[id]||['special','signature'].includes(D.moves[id].role)))throw Error('Invalid Null-line move');
+    D.species[entry.id]={...entry,element:'void',shape:'cat',family:'null',pattern:'constellation',variant:300+stage,
+      hiddenDex:true,glitchOnly:true,specialOnly:true,evolutionOnly:stage>0,evolved:stage>0,rarity:'glitch',visual:{stage}};
+  });
+  D.glitchLine=Object.freeze({ids:Object.freeze(entries.map(entry=>entry.id)),starter:'nullmie',level:5});
+  Object.assign(D.content,{dexSpecies:Object.values(D.species).filter(s=>!s.hiddenDex).length,
+    hiddenSpecies:entries.length,playableSpecies:Object.keys(D.species).length});
 })();
 </script><script>
 /* Pachi Monsters — deterministic combat, interiors, league and versioned saves. */
@@ -3080,6 +3110,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         return {kind:'cache',title:npc.name,lines:['……ｶﾞｶﾞｯ。空っぽのはずの箱の底から、何かが湧き出した！',`${D.items[pick].name} ×1 を手に入れた。`],id:npc.id};
       }
       if(npc.kind==='dialogue'&&streak%8===0){
+        if(this.state.map==='interior-glitch'&&npc.id==='glitch-note'){
+          const received=this.claimGlitchCompanion();
+          if(received.ok)this.discoverTrick('garble');
+          return {kind:'dialogue',title:garble(npc.name),id:npc.id,garbled:true,
+            lines:received.ok&&!received.alreadyReceived?['……ｶﾞｶﾞｯ。文字のすきまから、小さな影がこぼれ落ちた。',received.message,'図鑑には記録できない。けれど、いっしょに旅をして育てられる。']:[received.message],
+            ...(received.ok&&!received.alreadyReceived?{glitchCompanion:received.uid,destination:received.destination}:{})};
+        }
         this.discoverTrick('garble');
         return {kind:'dialogue',title:garble(npc.name),lines:npc.lines.map(garble),id:npc.id,garbled:true};
       }
@@ -3192,6 +3229,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!owner||owner.isAdmin!==true||!/^P[0-9a-f]{16}$/.test(owner.id||''))return fail('運営専用の裏技です。');
       if(!this.state.started||this.battle)return fail('冒険中の移動できるときに使えます。');
       if(!Object.hasOwn(D.species,species)||!finiteInt(level,1,MAX_LEVEL))return fail('種類とレベルを確認してください。');
+      if(D.species[species].glitchOnly)return fail('このパチモンは、地図にない部屋の裏技でのみ仲間になります。');
       if(this.state.party.length>=MAX_PARTY&&this.state.storage.length>=MAX_STORAGE)return fail('仲間とひかえに空きを作ってください。');
       if(!this.state.party.some(mon=>mon.hp>0))return fail('先に仲間を回復してください。');
       const grantId=species===D.mythical.species?'admin-mythical:'+owner.id:species==='futo'?'admin-initial:'+owner.id:null;
@@ -3280,9 +3318,16 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       return {ok:true,events};
     }
     markSeen(id) { if(!this.state.seen.includes(id))this.state.seen.push(id); }
-    markCaught(id) { this.markSeen(id);if(!this.state.caught.includes(id))this.state.caught.push(id);if(D.collectionRoutes?.wild&&hasAll(this.state.caught,D.collectionRoutes.wild))this.discover('dexwild'); }
+    markCaught(id) {
+      this.markSeen(id);if(!this.state.caught.includes(id))this.state.caught.push(id);
+      // Hidden companions retain ownership history for saves and one-time
+      // rewards, but never advance a Pokedex completion condition.
+      if(D.species[id]?.hiddenDex)return;
+      const wild=D.collectionRoutes?.wild?.filter(species=>!D.species[species]?.hiddenDex);
+      if(wild?.length&&hasAll(this.state.caught,wild))this.discover('dexwild');
+    }
     effectiveness(moveElement, defenderElement) {
-      if(!moveElement) return 1;
+      if(!moveElement || moveElement==='void' || defenderElement==='void') return 1;
       if(moveElement===defenderElement) return 0.8;
       if(D.elements[moveElement].strongAgainst===defenderElement) return 1.5;
       if(D.elements[defenderElement].strongAgainst===moveElement) return 0.7;
@@ -3787,7 +3832,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(this.battle)return fail('共鳴を終えてから、ひかえの仲間を見送りましょう。');
       if(!finiteInt(storageIndex,0,this.state.storage.length-1))return fail('ひかえから、見送るモンスターを選んでください。');
       const [mon]=this.state.storage.splice(storageIndex,1);this.returnHeld(mon);
-      return {ok:true,message:`${displayName(mon)}を故郷へ見送った。出会いの記録は図鑑に残ります。`};
+      return {ok:true,message:`${displayName(mon)}を故郷へ見送った。${D.species[mon.species]?.hiddenDex?'出会いと受け取りの記録は残ります。':'出会いの記録は図鑑に残ります。'}`};
     }
     releaseParty(index){
       if(this.battle)return fail('バトルを終えてから、旅の仲間を見送りましょう。');
@@ -3885,6 +3930,17 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       return true;
     }
     takeDiscoveries() { const out=this.discoveries||[];this.discoveries=[];return out; }
+    claimGlitchCompanion() {
+      const line=D.glitchLine;
+      if(!line||!D.species[line.starter]||!this.state.started||this.battle||this.state.map!=='interior-glitch'
+        ||this.nearbyNPC()?.id!=='glitch-note'||this.talkStreak?.id!=='glitch-note'
+        ||this.talkStreak.count<8||this.talkStreak.count%8!==0)return fail('まだ、言葉のすきまは開いていない。');
+      if(this.state.flags.nullLineClaimed||line.ids.some(id=>this.state.caught.includes(id)))return {ok:true,alreadyReceived:true,message:'あの影は、もう君と出会っている。同じすきまから、二度は現れない。'};
+      if(this.state.party.length>=MAX_PARTY&&this.state.storage.length>=MAX_STORAGE)return {...fail('仲間とひかえが満員です。空きを作り、もう一度8回話しかけてください。'),pending:true};
+      const mon=this.makeMonster(line.starter,line.level),destination=this.state.party.length<MAX_PARTY?'party':'storage';
+      this.state[destination].push(mon);this.markCaught(mon.species);this.state.flags.nullLineClaimed=true;
+      return {ok:true,uid:mon.uid,destination,message:`${D.species[mon.species].name} Lv.${mon.level}を${destination==='party'?'旅の仲間':'ひかえ'}に迎えた！`};
+    }
     activateStealth() {
       if(!this.state.started||this.battle)return fail('今は使えません。');
       this.stealthSteps=128;this.discoverTrick('stealth');return {ok:true,steps:this.stealthSteps};
@@ -3920,19 +3976,20 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       return {ok:true,message:`灯渡りで${map.name}に着いた。`};
     }
     quests() {
+      const dexCaught=this.state.caught.filter(id=>!D.species[id]?.hiddenDex);
       const values={captures:this.state.stats.captures,wins:this.state.stats.wins,towerBest:this.state.stats.towerBest,evolutions:this.state.stats.evolutions,
-        caught:this.state.caught.length,seals:this.state.seals.length,steps:this.state.steps,visited:this.state.visited.filter(id=>!D.maps[id].interior).length,
+        caught:dexCaught.length,seals:this.state.seals.length,steps:this.state.steps,visited:this.state.visited.filter(id=>!D.maps[id].interior).length,
         leagueWins:this.state.leagueWins.length,champion:this.state.flags.championWon?1:0,champions:(this.state.flags.championWon?1:0)+(this.state.flags.champion2Won?1:0),secrets:(this.state.secrets||[]).length,tricks:(this.state.tricks||[]).length,
-        types:new Set(this.state.caught.map(id=>D.species[id].element)).size};
+        types:new Set(dexCaught.map(id=>D.species[id].element)).size};
       // caught preserves acquisition order even after evolving or releasing.
       // Old saves retain their original first starter even if they later caught
       // another starter while those species still appeared in the wild.
       const starter=this.state.caught.find(id=>D.starters.includes(id))
         ||this.state.caught.map(id=>D.starters.find(root=>D.collectionRoutes.starters[root].includes(id))).find(Boolean);
-      const collection=new Set([...D.collectionRoutes.wild,...(D.collectionRoutes.starters[starter]||[])]);
+      const collection=new Set([...D.collectionRoutes.wild,...(D.collectionRoutes.starters[starter]||[])].filter(id=>!D.species[id]?.hiddenDex));
       return (D.quests||[]).map(q=>{
         const target=q.id==='all-voices'?collection.size:q.target;
-        const value=q.id==='all-voices'?this.state.caught.filter(id=>collection.has(id)).length:values[q.metric]||0;
+        const value=q.id==='all-voices'?dexCaught.filter(id=>collection.has(id)).length:values[q.metric]||0;
         const progress=Math.min(target,value),claimed=this.state.questsClaimed.includes(q.id);
         return {...q,target,progress,complete:progress>=target||(q.id==='all-voices'&&claimed),claimed};
       });
@@ -4050,8 +4107,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(caught.some(id=>!seen.includes(id)) || [...party,...storage].some(m=>!caught.includes(m.species)))error('図鑑と仲間の記録が一致しません。');
       if(!raw.flags || typeof raw.flags!=='object' || Array.isArray(raw.flags))error('旅の記録が正しくありません。');
       const flags={};
-      const validFlags=['endingShown','trueEndingShown',...Object.values(D.maps).flatMap(m=>m.npcs.filter(n=>n.kind==='cache').map(n=>n.id))];
+      const validFlags=['endingShown','trueEndingShown','nullLineClaimed',...Object.values(D.maps).flatMap(m=>m.npcs.filter(n=>n.kind==='cache').map(n=>n.id))];
       for(const key of validFlags){if(Object.hasOwn(raw.flags,key)){if(typeof raw.flags[key]!=='boolean')error('小箱の記録が正しくありません。');flags[key]=raw.flags[key];}}
+      // Acquisition history survives evolution, release and older exports that
+      // predate the explicit receipt flag; none of those can grant a second one.
+      if(D.glitchLine?.ids.some(id=>caught.includes(id)))flags.nullLineClaimed=true;
       const leagueWins=raw.version>=3 ? list(raw.leagueWins,ELITE_ORDER,'星路評議会') : [];
       if(leagueWins.some((id,i)=>id!==ELITE_ORDER[i]) || (leagueWins.length && seals.length<LEAGUE_ORDER.length))error('星路評議会の勝利記録が正しくありません。');
       if(raw.version>=3 && Object.hasOwn(raw.flags,'championWon')) {
@@ -4105,7 +4165,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 })();
 
 </script>
-<script src="creature-art.js?v=20261118-kiraseed-pixel-v31"></script>
+<script src="creature-art.js?v=20261119-void-line-v39"></script>
 <script src="assets/creatures-individual-catalog.js?v=20261117-256"></script>
 <script src="individual-creature-art.js?v=20261117-shiny-coats"></script>
 <script src="traveller-art.js?v=20261118-world-audio-ui-v33"></script>
@@ -6196,7 +6256,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         storedSave = checked.serialize();
         $('continue-btn').hidden = false;
         const state = checked.state;
-        $('title-status').textContent = `${state.playerName} · ${DATA.maps[state.map].name} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種のモンスター`;
+        $('title-status').textContent = `${state.playerName} · ${DATA.maps[state.map].name} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}種のモンスター`;
         if (key === BACKUP_KEY) $('title-status').textContent += ' · バックアップから復元';
         return;
       } catch (_) { bad = true; }
@@ -6359,7 +6419,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (engine.battle) updateBattle();
     paintPortraits($('party-list'));
     updateScene();
-    for(const [id,value] of [['content-species-count',Object.keys(DATA.species).length],['content-map-count',regions().length],['content-music-count',sound.getTracks().length]])if($(id))$(id).textContent=value;
+    for(const [id,value] of [['content-species-count',Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).length],['content-map-count',regions().length],['content-music-count',sound.getTracks().length]])if($(id))$(id).textContent=value;
     if($('quest-btn')){const ready=engine.quests().filter(q=>q.complete&&!q.claimed).length;$('quest-btn').setAttribute('data-ready',String(ready));}
   }
   function nearHint() {
@@ -6607,7 +6667,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       engine.state.flags.trueEndingShown = true; endingActive='true'; updateScene(); save();
       showDialogue('天頂の覇者、誕生。', [
         '子午線を北から南へ、卯酉線を東から西へ。二本の線が交わる天頂で、あなたと仲間たちは最後の勝負に勝った。',
-        `${engine.state.seals.length}の旅紋、${engine.state.caught.length}種の出会い、${engine.state.visited.filter(id=>!DATA.maps[id]?.interior).length}の土地。数字は半分ずつ小さくなって、最後の「1」はあなたです。`,
+        `${engine.state.seals.length}の旅紋、${engine.state.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}種の出会い、${engine.state.visited.filter(id=>!DATA.maps[id]?.interior).length}の土地。数字は半分ずつ小さくなって、最後の「1」はあなたです。`,
         '天頂の交点の奥で、隠された書庫の扉が開いた。16の秘密と8つの裏技は、まだ世界のどこかに眠っている。'
       ]);
       return;
@@ -6617,7 +6677,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       showDialogue('新しい星路の継承者の誕生。', [
         '16の旅紋、四境の守護者との激闘、そして最後の一戦。あなたと仲間たちは、パチモン星路評議会の頂点にたどり着いた。',
         `名も知らなかった相棒たちが、今はかけがえのないチームになった。${nameOf(engine.state.party[0])}と歩き始めた、小さな町を思い出す。`,
-        `物語クリア！ ${engine.state.caught.length}種のモンスターと出会いを結びました。これからも島を巡り、進化と全${Object.keys(DATA.species).length}種の図鑑完成を楽しめます。`
+        `物語クリア！ ${engine.state.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}種のモンスターと出会いを結びました。これからも島を巡り、進化と全${Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).length}種の図鑑完成を楽しめます。`
       ]);
     }
   }
@@ -6769,7 +6829,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const mon = engine.state.party[index]; if (!mon) return;
     const s = DATA.species[mon.species], stats = engine.stats(mon);
     const releaseBlocked = engine.state.party.length <= 1 ? '最後の1体は逃がせません。' : !engine.state.party.some((other,i)=>i!==index && other.hp>0) ? '動ける仲間を1体以上残してください。' : '';
-    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">モンスター記録　No.${String(Object.keys(DATA.species).indexOf(mon.species)+1).padStart(3,'0')}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><div class="party-vitals">${partyVitals(mon,stats)}</div></div></div><div class="stat-grid">${statCells(stats)}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
+    openModal(nameOf(mon), `<div class="creature-card">${creatureView(mon,160)}<div><p class="muted">${s.hiddenDex?'図鑑未登録 · バグ技で出会ったパチモン':`モンスター記録　No.${String(Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).indexOf(mon.species)+1).padStart(3,'0')}`}</p><h3>${escape(nameOf(mon))} ${genderMark(mon)} <small>Lv.${mon.level}</small></h3>${mon.nickname?`<p class="species-name">${escape(s.name)}</p>`:''}${shinyBadge(mon)}${typeBadge(s.element)}${conditionChip(mon)}<p>${escape(creatureDescription(s))}</p><p class="held-line">持ち物：${HELD_ITEMS[mon.heldItem]?`<strong>${escape(HELD_ITEMS[mon.heldItem].name)}</strong> <small>${escape(HELD_ITEMS[mon.heldItem].description)}</small>`:'なし'} <button class="btn btn-small" data-give="${index}">持たせる</button>${mon.heldItem?`<button class="btn btn-small btn-quiet" data-take="${index}">外す</button>`:''}</p><div class="party-vitals">${partyVitals(mon,stats)}</div></div></div><div class="stat-grid">${statCells(stats)}</div>${allocationPanel(mon,index)}<div class="move-list">${engine.moveDetails(mon).map(m => `<div class="item-row"><div class="item-info"><strong>${escape(m.name)} ${typeBadge(m.element)}</strong><p>PP ${m.pp} / ${m.maxPP} · ${escape(m.description)}</p></div></div>`).join('')}</div>${s.evolvesTo ? `<p class="notice">Lv.${s.evolveLevel}で新しい姿に進化します。</p>` : '<p class="notice">このモンスターは完成した姿です。</p>'}<div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button class="btn" data-ui="party-order">パーティーを並べ替える</button><button class="btn" data-ui="storage">仲間の入れ替え</button><button class="btn btn-primary" data-lead="${index}" ${index===0 || mon.hp===0 ? 'disabled' : ''}>先頭にする</button><button class="btn btn-quiet" data-release="${index}" data-release-source="party" ${releaseBlocked ? 'disabled aria-describedby="party-release-reason"' : ''}>逃がす</button></div>${releaseBlocked?`<p class="notice" id="party-release-reason">${escape(releaseBlocked)}</p>`:''}`, 'party');
   }
   const HELD_ITEMS=DATA.heldItems||{};
   function genderMark(mon){const g=LT.genderOf?.(mon);return g==='male'?'<span class="gender-mark male" aria-label="オス">♂</span>':g==='female'?'<span class="gender-mark female" aria-label="メス">♀</span>':'';}
@@ -6872,7 +6932,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         showParty(current<0?Math.min(index,engine.state.party.length-1):current);
       } else showStorage(-2);
     };
-    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から永久に外します。一度逃がすと元には戻せません。図鑑の発見・捕獲済みの記録は残ります。</p>${mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
+    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から永久に外します。一度逃がすと元には戻せません。${DATA.species[mon.species].hiddenDex?'受け取りの記録は残り、同じ裏技から再入手できません。':'図鑑の発見・捕獲済みの記録は残ります。'}</p>${mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
     $('release-cancel').onclick=returnToSource;
     const button=$('release-confirm');
     button.onclick=()=>{
@@ -6886,14 +6946,15 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   function showDex(filter = 'all') {
     const s = engine.state;
-    const species = Object.values(DATA.species).filter(c => filter==='all' || c.element===filter);
-    openModal('モンスター図鑑', `<div class="dex-header"><p>捕獲 <strong>${s.caught.length}</strong> / ${Object.keys(DATA.species).length}　·　発見 ${s.seen.length}</p><select id="dex-filter" aria-label="属性で絞り込み"><option value="all">すべての属性</option>${Object.entries(DATA.elements).map(([id,e]) => `<option value="${id}" ${filter===id?'selected':''}>${escape(e.name)}</option>`).join('')}</select></div><div class="dex-grid">`+species.map(c => {
+    const species = Object.values(DATA.species).filter(c => !c.hiddenDex&&(filter==='all' || c.element===filter));
+    openModal('モンスター図鑑', `<div class="dex-header"><p>捕獲 <strong>${s.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}</strong> / ${Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).length}　·　発見 ${s.seen.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}</p><select id="dex-filter" aria-label="属性で絞り込み"><option value="all">すべての属性</option>${Object.entries(DATA.elements).filter(([,e])=>!e.hiddenDex).map(([id,e]) => `<option value="${id}" ${filter===id?'selected':''}>${escape(e.name)}</option>`).join('')}</select></div><div class="dex-grid">`+species.map(c => {
       const seen = s.seen.includes(c.id), caught = s.caught.includes(c.id);
-      return `<button class="dex-card${seen?'':' undiscovered'}" data-dex="${c.id}" ${seen?'':'disabled'}><span class="dex-number">No.${String(Object.keys(DATA.species).indexOf(c.id)+1).padStart(3,'0')} ${caught?'✦':''}</span>${seen ? portrait(c.id,92) : '<span class="unknown-creature">?</span>'}<strong>${seen?escape(c.name):'未発見'}</strong>${seen?typeBadge(c.element):'<small>旅のどこかで</small>'}</button>`;
+      return `<button class="dex-card${seen?'':' undiscovered'}" data-dex="${c.id}" ${seen?'':'disabled'}><span class="dex-number">No.${String(Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).indexOf(c.id)+1).padStart(3,'0')} ${caught?'✦':''}</span>${seen ? portrait(c.id,92) : '<span class="unknown-creature">?</span>'}<strong>${seen?escape(c.name):'未発見'}</strong>${seen?typeBadge(c.element):'<small>旅のどこかで</small>'}</button>`;
     }).join('')+'</div>', 'dex');
     $('dex-filter').onchange = e => showDex(e.target.value);
   }
   function evolutionLineage(id) {
+    if(DATA.species[id]?.hiddenDex)return '';
     const parents=new Map();
     for(const creature of Object.values(DATA.species))if(creature.evolvesTo&&!parents.has(creature.evolvesTo))parents.set(creature.evolvesTo,creature.id);
     let root=id; const visited=new Set([id]);
@@ -6907,7 +6968,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }).join('')}</ol></section>`;
   }
   function showDexEntry(id) {
-    const s = DATA.species[id]; if (!s || !engine.state.seen.includes(id)) return;
+    const s = DATA.species[id]; if (!s || s.hiddenDex || !engine.state.seen.includes(id)) return;
     const habitats = Object.values(DATA.maps).filter(m => m.encounters.includes(id)).map(m=>m.name);
     const habitatText = DATA.starters.includes(id)?'最初の相棒として選択（野生には出現しません）':habitats.length?habitats.join('・'):'進化・星環の地で出会う';
     openModal(s.name, `<div class="creature-card">${creatureView(id,180)}<div>${typeBadge(s.element)}<p>${escape(creatureDescription(s))}</p><p class="muted">${engine.state.caught.includes(id)?'✦ 捕獲済み':'未捕獲'}</p><p>生息地：${escape(habitatText)}</p>${s.evolvesTo?`<p>Lv.${s.evolveLevel}で進化</p>`:''}</div></div>${evolutionLineage(id)}<div class="modal-actions"><button class="btn" data-ui="dex">← 図鑑へ戻る</button></div>`, 'dex-entry');
@@ -6939,7 +7000,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     marker(engine.state.x,engine.state.y,'#e95c48','player');
   }
   function showHelp() {
-    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。ソロの経験値は手持ち全員がもらえ、その相手との戦いで場に出た個体は1.5倍になります。途中の交代も対象です。相手が次のパチモンを出すと出場判定を切り替えます。「学びの帯」と重なると2.25倍。経験値でレベルアップし、一部は進化します。仲間は6体、ひかえは192体までです。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と2人のチャンピオン</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>属性の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプのパチモンはかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>着弾音は「弱点＝鋭く上がる音」「通常＝短い打撃音」「効きにくい＝低く沈む音」の3種類。ソロ・通信対戦の両方で属性相性を知らせます。急所や防御で音の種類は変わりません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。招待リンクを友だちに送って接続し、シングル・ダブルを選べます。6文字コードでも参加できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
+    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。ソロの経験値は手持ち全員がもらえ、その相手との戦いで場に出た個体は1.5倍になります。途中の交代も対象です。相手が次のパチモンを出すと出場判定を切り替えます。「学びの帯」と重なると2.25倍。経験値でレベルアップし、一部は進化します。仲間は6体、ひかえは192体までです。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と2人のチャンピオン</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>属性の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプのパチモンはかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>id==='void'?`<p>${typeBadge(id)} 与ダメージ・被ダメージの属性相性は、すべて1倍です。</p>`:`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>着弾音は「弱点＝鋭く上がる音」「通常＝短い打撃音」「効きにくい＝低く沈む音」の3種類。ソロ・通信対戦の両方で属性相性を知らせます。急所や防御で音の種類は変わりません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。招待リンクを友だちに送って接続し、シングル・ダブルを選べます。6文字コードでも参加できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   // ── Offline play: the service worker keeps the game (and, on request, all art) on the device.
   const offlinePlay={registration:null,installPrompt:null,storing:false,status:null};
@@ -7020,7 +7081,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showRecords(){
     if(!playing){toast('旅をはじめると記録を確認できます。');return;}
     const st=engine.state,heard=heardTracks();
-    const have={species:st.caught.length,stages:st.visited.filter(id=>DATA.maps[id]&&!DATA.maps[id].interior).length,bgm:Math.min(heard.size,sound.getTracks().length),badges:st.seals.length,
+    const have={species:st.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length,stages:st.visited.filter(id=>DATA.maps[id]&&!DATA.maps[id].interior).length,bgm:Math.min(heard.size,sound.getTracks().length),badges:st.seals.length,
       secrets:(st.secrets||[]).length,tricks:(st.tricks||[]).length,elites:(st.leagueWins||[]).length,champions:(st.flags.championWon?1:0)+(st.flags.champion2Won?1:0)};
     const rows=(DATA.ladder||[]).map(r=>`<li class="ladder-row${have[r.key]>=r.count?' done':''}"><span class="ladder-count">${r.count}</span><span class="ladder-label">${escape(r.label)}</span><span class="ladder-meter"><span style="width:${Math.min(100,Math.round(have[r.key]/r.count*100))}%"></span></span><strong>${have[r.key]} / ${r.count}</strong></li>`).join('')+`<li class="ladder-row done"><span class="ladder-count">1</span><span class="ladder-label">主人公</span><span class="ladder-meter"><span style="width:100%"></span></span><strong>${escape(st.playerName)}</strong></li>`;
     const secrets=(DATA.secrets||[]).map(x=>{const got=(st.secrets||[]).includes(x.id);return `<li class="secret-row${got?' found':''}"><span class="secret-no">${String(x.no).padStart(2,'0')}</span><div><strong>${got?escape(x.name):'？？？？'}</strong><p>${escape(got?x.text:'ヒント：'+x.hint)}</p></div></li>`;}).join('');
@@ -7107,7 +7168,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(file.size>524288)throw new Error('セーブデータのサイズが大きすぎます。');
       const data=JSON.parse(await file.text()); const checked=new Engine(data); const state=checked.state;
       if(tradeLocked()){toast('交換を完了または中止してから記録を読み込んでください。');return;}
-      openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(state.playerName)} · ${escape(DATA.maps[state.map].name)} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
+      openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(state.playerName)} · ${escape(DATA.maps[state.map].name)} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
       $('confirm-import').onclick=()=>{begin(null,checked.serialize());toast('冒険記録を読み込みました。');};
     } catch(err) { toast('読み込めません：'+(err.message || '有効なパチモンのセーブデータを選んでください。')); }
   }
@@ -7972,7 +8033,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   }
   function maxPP(move) { return integer(move.pp, 1, 99) ? move.pp : move.kind === 'heal' ? 10 : move.kind === 'guard' ? 15 : move.power >= 42 ? 10 : move.power >= 33 ? 15 : move.power >= 27 ? 20 : 30; }
   function effectiveness(element, defender) {
-    if (!element) return 1;
+    if (!element || element === 'void' || defender === 'void') return 1;
     if (element === defender) return .8;
     if (D.elements[element].strongAgainst === defender) return 1.5;
     if (D.elements[defender].strongAgainst === element) return .7;
@@ -8960,8 +9021,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-vfx.js?v=20261118-battle-growth-remix-v35"></script>
 <script src="admin-console.js?v=20261119-touch-guard-v38"></script>
-<script src="online-futo.js?v=20261118-full-allocation-v31"></script>
-<script src="secret-encounter.js?v=20261117-shiny"></script>
+<script src="online-futo.js?v=20261119-void-line-v39"></script>
+<script src="secret-encounter.js?v=20261119-void-line-v39"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261118-easy-connect-v37"></script>

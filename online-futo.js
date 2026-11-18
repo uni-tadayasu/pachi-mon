@@ -72,12 +72,13 @@
       try { return LT.MonsterIdentity.normalizeNickname(item.nickname) === item.nickname; } catch (_) { return false; }
     });
   }
-  // Species a player may field: every ordinary species, Arvelion once caught, and the two special companions once received.
+  // Glitch-only companions can battle once owned, but never become rentals or trades.
   function rosterIds(base) {
     const legendary = LT.DATA.legendary?.species, hasLegendary = !!ownedLegendary();
     const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly && (id !== legendary || hasLegendary));
     if (owned() && LT.DATA.species.futo) ids.push('futo');
     if (ownedMythical() && LT.DATA.species.floravelle) ids.push('floravelle');
+    for (const id of LT.DATA.glitchLine?.ids || []) if (firstOf(id)) ids.push(id);
     return ids;
   }
   // Looks are carried apart from combat data: they never change stats, levels or PP.
@@ -100,6 +101,7 @@
       if (input.ids.includes(LT.DATA.legendary?.species) && !ownedLegendary()) return fail('アルヴェリオンを仲間にしてから編成してください。');
       if (input.ids.includes('futo') && !owned()) return fail('フートを受け取ってから編成してください。');
       if (input.ids.includes('floravelle') && !ownedMythical()) return fail(`${LT.DATA.species.floravelle?.name || '幻のパチモン'}を迎えてから編成してください。`);
+      if (input.ids.some(id => LT.DATA.species[id]?.glitchOnly && !firstOf(id))) return fail('そのパチモンを仲間にしてから編成してください。');
       if (this._closed || !this._started || !this._connected || this.duel || this._teams[this.role]) return fail('現在は編成を変更できません。');
       // Chosen individuals (by uid) bring their own look, points and item.
       const members = input.uids === undefined ? null : membersFor(input.ids, input.uids);
@@ -126,7 +128,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items-glitch-line-v39';
   LT.DuelSession = LinkSession;
   LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 8 };
 })();

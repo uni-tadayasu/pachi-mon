@@ -1,5 +1,5 @@
 {
- "version": "20261118-world-audio-ui-v33",
+ "version": "2026-11-19",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -234,6 +234,14 @@
    "bytes": 554441
   },
   {
+   "url": "assets/nullmie-v39.png",
+   "bytes": 834784
+  },
+  {
+   "url": "assets/nullva-v39.png",
+   "bytes": 1137549
+  },
+  {
    "url": "assets/traveller-female-v33.png",
    "bytes": 1645687
   },
@@ -244,6 +252,10 @@
   {
    "url": "assets/traveller-npcs-v33.png",
    "bytes": 1764301
+  },
+  {
+   "url": "assets/zeroveil-v39.png",
+   "bytes": 1457336
   }
  ],
  "core": [
@@ -254,10 +266,13 @@
   "assets/environment-props-v33.png",
   "assets/environment-terrain-v33.png",
   "assets/environment-trees-v33.png",
+  "assets/nullmie-v39.png",
+  "assets/nullva-v39.png",
   "assets/traveller-female-v33.png",
   "assets/traveller-hero-v33.png",
-  "assets/traveller-npcs-v33.png"
+  "assets/traveller-npcs-v33.png",
+  "assets/zeroveil-v39.png"
  ],
- "totalBytes": 58412397,
- "coreBytes": 17201187
+ "totalBytes": 61842066,
+ "coreBytes": 20630856
 }

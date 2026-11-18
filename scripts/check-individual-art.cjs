@@ -7,7 +7,7 @@ const hash=data=>crypto.createHash('sha256').update(data).digest('hex');
 async function main(){
  const {LT,engine}=await runtime(),catalog=LT.IndividualArtCatalog?.species,api=LT.IndividualCreatureArt;
  assert(catalog&&api,'Individual artwork integration is missing');
- const normal=Object.keys(LT.DATA.species).filter(id=>!['futo','arvelion','floravelle'].includes(id));
+ const normal=Object.keys(LT.DATA.species).filter(id=>!LT.DATA.species[id].hiddenDex&&!['futo','arvelion','floravelle'].includes(id));
  if(!partial)assert.deepEqual(Object.keys(catalog).sort(),normal.sort(),'Every normal species needs its own artwork');
  assert(!catalog.futo&&!catalog.arvelion&&!catalog.floravelle,'Dedicated special artwork must remain separate');
  const before=JSON.stringify({data:LT.DATA,state:engine.state}),groups=new Map(),sources=new Set(),rendered=new Set(),masks=new Set();

@@ -5,8 +5,8 @@ const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'ind
 for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(s[1]))continue;vm.runInContext(s[2],ctx);if(ctx.LT?.Engine)break;}
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
-const all=Object.keys(D.species);assert.equal(all.length,256);
-// Every registered species is selectable, capturable with one capsule, and
+const all=Object.keys(D.species).filter(id=>!D.species[id].hiddenDex);assert.equal(all.length,256);
+// Every public species is selectable, capturable with one capsule, and
 // round-trippable, including starter bases, special species and every evolution.
 for(const [i,id] of all.entries()){
  const e=make(),level=i%2?100:1;e.state.inventory.chime=0;
@@ -26,6 +26,10 @@ for(const denied of [null,{}, {id:owner.id,isAdmin:false},{id:'invalid',isAdmin:
 }
 for(const [species,level] of [['missing',70],['floravelle',0],['floravelle',101],['floravelle',1.5],['floravelle','70'],['floravelle',NaN]]){
  const e=make();assert(!e.startAdminEncounter(species,level,owner).ok);assert.equal(e.battle,null);
+}
+for(const id of D.glitchLine.ids){
+ const e=make(),before=JSON.stringify(e.state);assert(!e.startAdminEncounter(id,5,owner).ok,id+' cannot bypass its glitch acquisition');
+ assert.equal(e.battle,null);assert.equal(JSON.stringify(e.state),before);
 }
 assert(!new Engine().startAdminEncounter('floravelle',70,owner).ok);
 let e=make();e.startBattle('arvelion',70);const originalBattle=e.battle;
@@ -119,6 +123,8 @@ async function main(){
  const settle=()=>new Promise(resolve=>setImmediate(resolve));
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
  u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,256);
+ assert(!u.dialog.querySelector('#secret-species').children.some(option=>D.species[option.value].hiddenDex),'Off-dex creatures are absent from the operator selector');
+ for(const id of D.glitchLine.ids){u.dialog.querySelector('#secret-species').value=id;await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);assert(u.dialog.open);}
  u.dialog.querySelector('#secret-species').value='floravelle';await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],'floravelle');assert.equal(u.startCalls[0][1],70);assert(!u.dialog.open);
  u=ui();u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);assert(u.messages.some(m=>m.includes('運営専用')));
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.admin=false;await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,0);assert(u.dialog.open);

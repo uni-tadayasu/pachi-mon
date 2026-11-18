@@ -24,7 +24,9 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   if (context.LT?.Engine) break;
 }
 const { LT } = context, D = LT.DATA, engine = new LT.Engine();
-const ids = Object.keys(D.species), no = id => ids.indexOf(id) + 1, pad = n => String(n).padStart(3, '0');
+// Glitch companions exist in saves and battle data, but have no public dex page,
+// learner listing, dex number or sitemap entry.
+const ids = Object.keys(D.species).filter(id=>!D.species[id].hiddenDex), no = id => ids.indexOf(id) + 1, pad = n => String(n).padStart(3, '0');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const typeName = el => el ? (D.elements[el]?.name || el) + 'タイプ' : '無属性';
 const typeChip = el => `<span class="chip t-${esc(el || 'none')}">${esc(el ? D.elements[el].name : '無')}</span>`;
@@ -151,7 +153,7 @@ for (const [index, id] of ids.entries()) {
 }
 
 // ---------- encyclopedia index ----------
-const groups = Object.keys(D.elements).map(el => [el, ids.filter(id => D.species[id].element === el)]);
+const groups = Object.keys(D.elements).filter(el=>!D.elements[el].hiddenDex).map(el => [el, ids.filter(id => D.species[id].element === el)]);
 const indexBody = `${crumbNav([['トップ', '../'], ['パチモン図鑑', '']], 1)}
 <section class="window">
   <h1>パチモン図鑑（全${ids.length}種）</h1>
@@ -194,7 +196,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>バトルは「たたかう・バッグ・パチモン・にげる」から行動を選びます。素早さの高いほうが先に動き、防御の技は優先して発動します。技にはPP（使用回数）があり、すべて使い切ると反動を受ける「踏ん張り打ち」になります。宿や休み場では体力とPPを無料で全回復できます。</p>
   <ul><li>物理技は「物理攻撃」と相手の「物理防御」、特殊技は「特殊攻撃」と相手の「特殊防御」でダメージが決まります。</li><li>自分と同じタイプの技は威力が1.15倍になります。</li><li>防御の技は次に受けるダメージを半分にします。「守りを貫く」技は防御を無視します。</li><li>回復の技は最大体力の一定割合を回復し、吸収の技は与えたダメージの25%を回復します。</li></ul>
   <h2 id="types">タイプ相性表</h2>
-  <p>パチモンのタイプは芽・潮・灯・風・晶の5種類です。有利な相手には1.5倍、不利な相手には0.7倍、同じタイプ同士には0.8倍のダメージになります。</p>
+  <p>パチモンには芽・潮・灯・風・晶と「無」の属性があります。基本の5属性は有利な相手に1.5倍、不利な相手に0.7倍、同じ属性同士に0.8倍のダメージになります。「無」が攻撃側または防御側の属性相性に関わる場合は、無同士を含めてすべて1倍です。弱点・耐性による増減はなく、技の威力や能力値による差は通常どおり反映します。</p>
   <p>技が当たったときの音でも相性が分かります。弱点を突いたときは鋭く上がる音、効きにくいときは低く沈む音、通常は短い打撃音が鳴ります。ソロ・通信対戦の両方に対応し、急所や防御によるダメージの増減では音の種類は変わりません。</p>
   <div class="table-wrap"><table><thead><tr><th>攻撃する技のタイプ</th><th>強い相手（1.5倍）</th><th>この技に強い相手</th></tr></thead><tbody>${typeRows}</tbody></table></div>
   <h2 id="catch">パチモンの捕まえ方</h2>
