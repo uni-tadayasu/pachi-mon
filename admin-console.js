@@ -149,8 +149,9 @@
     claimBusy=true;
     try{
       await withButton(button,async()=>{try{await ensureIdentity();let data;
-        try{data=await request('/admin/claim',{method:'POST',body:{key}});}
-        catch(err){if(recovering&&err.code==='ADMIN_ALREADY_EXISTS'){recoveryNote='サーバーで運営の復元が有効になっていないため、再登録できませんでした。サーバーの復元設定（ADMIN_RECOVERY_OWNER_ID・ADMIN_RECOVERY_ORIGIN）を確認してください。';throw new Error(recoveryNote);}throw err;}
+        // The hidden recovery screen asks the server for the operator seat explicitly; the operator key still decides.
+        try{data=await request('/admin/claim',{method:'POST',body:recoveryOpen?{key,recover:true}:{key}});}
+        catch(err){if(recovering&&err.code==='ADMIN_ALREADY_EXISTS'){recoveryNote='サーバーが運営の復元に対応した版になっていないため、再登録できませんでした。通信サーバーを最新版に更新してから、もう一度お試しください。';throw new Error(recoveryNote);}throw err;}
         recoveryOpen=false;recoveryNote='';player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートとアルヴェリオンを準備しています。':'運営に登録しました。フートとアルヴェリオンを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
     }finally{claimBusy=false;refreshSettings();await sync();}
   }

@@ -429,6 +429,29 @@ test('recovery rejects missing configuration, wrong origin, wrong key and missin
   assert.equal(env.ADMIN_CLAIM_KEY, SECRET);
 });
 
+test('the hidden recovery screen re-registers with the operator key alone, without recovery settings', async () => {
+  const {call, admin, register, env} = setup();
+  const oldOwner = await admin(), candidate = await register();
+  assert.equal(env.ADMIN_RECOVERY_OWNER_ID, undefined);
+  assert.equal(env.ADMIN_RECOVERY_ORIGIN, undefined);
+  const request = {method:'POST', token:candidate.token, body:{key:SECRET, recover:true}};
+  // An ordinary claim still stops at the existing operator; the explicit request still needs the key and a player.
+  assert.equal((await call('/api/admin/claim', {...request, body:{key:SECRET}})).status, 409);
+  assert.equal((await call('/api/admin/claim', {...request, body:{key:'incorrect-key', recover:true}})).status, 403);
+  assert.equal((await call('/api/admin/claim', {...request, token:undefined})).status, 401);
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id, oldOwner.id);
+  // With the key, the seat moves to this player, with the operator's initial companions.
+  const recovered = await call('/api/admin/claim', request);
+  assert.equal(recovered.player.isAdmin, true);
+  assert.deepEqual(recovered.initialCompanions.map(row => row.species).sort(), ['arvelion', 'floravelle']);
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id, candidate.id);
+  assert.equal((await call('/api/admin/config', {token:oldOwner.token})).status, 403);
+  assert.equal((await call('/api/admin/config', {token:candidate.token})).status, 200);
+  // The status never offers the key form to everyone.
+  assert.equal((await call('/api/status')).adminRecoveryAvailable, false);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_owner').get().n, 1);
+});
+
 test('recovery transfers ownership once, preserves data and grants the current Futo configuration', async () => {
   const {call, admin, register, env} = setup();
   const oldOwner = await admin(), candidate = await register('新ドメイン'), recipient = await register('配布済み');
