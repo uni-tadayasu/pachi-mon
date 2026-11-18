@@ -246,7 +246,7 @@
   }
   function futoMoveEntries(){
     const exclusive=new Set([...(LT.DATA.species?.[LT.DATA.legendary?.species]?.moves||[]),...(LT.DATA.species?.[LT.DATA.mythical?.species]?.moves||[]),...Object.keys(LT.DATA.signatureMoves||{})]);
-    return Object.entries(LT.DATA.moves).filter(([id])=>id!=='struggle'&&!exclusive.has(id));
+    return Object.entries(LT.DATA.moves).filter(([id,move])=>id!=='struggle'&&!exclusive.has(id)&&!move.hiddenDex);
   }
   async function openConsole(){
     if(sendBusy||releaseBusy)throw new Error('操作の結果を確認しています。少しお待ちください。');

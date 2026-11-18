@@ -2635,7 +2635,16 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   'use strict';
   const D=globalThis.LT.DATA;
   if(D.glitchLine)return;
-  D.elements.void={name:'無',color:'#aeb2c8',strongAgainst:null,weakAgainst:null,hiddenDex:true};
+  D.elements.void={name:'無',color:'#aeb2c8',strongAgainst:null,weakAgainst:null,hiddenDex:true,statusImmune:true};
+  const techniques=[
+    {id:'null_restore',name:'零への回帰',element:'void',kind:'heal',category:'status',power:100,accuracy:100,pp:8,effect:'fullHealRecharge',description:'自分の体力を全回復する。反動で次の1ターンは技も交代もできない。状態異常への耐性では反動を防げない。'},
+    {id:'null_curse',name:'虚無の呪縛',element:'void',kind:'attack',category:'status',power:0,accuracy:100,pp:8,effect:'curse',description:'自分の最大体力の1/4を使い、相手を呪縛する。相手はそのターンから毎ターン末に最大体力の1/4を失う。灯焼けと重なり、交代・戦闘不能・戦闘終了で解ける。無属性には効かない。'},
+    {id:'null_ray',name:'ヴォイドレイ',element:'void',kind:'attack',category:'special',power:60,accuracy:100,pp:16,description:'虚無の光線を放つ特殊攻撃。属性相性による弱点や耐性がなく、どの属性にも等倍で当たる。'},
+    {id:'null_scorch',name:'呪灯',element:'ember',kind:'attack',category:'status',power:0,accuracy:100,pp:16,effect:'inflictScorch',description:'命中した相手を灯焼けにする。直接のダメージはない。灯属性・無属性、灯焼けを防ぐ持ち物、すでに通常の状態異常がある相手には効かない。'}
+  ];
+  for(const move of techniques)D.moves[move.id]={...move,role:'hidden',hiddenDex:true};
+  D.hiddenMoves=Object.freeze(techniques.map(move=>move.id));
+  D.volatileConditions=Object.freeze({curse:Object.freeze({id:'curse',name:'呪縛',color:'#9c73d6',description:'毎ターン末に最大体力の1/4を失う。ほかの状態異常と重なり、交代・戦闘不能・戦闘終了で解ける。'})});
   const entries=[
     {id:'nullmie',name:'ヌルミィ',color:'#b8b9db',accent:'#79f0e4',
       description:'記録の隙間からこぼれた、小さな無の影。欠けた輪のような尾を振り、まだ名前のない音を追いかける。図鑑には映らず、ある裏技でだけ仲間になる。',
@@ -2652,12 +2661,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   ];
   entries.forEach((entry,stage)=>{
     if(entry.moves.some(id=>!D.moves[id]||['special','signature'].includes(D.moves[id].role)))throw Error('Invalid Null-line move');
-    D.species[entry.id]={...entry,element:'void',shape:'cat',family:'null',pattern:'constellation',variant:300+stage,
+    D.species[entry.id]={...entry,moves:D.hiddenMoves.slice(),description:entry.description+' 無属性のため、呪縛を含むすべての状態異常を受けない。',element:'void',shape:'cat',family:'null',pattern:'constellation',variant:300+stage,
       hiddenDex:true,glitchOnly:true,specialOnly:true,evolutionOnly:stage>0,evolved:stage>0,rarity:'glitch',visual:{stage}};
   });
   D.glitchLine=Object.freeze({ids:Object.freeze(entries.map(entry=>entry.id)),starter:'nullmie',level:5});
+  const oldPP=move=>move.pp??(move.kind==='heal'?10:move.kind==='guard'?15:move.power>=42?10:move.power>=33?15:move.power>=27?20:30);
+  D.nullLegacyMovesets=Object.freeze(Object.fromEntries(entries.map(entry=>[entry.id,Object.freeze(entry.moves.map(id=>Object.freeze([id,oldPP(D.moves[id])])))])));
   Object.assign(D.content,{dexSpecies:Object.values(D.species).filter(s=>!s.hiddenDex).length,
-    hiddenSpecies:entries.length,playableSpecies:Object.keys(D.species).length});
+    hiddenSpecies:entries.length,playableSpecies:Object.keys(D.species).length,hiddenMoves:techniques.length,totalMoves:Object.keys(D.moves).length});
 })();
 </script><script>
 /* Pachi Monsters — deterministic combat, interiors, league and versioned saves. */
@@ -2678,6 +2689,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const hasAll = (have, ids) => ids.every(id => have.includes(id));
   // Conditions, held items, gender and allocation points.
   const STATUS = D.statuses || {}, STATUS_BY_ELEMENT = D.statusByElement || {}, HELD = D.heldItems || {};
+  // Immunity belongs to the type, including future conditions and species.
+  // Clear legacy conditions before they affect actions, damage, items or saves.
+  const isConditionImmune = mon => D.elements[D.species[mon?.species]?.element]?.statusImmune === true;
+  const clearImmuneCondition = mon => {
+    if(!isConditionImmune(mon))return false;
+    delete mon.status;delete mon.statusTurns;delete mon.curse;return true;
+  };
+  const conditionList = mon => isConditionImmune(mon)?[]:[...(STATUS[mon?.status]?[STATUS[mon.status]]:[]),...(mon?.curse&&D.volatileConditions?.curse?[D.volatileConditions.curse]:[])];
   const ALLOC = D.allocation || {pointsPerLevel:2,capPerStat:64,keys:['hp','atk','def','spAtk','spDef','speed'],hpPerPoint:2};
   const hashText = text => { let h = 2166136261; for (const ch of String(text)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
   const heldOf = mon => (mon && HELD[mon.heldItem]) || null;
@@ -2744,7 +2763,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   }
   function futoMoves(raw){
     const values=Array.isArray(raw)?migrateMoveIds(raw,D.species.futo.moves):raw??D.species.futo.moves;
-    if(!Array.isArray(values)||values.length!==4||new Set(values).size!==4||values.some(id=>typeof id!=='string'||!Object.hasOwn(D.moves,id)))throw Error('フートの技は登録された異なる4つを指定してください。');
+    if(!Array.isArray(values)||values.length!==4||new Set(values).size!==4||values.some(id=>typeof id!=='string'||!Object.hasOwn(D.moves,id)||D.moves[id].hiddenDex))throw Error('フートの技は登録された異なる4つを指定してください。');
     return legacyFutoMoves(values)?D.species.futo.moves.slice():values.slice();
   }
   const legacyFutoRecord=mon=>mon.species==='futo'&&(legacyFutoMoves(mon.customMoves)||(mon.customMoves===undefined&&mon.pp&&LEGACY_FUTO_MOVES.every(id=>Object.hasOwn(mon.pp,id))));
@@ -2859,6 +2878,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       return {ok:true,message:name?`ニックネームを「${name}」にしました。`:'種族の名前に戻しました。'};
     }
     battleStats(mon){
+      clearImmuneCondition(mon);
       const base=this.stats(mon),b=this.battle;
       if(!b||b.result)return base;
       const side=mon===b.enemy?'enemy':mon===this.state.party[b.activeIndex]?'ally':null;
@@ -2976,9 +2996,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     syncPP(mon) {
       const previous=mon.pp || {}, next={},legacy=legacyFutoRecord(mon);
+      const oldNull=D.nullLegacyMovesets?.[mon.species],migrateNull=oldNull&&!this.moves(mon).every(move=>Object.hasOwn(previous,move.id))&&oldNull.every(([id])=>Object.hasOwn(previous,id));
       for(const [i,move]of this.moves(mon).entries()){
-        const oldId=legacy?LEGACY_FUTO_MOVES[i]:move.id,oldMax=legacy?this.maxPP(D.moves[oldId]):this.maxPP(move);
-        next[move.id]=finiteInt(previous[oldId],0,oldMax)?Math.min(previous[oldId],this.maxPP(move)):this.maxPP(move);
+        const oldId=legacy?LEGACY_FUTO_MOVES[i]:migrateNull?oldNull[i][0]:move.id,oldMax=legacy?this.maxPP(D.moves[oldId]):migrateNull?oldNull[i][1]:this.maxPP(move);
+        next[move.id]=finiteInt(previous[oldId],0,oldMax)?(migrateNull?scalePP(previous[oldId],oldMax,this.maxPP(move)):Math.min(previous[oldId],this.maxPP(move))):this.maxPP(move);
       }
       if(legacy)mon.customMoves=D.species.futo.moves.slice();
       mon.pp=next;return next;
@@ -2990,7 +3011,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     moveDetails(mon) { this.syncPP(mon);return this.moves(mon).map(move=>({...move,pp:mon.pp[move.id],maxPP:this.maxPP(move)})); }
     canStruggle(mon) { return this.moveDetails(mon).every(move=>move.pp===0); }
     restoreMonster(mon) {
-      mon.hp=this.stats(mon).hp;mon.pp={};delete mon.status;delete mon.statusTurns;
+      mon.hp=this.stats(mon).hp;mon.pp={};delete mon.status;delete mon.statusTurns;delete mon.curse;delete mon.rechargeTurns;
       for(const move of this.moves(mon))mon.pp[move.id]=this.maxPP(move);
     }
     objective() {
@@ -3304,6 +3325,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(pending.enemyIndex!==null && (!b.enemyTeam || !finiteInt(pending.enemyIndex,b.enemyIndex+1,b.enemyTeam.length-1)))return fail('次の相手を確認できません。');
       const events=[];
       if(next!==b.activeIndex){
+        if(this.state.party[b.activeIndex].hp>0&&this.state.party[b.activeIndex].rechargeTurns>0)return fail('回復の反動で、次のターンが終わるまで交代できません。');
+        this.clearBattleEffects(this.state.party[b.activeIndex]);
         b.activeIndex=next;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');
         this.event(events,`${displayName(this.state.party[next])}が前に出た。`,'switch',{side:'ally',slot:0,index:next,forced:pending.allyRequired});
       }
@@ -3336,7 +3359,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     resonanceChance() {
       if(!this.battle || this.isTrainerBattle()) return 0;
       if(this.battle.secretEncounter)return 1;
-      const enemy=this.battle.enemy, ratio=enemy.hp/this.stats(enemy).hp;
+      const enemy=this.battle.enemy;clearImmuneCondition(enemy);
+      const ratio=enemy.hp/this.stats(enemy).hp;
       if(D.species[enemy.species].adminOnly)return 0;
       if(enemy.species===D.legendary.species){
         const maxHP=this.stats(enemy).hp;
@@ -3350,6 +3374,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const b=this.battle;
       if(!b){events?.push({text,kind,...meta});return;}
       const ally=this.state.party[b.activeIndex];
+      clearImmuneCondition(ally);clearImmuneCondition(b.enemy);
       const visual=ally&&b.enemy?{activeIndex:b.activeIndex,ally:clone(ally),enemy:clone(b.enemy),enemyIndex:b.enemyIndex}:null;
       events.push({text,kind,...meta,...(visual?{visual}:{})});b.log.push(text);if(b.log.length>40)b.log.shift();
     }
@@ -3358,11 +3383,19 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!b || b.result) return fail('今は合図を出せません。');
       if(b.pendingReplacement)return fail('先に次に出す仲間を選んでください。');
       if(!command || typeof command!=='object') return fail('合図を選んでください。');
+      for(const mon of [...this.state.party,...(b.enemyTeam||[]),b.enemy])clearImmuneCondition(mon);
       const events=[];
       let ally=this.state.party[b.activeIndex];
       const live=this.state.party.findIndex(m=>m.hp>0);
       if(live<0){this.endBattle('lost',events);return {ok:true,events,ended:'lost'};}
       if(ally.hp<=0 && command.type!=='switch') return fail('動ける仲間に交代してください。');
+      if(ally.hp>0&&ally.rechargeTurns>0){
+        if(!['move','struggle','switch','item','resonate','flee'].includes(command.type))return fail('合図が見つかりません。');
+        b.turn++;this.rechargeBlocks(ally,'ally',events);this.enemyTurn(events);
+        if(!b.result)this.endOfTurn(events);
+        if(!b.result)this.resolveAllyFaint(events);
+        return {ok:true,events,...(b.result?{ended:b.result}:{})};
+      }
       let move=null, itemTarget=b.activeIndex;
       if(command.type==='move') {
         if(!finiteInt(command.index,0,this.moves(ally).length-1))return fail('使う技を選んでください。');
@@ -3390,6 +3423,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       b.turn++;
       if(command.type==='switch') {
         const forced=ally.hp<=0;
+        this.clearBattleEffects(ally);
         b.activeIndex=command.index;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');
         ally=this.state.party[b.activeIndex];
         this.recordBattleParticipant();
@@ -3399,7 +3433,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         this.state.inventory.chime--;
         this.event(events,'パチカプセルを投げた！','resonate');
         if(this.rng()<this.resonanceChance()) {
-          const caught=clone(b.enemy);caught.uid=`lt-${Date.now().toString(36)}-${(++serial).toString(36)}`;caught.gender=genderOf(b.enemy);this.cureCondition(caught);if(caught.gender==='none')delete caught.gender;caught.hp=this.stats(caught).hp;
+          const caught=clone(b.enemy);caught.uid=`lt-${Date.now().toString(36)}-${(++serial).toString(36)}`;caught.gender=genderOf(b.enemy);this.cureCondition(caught);this.clearBattleEffects(caught);if(caught.gender==='none')delete caught.gender;caught.hp=this.stats(caught).hp;
           const isParty=this.state.party.length<MAX_PARTY;
           (isParty?this.state.party:this.state.storage).push(caught);this.markCaught(caught.species);
           if(caught.grantId&&!this.state.giftReceipts.includes(caught.grantId))this.state.giftReceipts.push(caught.grantId);
@@ -3458,12 +3492,29 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(move.kind==='heal') {
         const max=this.stats(attacker).hp,amount=Math.min(max-attacker.hp,Math.ceil(max*move.power/100));
         attacker.hp+=amount;b.healCooldown[side]=1;
-        this.event(events,amount>0?`${name}の「${move.name}」。体力が${amount}回復した。`:`${name}の「${move.name}」。体力が満ちているので効果がなかった。`,'heal',{side,element:move.element,moveId:move.id});return;
+        if(move.effect==='fullHealRecharge')attacker.rechargeTurns=1;
+        const text=amount>0?`${name}の「${move.name}」。体力が${amount}回復した。`:`${name}の「${move.name}」。体力は満タンだった。`;
+        this.event(events,text+(move.effect==='fullHealRecharge'?' 反動で次の1ターンは動けない。':''),'heal',{side,element:move.element,moveId:move.id,amount,effect:move.effect});return;
       }
       b.healCooldown[side]=0;
       const atk=this.battleStats(attacker),def=this.battleStats(defender);
       const hitChance=Math.min(100,Math.max(20,move.accuracy*atk.accuracy/Math.max(1,def.evasion)));
       if(this.rng()*100>=hitChance){this.event(events,`${name}の「${move.name}」は、すれ違った。`,'miss',{side,element:move.element,moveId:move.id});return;}
+      if(move.effect==='curse'){
+        if(clearImmuneCondition(defender)||defender.curse){this.event(events,`${name}の「${move.name}」。${displayName(defender)}には呪縛が効かなかった。`,'info',{side,moveId:move.id,element:move.element});return;}
+        const cost=Math.min(attacker.hp,Math.max(1,Math.floor(this.stats(attacker).hp/4)));
+        attacker.hp-=cost;
+        this.event(events,`${name}は体力を${cost}使い、「${move.name}」を放った！`,'recoil',{side,moveId:move.id,element:move.element,amount:cost});
+        defender.curse=true;
+        this.event(events,`${displayName(defender)}は呪縛に包まれた！ ターンの終わりに最大体力の1/4を失う。`,'status',{side:opp,status:'curse',moveId:move.id,element:move.element});
+        if(attacker.hp<=0)this.faint(attacker,side,events);else this.heldReact(attacker,side,events);
+        return;
+      }
+      if(move.effect==='inflictScorch'){
+        if(this.inflictCondition(defender,opp,move,events,true))this.heldReact(defender,opp,events);
+        else this.event(events,`${name}の「${move.name}」。${displayName(defender)}には灯焼けが効かなかった。`,'info',{side,moveId:move.id,element:move.element});
+        return;
+      }
       const effect=this.effectiveness(move.element,D.species[defender.species].element);
       const special=(move.category || (move.element?'special':'physical'))==='special';
       const offense=special?atk.spAtk:atk.atk, defense=special?def.spDef:def.def;
@@ -3504,11 +3555,20 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     // ── Conditions and held-item reactions ─────────────────────────────────
     cureCondition(mon){delete mon.status;delete mon.statusTurns;}
+    clearBattleEffects(mon){if(mon){delete mon.curse;delete mon.rechargeTurns;}}
+    rechargeBlocks(mon,side,events){
+      if(!(mon.rechargeTurns>0))return false;
+      delete mon.rechargeTurns;
+      this.event(events,`${displayName(mon)}は「零への回帰」の反動で、このターンは動けない。`,'recharge',{side,element:'void'});return true;
+    }
     faint(mon,side,events){
-      this.cureCondition(mon);this.resetBattleStages(side);
+      this.cureCondition(mon);this.clearBattleEffects(mon);this.resetBattleStages(side);
       this.event(events,`${displayName(mon)}は戦闘不能になった。`,'faint',{side,element:D.species[mon.species]?.element});
     }
     conditionBlocks(mon,side,events){
+      const immune=clearImmuneCondition(mon);
+      if(this.rechargeBlocks(mon,side,events))return true;
+      if(immune)return false;
       const kind=mon.status,name=displayName(mon);if(!kind||!STATUS[kind])return false;
       if(kind==='crystal'){
         if((mon.statusTurns||0)>0){mon.statusTurns--;this.event(events,`${name}は結晶に包まれて動けない。`,'status',{side,status:kind,blocked:true});return true;}
@@ -3521,16 +3581,18 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(kind==='dizzy'&&this.rng()<.25){this.event(events,`${name}は目が回って動けない！`,'status',{side,status:kind,blocked:true});return true;}
       return false;
     }
-    inflictCondition(mon,side,move,events){
+    inflictCondition(mon,side,move,events,force=false){
+      if(clearImmuneCondition(mon))return false;
       const kind=STATUS_BY_ELEMENT[move?.element],info=STATUS[kind];
       if(!info||mon.status||mon.hp<=0||D.species[mon.species]?.element===info.element)return false;
       const ward=holds(mon,'ward');if(ward&&ward.params.status===kind)return false;
-      if(this.rng()>=info.chance)return false;
+      if(!force&&this.rng()>=info.chance)return false;
       mon.status=kind;if(kind==='crystal')mon.statusTurns=1+Math.floor(this.rng()*3);
       this.event(events,`${displayName(mon)}は${info.inflict}`,'status',{side,status:kind});
       return true;
     }
     heldReact(mon,side,events){
+      clearImmuneCondition(mon);
       const item=heldOf(mon);if(!item||mon.hp<=0)return;
       const max=this.stats(mon).hp,name=displayName(mon);
       if(item.kind==='cureberry'&&mon.status&&(item.params.status==='any'||item.params.status===mon.status)){
@@ -3550,6 +3612,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     endOfTurn(events){
       const b=this.battle;if(!b||b.result)return;
       for(const [side,mon] of [['ally',this.state.party[b.activeIndex]],['enemy',b.enemy]]){
+        clearImmuneCondition(mon);
         if(!mon||mon.hp<=0)continue;
         const max=this.stats(mon).hp,name=displayName(mon);
         if(mon.status==='bloom'||mon.status==='scorch'){
@@ -3560,6 +3623,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         // Every turn shows each condition once: when it stops a move, when it lands, or here.
         else if(STATUS[mon.status]&&!events.some(e=>e.kind==='status'&&e.side===side&&e.status===mon.status))
           this.event(events,`${name}は${STATUS[mon.status].ongoing}`,'status',{side,status:mon.status,ongoing:true});
+        if(mon.curse){
+          const dmg=Math.min(mon.hp,Math.max(1,Math.floor(max/4)));mon.hp-=dmg;
+          this.event(events,`${name}は呪縛で${dmg}のダメージを受けた。`,'statusTick',{side,status:'curse',amount:dmg});
+          if(mon.hp<=0){this.faint(mon,side,events);continue;}
+        }
         const regen=holds(mon,'regen');
         if(regen&&mon.hp<max){const amount=Math.min(max-mon.hp,Math.max(1,Math.floor(max*regen.params.fraction)));mon.hp+=amount;this.event(events,`${name}は${regen.name}で体力が${amount}回復した。`,'item',{side,item:regen.id});}
         this.heldReact(mon,side,events);
@@ -3598,6 +3666,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     giveXP(mon, amount, events) {
       if(!Number.isFinite(amount) || amount<=0)return;
+      clearImmuneCondition(mon);
       const evolveReady=()=>{
         const visited=new Set();
         let data=D.species[mon.species];
@@ -3607,6 +3676,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           visited.add(data.id);
           const before=data.name,oldHP=mon.hp,oldMax=this.stats(mon).hp;
           mon.species=data.evolvesTo;
+          clearImmuneCondition(mon);
           mon.hp=oldHP>0?Math.max(1,Math.min(this.stats(mon).hp,oldHP+this.stats(mon).hp-oldMax)):0;
           this.syncPP(mon);
           this.markCaught(mon.species);this.state.stats.evolutions++;
@@ -3636,6 +3706,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     endBattle(result,events) {
       const b=this.battle;if(b.result)return;b.result=result;
       delete b.pendingReplacement;
+      for(const mon of [...this.state.party,...(b.enemyTeam||[]),b.enemy]){this.clearBattleEffects(mon);clearImmuneCondition(mon);}
       for(const mon of this.state.party)if(mon.status&&!STATUS[mon.status]?.persistent)this.cureCondition(mon);
       this.resetBattleStages();
       if(result==='won' || result==='caught') {
@@ -3723,6 +3794,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!finiteInt(index,0,this.state.party.length-1))return fail('使う相手を選んでください。');
       if(this.state.inventory[itemId]<=0)return fail(`${D.items[itemId].name}がありません。`);
       const mon=this.state.party[index];
+      clearImmuneCondition(mon);
       if(itemId==='remedy')return mon.hp<=0?fail('倒れたパチモンには使えません。'):mon.status?{ok:true}:fail('そのパチモンは状態異常ではありません。');
       if(itemId==='tonic' && mon.hp>0)return fail('夜明けの雫は、倒れたモンスターに使います。');
       if(itemId==='salve' && mon.hp<=0)return fail('倒れたモンスターには、夜明けの雫を使ってください。');
@@ -4007,6 +4079,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     serialize() {
       const state=clone(this.state);
+      for(const mon of [...state.party,...state.storage]){clearImmuneCondition(mon);this.clearBattleEffects(mon);}
       // A save never traps the party mid-turn. Resume at this area's entrance, fully rested.
       if(this.battle && !this.battle.result){const spawn=D.maps[state.map].spawn;state.x=spawn.x;state.y=spawn.y;state.party.forEach(m=>this.restoreMonster(m));}
       return state;
@@ -4063,7 +4136,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         const pp={},legacy=legacyFutoRecord(mon),current=this.moves(mon);
         if(mon.pp!==undefined && (!mon.pp || typeof mon.pp!=='object' || Array.isArray(mon.pp)))error('技のPPが正しくありません。');
         // Saves from before the 96-move rework hold the old four moves: carry their PP over slot by slot.
-        const oldSet=!legacy&&mon.pp&&!current.every(move=>Object.hasOwn(mon.pp,move.id))?D.legacyMovesets?.[mon.species]:null;
+        const oldSet=!legacy&&mon.pp&&!current.every(move=>Object.hasOwn(mon.pp,move.id))?(D.nullLegacyMovesets?.[mon.species]||D.legacyMovesets?.[mon.species]):null;
         const fromOld=oldSet&&oldSet.length===current.length&&oldSet.every(([id])=>Object.hasOwn(mon.pp,id))?oldSet:null;
         for(const [i,move]of current.entries()) {
           const previousId=legacy?LEGACY_FUTO_MOVES[i]:fromOld?fromOld[i][0]:move.id,previousMax=legacy?this.maxPP(D.moves[previousId]):fromOld?fromOld[i][1]:this.maxPP(move);
@@ -4071,7 +4144,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           pp[move.id]=mon.pp===undefined?this.maxPP(move):fromOld?scalePP(mon.pp[previousId],previousMax,this.maxPP(move)):Math.min(mon.pp[previousId],this.maxPP(move));
         }
         if(legacy)special.customMoves=D.species.futo.moves.slice();
-        if(typeof mon.status==='string'&&STATUS[mon.status]?.persistent&&mon.hp>0)special.status=mon.status;
+        if(!isConditionImmune(mon)&&typeof mon.status==='string'&&STATUS[mon.status]?.persistent&&mon.hp>0)special.status=mon.status;
         if(mon.heldItem!==undefined){if(typeof mon.heldItem!=='string'||!HELD[mon.heldItem])error('持ち物の情報が正しくありません。');special.heldItem=mon.heldItem;}
         if((mon.gender==='male'||mon.gender==='female')&&!(D.genderless||[]).includes(mon.species))special.gender=mon.gender;
         if(Number.isSafeInteger(mon.bonusPoints)&&mon.bonusPoints>0&&mon.bonusPoints<=999)special.bonusPoints=mon.bonusPoints;
@@ -4157,7 +4230,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   LT.PlayerIdentity=Object.freeze({normalizeName:normalizePlayerName,countName:countNickname,onlineName:playerOnlineName,defaultName:DEFAULT_PLAYER_NAME,maxLength:MAX_PLAYER_NAME});
   LT.displayName=displayName;
   LT.genderOf=genderOf;
-  LT.ConditionRules=Object.freeze({statuses:STATUS,byElement:STATUS_BY_ELEMENT,held:HELD,allocation:ALLOC});
+  LT.ConditionRules=Object.freeze({statuses:STATUS,byElement:STATUS_BY_ELEMENT,held:HELD,allocation:ALLOC,isImmune:isConditionImmune,clearImmune:clearImmuneCondition,list:conditionList,volatile:D.volatileConditions||{}});
   LT.normalizeFutoMoves=futoMoves;
   LT.BattleStages=BattleStages;
   LT.migrateMoveIds=migrateMoveIds;
@@ -5875,6 +5948,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if(condition==='scorch'){this.drum(null,'snare',now,.07);play([62,61,57],'lead',.06,.13,.09);return;}
         if(condition==='dizzy'){play([79,76,79,76,79],'flute',.07,.14,.09);return;}
         if(condition==='crystal'){play([88,95,91],'bell',.06,.36,.11);return;}
+        if(condition==='curse'){play([55,61,54,49],'bell',.08,.34,.12);play([43,42],'bass',.13,.3,.08);return;}
       }
       play([76],'mallet',.05,.12,.09);
     }
@@ -6525,8 +6599,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const species = DATA.species[mon.species], max = engine.stats(mon).hp;
       const gender=LT.genderOf?.(mon);
       $(prefix+'-name').textContent = (mon.shiny?'✦ ':'')+nameOf(mon)+(gender==='male'?' ♂':gender==='female'?' ♀':'');
-      const chip=$(prefix+'-status'),condition=(DATA.statuses||{})[mon.status];
-      if(chip){chip.hidden=!condition;chip.textContent=condition?condition.name:'';chip.dataset.status=condition?.id||'';chip.style.setProperty('--status-color',condition?.color||'transparent');chip.title=condition?.description||'';}
+      const chip=$(prefix+'-status'),conditions=visibleConditions(mon),condition=conditions[0];
+      if(chip){chip.hidden=!conditions.length;chip.textContent=conditions.map(c=>c.name).join('・');chip.dataset.status=condition?.id||'';chip.style.setProperty('--status-color',condition?.color||'transparent');chip.title=conditions.map(c=>c.description).join(' ');}
       $(prefix+'-name').title = mon.nickname ? species.name : '';
       $(prefix+'-name').classList.toggle('is-shiny',!!mon.shiny);
       $(prefix+'-level').textContent = `Lv.${mon.level}`;
@@ -6557,9 +6631,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
     const restricted=!!(b.guardian || b.rival || b.towerFloor || b.elite || b.champion);
     if (view === 'moves') {
-      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : m.kind==='boost' ? '自分の能力を強化' : `${m.category==='special'?'特殊':'物理'} · <span class="nb">威力 ${m.power}</span> · <span class="nb">命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%</span>`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
+      box.innerHTML = engine.moveDetails(mon).map((m,i) => `<button class="move-btn" data-move="${i}" ${m.pp===0 ? 'disabled' : ''} style="--type-color:${DATA.elements[m.element]?.color || '#738d87'}"><span>${escape(m.name)} ${typeBadge(m.element)}</span><strong class="move-pp">PP ${m.pp} / ${m.maxPP}</strong><small class="move-meta">${m.kind==='heal' ? '自分を回復' : m.kind==='guard' ? '被ダメージを軽減' : m.kind==='boost' ? '自分の能力を強化' : m.category==='status' ? '相手の状態を変化' : `${m.category==='special'?'特殊':'物理'} · <span class="nb">威力 ${m.power}</span> · <span class="nb">命中 ${Math.round(m.accuracy <= 1 ? m.accuracy*100 : m.accuracy)}%</span>`}</small></button>`).join('')+(engine.canStruggle(mon)?'<button class="btn btn-primary" data-battle="struggle">踏ん張り打ち<small>PPがないときの攻撃。反動を受けます。</small></button>':'')+'<button class="btn btn-quiet battle-back" data-battle="back">← 戻る</button>';
     } else if (view === 'switch') {
-      box.innerHTML = engine.state.party.map((m,i) => `<button class="btn" data-switch="${i}" ${i===b.activeIndex || m.hp===0 ? 'disabled' : ''}>${escape(nameOf(m))} <small>Lv.${m.level} · 体力 ${m.hp}${(DATA.statuses||{})[m.status]?' · '+DATA.statuses[m.status].name:''}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
+      box.innerHTML = engine.state.party.map((m,i) => `<button class="btn" data-switch="${i}" ${i===b.activeIndex || m.hp===0 ? 'disabled' : ''}>${escape(nameOf(m))} <small>Lv.${m.level} · 体力 ${m.hp}${visibleConditions(m).length?' · '+visibleConditions(m).map(c=>c.name).join('・'):''}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
     } else if (view === 'items') {
       const storageFull=engine.state.party.length>=(DATA.limits?.party||6)&&engine.state.storage.length>=(DATA.limits?.storage||192);
       box.innerHTML = `<button class="btn" data-battle="resonate" ${restricted || engine.state.inventory.chime===0 || storageFull ? 'disabled' : ''}><span class="btn-line">${ico('resonate')} ${escape(DATA.items.chime.name)} ×${engine.state.inventory.chime}</span><small>${restricted?'調律士のパチモンには使えません':storageFull?`仲間とひかえが満員です（ひかえ${DATA.limits?.storage||192}体まで）`:`つかまえる · 成功率 ${Math.round(engine.resonanceChance()*100)}%`}</small></button>`+['salve','tonic','remedy'].map(id => `<button class="btn" data-battle-item="${id}" ${engine.state.inventory[id] < 1 ? 'disabled' : ''}>${escape(DATA.items[id].name)} ×${engine.state.inventory[id]}<small>${escape(DATA.items[id].description)}</small></button>`).join('') + '<button class="btn btn-quiet" data-battle="back">← 戻る</button>';
@@ -6570,6 +6644,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         `<button class="btn" data-battle="items">${ico('bag')} バッグ</button><button class="btn" data-battle="switch">${ico('switch')} パチモン</button>`+
         `<button class="btn btn-quiet" data-battle="flee" ${restricted ? 'disabled' : ''}>${ico('flee')} にげる</button>`;
     }
+    if(mon.rechargeTurns>0)box.innerHTML='<p class="battle-item-target">反動でこのターンは動けません。技を選ぶと休みます（PP消費なし）。</p>'+box.innerHTML;
     box.querySelectorAll('button').forEach(btn => { if(busy) btn.disabled = true; });
     for(const btn of box.querySelectorAll(':scope>.btn:not(.move-btn)'))if(!btn.querySelector(':scope>small'))btn.classList.add('fit-line');
     refitBattleText();
@@ -6691,7 +6766,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(index===b.activeIndex){if(replacement&&!b.pendingReplacement.allyRequired)chooseBattleReplacement(index);return;}
     const outgoing=engine.state.party[b.activeIndex],choice={engine,battle:b,index,uid:mon.uid,activeIndex:b.activeIndex,turn:b.turn,pending:b.pendingReplacement};
     battleSwitchConfirmation=choice;
-    const card=(m,label)=>`<div class="battle-switch-member"><small>${label}</small>${portrait(m,88)}<strong>${escape(nameOf(m))}</strong><span>Lv.${m.level} · 体力 ${m.hp} / ${engine.stats(m).hp}</span>${(DATA.statuses||{})[m.status]?`<span>${escape(DATA.statuses[m.status].name)}</span>`:''}</div>`;
+    const card=(m,label)=>`<div class="battle-switch-member"><small>${label}</small>${portrait(m,88)}<strong>${escape(nameOf(m))}</strong><span>Lv.${m.level} · 体力 ${m.hp} / ${engine.stats(m).hp}</span>${conditionChip(m)}</div>`;
     openModal('このパチモンに交代しますか？',`<div class="battle-switch-preview">${card(outgoing,'いま出ている仲間')}<span class="battle-switch-arrow" aria-hidden="true">→</span>${card(mon,'次に出す仲間')}</div><p class="notice">${replacement?'この交代ではターンを消費しません。':'交代で1ターンを使います。相手もこのターンに行動します。'}</p><div class="modal-actions battle-switch-actions"><button type="button" id="battle-switch-cancel" class="btn">選び直す</button><button type="button" id="battle-switch-confirm" class="btn btn-primary">交代する</button></div>`,'battle-switch-confirm');
     $('battle-switch-cancel').onclick=closeModal;
     $('battle-switch-confirm').onclick=()=>{
@@ -6888,7 +6963,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   const HELD_ITEMS=DATA.heldItems||{};
   function genderMark(mon){const g=LT.genderOf?.(mon);return g==='male'?'<span class="gender-mark male" aria-label="オス">♂</span>':g==='female'?'<span class="gender-mark female" aria-label="メス">♀</span>':'';}
-  function conditionChip(mon){const c=(DATA.statuses||{})[mon?.status];return c?`<span class="status-chip" data-status="${c.id}" style="--status-color:${c.color}" title="${escape(c.description)}">${escape(c.name)}</span>`:'';}
+  function visibleConditions(mon){
+    const list=LT.ConditionRules?.list?.(mon)||[(DATA.statuses||{})[mon?.status]].filter(Boolean);
+    return mon?.hp>0&&mon.rechargeTurns>0?[...list,{id:'recharge',name:'反動休み',color:'#82769d',description:'技の反動で次のターンは動けない。状態異常ではない。'}]:list;
+  }
+  function conditionChip(mon){return visibleConditions(mon).map(c=>`<span class="status-chip" data-status="${c.id}" style="--status-color:${c.color}" title="${escape(c.description)}">${escape(c.name)}</span>`).join('');}
   function heldChip(mon){const h=(DATA.heldItems||{})[mon?.heldItem];return h?`<span class="held-chip" title="${escape(h.description)}">${escape(h.name)}</span>`:'';}
   function showHeldPicker(index){
     const mon=engine.state.party[index];if(!mon)return;
@@ -8058,6 +8137,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   // Held items and conditions follow the adventure's rules. Items that only act
   // outside battle (experience, coins, encounters, evolution, training) do nothing here.
   const HELD = D.heldItems || {}, STATUS = D.statuses || {}, STATUS_BY_ELEMENT = D.statusByElement || {};
+  const clearImmuneCondition = LT.ConditionRules.clearImmune;
   const BATTLE_ITEM_KINDS = Object.freeze(['boost', 'shield', 'ward', 'cureberry', 'pinchheal', 'regen', 'stat', 'pinchstage', 'crit', 'endure', 'orb', 'drain', 'thorns', 'quick', 'ppsaver', 'guardplus']);
   const heldOf = mon => (mon && own(HELD, mon.item || '') && HELD[mon.item]) || null;
   const holds = (mon, kind) => { const item = heldOf(mon); return item && item.kind === kind ? item : null; };
@@ -8067,7 +8147,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const ALLOC = D.allocation || { pointsPerLevel: 2, capPerStat: 64, keys: ['hp', 'atk', 'def', 'spAtk', 'spDef', 'speed'], hpPerPoint: 2 };
   const ALLOC_KEYS = Object.freeze([...ALLOC.keys]);
   const RULES = Object.freeze({ version: 8, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
-    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
+    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn-void-immune-v41', nullMoves: 'full-heal-then-one-recharge-turn-quarter-hp-curse-stacks-clears-on-switch-faint-end-forced-scorch-v41', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
     allocation: Object.freeze({ budget: ALLOC.capPerStat * ALLOC_KEYS.length, cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'selected-owned-individual-full-allocation' }) });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
@@ -8168,9 +8248,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false }; }),
           active: Array.from({ length: slots }, (_, slot) => slot) })), winner: null, reason: null, log: [], events: [] };
     }
-    snapshot() { return clone(this.state); }
-    fingerprint() { return checksum(this.state); }
+    _clearImmuneConditions() { for(const team of this.state.teams)for(const mon of team.monsters)clearImmuneCondition(mon); }
+    snapshot() { this._clearImmuneConditions();return clone(this.state); }
+    fingerprint() { this._clearImmuneConditions();return checksum(this.state); }
     effectiveStats(mon) {
+      clearImmuneCondition(mon);
       const out = STAGES.apply(mon.stats, mon.stages), item = holds(mon, 'stat');
       if (item) out[item.params.stat] = Math.max(1, Math.floor(out[item.params.stat] * item.params.mul));
       if (mon.status === 'dizzy') out.speed = Math.max(1, Math.floor(out.speed / 2));
@@ -8258,6 +8340,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     }
     _event(text, kind = 'info', data = {}) {
+      this._clearImmuneConditions();
       this.state.events.push({ text, kind, ...data, visual: {teams:clone(this.state.teams)} }); this.state.log.push(text);
       if (this.state.log.length > 80) this.state.log.shift();
     }
@@ -8265,12 +8348,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     resolve(allOrders) {
       if (!Array.isArray(allOrders) || allOrders.length !== 2) throw new Error('両プレイヤーの行動が必要です。');
       for (let side = 0; side < 2; side++) { const result = this.validate(side, allOrders[side]); if (!result.ok) throw new Error(result.error); }
+      this._clearImmuneConditions();
       if(this.state.phase==='replacement'){
         this.state.events=[];this._event('次に出す仲間が決まった。','replacement');
         allOrders.forEach((orders,side)=>orders.slice().sort((a,b)=>a.slot-b.slot).forEach(order=>{
           const team=this.state.teams[side],previous=team.monsters[team.active[order.slot]];
-          previous.guard=false;this.resetStages(previous);team.active[order.slot]=order.index;
-          const next=team.monsters[order.index];next.guard=false;this.resetStages(next);
+          previous.guard=false;this.resetStages(previous);this._clearVolatile(previous);team.active[order.slot]=order.index;
+          const next=team.monsters[order.index];next.guard=false;this.resetStages(next);this._clearVolatile(next);
           this._event(`${this._name(side,next)}が、仲間の想いをつないだ。`,'switch',{side,slot:order.slot,index:order.index,forced:true});
         }));
         this.state.phase='action';this.state.round++;return this.snapshot();
@@ -8279,7 +8363,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const actions = allOrders.flatMap((orders, side) => orders.slice().sort((a, b) => a.slot - b.slot).map(order => {
         const actor = this.state.teams[side].active[order.slot], mon = this.state.teams[side].monsters[actor];
         const move = order.type === 'move' ? this.moves(mon)[order.move] : order.type === 'struggle' ? STRUGGLE : null;
-        const claw = move && move.kind !== 'guard' ? holds(mon, 'quick') : null;
+        const claw = mon.rechargeTurns > 0 ? null : move && move.kind !== 'guard' ? holds(mon, 'quick') : null;
         return { ...order, target: move && move.kind !== 'attack' ? order.slot : order.target, side, actor, technique: move, speed: this.effectiveStats(mon).speed,
           priority: order.type === 'switch' ? 3 : move?.kind === 'guard' ? 2 : 1, quick: !!claw && this._random() < claw.params.chance, tie: this._random() };
       }));
@@ -8289,8 +8373,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       for (const action of actions) {
         const team = this.state.teams[action.side], mon = team.monsters[action.actor];
         if (mon.hp <= 0 || team.active[action.slot] !== action.actor) continue;
+        if (this._recharge(action.side, action.slot, mon)) continue;
         if (action.type === 'switch') {
-          mon.guard = false; this.resetStages(mon); team.active[action.slot] = action.index; team.monsters[action.index].guard = false; this.resetStages(team.monsters[action.index]);
+          mon.guard = false; this.resetStages(mon); this._clearVolatile(mon); team.active[action.slot] = action.index; team.monsters[action.index].guard = false; this.resetStages(team.monsters[action.index]); this._clearVolatile(team.monsters[action.index]);
           this._event(`${this._name(action.side, team.monsters[action.index])}が登場。`, 'switch', { side: action.side, slot: action.slot, index: action.index });
         } else this._apply(action, mon);
       }
@@ -8306,6 +8391,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     _apply(action, mon) {
       const move = action.technique, side = action.side, slot = action.slot, enemy = this.state.teams[1 - side];
+      if (this._recharge(side, slot, mon)) return;
       if (action.quick) { const claw = holds(mon, 'quick'); if (claw) this._event(`${this._name(side, mon)}は${claw.name}で素早く動いた！`, 'item', { side, slot, item: claw.id }); }
       if (this._blocked(side, slot, mon)) return;
       let targetSlot = action.target, target = enemy.monsters[enemy.active[targetSlot]];
@@ -8325,7 +8411,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
       if (move.kind === 'heal') {
         const amount = Math.min(mon.maxHp - mon.hp, Math.ceil(mon.maxHp * move.power / 100)); mon.hp += amount;
-        this._event(`${name}の「${move.name}」。${amount > 0 ? `体力が${amount}回復した。` : '体力は満タンだった。'}`, 'heal', { ...meta, amount }); return;
+        const recharge = move.effect === 'fullHealRecharge';
+        if (recharge) mon.rechargeTurns = 1;
+        this._event(`${name}の「${move.name}」。${amount > 0 ? `体力が${amount}回復した。` : '体力は満タンだった。'}${recharge ? ' 次のターンは反動で動けない。' : ''}`, 'heal', { ...meta, amount, ...(recharge ? { recharge: true } : {}) }); return;
       }
       if (move.kind === 'boost' && ['allStats','allStatsGuard'].includes(move.effect)) {
         mon.stages ||= STAGES.empty();
@@ -8338,6 +8426,25 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const actorStats = this.effectiveStats(mon), targetStats = this.effectiveStats(target);
       const hitChance = Math.min(100, Math.max(20, move.accuracy * actorStats.accuracy / Math.max(1, targetStats.evasion)));
       if (this._random() * 100 >= hitChance) { this._event(`${name}の「${move.name}」は外れた。`, 'miss', { ...meta, target: targetSlot }); return; }
+      // These techniques inflict a condition without dealing attack damage or
+      // consuming the target's guard. Their own HP cost is paid only on success.
+      if (move.effect === 'curse') {
+        if (clearImmuneCondition(target) || target.curse) {
+          this._event(`${name}の「${move.name}」。${this._name(1 - side, target)}には呪縛が効かなかった。`, 'info', { ...meta, target: targetSlot, failed: true }); return;
+        }
+        const amount = Math.min(mon.hp, Math.max(1, Math.floor(mon.maxHp / 4))); mon.hp -= amount;
+        this._event(`${name}は体力を${amount}削って、虚無の呪縛を放った。`, 'recoil', { ...meta, amount, effect: 'curse' });
+        target.curse = true;
+        this._event(`${this._name(1 - side, target)}は虚無の呪縛にとらわれた！`, 'status', { side: 1 - side, slot: targetSlot, status: 'curse', move: move.id, element: move.element });
+        if (mon.hp === 0) this._faint(side, slot, mon);
+        else this._react(side, slot, mon);
+        return;
+      }
+      if (move.effect === 'inflictScorch') {
+        if (this._inflict(1 - side, targetSlot, target, move, true)) this._react(1 - side, targetSlot, target);
+        else this._event(`${name}の「${move.name}」。${this._name(1 - side, target)}には灯焼けが効かなかった。`, 'info', { ...meta, target: targetSlot, failed: true });
+        return;
+      }
       const special = (move.category || (move.element ? 'special' : 'physical')) === 'special';
       const offense = special ? actorStats.spAtk : actorStats.atk, defense = special ? targetStats.spDef : targetStats.def;
       const effect = effectiveness(move.element, D.species[target.species].element), same = move.element && move.element === D.species[mon.species].element ? 1.15 : 1;
@@ -8377,8 +8484,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     // ── Conditions and held-item reactions (the adventure's rules, on the duel's seeded random numbers).
     _cure(mon) { delete mon.status; delete mon.statusTurns; }
-    _faint(side, slot, mon) { this._cure(mon); this.resetStages(mon); this._event(`${this._name(side, mon)}は戦闘不能。`, 'faint', { side, slot }); }
+    _clearVolatile(mon) { delete mon.curse; delete mon.rechargeTurns; }
+    _recharge(side, slot, mon) {
+      if (!(mon.rechargeTurns > 0)) return false;
+      mon.rechargeTurns--; if (mon.rechargeTurns <= 0) delete mon.rechargeTurns;
+      this._event(`${this._name(side, mon)}は全回復の反動で動けない。`, 'recharge', { side, slot, blocked: true, recharge: true });
+      return true;
+    }
+    _faint(side, slot, mon) { this._cure(mon); this._clearVolatile(mon); this.resetStages(mon); this._event(`${this._name(side, mon)}は戦闘不能。`, 'faint', { side, slot }); }
     _blocked(side, slot, mon) {
+      if(clearImmuneCondition(mon))return false;
       const kind = mon.status, name = this._name(side, mon);
       if (!kind || !own(STATUS, kind)) return false;
       if (kind === 'crystal') {
@@ -8392,16 +8507,18 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       if (kind === 'dizzy' && this._random() < .25) { this._event(`${name}は目が回って動けない！`, 'status', { side, slot, status: kind, blocked: true }); return true; }
       return false;
     }
-    _inflict(side, slot, mon, move) {
+    _inflict(side, slot, mon, move, force = false) {
+      if(clearImmuneCondition(mon))return false;
       const kind = STATUS_BY_ELEMENT[move?.element], info = STATUS[kind];
       if (!info || mon.status || mon.hp <= 0 || D.species[mon.species]?.element === info.element) return false;
       const ward = holds(mon, 'ward'); if (ward && ward.params.status === kind) return false;
-      if (this._random() >= info.chance) return false;
+      if (!force && this._random() >= info.chance) return false;
       mon.status = kind; if (kind === 'crystal') mon.statusTurns = 1 + Math.floor(this._random() * 3);
       this._event(`${this._name(side, mon)}は${info.inflict}`, 'status', { side, slot, status: kind });
       return true;
     }
     _react(side, slot, mon) {
+      clearImmuneCondition(mon);
       const item = heldOf(mon); if (!item || mon.hp <= 0) return;
       const name = this._name(side, mon), max = mon.maxHp;
       if (item.kind === 'cureberry' && mon.status && (item.params.status === 'any' || item.params.status === mon.status)) {
@@ -8419,7 +8536,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     _endOfTurn() {
       this.state.teams.forEach((team, side) => team.active.forEach((index, slot) => {
-        const mon = team.monsters[index]; if (mon.hp <= 0) return;
+        const mon = team.monsters[index];clearImmuneCondition(mon);if (mon.hp <= 0) return;
         const name = this._name(side, mon);
         if (mon.status === 'bloom' || mon.status === 'scorch') {
           const amount = Math.min(mon.hp, Math.max(1, Math.floor(mon.maxHp / (mon.status === 'bloom' ? 8 : 16)))); mon.hp -= amount;
@@ -8429,6 +8546,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         // Every turn shows each condition once: when it stops a move, when it lands, or here.
         else if (own(STATUS, mon.status) && !this.state.events.some(e => e.kind === 'status' && e.side === side && (e.slot || 0) === slot && e.status === mon.status))
           this._event(`${name}は${STATUS[mon.status].ongoing}`, 'status', { side, slot, status: mon.status, ongoing: true });
+        if (mon.curse) {
+          const amount = Math.min(mon.hp, Math.max(1, Math.floor(mon.maxHp / 4))); mon.hp -= amount;
+          this._event(`${name}は虚無の呪縛で${amount}ダメージ。`, 'statusTick', { side, slot, status: 'curse', amount });
+          if (mon.hp === 0) { this._faint(side, slot, mon); return; }
+        }
         const regen = holds(mon, 'regen');
         if (regen && mon.hp < mon.maxHp) { const amount = Math.min(mon.maxHp - mon.hp, Math.max(1, Math.floor(mon.maxHp * regen.params.fraction))); mon.hp += amount; this._event(`${name}は${regen.name}で体力が${amount}回復した。`, 'item', { side, slot, item: regen.id, amount }); }
         this._react(side, slot, mon);
@@ -8443,6 +8565,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     _finish(winner, reason) {
       this.state.winner = winner; this.state.reason = reason;
+      for (const team of this.state.teams) for (const mon of team.monsters) this._clearVolatile(mon);
       if (reason === 'turn-limit') this._event('100ターン終了。全メンバーの残り体力の割合の合計で判定。', 'limit');
       this._event(winner === 'draw' ? '引き分け！' : `${this.state.teams[winner].name}の勝利！`, 'result', { winner });
     }
@@ -8882,10 +9005,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>手持ち・ひかえから · Lv.50 · 振り分けと持ち物を反映 · 同じ種類・同じ持ち物は1つまで</span></div>${enough?`<div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((uid,i)=>{const mon=byUid.get(uid)?.mon,used=new Set(selected.slice(0,count).filter((other,j)=>j!==i).map(other=>byUid.get(other)?.mon.species));return `<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(mon.species,100,mon)}<label><span class="sr-only">チーム ${i+1} のパチモン</span><select id="link-member-${i}" data-link-member="${i}" ${locked?'disabled':''}>${members.map(({mon:option,where})=>`<option value="${esc(option.uid)}" ${option.uid===uid?'selected':''} ${used.has(option.species)?'disabled':''}>${esc(memberLabel(option))} Lv.${option.level} · ${where}${used.has(option.species)?'（同じ種類を編成中）':''}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(mon.species).element].name)}タイプ</span><label class="link-item-field">持ち物<select id="link-item-${i}" data-link-item="${i}" ${locked?'disabled':''}>${itemOptions(i,count)}</select></label>${itemNote(i)}${allocBadge(mon)}</article>`;}).join('')}</div>`:`<p class="link-empty-team">対戦には、種類の違うパチモンが${count}体必要です（いま編成できるのは${kinds}種類）。冒険で仲間を増やしてから参加してください。${mode==='double'?'シングルは3体で遊べます。':''}</p>`}<div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked||!enough?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
       <details class="link-rules"><summary>ルールと接続について</summary><p>チームは、冒険の手持ち・ひかえにいるパチモンから選びます。選んだ個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使い、レベルは50にそろえます。アルヴェリオン・キラシード・フートも、持っていればほかのパチモンと同じ基準の能力と種族の技で戦えます（フートは冒険の能力を運営が決めるため、対戦では振り分け98ptを均等に使います）。基礎能力だけをLv.50にそろえ、ソロで割り振ったポイントは、鍛錬による追加分も含めて減らさずすべて反映します（1能力64まで、体力は1ポイントで+2）。未使用のポイントは加算されません。</p><p><strong>持ち物</strong>は、冒険で持っているもの（かばんの中、または仲間が持っているもの）から1体に1つ選べます。同じ持ち物は1つのチームに1つまでです。効果は冒険と同じで、実を食べるなどして使った持ち物も、冒険の持ち物は減りません。経験値・コイン・出会い・進化・鍛錬の持ち物は対戦では働きません。状態異常（花毒・水封・灯焼け・目眩・結晶化）も冒険と同じルールで起こり、対戦の中だけで治ります。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。かばんの道具・捕獲は使えません。100ターンで残り体力の割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>ローカル対戦は、同じWi-Fi（またはスマホのテザリング）につないだ2台の端末を、お互いの画面のQRコード（またはコードの貼り付け）で直接つなぎます。インターネットや外部サービスとは通信せず、オフラインでも遊べます。カメラは読み取りのときだけ使い、映像は保存・送信しません。</p><p>インターネット対戦では、部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
   }
+  function linkConditions(mon){
+    const list=LT.ConditionRules?.list?.(mon)||[D.statuses?.[mon?.status]].filter(Boolean);
+    return mon?.hp>0&&mon.rechargeTurns>0?[...list,{id:'recharge',name:'反動休み',color:'#82769d'}]:list;
+  }
   function hp(mon){return `<div class="link-hp-track"><span style="width:${Math.max(0,mon.hp/mon.maxHp*100)}%" class="${mon.hp/mon.maxHp<.25?'low':''}"></span></div><small>体力 ${mon.hp} / ${mon.maxHp}</small>`;}
   function commandOptions(duel,team,slot){
     const mon=team.monsters[team.active[slot]],current=orders.find(o=>o.slot===slot),value=current?.type==='switch'?'s'+current.index:current?.type==='struggle'?'struggle':'m'+(current?.move??0);
-    const options=duel.moves(mon).map((m,i)=>`<option value="m${i}" ${value==='m'+i?'selected':''} ${m.pp<=0?'disabled':''}>${esc(m.name)} · PP ${m.pp}/${m.maxPP}</option>`).join('');
+    const options=duel.moves(mon).map((m,i)=>`<option value="m${i}" ${value==='m'+i?'selected':''} ${m.pp<=0?'disabled':''}>${esc(m.name)}${m.category==='status'?'（変化）':''} · PP ${m.pp}/${m.maxPP}</option>`).join('');
     const fallback=duel.canStruggle(mon)?`<option value="struggle" ${value==='struggle'?'selected':''}>踏ん張り打ち · 反動あり</option>`:'';
     return options+fallback+team.monsters.map((m,i)=>!team.active.includes(i)&&m.hp>0?`<option value="s${i}" ${value==='s'+i?'selected':''}>交代 → ${esc(monLabel(m))} (${m.hp}/${m.maxHp})</option>`:'').join('');
   }
@@ -8935,7 +9062,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     switchConfirmation=null;await submitOrders(choice.orders);
   }
   function switchConfirmationMarkup(team,replacing){
-    const card=(mon,heading)=>`<div class="battle-switch-member"><small>${heading}</small>${portrait(mon.species,80,mon)}<strong>${esc(monLabel(mon))}</strong><span>Lv.${mon.level} · 体力 ${mon.hp} / ${mon.maxHp}</span>${mon.status&&D.statuses?.[mon.status]?`<span>${esc(D.statuses[mon.status].name)}</span>`:''}</div>`;
+    const card=(mon,heading)=>`<div class="battle-switch-member"><small>${heading}</small>${portrait(mon.species,80,mon)}<strong>${esc(monLabel(mon))}</strong><span>Lv.${mon.level} · 体力 ${mon.hp} / ${mon.maxHp}</span>${linkConditions(mon).map(c=>`<span>${esc(c.name)}</span>`).join('')}</div>`;
     const rows=switchConfirmation.orders.map(order=>{
       const outgoing=team.monsters[team.active[order.slot]];
       if(order.type==='switch')return `<div class="link-switch-row"><p>自分 ${order.slot+1} の交代</p><div class="battle-switch-preview">${card(outgoing,'いま出ている仲間')}<span class="battle-switch-arrow" aria-hidden="true">→</span>${card(team.monsters[order.index],'次に出す仲間')}</div></div>`;
@@ -8955,7 +9082,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     const shown=LT.BattleVFX?.onlineView?.(b,performance.now())||b;
     const outcome=finished?(b.winner==='draw'?'引き分け':b.winner===side?'あなたの勝利！':'対戦終了 · 相手の勝利'):interrupted?'通信対戦を中断しました':b.winner!==null?'最終結果を確認中…':`TURN ${b.turn} · ${modeName()}`;
     const teamStatus=t=>t.monsters.map(m=>`<span class="link-stock ${m.hp<=0?'fainted':''}" title="${esc(monLabel(m))} ${m.hp>0?'戦闘可能':'戦闘不能'}"></span>`).join('');
-    const condition=m=>m.status&&D.statuses?.[m.status]?`<span class="link-condition" style="--c:${esc(D.statuses[m.status].color)}">${esc(D.statuses[m.status].name)}</span>`:'';
+    const condition=m=>linkConditions(m).map(c=>`<span class="link-condition" style="--c:${esc(c.color)}">${esc(c.name)}</span>`).join('');
     const held=m=>m.item&&D.heldItems?.[m.item]?`<span class="link-held">持ち物：${esc(D.heldItems[m.item].name)}</span>`:'';
     const combatant=(t,which)=>`<div class="link-combatants ${which}">${t.active.map((index,slot)=>{const m=t.monsters[index];return `<article class="link-combatant ${m.hp<=0?'fainted':''}"><span>${which==='foe'?'相手':'自分'} ${slot+1} · Lv.${m.level}</span><b>${esc(monLabel(m))}</b>${hp(m)}<div>${condition(m)}${held(m)}</div></article>`;}).join('')}</div>`;
     // Messages of the turn appear as their beat plays, not all at once.
@@ -8964,7 +9091,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     lastShown=progress?.shown??-1;
     body.innerHTML=`<div class="link-match-title"><div><span class="link-kicker">${esc(room)} / FRIEND MATCH</span><h3>${outcome}</h3></div><div class="link-versus"><span>${esc(me.name)}<small>${teamStatus(me)}</small></span><b>VS</b><span>${esc(enemy.name)}<small>${teamStatus(enemy)}</small></span></div></div>
       <div class="link-battle-layout"><section class="link-arena" aria-label="オンライン対戦の場">${combatant(shown.teams[1-side],'foe')}<canvas id="link-battle-canvas" width="1536" height="720" aria-label="${modeName()}、双方${mode==='double'?'2':'1'}体のモンスター"></canvas>${combatant(shown.teams[side],'ally')}</section>
-      <section class="link-command-panel"><h4>${finished||interrupted?'バトルレコード':playbackLocked?'エフェクトを再生中…':replacing?'次に出す仲間を選択':'それぞれの行動を選択'}</h4>${finished||interrupted?'':replacing?replacementChoices(me,editable):me.active.map((index,slot)=>{const m=me.monsters[index];if(m.hp<=0)return '';const order=orders.find(o=>o.slot===slot),selfTarget=order?.type==='move'&&session.duel.moves(m)[order.move]?.kind!=='attack';return `<div class="link-command-card"><div class="link-command-name">${portrait(m.species,46,m)}<b>${slot+1}. ${esc(monLabel(m))}</b></div><label>行動<select id="link-action-${slot}" data-link-action="${slot}" ${editable?'':'disabled'}>${commandOptions(session.duel,me,slot)}</select></label><label>対象<select id="link-target-${slot}" data-link-target="${slot}" ${!editable||order?.type==='switch'||selfTarget?'disabled':''}>${selfTarget?'<option>自分自身</option>':enemy.active.map((i,j)=>`<option value="${j}" ${order?.target===j?'selected':''} ${enemy.monsters[i].hp<=0?'disabled':''}>相手 ${j+1}：${esc(monLabel(enemy.monsters[i]))}</option>`).join('')}</select></label></div>`;}).join('')}
+      <section class="link-command-panel"><h4>${finished||interrupted?'バトルレコード':playbackLocked?'エフェクトを再生中…':replacing?'次に出す仲間を選択':'それぞれの行動を選択'}</h4>${finished||interrupted?'':replacing?replacementChoices(me,editable):me.active.map((index,slot)=>{const m=me.monsters[index];if(m.hp<=0)return '';const order=orders.find(o=>o.slot===slot),selfTarget=order?.type==='move'&&session.duel.moves(m)[order.move]?.kind!=='attack';return `<div class="link-command-card"><div class="link-command-name">${portrait(m.species,46,m)}<b>${slot+1}. ${esc(monLabel(m))}</b></div>${m.rechargeTurns>0?'<p class="link-small">反動でこのターンは休みます（技・交代なし、PP消費なし）。</p>':''}<label>行動<select id="link-action-${slot}" data-link-action="${slot}" ${editable?'':'disabled'}>${commandOptions(session.duel,me,slot)}</select></label><label>対象<select id="link-target-${slot}" data-link-target="${slot}" ${!editable||order?.type==='switch'||selfTarget?'disabled':''}>${selfTarget?'<option>自分自身</option>':enemy.active.map((i,j)=>`<option value="${j}" ${order?.target===j?'selected':''} ${enemy.monsters[i].hp<=0?'disabled':''}>相手 ${j+1}：${esc(monLabel(enemy.monsters[i]))}</option>`).join('')}</select></label></div>`;}).join('')}
       ${finished||interrupted?`<p class="link-result-note">${interrupted?'この対戦の勝敗は記録されません。':'対戦ありがとうございました。冒険のセーブはそのままです。'}</p><button id="link-reset" type="button" class="btn btn-primary">新しい部屋で遊ぶ</button>`:`<button id="link-submit" type="button" class="btn btn-primary" ${editable&&(!replacing||session.duel.validate(side,orders).ok)?'':'disabled'}>${playbackLocked?'エフェクトを再生中…':view.localSubmitted?'相手の確定を待っています':view.phase==='syncing'?'結果を同期中':replacing?'この仲間に交代する':'このターンを確定'}</button><p class="link-small">${view.remoteSubmitted?'相手は確定済みです。':'相手の選択は両者の確定後に公開されます。'}<br>確定後の変更はできません。</p>`}
       </section></div><section class="link-log" aria-label="対戦ログ"><h4>バトルログ</h4><div role="log" aria-live="polite">${visibleLog.slice(-10).map((line,i,all)=>`<p${progress&&i===all.length-1?' class="is-current"':''}>${esc(typeof line==='string'?line:line.text||line.message||'')}</p>`).join('')||'<p>両者の準備が整いました。最初の行動を選ぼう。</p>'}</div></section>`;
   }
@@ -9078,8 +9205,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261118-battle-growth-remix-v35"></script>
-<script src="admin-console.js?v=20261119-touch-guard-v38"></script>
+<script src="battle-vfx.js?v=20261119-null-moves-v42"></script>
+<script src="admin-console.js?v=20261119-null-moves-v42"></script>
 <script src="online-futo.js?v=20261119-void-line-v39"></script>
 <script src="secret-encounter.js?v=20261119-void-line-v39"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">

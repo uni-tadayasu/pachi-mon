@@ -16,13 +16,18 @@ assert.equal(D.elements.void.name,'無');assert.equal(D.elements.void.strongAgai
 assert.equal(D.content.totalSpecies,256);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,3);assert.equal(D.content.playableSpecies,259);
 assert.equal(D.content.species,254);assert.equal(D.content.specialSpecies,2);
 assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
-assert.equal(Object.keys(D.species).length,259);assert.equal(Object.keys(D.moves).length,96);
+assert.equal(Object.keys(D.species).length,259);assert.equal(Object.keys(D.moves).length,100);
+assert.equal(Object.values(D.moves).filter(move=>!move.hiddenDex).length,96);assert.equal(D.content.moves,96);
+const dedicated=['null_restore','null_curse','null_ray','null_scorch'];
+assert.deepEqual(copy(D.hiddenMoves),dedicated);assert.equal(D.content.hiddenMoves,4);assert.equal(D.content.totalMoves,100);
 const stats=['hp','atk','def','spAtk','spDef','speed'];
 for(const [stage,id]of ids.entries()){
   const s=D.species[id];assert.equal(s.name,names[stage]);assert.equal(s.element,'void');
   assert(s.hiddenDex&&s.glitchOnly&&s.specialOnly);assert(!s.adminOnly);assert.equal(s.atlasNumber,undefined);
   assert.equal(s.moves.length,4);assert.equal(new Set(s.moves).size,4);
-  assert(s.moves.every(mid=>D.moves[mid]?.element===null&&D.moves[mid].role==='neutral'),'Only neutral, nonexclusive techniques are learned');
+  assert.deepEqual(copy(s.moves),dedicated,'Every stage shares the same four dedicated move slots');
+  assert(s.moves.every(mid=>D.moves[mid]?.hiddenDex&&D.moves[mid].role==='hidden'),'Dedicated moves remain hidden');
+  assert.deepEqual([...s.moves].map(mid=>D.moves[mid].element),['void','void','void','ember']);
   assert(s.base.spAtk>s.base.atk);assert(stats.every(key=>Number.isInteger(s.base[key])&&s.base[key]>0));
   if(stage)assert(stats.every(key=>s.base[key]>D.species[ids[stage-1]].base[key]),'All six base stats grow with evolution');
   assert(Object.values(D.maps).every(map=>!map.encounters.includes(id)),'No ordinary wild encounter');
@@ -60,4 +65,4 @@ const old=new Engine();old.newGame('komori');assert.doesNotThrow(()=>new Engine(
 const delayed=e.makeMonster('nullmie',100);delayed.heldItem='everpebble';e.state.storage.push(delayed);
 e.giveXP(delayed,1,[]);assert.equal(delayed.species,'nullmie');
 delete delayed.heldItem;e.giveXP(delayed,1,[]);assert.equal(delayed.species,'zeroveil');assert.equal(delayed.level,100);assert.equal(delayed.xp,0);
-console.log(JSON.stringify({ok:true,hiddenSpecies:ids,dexSpecies:256,playableSpecies:259,moves:96,evolutionLevels:[24,48],coverage:'void metadata, neutral moves, no ordinary acquisition, no exchange, evolution identity and PP, allocation, save round-trip, everstone and level cap'}));
+console.log(JSON.stringify({ok:true,hiddenSpecies:ids,dexSpecies:256,playableSpecies:259,publicMoves:96,hiddenMoves:4,totalMoves:100,evolutionLevels:[24,48],coverage:'void metadata, fixed hidden moves, no ordinary acquisition, no exchange, evolution identity and PP, allocation, save round-trip, everstone and level cap'}));

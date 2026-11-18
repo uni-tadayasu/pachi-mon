@@ -66,8 +66,9 @@ test('the new 無 type and every stage are registered without changing the five-
   for(const [type,id]of Object.entries(REPRESENTATIVES))assert.equal(D.species[id].element,type);
   for(const id of ['nullmie','nullva','zeroveil']){
     const species=D.species[id];assert.equal(species.element,'void');assert(species.hiddenDex&&species.glitchOnly);
-    assert.equal(species.moves.length,4);
-    for(const id of species.moves)assert.equal(D.moves[id].element,null,'the lineage learns only neutral moves');
+    assert.deepEqual([...species.moves],['null_restore','null_curse','null_ray','null_scorch'],'all stages keep the same four dedicated slots');
+    assert.deepEqual([...species.moves].map(id=>D.moves[id].element),['void','void','void','ember']);
+    for(const id of species.moves)assert(D.moves[id].hiddenDex&&D.moves[id].role==='hidden','dedicated techniques stay outside the public move catalog');
   }
   const engine=new Engine();
   for(const attack of [null,...TYPES])for(const defense of TYPES){
