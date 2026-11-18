@@ -214,8 +214,8 @@
    "bytes": 978966
   },
   {
-   "url": "assets/floravelle.png?v=20261118-elephant",
-   "bytes": 41003
+   "url": "assets/floravelle.png?v=20261118-elephant-hd",
+   "bytes": 101668
   },
   {
    "url": "assets/futo-back-v2.png",
@@ -254,6 +254,6 @@
   "assets/traveller-hero.webp",
   "assets/traveller-npcs.webp"
  ],
- "totalBytes": 44604295,
+ "totalBytes": 44664960,
  "coreBytes": 7296515
 }

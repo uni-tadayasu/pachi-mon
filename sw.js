@@ -11,6 +11,7 @@
  * v25: condition effects every turn; the new effects code version is stored on install.
  * v26: the special three join link battles and Floravelle has new art; the new
  *   code and image versions are stored on install.
+ * v27: Floravelle's art finished in high detail (a new image version).
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
