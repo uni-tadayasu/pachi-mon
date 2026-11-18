@@ -6,14 +6,22 @@ for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bs
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
 const all=Object.keys(D.species),hidden=[...D.glitchLine.ids],nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,259);
+const genderless=[...D.genderless],gendered=[...D.starters,...hidden];
+function assertCapturedGender(engine,mon,gender,enemyUID){
+ assert.notEqual(mon.uid,enemyUID,'Capture assigns a new individual ID');assert.equal(engine.genderOf(mon),gender,'The displayed encounter gender survives capture');
+ assert.equal(mon.gender,gender==='none'?undefined:gender,'Captured gender is explicit unless the species is genderless');
+}
 // The operator selector covers every species, including the three off-dex
 // stages. One capsule captures exactly the chosen form and level.
 for(const [i,id] of all.entries()){
  const e=make(),level=i%2?100:1;e.state.inventory.chime=0;
  assert(e.startAdminEncounter(id,level,owner).ok,id);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,level);
+ const enemyUID=e.battle.enemy.uid,gender=e.genderOf(e.battle.enemy);assert.equal(e.battle.enemy.gender,undefined,'Omitted gender retains automatic UID-based selection');
+ assert.equal(genderless.includes(id),gender==='none');
  assert.equal(e.resonanceChance(),1);assert.equal(e.state.inventory.chime,1);
  const result=e.action({type:'resonate'});assert(result.ok);assert.equal(e.battle.result,'caught',id);assert.equal(e.state.inventory.chime,0);
  const mon=e.state.party[1];assert.equal(mon.species,id);assert.equal(mon.level,level);
+ assertCapturedGender(e,mon,gender,enemyUID);
  const saved=e.serialize(),reloaded=new Engine(saved);assert.deepEqual(copy(reloaded.state.party[1]),copy(mon));
  assert(!JSON.stringify(saved).includes('secretEncounter'),'The permission and 100% capture flag must not persist');
  if(id==='floravelle'||id==='futo'){
@@ -42,6 +50,46 @@ for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100
  assert.deepEqual(copy(restored),copy(mon));assert.equal(restored.species,id);assert.equal(restored.level,level);assert.equal(restored.shiny,shiny);
  assert.deepEqual(copy(loaded.moves(restored).map(move=>move.id)),nullMoves);
 }
+// Explicit genders survive the new capture UID, both destinations, and reload.
+// Exercise both sexes for the ordinary starters and every off-dex stage.
+for(const id of gendered)for(const gender of ['male','female'])for(const destination of ['party','storage']){
+ const e=make();if(destination==='storage')while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',5));
+ const level=destination==='party'?1:100;
+ assert(e.startAdminEncounter(id,level,owner,{gender,shiny:true}).ok);const enemyUID=e.battle.enemy.uid;
+ assert.equal(e.battle.enemy.gender,gender);assert.equal(e.genderOf(e.battle.enemy),gender);assert.equal(e.battle.enemy.shiny,true);
+ assert(e.action({type:'resonate'}).ok);const mon=e.state[destination].at(-1);
+ assert.equal(mon.species,id);assert.equal(mon.level,level);assertCapturedGender(e,mon,gender,enemyUID);
+ const loaded=new Engine(e.serialize()),restored=loaded.state[destination].find(m=>m.uid===mon.uid);
+ assert.deepEqual(copy(restored),copy(mon));assert.equal(loaded.genderOf(restored),gender);
+}
+// Omitted, undefined and auto use the existing individual-ID gender calculation.
+// Genderless species stay genderless throughout their guaranteed capture.
+for(const id of [...gendered,...genderless])for(const options of [{},{gender:undefined},{gender:'auto'}]){
+ const e=make();assert(e.startAdminEncounter(id,1,owner,options).ok);
+ const enemy=e.battle.enemy,gender=e.genderOf(enemy);assert.equal(enemy.gender,undefined);
+ assert.equal(gender,e.genderOf({uid:enemy.uid,species:id}));assert.equal(genderless.includes(id),gender==='none');
+ assert(e.action({type:'resonate'}).ok);assertCapturedGender(e,e.state.party.at(-1),gender,enemy.uid);
+}
+// Sex is individual data: both ordinary and off-dex evolution chains retain it,
+// including a monster caught directly into the reserve and then reloaded.
+for(const id of ['komori',...hidden.filter(id=>D.species[id].evolvesTo)])for(const gender of ['male','female'])for(const destination of ['party','storage']){
+ let e=make();if(destination==='storage')while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',5));
+ assert(e.startAdminEncounter(id,1,owner,{gender}).ok);assert(e.action({type:'resonate'}).ok);e.battle=null;
+ const uid=e.state[destination].at(-1).uid;e=new Engine(e.serialize());let mon=e.state[destination].find(m=>m.uid===uid);
+ while(D.species[mon.species].evolvesTo){
+  const species=D.species[mon.species],events=[];let xp=0;for(let level=mon.level;level<species.evolveLevel;level++)xp+=e.xpToNext(level);
+  e.giveXP(mon,xp-mon.xp,events);assert.equal(mon.species,species.evolvesTo);assert.equal(mon.gender,gender);assert.equal(e.genderOf(mon),gender);assert.equal(mon.uid,uid);
+  assert(events.some(event=>event.kind==='evolve'));e=new Engine(e.serialize());mon=e.state[destination].find(m=>m.uid===uid);assert.equal(mon.gender,gender);
+ }
+}
+function rejectGender(species,gender){
+ const e=make();e.state.inventory.chime=0;const before=JSON.stringify(e.state),cooldown=e.encounterCooldown;
+ assert.equal(e.startAdminEncounter(species,70,owner,{gender,shiny:true}).ok,false,`${species}: invalid gender is rejected`);
+ assert.equal(e.battle,null);assert.equal(JSON.stringify(e.state),before,'Rejected gender does not change inventory, receipts, collection or other state');assert.equal(e.encounterCooldown,cooldown);
+}
+const invalidGenders=[null,'','none','random','MALE',0,1,NaN,true,false,[],{},['male'],new String('male')];
+for(const id of [...gendered,...genderless])for(const gender of invalidGenders)rejectGender(id,gender);
+for(const id of genderless)for(const gender of ['male','female'])rejectGender(id,gender);
 assert(!new Engine().startAdminEncounter('floravelle',70,owner).ok);
 let e=make();e.startBattle('arvelion',70);const originalBattle=e.battle;
 assert(!e.startAdminEncounter('floravelle',70,owner).ok);assert.equal(e.battle,originalBattle);
@@ -116,19 +164,34 @@ for(const species of ['floravelle',...hidden])for(const override of [{playing:fa
 }
 let b=bridge();assert(b.bridge.startSecretEncounter('floravelle',70,owner).ok);assert.equal(b.closed,1);assert.equal(b.opened,1);
 for(const species of hidden){const c=bridge();assert(c.bridge.startSecretEncounter(species,100,owner,{shiny:true}).ok);assert.equal(c.closed,1);assert.equal(c.opened,1);assert.equal(c.engine.battle.enemy.species,species);assert.equal(c.engine.battle.enemy.shiny,true);}
+for(const species of gendered)for(const gender of ['male','female']){
+ const c=bridge();assert(c.bridge.startSecretEncounter(species,70,owner,{gender,shiny:true}).ok);
+ assert.equal(c.engine.battle.enemy.gender,gender);assert.equal(c.engine.battle.enemy.shiny,true);assert.equal(c.closed,1);assert.equal(c.opened,1);
+}
+for(const [species,gender] of [['komori',null],['komori','none'],...hidden.map(id=>[id,{}]),...genderless.map(id=>[id,'female'])]){
+ const c=bridge(),before=JSON.stringify(c.engine.state);assert(!c.bridge.startSecretEncounter(species,70,owner,{gender}).ok);
+ assert.equal(c.engine.battle,null);assert.equal(JSON.stringify(c.engine.state),before);assert.equal(c.closed,0);assert.equal(c.opened,0);
+}
 // Minimal DOM harness exercises real seven-tap and submit handlers, including
 // fresh server authorization for every open and every encounter request.
 const source=fs.readFileSync(path.join(root,'secret-encounter.js'),'utf8');
 function ui(){
  const state={now:10000,click:null,dialog:null,authCalls:0,startCalls:[],messages:[],admin:true,playing:true};
- function element(tag){return {tag,children:[],value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
+ function element(tag){return {tag,children:[],get options(){return this.children;},value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
  const document={body:{append(node){state.dialog=node;}},addEventListener(name,fn){if(name==='click')state.click=fn;},querySelectorAll(){return state.dialog?.open?[state.dialog]:[];},createElement(tag){const node=element(tag);if(tag==='dialog'){
-  const fields={'#secret-species':element('select'),'#secret-level':element('input'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
+  const fields={'#secret-species':element('select'),'#secret-level':element('input'),'#secret-gender':element('select'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
+  // Read the new select's options from the real markup, so the harness cannot
+  // conceal a missing control or incorrect values/labels in the UI source.
+  Object.defineProperty(node,'innerHTML',{set(markup){
+   const select=markup.match(/<select\b[^>]*\bid="secret-gender"[^>]*>([\s\S]*?)<\/select>/);assert(select,'Gender selector exists in the dialog markup');
+   for(const option of select[1].matchAll(/<option\b[^>]*\bvalue="([^"]*)"[^>]*>([^<]*)<\/option>/g)){const child=element('option');child.value=option[1];child.textContent=option[2];fields['#secret-gender'].append(child);}
+  }});
  }return node;}};
  const LT={DATA:D,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
  vm.runInNewContext(source,{LT,document,Date:{now:()=>state.now},console});
  state.tap=()=>state.click({target:{closest:selector=>selector==='#pachi-console-title'?{}:null}});
  state.submit=()=>state.dialog.querySelector('#secret-form').onsubmit({preventDefault(){}});
+ state.selectSpecies=id=>{const select=state.dialog.querySelector('#secret-species');select.value=id;assert.equal(typeof select.onchange,'function');select.onchange();};
  return state;
 }
 async function main(){
@@ -136,14 +199,30 @@ async function main(){
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
  u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,259);
  const choices=u.dialog.querySelector('#secret-species').children;assert.deepEqual(choices.map(option=>option.value).sort(),all.slice().sort());
+ let genderSelect=u.dialog.querySelector('#secret-gender');assert.deepEqual(genderSelect.options.map(option=>[option.value,option.textContent]),[['auto','おまかせ'],['male','オス ♂'],['female','メス ♀']]);assert.equal(genderSelect.value,'auto');assert.equal(genderSelect.disabled,false);
  for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');}
- u.dialog.querySelector('#secret-species').value='floravelle';await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],'floravelle');assert.equal(u.startCalls[0][1],70);assert(!u.dialog.open);
+ u.selectSpecies('floravelle');assert.equal(genderSelect.disabled,true);assert.equal(genderSelect.options[0].textContent,'性別なし');await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.deepEqual(copy(u.startCalls[0]),['floravelle',70,owner,{shiny:false,gender:'auto'}]);assert(!u.dialog.open);
  u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,3);assert(!u.dialog.open);assert.equal(u.startCalls.length,1,'Reopening rechecks permissions instead of reusing the earlier authorization');
  for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100]){
   u=ui();for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);
-  u.dialog.querySelector('#secret-species').value=id;u.dialog.querySelector('#secret-level').value=String(level);u.dialog.querySelector('#secret-shiny').checked=shiny;
-  await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.deepEqual(copy(u.startCalls[0]),[id,level,owner,{shiny}]);assert(!u.dialog.open);
+  u.selectSpecies(id);u.dialog.querySelector('#secret-level').value=String(level);u.dialog.querySelector('#secret-shiny').checked=shiny;
+  await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.deepEqual(copy(u.startCalls[0]),[id,level,owner,{shiny,gender:'auto'}]);assert(!u.dialog.open);
  }
+ for(const id of ['komori',...hidden])for(const gender of ['male','female']){
+  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.selectSpecies(id);u.dialog.querySelector('#secret-gender').value=gender;u.dialog.querySelector('#secret-shiny').checked=true;
+  await u.submit();assert.equal(u.authCalls,2);assert.deepEqual(copy(u.startCalls[0]),[id,70,owner,{shiny:true,gender}]);assert(!u.dialog.open);
+ }
+ u=ui();for(let n=0;n<7;n++)u.tap();await settle();genderSelect=u.dialog.querySelector('#secret-gender');
+ for(const id of genderless){
+  genderSelect.value='female';u.selectSpecies(id);assert.equal(genderSelect.value,'auto');assert.equal(genderSelect.disabled,true);assert.equal(genderSelect.options[0].textContent,'性別なし');
+  genderSelect.value='male';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);assert(u.dialog.querySelector('#secret-status').textContent.includes('性別'));assert(u.dialog.open);
+  u.selectSpecies('nullmie');assert.equal(genderSelect.disabled,false);assert.equal(genderSelect.options[0].textContent,'おまかせ');
+ }
+ // Reopening synchronizes even if the selected species changed while closed.
+ u.selectSpecies('futo');u.dialog.querySelector('[data-secret-close]').onclick();u.dialog.querySelector('#secret-species').value='komori';
+ for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,2);assert(u.dialog.open);assert.equal(genderSelect.disabled,false);assert.equal(genderSelect.options[0].textContent,'おまかせ');
+ assert.equal(genderSelect.value,'auto');
+ for(const gender of ['','none','unknown']){genderSelect.value=gender;await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,0);assert(u.dialog.open);assert(u.dialog.querySelector('#secret-status').textContent.includes('性別'));}
  u=ui();u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);assert(u.messages.some(m=>m.includes('運営専用')));
  for(const authOwner of [null,{}, {id:owner.id,isAdmin:1},{id:'invalid',isAdmin:true}]){
   u=ui();u.authOwner=authOwner;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,1);assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);
@@ -151,11 +230,11 @@ async function main(){
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.admin=false;await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,0);assert(u.dialog.open);
  assert(u.dialog.querySelector('#secret-status').textContent.includes('運営専用'));
  for(const id of hidden){
-  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-species').value=id;u.admin=false;
+  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.selectSpecies(id);u.dialog.querySelector('#secret-gender').value='female';u.admin=false;
   await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,0);assert(u.dialog.open);assert(u.dialog.querySelector('#secret-status').textContent.includes('運営専用'));
  }
  u=ui();for(let n=0;n<6;n++)u.tap();u.now+=2501;u.tap();await settle();assert.equal(u.authCalls,0);
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-level').value='101';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 259 species capture/save; 3 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; owner/input/battle/capacity guards, private permit, special receipts, hidden Futo growth across sync/reload and legacy gift updates, normal odds restored, bridge identity checks, seven-tap UI, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
+ console.log('Secret encounter checks passed: all 259 species capture/save; 3 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; male/female and automatic gender through capture UID changes, both destinations, reload and evolution; genderless/input rejection without side effects; owner/battle/capacity guards, private permit, special receipts, hidden Futo sync/reload and legacy gifts, normal odds restored, bridge identity/gender forwarding, seven-tap UI, gender switching/reopening/validation, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
