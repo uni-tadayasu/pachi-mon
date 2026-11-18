@@ -38,7 +38,7 @@ html.mobile-screen{height:100%;min-height:0;overflow:hidden;overscroll-behavior:
 .mobile-screen .battle-actions{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;gap:5px;padding:5px}
 .mobile-screen .battle-actions>.btn,.mobile-screen .battle-actions>button:not(.move-btn){flex:1 0 43%;min-height:44px;padding:5px;font-size:11px}
 .mobile-screen .battle-actions .move-btn{flex:1 0 43%;min-height:52px;padding:5px;gap:2px}.mobile-screen .move-btn>span{font-size:11px}.mobile-screen .move-meta{font-size:9px;line-height:1.3}
-.mobile-screen .battle-actions .battle-back{min-height:36px!important;padding:4px!important}
+.mobile-screen .battle-actions .battle-back{min-height:44px!important;padding:4px!important}
 .mobile-screen .in-battle .touch-controls{display:none}.mobile-screen .in-battle .journal{display:none}
 .mobile-screen .combatant{width:44%;max-width:180px;padding:5px 7px;border-width:2px;box-shadow:none}.mobile-screen .enemy-card{top:7px;left:7px}.mobile-screen .ally-card{right:7px;bottom:7px}.mobile-screen .combatant-top strong{font-size:11px}.mobile-screen .combatant-type{margin:2px 0}.mobile-screen .hp-text{font-size:9px;margin:1px 0}
 .mobile-screen dialog,.mobile-screen #online-modal{position:fixed;inset:calc(env(safe-area-inset-top) + 6px) 0 auto;width:calc(100% - 12px);max-width:800px;max-height:calc(var(--app-height,100dvh) - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom));margin:0 auto;padding:0;border-width:2px;overflow:hidden;box-shadow:none}
@@ -57,7 +57,7 @@ html.mobile-screen{height:100%;min-height:0;overflow:hidden;overscroll-behavior:
 .mobile-screen .title-copy h2{font-size:16px;line-height:1.5;margin:7px 0}.mobile-screen .title-description{font-size:10px;line-height:1.5;margin-bottom:8px}
 .mobile-screen .title-buttons{gap:6px}.mobile-screen .title-start{min-height:44px;padding:7px 12px;font-size:12px}.mobile-screen .title-settings{min-height:40px;padding:5px 0;font-size:11px}
 .mobile-screen .title-status{margin-top:5px;font-size:8px;line-height:1.4}.mobile-screen .title-metrics{display:none}.mobile-screen .title-world-note,.mobile-screen .title-art-caption,.mobile-screen .title-discover{display:none}
-.mobile-screen .title-footer{flex:0 0 auto;min-height:0;padding:5px 8px;margin:0;font-size:7px}.mobile-screen .title-footer>span:first-child{display:none}.mobile-screen .title-copyright{font-size:8px!important}
+.mobile-screen .title-footer{flex:0 0 auto;min-height:0;padding:5px 8px;margin:0;font-size:7px}.mobile-screen .title-footer>span:first-child{display:none}.mobile-screen .title-copyright{font-size:9px}
 .mobile-screen .game-info{display:none}.mobile-screen .toast{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:12px;right:12px;width:auto;max-width:none;transform:none;font-size:11px;padding:9px;pointer-events:none}
 @media(max-height:650px){.mobile-screen .journal{display:none}.mobile-screen .battle-panel{max-height:55%}.mobile-screen .title-copy h2,.mobile-screen .title-description{display:none}.mobile-screen .title-english{width:155px;margin:5px 0}}
 @media(max-width:420px){

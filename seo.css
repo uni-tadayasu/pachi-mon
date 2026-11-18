@@ -64,3 +64,36 @@ tbody th{font-family:var(--pixel);font-weight:400;color:#fff;white-space:nowrap}
 /* Move tables: short headings and numbers stay on one line (the table scrolls inside its frame). */
 .moves thead th,.moves td:nth-child(-n+6){white-space:nowrap}
 .moves td:nth-child(7){min-width:14em}.moves td:nth-child(8){min-width:10em}
+
+/* High-detail pixel frames, shared with the game's full-colour windows. */
+:root{--win:linear-gradient(#b9e9ff,#b9e9ff) 5px 5px/3px 3px no-repeat,linear-gradient(#b9e9ff,#b9e9ff) calc(100% - 5px) 5px/3px 3px no-repeat,linear-gradient(180deg,#4a74ec 0 3px,#3d63d8 3px 12%,#375dce 12% 24%,#3155c3 24% 36%,#2d4db6 36% 48%,#2845a6 48% 60%,#243d96 60% 72%,#203588 72% 84%,#1b2e79 84% calc(100% - 3px),#111b53 calc(100% - 3px))}
+.window{box-shadow:inset 0 0 0 1px #111a4b,inset 0 0 0 2px #92a8ee,inset 0 0 0 3px #18275e,inset 0 -5px 0 rgba(7,13,48,.25)}
+.site-head nav a,.button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-shadow:inset 1px 1px 0 #a6c7ff,inset -1px -1px 0 #132459,inset 0 -5px 0 rgba(8,14,60,.5)}
+.site-head nav a.play,.button{box-shadow:inset 1px 1px 0 #fffbe9,inset -1px -1px 0 #955316,inset 0 3px 0 #fff0ab,inset 0 -5px 0 #d58c22}
+.dex-grid a,.evo a,.sprite{box-shadow:inset 1px 1px 0 rgba(180,207,255,.32),inset -1px -2px 0 rgba(4,10,45,.56)}
+.bar span{background-image:repeating-linear-gradient(90deg,transparent 0 7px,rgba(0,0,0,.2) 7px 8px)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:-6px}
+.skip-link{position:fixed;top:8px;left:8px;z-index:30;padding:10px 16px;background:var(--gold);color:var(--ink);font-family:var(--pixel);transform:translateY(-150%)}
+.skip-link:focus{transform:none}
+.site-head,.wrap,.window,.dex-hero,.dex-hero>div,.dex-grid>li{min-width:0}
+.window{overflow-wrap:anywhere}
+.dex-hero>div{min-width:min(240px,100%)}
+.crumbs,.pager{overflow-wrap:anywhere}
+.jump a,.pager a{display:inline-flex;align-items:center;min-height:44px}
+.table-wrap{max-width:100%;overscroll-behavior-x:contain}
+html{scroll-padding-top:150px}
+@media(max-width:420px){
+  .site-head{position:relative;gap:10px;padding:12px}
+  .site-head nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:6px}
+  .site-head nav a{font-size:12px;padding:8px 6px}
+  .window{padding:16px 12px}
+  .dex-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dex-grid strong{font-size:13px;overflow-wrap:anywhere;text-align:center}
+  .dex-hero{justify-content:center}
+  .facts th{width:6.2em;white-space:normal}
+  .stats th,.stats td{padding-left:6px;padding-right:6px}
+  .stats td{width:3.3em}
+  .cta .button{width:100%;padding:12px;font-size:15px;line-height:1.6}
+  .pager{display:grid;grid-template-columns:1fr;gap:4px}
+  html{scroll-padding-top:16px}
+}

@@ -19,6 +19,8 @@
  *   Kiraseed pixel art; updated script, stylesheet and image URLs refresh together.
  * v32: registered-owner key privacy, confirmed release, native pixel detail,
  *   and lazy elemental effect art; versioned clients and styles refresh together.
+ * v33: newly drawn travellers and environments, arranged score, full-color
+ *   default, detailed responsive UI and the 192-slot reserve update together.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

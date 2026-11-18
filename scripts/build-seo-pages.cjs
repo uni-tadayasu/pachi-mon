@@ -86,12 +86,13 @@ function page({ depth, canonical, title, description, body, jsonld = [], image =
 <link rel="icon" type="image/svg+xml" href="${up}assets/favicon-pixel.svg">
 <link rel="apple-touch-icon" href="${up}assets/apple-touch-pixel.png">
 ${fontLinks}
-<link rel="stylesheet" href="${up}seo.css?v=20261117-moves">
+<link rel="stylesheet" href="${up}seo.css?v=20261118-world-audio-ui-v33">
 ${jsonld.map(data => `<script type="application/ld+json">${JSON.stringify(data)}</script>`).join('\n')}
 </head>
 <body>
+<a class="skip-link" href="#main-content">本文へ進む</a>
 <header class="site-head"><a class="logo" href="${up}">パチモン<small>Pachi Monsters</small></a><nav aria-label="サイト内"><a href="${up}monsters/">パチモン図鑑</a><a href="${up}moves/">技一覧</a><a href="${up}guide/">攻略ガイド</a><a class="play" href="${up}">無料で遊ぶ ▶</a></nav></header>
-<main class="wrap">
+<main class="wrap" id="main-content">
 ${body}
 </main>
 <footer class="site-foot"><p><a href="${up}">パチモン｜無料のドット絵モンスター育成RPG</a> ・ <a href="${up}monsters/">図鑑</a> ・ <a href="${up}moves/">技一覧</a> ・ <a href="${up}guide/">攻略ガイド</a> ・ <a href="${up}LICENSES.txt">ライセンス</a></p><p>© 2026 KASAI SOLUTIONS INC. 本ページの内容はゲーム内データから生成しています。</p></footer>
@@ -114,7 +115,7 @@ for (const [index, id] of ids.entries()) {
   const strong = el?.strongAgainst ? D.elements[el.strongAgainst].name : '', weakTo = Object.entries(D.elements).filter(([, e]) => e.strongAgainst === s.element).map(([, e]) => e.name);
   const evoText = s.evolvesTo ? `Lv.${s.evolveLevel}で${D.species[s.evolvesTo].name}に進化` : preOf[id] ? `${D.species[preOf[id].from].name}からLv.${preOf[id].level}で進化` : '進化しない';
   const description = `${s.name}（No.${number}）は${typeName(s.element)}のパチモン。${s.description}`.slice(0, 118) + ' 能力値・覚える技・進化・入手方法を掲載。';
-  const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../${dexSprite(cid)}" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
+  const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../${dexSprite(cid)}" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy" decoding="async"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
   const prev = ids[index - 1], next = ids[index + 1];
   const body = `${crumbNav([['トップ', '../'], ['パチモン図鑑', './'], [s.name, '']], 1)}
 <article class="window">
@@ -136,7 +137,7 @@ for (const [index, id] of ids.entries()) {
   </tbody></table>
   <h2>Lv.50の能力値</h2>
   <table class="stats"><tbody>${STAT_ORDER.map(key => `<tr><th>${esc(D.statLabels[key])}</th><td>${stats[key]}</td><td class="bar"><span style="width:${Math.min(100, Math.round(stats[key] / statMax[key] * 100))}%"></span></td></tr>`).join('')}</tbody></table>
-  <p class="note">冒険中の能力値はレベルに応じて上がります。オンライン対戦の通常レンタルはLv.50で統一されます。</p>
+  <p class="note">上の数値は、振り分けポイントと持ち物の補正を含まないLv.50の基礎能力です。冒険中の能力値はレベルに応じて上がります。通信対戦は基礎能力をLv.50にそろえ、選んだ個体の振り分けポイントはすべて加算します。</p>
   <h2>覚える技</h2>
   <div class="table-wrap"><table class="moves"><thead><tr><th>技</th><th>タイプ</th><th>分類</th><th>威力</th><th>命中</th><th>PP</th><th>効果</th></tr></thead><tbody>${moves.map(m => `<tr><th><a href="../moves/#${esc(m.id)}">${esc(m.name)}</a></th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${m.kind === 'attack' ? m.power : '—'}</td><td>${m.kind === 'attack' ? Math.round(m.accuracy) : '—'}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td></tr>`).join('')}</tbody></table></div>
   ${chainHtml}
@@ -160,7 +161,7 @@ const indexBody = `${crumbNav([['トップ', '../'], ['パチモン図鑑', '']]
 ${groups.map(([el, list]) => `<section class="window" id="${el}">
   <h2>${esc(typeName(el))}のパチモン（${list.length}種）</h2>
   <p>${esc(typeName(el))}は${D.elements[el].strongAgainst ? `${esc(D.elements[el].name)}の技が${esc(D.elements[D.elements[el].strongAgainst].name)}タイプに強い` : ''}タイプです。</p>
-  <ul class="dex-grid">${list.map(id => `<li><a href="${id}.html"><img src="../${dexSprite(id)}" width="96" height="96" alt="${esc(D.species[id].name)}" loading="lazy"><span class="dex-no">No.${pad(no(id))}</span><strong>${esc(D.species[id].name)}</strong></a></li>`).join('')}</ul>
+  <ul class="dex-grid">${list.map(id => `<li><a href="${id}.html"><img src="../${dexSprite(id)}" width="96" height="96" alt="${esc(D.species[id].name)}" loading="lazy" decoding="async"><span class="dex-no">No.${pad(no(id))}</span><strong>${esc(D.species[id].name)}</strong></a></li>`).join('')}</ul>
 </section>`).join('\n')}
 <p class="cta"><a class="button" href="../">冒険をはじめる — 無料で遊ぶ ▶</a></p>`;
 fs.writeFileSync(path.join(ROOT, 'monsters', 'index.html'), page({ depth: 1, canonical: `${SITE}/monsters/`, title: `パチモン図鑑 全${ids.length}種一覧｜タイプ・進化・技｜パチモン`, description: `パチモン全${ids.length}種の図鑑一覧。芽・潮・灯・風・晶の5タイプ別に、各パチモンの能力値・覚える技・進化・入手方法を掲載しています。`, body: indexBody,
@@ -196,7 +197,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>パチモンのタイプは芽・潮・灯・風・晶の5種類です。有利な相手には1.5倍、不利な相手には0.7倍、同じタイプ同士には0.8倍のダメージになります。</p>
   <div class="table-wrap"><table><thead><tr><th>攻撃する技のタイプ</th><th>強い相手（1.5倍）</th><th>この技に強い相手</th></tr></thead><tbody>${typeRows}</tbody></table></div>
   <h2 id="catch">パチモンの捕まえ方</h2>
-  <p>草むらを歩くと野生のパチモンが現れます。体力を減らしてから「バッグ」の「パチカプセル」を使うと捕まえやすくなります。パチカプセルは道具店で買え、勝利後に拾えることもあります。調律士（トレーナー）のパチモンは捕まえられません。仲間は6体まで連れて歩け、残りは「ひかえ」に預けられます。</p>
+  <p>草むらを歩くと野生のパチモンが現れます。体力を減らしてから「バッグ」の「パチカプセル」を使うと捕まえやすくなります。パチカプセルは道具店で買え、勝利後に拾えることもあります。調律士（トレーナー）のパチモンは捕まえられません。仲間は${D.limits.party}体まで連れて歩け、ひかえには最大${D.limits.storage}体を預けられます。手持ち・ひかえが両方とも満員のときは、新しい仲間を迎える前に空きを作ってください。旧バージョンの記録が${D.limits.storage}体を超えていても、保存済みの仲間は保持されます。追加を止めた状態で入れ替えや見送りができ、空きができると新しい仲間を迎えられます。</p>
   <h2 id="evolve">進化と育成</h2>
   <p>バトルの経験値はパーティー全員で分け合います。レベルの上限は100です。多くのパチモンはLv.8・12・16・22・24・32などで進化し、進化前の特徴を受け継いだ新しい姿になります。各パチモンの進化レベルは<a href="../monsters/">パチモン図鑑</a>で確認できます。</p>
   <h2 id="rare">伝説・幻・色違い</h2>
@@ -229,9 +230,9 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <h2 id="moves">技（全${Object.keys(D.moves).length}種）とエフェクト</h2>
   <p>技は5タイプ×15種、無属性6種、特別な技15種の全${Object.keys(D.moves).length}種です。各タイプには、物理・特殊の弱い技から大技、捨て身の技（反動あり）、相手の体力を吸う技、守りを貫く技、回復、守りまでそろっています。攻撃技はタイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
   <h2 id="offline">オフラインで遊ぶ</h2>
-  <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像（約46MB）もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
+  <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
   <h2 id="settings">便利な設定</h2>
-  <ul><li><strong>画面モード</strong>：高精細ドット（原画カラー）が標準です。携帯機風の240ドット表示、16ビット風、4階調の液晶（若葉・セピア・月夜・モノクロ）にも変更できます。本体の「液晶」ボタンでも切り替えられます。</li><li><strong>文字と演出の速さ</strong>：ゆっくり・ふつう・はやい・瞬間の4段階。演出中はA・Enterで早送りできます。</li><li><strong>常にダッシュ</strong>：移動を常に早足にします。</li><li><strong>灯渡り</strong>：ワールドマップから、一度訪れた地域へすぐに移動できます。</li></ul>
+  <ul><li><strong>画面モード</strong>：フルカラー（高精細ドット）が初期設定です。ブラウン管風の走査線も最初はOFFです。携帯機風の240ドット表示、16ビット風、4階調の液晶（若葉・セピア・月夜・モノクロ）にも変更できます。本体の「液晶」ボタンでも切り替えられます。</li><li><strong>文字と演出の速さ</strong>：ゆっくり・ふつう・はやい・瞬間の4段階。演出中はA・Enterで早送りできます。</li><li><strong>常にダッシュ</strong>：移動を常に早足にします。</li><li><strong>灯渡り</strong>：ワールドマップから、一度訪れた地域へすぐに移動できます。</li></ul>
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'guide'), { recursive: true });

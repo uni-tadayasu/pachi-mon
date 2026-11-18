@@ -57,6 +57,69 @@ test('all 64 original themes have finite, distinct complete arrangements in both
     assert.equal(signatures.size,64);
   }
 });
+test('action arrangements retain their melodic themes and individual lead instruments',()=>{
+  const themes=[
+    ['battle','pulse25',[64,62,64,69,67,64]],
+    ['rival','guitarlead',[64,64,67,71,69,67]],
+    ['guardian','horn',[62,69,74,72,69]],
+    ['champion','horn',[57,69,67,65,64]]
+  ];
+  for(const quality of ['high','low'])for(const [id,kind,expected] of themes){
+    const {audio}=make(quality),{events,track}=scoreEvents(audio,id),barSeconds=240/track.bpm;
+    const melody=events.filter(e=>!e.drum&&e.kind===kind&&e.time<.065+barSeconds).map(e=>e.midi);
+    assert.deepEqual(melody,expected,`${id}/${quality}: the opening tune must survive orchestration`);
+  }
+});
+test('battle rhythm sections combine independent drums and moving bass in both quality modes',()=>{
+  for(const quality of ['high','low'])for(const id of ['battle','rival','guardian','champion']){
+    const {audio}=make(quality),{events,track}=scoreEvents(audio,id),unit=30/track.bpm;
+    const firstBar=events.filter(e=>e.time<.065+unit*8-.0001);
+    assert(firstBar.filter(e=>e.kind==='wavebass').length>=7,`${id}/${quality}: bass must drive the bar`);
+    for(const step of [0,2,6]){
+      const hits=firstBar.filter(e=>e.drum&&Math.abs(e.time-(.065+step*unit))<.001).map(e=>e.kind);
+      assert(hits.includes(step===0?'kick':'snare'),`${id}/${quality}: independent backbeat`);
+      assert(hits.includes('hat'),`${id}/${quality}: cymbal and backbeat strike together`);
+    }
+  }
+});
+test('the quiet bridge, section fills and final return produce musical contrast',()=>{
+  for(const quality of ['high','low']){
+    const {audio}=make(quality),{events,track}=scoreEvents(audio,'champion'),barSeconds=240/track.bpm;
+    const bars=(start,end)=>events.filter(e=>e.time>=.065+start*barSeconds-.0001&&e.time<.065+end*barSeconds-.0001);
+    const chorus=bars(16,24),bridge=bars(32,40),finale=bars(48,56);
+    assert(bridge.filter(e=>e.drum).length<chorus.filter(e=>e.drum).length*.6,'bridge needs space before the return');
+    assert(!bridge.some(e=>e.kind==='wavebass'),'bridge releases the continuous bass ostinato');
+    assert(finale.filter(e=>e.kind==='wavebass').length>40,'the driving bass returns in the finale');
+    assert(finale.some(e=>e.kind==='brass'),'climax adds brass');
+    const fill=bars(7,8);
+    assert(fill.some(e=>e.kind==='tomHigh')&&fill.some(e=>e.kind==='tomLow'),'section fill descends through two toms');
+    const arrival=finale.filter(e=>Math.abs(e.time-(.065+48*barSeconds))<.001&&e.drum).map(e=>e.kind);
+    assert(arrival.includes('kick')&&arrival.includes('cymbal'),'the finale arrives as a combined band accent');
+  }
+});
+test('rest scenes remain spacious while village and harbor gain acoustic accompaniment',()=>{
+  for(const id of ['inn','night','healing']){
+    const {audio}=make(),{events}=scoreEvents(audio,id);
+    assert(!events.some(e=>e.drum),'resting scenes retain silence in the drum part');
+    assert(!events.some(e=>e.kind==='powerguitar'||e.kind==='wavebass'),'resting scenes retain their soft ensemble');
+  }
+  for(const id of ['village','harbor']){
+    const {audio}=make(),{events}=scoreEvents(audio,id);
+    assert(events.filter(e=>e.kind==='guitar').length>50,`${id}: audible acoustic accompaniment`);
+  }
+});
+test('repeated scene updates preserve song position and old ensembles retire after their crossfade',()=>{
+  const {audio}=make();audio.setScene({map:'meadow'});audio.tick();
+  const first=audio.group,step=first.step,next=first.next;
+  for(let i=0;i<30;i++)audio.setScene({map:'meadow'});
+  assert.equal(audio.group,first);assert.equal(first.step,step);assert.equal(first.next,next);assert.equal(audio.groups.size,1);
+  audio.ctx.currentTime=.2;audio.setScene({map:'battle'});audio.tick();
+  const current=audio.group;assert.notEqual(current,first);assert(first.retireAt<1);assert.equal(current.retireAt,Infinity);
+  assert.equal(first.bus.gain.events.at(-1).value,0,'the old ensemble fades to silence');
+  audio.ctx.currentTime=.8;audio.tick();
+  assert.equal(audio.group,current);assert.equal(audio.groups.size,1);
+  assert(![...audio.voices].some(v=>v.group===first),'retired scene leaves no sounding notes');
+});
 test('real graph remains bounded with dense music and repeated layered move effects',()=>{
   const techniques=[
     {id:'futo_burst',kind:'attack',category:'special',element:'crystal',power:100},

@@ -1,5 +1,5 @@
 {
- "version": "2026-11-18-v32",
+ "version": "20261118-world-audio-ui-v33",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -202,20 +202,20 @@
    "bytes": 41903
   },
   {
-   "url": "assets/environment-buildings.webp",
-   "bytes": 675582
+   "url": "assets/environment-buildings-v33.png",
+   "bytes": 2775018
   },
   {
-   "url": "assets/environment-props.webp",
-   "bytes": 784996
+   "url": "assets/environment-props-v33.png",
+   "bytes": 2077621
   },
   {
-   "url": "assets/environment-terrain.webp",
-   "bytes": 664300
+   "url": "assets/environment-terrain-v33.png",
+   "bytes": 3183465
   },
   {
-   "url": "assets/environment-trees.webp",
-   "bytes": 978966
+   "url": "assets/environment-trees-v33.png",
+   "bytes": 3035115
   },
   {
    "url": "assets/floravelle.png?v=20261118-kiraseed-pixel-v31",
@@ -234,30 +234,30 @@
    "bytes": 554441
   },
   {
-   "url": "assets/traveller-female.webp",
-   "bytes": 1059028
+   "url": "assets/traveller-female-v33.png",
+   "bytes": 1645687
   },
   {
-   "url": "assets/traveller-hero.webp",
-   "bytes": 1072744
+   "url": "assets/traveller-hero-v33.png",
+   "bytes": 1674507
   },
   {
-   "url": "assets/traveller-npcs.webp",
-   "bytes": 1015426
+   "url": "assets/traveller-npcs-v33.png",
+   "bytes": 1764301
   }
  ],
  "core": [
   "assets/battle-landscapes-v7.webp",
   "assets/cover-handheld.webp",
   "assets/creatures-individual-catalog.js?v=20261117-256",
-  "assets/environment-buildings.webp",
-  "assets/environment-props.webp",
-  "assets/environment-terrain.webp",
-  "assets/environment-trees.webp",
-  "assets/traveller-female.webp",
-  "assets/traveller-hero.webp",
-  "assets/traveller-npcs.webp"
+  "assets/environment-buildings-v33.png",
+  "assets/environment-props-v33.png",
+  "assets/environment-terrain-v33.png",
+  "assets/environment-trees-v33.png",
+  "assets/traveller-female-v33.png",
+  "assets/traveller-hero-v33.png",
+  "assets/traveller-npcs-v33.png"
  ],
- "totalBytes": 48507725,
- "coreBytes": 7296515
+ "totalBytes": 58412397,
+ "coreBytes": 17201187
 }
