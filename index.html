@@ -3250,7 +3250,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!owner||owner.isAdmin!==true||!/^P[0-9a-f]{16}$/.test(owner.id||''))return fail('運営専用の裏技です。');
       if(!this.state.started||this.battle)return fail('冒険中の移動できるときに使えます。');
       if(!Object.hasOwn(D.species,species)||!finiteInt(level,1,MAX_LEVEL))return fail('種類とレベルを確認してください。');
-      if(D.species[species].glitchOnly)return fail('このパチモンは、地図にない部屋の裏技でのみ仲間になります。');
+      if(D.species[species].glitchOnly&&!D.glitchLine?.ids.includes(species))return fail('このパチモンは幻の草むらでは出現させられません。');
       if(this.state.party.length>=MAX_PARTY&&this.state.storage.length>=MAX_STORAGE)return fail('仲間とひかえに空きを作ってください。');
       if(!this.state.party.some(mon=>mon.hp>0))return fail('先に仲間を回復してください。');
       const grantId=species===D.mythical.species?'admin-mythical:'+owner.id:species==='futo'?'admin-initial:'+owner.id:null;
@@ -9208,7 +9208,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="battle-vfx.js?v=20261119-null-moves-v42"></script>
 <script src="admin-console.js?v=20261119-null-moves-v42"></script>
 <script src="online-futo.js?v=20261119-void-line-v39"></script>
-<script src="secret-encounter.js?v=20261119-void-line-v39"></script>
+<script src="secret-encounter.js?v=20261119-null-grass-v43"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261118-easy-connect-v37"></script>
