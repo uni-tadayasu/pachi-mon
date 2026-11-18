@@ -14,6 +14,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const ROOT = path.resolve(__dirname, '..');
 const SITE = 'https://www.kasai-solutions-inc.com';
 const DATE = process.env.SEO_DATE || new Date().toISOString().slice(0, 10);
+const dexSprite = id => `assets/dex/${id}.webp${id === 'floravelle' ? '?v=20261118-kiraseed-pixel-v31' : ''}`;
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const context = vm.createContext({ console });
@@ -113,12 +114,12 @@ for (const [index, id] of ids.entries()) {
   const strong = el?.strongAgainst ? D.elements[el.strongAgainst].name : '', weakTo = Object.entries(D.elements).filter(([, e]) => e.strongAgainst === s.element).map(([, e]) => e.name);
   const evoText = s.evolvesTo ? `Lv.${s.evolveLevel}で${D.species[s.evolvesTo].name}に進化` : preOf[id] ? `${D.species[preOf[id].from].name}からLv.${preOf[id].level}で進化` : '進化しない';
   const description = `${s.name}（No.${number}）は${typeName(s.element)}のパチモン。${s.description}`.slice(0, 118) + ' 能力値・覚える技・進化・入手方法を掲載。';
-  const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../assets/dex/${cid}.webp" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
+  const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../${dexSprite(cid)}" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
   const prev = ids[index - 1], next = ids[index + 1];
   const body = `${crumbNav([['トップ', '../'], ['パチモン図鑑', './'], [s.name, '']], 1)}
 <article class="window">
   <div class="dex-hero">
-    <img class="sprite" src="../assets/dex/${id}.webp" width="192" height="192" alt="${esc(s.name)}のドット絵（正面）">
+    <img class="sprite" src="../${dexSprite(id)}" width="192" height="192" alt="${esc(s.name)}のドット絵（正面）">
     <div>
       <p class="dex-no">No.${number}</p>
       <h1>${esc(s.name)}</h1>
@@ -144,7 +145,7 @@ for (const [index, id] of ids.entries()) {
   <p class="cta"><a class="button" href="../">${esc(s.name)}に会いに行く — 無料で遊ぶ ▶</a></p>
 </article>
 <nav class="pager" aria-label="前後のパチモン">${prev ? `<a href="${prev}.html">◀ No.${pad(index)} ${esc(D.species[prev].name)}</a>` : '<span></span>'}<a href="./">図鑑一覧</a>${next ? `<a href="${next}.html">No.${pad(index + 2)} ${esc(D.species[next].name)} ▶</a>` : '<span></span>'}</nav>`;
-  fs.writeFileSync(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の進化・技・入手方法｜パチモン図鑑`, description, body, image: `${SITE}/assets/dex/${id}.webp`, imageAlt: `${s.name}のドット絵`,
+  fs.writeFileSync(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の進化・技・入手方法｜パチモン図鑑`, description, body, image: `${SITE}/${dexSprite(id)}`, imageAlt: `${s.name}のドット絵`,
     jsonld: [crumbs([['トップ', `${SITE}/`], ['パチモン図鑑', `${SITE}/monsters/`], [s.name, url]])] }));
 }
 
@@ -159,7 +160,7 @@ const indexBody = `${crumbNav([['トップ', '../'], ['パチモン図鑑', '']]
 ${groups.map(([el, list]) => `<section class="window" id="${el}">
   <h2>${esc(typeName(el))}のパチモン（${list.length}種）</h2>
   <p>${esc(typeName(el))}は${D.elements[el].strongAgainst ? `${esc(D.elements[el].name)}の技が${esc(D.elements[D.elements[el].strongAgainst].name)}タイプに強い` : ''}タイプです。</p>
-  <ul class="dex-grid">${list.map(id => `<li><a href="${id}.html"><img src="../assets/dex/${id}.webp" width="96" height="96" alt="${esc(D.species[id].name)}" loading="lazy"><span class="dex-no">No.${pad(no(id))}</span><strong>${esc(D.species[id].name)}</strong></a></li>`).join('')}</ul>
+  <ul class="dex-grid">${list.map(id => `<li><a href="${id}.html"><img src="../${dexSprite(id)}" width="96" height="96" alt="${esc(D.species[id].name)}" loading="lazy"><span class="dex-no">No.${pad(no(id))}</span><strong>${esc(D.species[id].name)}</strong></a></li>`).join('')}</ul>
 </section>`).join('\n')}
 <p class="cta"><a class="button" href="../">冒険をはじめる — 無料で遊ぶ ▶</a></p>`;
 fs.writeFileSync(path.join(ROOT, 'monsters', 'index.html'), page({ depth: 1, canonical: `${SITE}/monsters/`, title: `パチモン図鑑 全${ids.length}種一覧｜タイプ・進化・技｜パチモン`, description: `パチモン全${ids.length}種の図鑑一覧。芽・潮・灯・風・晶の5タイプ別に、各パチモンの能力値・覚える技・進化・入手方法を掲載しています。`, body: indexBody,
@@ -219,7 +220,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <h2 id="secrets">16の隠し要素と8つの裏技</h2>
   <p>冒険中のメニュー「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。見つける前はヒントだけが表示されます。たとえば「${esc(D.secrets[2].hint)}」「${esc(D.secrets[13].hint)}」——世界のどこかで試してみてください。</p>
   <h2 id="online">オンライン対戦・交換</h2>
-  <p>メニューの「オンライン対戦」では、6文字のルームコードで友だちと1対1のシングル・ダブルバトルができます。チームは冒険で仲間にしたパチモン（手持ち・ひかえ）から選び、レベルは50にそろえて戦います。振り分けポイントと持ち物も反映され、同じ持ち物は1チームに1つまでです。状態異常も冒険と同じルールで起こり、対戦で使った持ち物も冒険では減りません。「オンライン交換」では、コードで参加した相手と育てたパチモンを交換できます。</p>
+  <p>メニューの「オンライン対戦」では、6文字のルームコードで友だちと1対1のシングル・ダブルバトルができます。チームは冒険で仲間にしたパチモン（手持ち・ひかえ）から選び、レベルは50にそろえて戦います。選んだ個体に割り振ったポイントは、鍛錬で得た追加分を含めてすべて反映します（98ポイントへの縮小はありません）。持ち物も反映され、同じ持ち物は1チームに1つまでです。交代を含む行動の確定前には確認画面が出て、「選び直す」で戻ってもターンは進みません。状態異常も冒険と同じルールで起こり、対戦で使った持ち物も冒険では減りません。「オンライン交換」では、コードで参加した相手と育てたパチモンを交換できます。</p>
   <h2 id="local">ローカル通信（インターネットなしで近くの友だちと）</h2>
   <p>メニューの「ローカル通信」では、同じWi-Fi・スマホのテザリング・Bluetoothテザリングでつないだ近くの端末どうしで、インターネットなしで対戦・交換できます。つなぎ方は3ステップです。</p>
   <ol><li>片方が「部屋をつくる」を押して、画面にQRコードを表示します。</li><li>もう片方が「カメラで読み取って参加」でそのQRコードを読み取ると、参加する側の画面に別のQRコードが出ます。</li><li>部屋をつくった人がそのQRコードを読み取ると接続完了です。カメラがない端末は、表示されたコードを貼り付けても接続できます。</li></ol>
@@ -285,7 +286,7 @@ fs.writeFileSync(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canon
 const urls = [[`${SITE}/`, '1.0', 'weekly'], [`${SITE}/guide/`, '0.8', 'monthly'], [`${SITE}/monsters/`, '0.8', 'monthly'], [`${SITE}/moves/`, '0.7', 'monthly'], ...ids.map(id => [`${SITE}/monsters/${id}.html`, '0.5', 'monthly', id])];
 fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${urls.map(([loc, priority, freq, id]) => `  <url><loc>${loc}</loc><lastmod>${DATE}</lastmod><changefreq>${freq}</changefreq><priority>${priority}</priority>${id ? `<image:image><image:loc>${SITE}/assets/dex/${id}.webp</image:loc></image:image>` : ''}</url>`).join('\n')}
+${urls.map(([loc, priority, freq, id]) => `  <url><loc>${loc}</loc><lastmod>${DATE}</lastmod><changefreq>${freq}</changefreq><priority>${priority}</priority>${id ? `<image:image><image:loc>${SITE}/${dexSprite(id)}</image:loc></image:image>` : ''}</url>`).join('\n')}
 </urlset>
 `);
 

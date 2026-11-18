@@ -1035,3 +1035,19 @@ html:not(.mobile-screen) .console-pill small,html:not(.mobile-screen) .touch-com
 #online-modal .link-modes button[aria-pressed=true],.local-trade .link-modes button[aria-pressed=true]{background:var(--pm-gold);border-color:var(--pm-gold-deep);color:var(--pm-gold-ink);text-shadow:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.22)}
 #online-modal .link-modes button:disabled,.local-trade .link-modes button:disabled{opacity:.55;cursor:default}
 #online-modal .link-modes button:not(:disabled):hover,.local-trade .link-modes button:not(:disabled):hover{border-color:#fff}
+
+/* Battle switch confirmation: the selected individual and its current health. */
+.battle-switch-preview{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;margin:12px 0 18px}
+.battle-switch-member{display:flex;min-width:0;flex-direction:column;align-items:center;gap:5px;padding:12px 8px;text-align:center;border:2px solid var(--pm-frame-faint);background:rgba(10,18,66,.3)}
+.battle-switch-member>small{color:var(--pm-text-3);font-size:11px}
+.battle-switch-member>strong{font-size:16px;line-height:1.5;overflow-wrap:anywhere;color:var(--pm-gold)}
+.battle-switch-member>span{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.battle-switch-member>canvas{max-width:100%;image-rendering:pixelated}
+.battle-switch-arrow{font-size:24px;color:var(--pm-gold)}
+.battle-switch-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.battle-switch-actions>.btn{width:100%;min-width:0;min-height:48px;white-space:normal;overflow-wrap:anywhere}
+.link-switch-confirm{max-width:660px;margin:0 auto}
+.link-switch-confirm h3{margin:0 0 14px;font-size:20px;line-height:1.6}
+.link-switch-row>p{margin:10px 0 0;color:var(--pm-text-2);font-size:13px}
+.link-switch-other{padding:10px 12px;border:2px solid var(--pm-frame-faint);font-size:13px;overflow-wrap:anywhere}
+@media(max-width:420px){.battle-switch-preview{gap:6px}.battle-switch-member{padding:9px 5px}.battle-switch-member>strong{font-size:14px}.battle-switch-member>span{font-size:11px}.battle-switch-arrow{font-size:20px}.battle-switch-actions>.btn{font-size:12px;padding:10px 6px}}
