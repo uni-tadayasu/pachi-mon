@@ -151,21 +151,20 @@
     close(reason = '退出しました。') { if (this.connected) this._raw({ pachi: 'L1', kind: 'bye' }); this._finish(reason); }
   }
 
-  // ── How to put two devices on one network. Browsers cannot pair two phones over
-  // Bluetooth directly (Web Bluetooth only reaches accessories), so Bluetooth play
-  // uses Bluetooth tethering: one phone shares a small network over Bluetooth and
-  // the link runs over it exactly as over Wi-Fi.
-  const GUIDE = `<details class="local-howto"><summary>つなぎ方：Wi-Fi・テザリング・Bluetooth</summary>
+  // ── How to put two devices on one network. This browser implementation uses
+  // WebRTC over IP, not a direct Bluetooth transport. Bluetooth tethering works
+  // only when the devices and their operating systems support that network setup.
+  const GUIDE = `<details class="local-howto"><summary>つなぎ方：Wi-Fi・テザリング・Bluetoothテザリング</summary>
     <p><strong>Wi-Fi</strong>：2台を同じWi-Fiにつなぎます（インターネットにつながっていなくてもかまいません）。</p>
     <p><strong>テザリング</strong>：片方のスマホの「インターネット共有（テザリング）」に、もう片方をWi-Fiでつなぎます。</p>
-    <p><strong>Bluetooth</strong>：Wi-Fiが使えない場所では、Bluetoothテザリングで2台をつなげます。</p>
-    <ol><li>2台ともBluetoothをオンにして、ペアリングします。</li>
-      <li>片方で Bluetoothテザリングをオンにします（Android：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」／iPhone：設定 →「インターネット共有」→「ほかの人の接続を許可」）。</li>
-      <li>もう片方の Bluetooth設定で、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
+    <p><strong>Bluetoothテザリング</strong>：対応端末で設定したBluetoothネットワークを利用します。利用可否は端末・OS・接続相手の組み合わせによって異なります。</p>
+    <ol><li>Bluetoothテザリングに対応する端末どうしで、Bluetoothをオンにしてペアリングします。</li>
+      <li>共有する側で「Bluetoothテザリング」をオンにします。Androidの例：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」（設定名や場所は端末によって異なります）。</li>
+      <li>接続する側がBluetoothのネットワーク接続に対応している場合は、Bluetooth設定から、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
       <li>あとは、いつもどおりQRコードを読み取って接続します。</li></ol>
-    <p class="local-note">ブラウザーの仕組み上、Bluetoothだけで端末どうしを直接つなぐことはできないため、Bluetoothテザリングで作ったネットワークを使います。iPhoneのインターネット共有は、モバイルデータ通信の契約がないと使えない場合があります。公共・会社のWi-Fiでは、端末どうしの通信が禁止されていてつながらないことがあります。</p></details>`;
-  // ── Bluetooth only (no Wi-Fi). Two phones joined by Bluetooth tethering form a small
-  // network of their own and the link runs over it; Wi-Fi and the internet are not used.
+    <p class="local-note">テザリングなしのBluetooth直接通信は、このブラウザー版では利用できません。ペアリングだけでは接続できず、両端末がBluetoothテザリングによるネットワーク接続に対応している必要があります。公共・会社のWi-Fiでは、端末どうしの通信が禁止されていてつながらないことがあります。</p></details>`;
+  // ── Bluetooth tethering is an OS-level network setup. Selecting the option
+  // changes guidance; it does not create that network or force a Bluetooth route.
   // Camera permission (also needed to read the codes) lets the browser put this device's
   // real local address in its code instead of a hidden name; on tethered links the name
   // lookups often do not travel, so this keeps the connection working.
@@ -185,20 +184,26 @@
     } catch (_) { return false; }
   }
   function netToggle(net, attr) {
-    return `<div class="link-modes local-net-toggle" role="group" aria-label="つなぎ方"><button type="button" ${attr}="wifi" aria-pressed="${net !== 'bluetooth'}"><b>Wi-Fi・テザリング</b><small>同じネットワークにつなぐ</small></button><button type="button" ${attr}="bluetooth" aria-pressed="${net === 'bluetooth'}"><b>Bluetoothのみ</b><small>Wi-Fi不要</small></button></div>`;
+    return `<div class="link-modes local-net-toggle" role="group" aria-label="つなぎ方"><button type="button" ${attr}="wifi" aria-pressed="${net !== 'bluetooth'}"><b>同じWi-Fi</b><small>おすすめ・テザリング不要</small></button><button type="button" ${attr}="bluetooth" aria-pressed="${net === 'bluetooth'}"><b>Bluetoothテザリング</b><small>対応端末で設定が必要</small></button></div>`;
+  }
+  function setupSteps(stage, net = 'wifi') {
+    const current = stage === 'host' ? 1 : stage === 'guest' ? 2 : 0;
+    const labels = [net === 'bluetooth' ? '対応端末でテザリングを設定' : '2台を同じWi-Fiへ', '参加する人が部屋のQRを読む', '部屋の人が相手のQRを読む'];
+    return `<ol class="local-setup-steps" aria-label="つなぎ方の3ステップ">${labels.map((label, i) => `<li${i === current ? ' class="is-current" aria-current="step"' : ''}><span class="local-step-number" aria-hidden="true">${i + 1}</span><span class="local-step-copy">${esc(label)}${i === current ? '<small>いまの手順</small>' : ''}</span></li>`).join('')}</ol>`;
   }
   function bluetoothPanel() {
     const type = networkType();
-    const status = type ? `<p class="local-net-status${type === 'bluetooth' ? ' is-ok' : ''}">この端末の接続：${esc(NET_LABEL[type] || type)}${type === 'bluetooth' ? ' ✓ Bluetoothでつながっています' : ''}</p>` : '';
+    const status = type ? `<p class="local-net-status">この端末の接続種別：${esc(NET_LABEL[type] || type)}</p>` : '';
     return `<div class="local-bt">
-      <p class="local-bt-title">Bluetoothだけでつなぐ（Wi-Fiは不要・オフのままで大丈夫）</p>
-      <ol><li>2台ともBluetoothをオンにして、ペアリングします。</li>
-        <li>片方で「Bluetoothテザリング」をオンにします。<br>Android：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」<br>iPhone：設定 →「インターネット共有」→「ほかの人の接続を許可」</li>
-        <li>もう片方のBluetooth設定で、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
-        <li>部屋をつくり、QRコードを読み取り合って接続します。カメラの使用を許可すると、Bluetoothでもつながりやすくなります（カメラの映像は使いません）。</li></ol>${status}
-      <p class="local-note">2台はBluetoothで作った小さなネットワークだけで通信し、Wi-Fiやインターネットは使いません。ブラウザーの仕組み上、ペアリングしただけでは通信できないため、Bluetoothテザリングを使います。iPhoneのインターネット共有は、モバイル通信の契約がないとオンにできない場合があります。</p></div>`;
+      <p class="local-bt-title">Bluetoothテザリングでつなぐ</p>
+      <p class="local-note"><strong>テザリングなしのBluetooth直接通信は、このブラウザー版では利用できません。</strong></p>
+      <ol><li>Bluetoothテザリングに対応する端末どうしで、Bluetoothをオンにしてペアリングします。</li>
+        <li>共有する側で「Bluetoothテザリング」をオンにします。<br>Androidの例：設定 →「ネットワークとインターネット」→「アクセスポイントとテザリング」→「Bluetoothテザリング」（設定名や場所は端末によって異なります）</li>
+        <li>接続する側がBluetoothのネットワーク接続に対応している場合は、Bluetooth設定から、ペアリングした端末の「インターネット接続（ネットワークアクセス）」をオンにします。</li>
+        <li>ネットワーク接続を設定した後、部屋をつくり、QRコードを読み取り合って接続します。カメラの使用を許可すると、接続情報を取得しやすくなります（この準備でカメラの映像は使いません）。</li></ol>${status}
+      <p class="local-note">利用可否は端末・OS・接続相手の組み合わせによって異なります。この画面でBluetoothテザリングを選んでも、端末のネットワーク設定は変更されません。接続種別の表示は、対戦相手との接続成功やBluetooth専用経路を示すものではありません。</p></div>`;
   }
-  const BLUETOOTH_HINT = 'Bluetoothの場合は、片方でBluetoothテザリングがオンになっているか、もう片方で「インターネット接続（ネットワークアクセス）」がオンになっているかを確かめてから、部屋をつくる側と参加する側を入れ替えて試してください。';
+  const BLUETOOTH_HINT = 'Bluetoothテザリングを使う場合は、2台の組み合わせが対応しているか、共有する側のBluetoothテザリングと接続する側の「インターネット接続（ネットワークアクセス）」がオンかを確認してください。設定後もつながらない場合は、部屋をつくる側と参加する側を入れ替えて試してください。';
 
   // ── QR codes: draw them, and read them with the camera.
   const scripts = new Map();
@@ -347,16 +352,24 @@
     function eligible(mon) { try { bridge().getEngine().toTradeWire(mon); return true; } catch (_) { return false; } }
     function label(mon) { const s = LT.DATA.species[mon.species]; return `${mon.shiny ? '✦ ' : ''}${mon.nickname || s?.name || mon.species}${mon.nickname ? `（${s?.name}）` : ''} Lv.${mon.level}`; }
     function connectHtml() {
-      if (!link) return `<p class="local-lead">近くの端末と、インターネットなしで交換できます。Wi-Fiを使わず、Bluetoothだけでもつなげます。</p>${netToggle(net, 'data-local-net')}${net === 'bluetooth' ? bluetoothPanel() : GUIDE}
-        <div class="local-actions"><button type="button" class="btn btn-primary" data-local="host" ${connecting ? 'disabled' : ''}>部屋をつくる</button></div>
-        <div class="link-or">または、相手のコードで参加</div>
-        <div class="local-actions"><button type="button" class="btn" data-local="scan-offer" ${connecting ? 'disabled' : ''}>カメラで読み取る</button></div>
-        <label class="link-field">コードを貼り付け<textarea id="local-trade-code" rows="3" placeholder="PM1O…" spellcheck="false" autocomplete="off">${esc(pasted)}</textarea></label>
-        <div class="local-actions"><button type="button" class="btn" data-local="join" ${connecting ? 'disabled' : ''}>このコードで参加</button></div>`;
-      if (!link.connected) return `${code ? `<div class="local-qr" data-local-qr="${esc(code)}"></div><div class="local-actions"><button type="button" class="btn btn-small" data-local="copy">コードをコピー</button></div>` : ''}
-        ${role === 0 && code ? `<p class="local-lead">相手がこのQRを読み取ったら、相手に表示されたQRコードを読み取ってください。</p><div class="local-actions"><button type="button" class="btn btn-primary" data-local="scan-answer">相手のコードを読み取る</button></div>
-          <label class="link-field">相手のコードを貼り付け<textarea id="local-trade-code" rows="3" placeholder="PM1A…" spellcheck="false" autocomplete="off">${esc(pasted)}</textarea></label><div class="local-actions"><button type="button" class="btn" data-local="accept">接続する</button></div>` : ''}
-        ${role === 1 && code ? '<p class="local-lead">部屋をつくった人に、このQRコードを読み取ってもらってください。</p>' : ''}`;
+      if (!link) return `<p class="local-lead">おすすめは、2台を同じWi-FiにつないでQRコードを読み取る方法です。インターネット回線は不要です。オフラインで遊ぶ前に、両方の端末で一度ゲームを読み込んでください。</p>${netToggle(net, 'data-local-net')}
+        ${net === 'bluetooth' ? '<p class="local-note">テザリングなしのBluetooth直接通信は、このブラウザー版では利用できません。</p>' : ''}${setupSteps('prepare', net)}
+        <div class="local-role-grid">
+          <section class="local-role-card" aria-labelledby="local-trade-host-title"><h3 class="local-role-title" id="local-trade-host-title">部屋をつくる人</h3><p class="local-role-help">自分のQRを表示して、参加する人に見せます。</p><button type="button" class="btn btn-primary" data-local="host" ${connecting ? 'disabled' : ''}>部屋をつくる（QRを表示）</button></section>
+          <section class="local-role-card" aria-labelledby="local-trade-guest-title"><h3 class="local-role-title" id="local-trade-guest-title">参加する人</h3><p class="local-role-help">部屋をつくった人が表示したQRを読み取ります。</p><button type="button" class="btn" data-local="scan-offer" ${connecting ? 'disabled' : ''}>部屋のQRを読み取る</button></section>
+        </div>
+        <details class="local-manual-code"${pasted.trim() ? ' open' : ''}><summary>カメラを使わずコードで接続</summary>
+          <label class="link-field">部屋のコードを貼り付け<textarea id="local-trade-code" rows="3" placeholder="PM1O…" spellcheck="false" autocomplete="off">${esc(pasted)}</textarea></label>
+          <div class="local-actions"><button type="button" class="btn" data-local="join" ${connecting ? 'disabled' : ''}>このコードで参加</button></div>
+        </details>
+        ${net === 'bluetooth' ? `<details class="local-howto"><summary>Bluetoothテザリングの設定と対応条件</summary>${bluetoothPanel()}</details>` : GUIDE}`;
+      if (!link.connected) return `${setupSteps(role === 0 ? 'host' : 'guest', net)}${code ? `<h3 class="local-role-title">${role === 0 ? 'このQRを参加する人に見せてください' : 'このQRを部屋をつくった人に見せてください'}</h3><div class="local-qr" data-local-qr="${esc(code)}"></div>` : ''}
+        ${role === 0 && code ? `<p class="local-role-help">相手の画面にQRが表示されたら、下のボタンで読み取ります。つながると自動で交換画面へ進みます。</p><div class="local-actions"><button type="button" class="btn btn-primary" data-local="scan-answer">相手のQRを読み取る</button></div>
+          <details class="local-manual-code"${pasted.trim() ? ' open' : ''}><summary>カメラを使わずコードで接続</summary>
+            <div class="local-actions"><button type="button" class="btn btn-small" data-local="copy">自分のコードをコピー</button></div>
+            <label class="link-field">相手のコードを貼り付け<textarea id="local-trade-code" rows="3" placeholder="PM1A…" spellcheck="false" autocomplete="off">${esc(pasted)}</textarea></label><div class="local-actions"><button type="button" class="btn" data-local="accept">接続する</button></div>
+          </details>` : ''}
+        ${role === 1 && code ? '<p class="local-role-help">部屋をつくった人がこのQRを読み取ると、自動で交換画面へ進みます。この画面でお待ちください。</p><details class="local-manual-code"><summary>カメラを使わずコードで接続</summary><p class="local-role-help">自分のコードをコピーして部屋をつくった人に渡し、貼り付けてもらってください。</p><div class="local-actions"><button type="button" class="btn btn-small" data-local="copy">自分のコードをコピー</button></div></details>' : ''}`;
       return '';
     }
     function tradeHtml() {
@@ -425,7 +438,7 @@
         const button = event.target.closest('[data-local]'); if (!button || button.disabled) return;
         const action = button.dataset.local;
         // Bluetooth: camera permission first, so this device's code carries its real address.
-        if (net === 'bluetooth' && (action === 'host' || action === 'join') && !link) { status = 'Bluetoothでつながりやすくするため、カメラの使用を確認しています…'; render(); await revealLocalAddress(); status = ''; }
+        if (net === 'bluetooth' && (action === 'host' || action === 'join') && !link) { status = 'Bluetoothテザリングの接続準備のため、カメラの使用を確認しています…'; render(); await revealLocalAddress(); status = ''; }
         if (action === 'close') { dialog.close(); return; }
         if (action === 'reset') { reset(); return; }
         if (action === 'host') await connect(true);
@@ -453,7 +466,7 @@
 
   LT.LocalLink = LocalLink;
   LT.LocalSignal = Object.freeze({ encode: encodeSignal, decode: decodeSignal, trim: trimSdp, prefix: PREFIX });
-  LT.LocalQR = Object.freeze({ svg: qrSvg, hydrate, scan, vendor: VENDOR, guide: GUIDE });
+  LT.LocalQR = Object.freeze({ svg: qrSvg, hydrate, scan, vendor: VENDOR, guide: GUIDE, setupSteps });
   LT.LocalNet = Object.freeze({ type: networkType, preferred: preferredNet, remember: rememberNet, reveal: revealLocalAddress, toggle: netToggle, panel: bluetoothPanel, hint: BLUETOOTH_HINT });
   LT.LocalTradeSession = LocalTradeSession;
   LT.LocalTrade = Trade;
