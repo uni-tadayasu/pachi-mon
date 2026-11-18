@@ -24,11 +24,12 @@
   function ownedMythical() { return ownedList().find(mon => mon.species === 'floravelle' && /^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId || '')) || null; }
   function ownedLegendary() { const id = LT.DATA.legendary?.species; return id ? ownedList().find(mon => mon.species === id) || null : null; }
   const lookOf = mon => ({ nickname: mon?.nickname || '', shiny: mon?.shiny === true });
-  // The individual's own points at the Lv.50 limits; Futo with operator stats brings the even spread.
+  // All of the individual's assigned points, independent of the Lv.50 base stats;
+  // Futo with operator stats keeps its existing even 98-point spread.
   function allocationOf(id, mon) {
     if (!mon) return null;
     if (mon.customStats !== undefined) return id === 'futo' ? { ...FUTO_LINK_ALLOCATION } : null;
-    return Duel.scaleAllocation(mon.alloc);
+    return Duel.normalizeAllocation(mon.alloc);
   }
   // Without chosen individuals, the first owned one of each species is used.
   const firstOf = id => ownedList().find(mon => mon.species === id) || null;
@@ -125,7 +126,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v7-special-three-standard-allocation-owned-items';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 7 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 8 };
 })();

@@ -45,7 +45,7 @@ async function run(){
  // Duplicate inputs while playback is outstanding cannot run a second engine turn.
  e=make();({c,out}=harness(e));const pending=c.doBattle({type:'move',index:0});const turn=e.battle.turn;await c.doBattle({type:'move',index:0});await pending;assert.equal(e.battle.turn,turn);
  assert(html.includes("battleView||engine,settings.reducedMotion?0:now"),'Canvas must render the staged view');
- assert(html.includes("if(b.pendingReplacement){"));assert(html.includes('data-replacement='));assert(html.includes("chooseBattleReplacement(Number(d.replacement))"));
+ assert(html.includes("if(b.pendingReplacement){"));assert(html.includes('data-replacement='));assert(html.includes("confirmBattleSwitch(Number(d.replacement),true)"));
  console.log('Battle playback passed: lethal hit before collapse, retained participants, selected arrivals after animation, no duplicate input, motion-reduced completion with reading time, staged canvas and choice UI.');
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
