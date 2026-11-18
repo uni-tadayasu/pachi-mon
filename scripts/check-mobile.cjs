@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const mobileSource = fs.readFileSync(path.join(__dirname, '..', 'mobile-screen.js'), 'utf8');
 const events = new Map();
 const viewport = { content: '', setAttribute(_, value) { this.content = value; } };
 const classes = new Set(), properties = new Map(), frames = [];
@@ -24,7 +25,7 @@ const window = { innerWidth: 390, innerHeight: 844, scrollX: 0, scrollY: 0, scro
 const document = { documentElement: root, querySelector() { return viewport; }, addEventListener: listen, dispatchEvent(event) { shapes.push(event.detail?.shape); } };
 const context = vm.createContext({ window, document, Element, Event: class Event {}, CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } }, matchMedia: () => mobile,
   requestAnimationFrame(callback) { frames.push(callback); return frames.length; } });
-vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'mobile-screen.js'), 'utf8'), context);
+vm.runInContext(mobileSource, context);
 
 let checks = 0;
 function prevented(type, detail = {}) {
@@ -80,6 +81,111 @@ check(classes.has('mobile-screen'), false, 'Desktop class restored');
 check(viewport.content.includes('maximum-scale'), false, 'Desktop zoom restored');
 check(prevented('touchstart', { touches: [{ target: field }, { target: field }] }), false, 'Desktop gestures unchanged');
 check(prevented('contextmenu'), false, 'Desktop context menu unchanged');
+
+// Evaluate the production media query rather than forcing .matches=true. This
+// catches tablets reverting to desktop solely because their long side turns
+// horizontal, including a fine primary pointer with touch still available.
+function matchesMedia(query, state) {
+  return query.split(',').some(clause => {
+    const features = [...clause.matchAll(/\(\s*([\w-]+)\s*:\s*([^)]+)\)/g)];
+    assert(features.length && !clause.replace(/\([^)]*\)/g, '').replace(/\band\b/g, '').trim(), 'Supported media-query syntax');
+    return features.every(([, feature, raw]) => {
+      const value = raw.trim(), axis = /^(min|max)-(width|height)$/.exec(feature);
+      if (axis) {
+        assert(/^\d+(?:\.\d+)?px$/.test(value), 'Viewport breakpoints use CSS px');
+        return axis[1] === 'max' ? state[axis[2]] <= parseFloat(value) : state[axis[2]] >= parseFloat(value);
+      }
+      if (feature === 'pointer') return state.pointer === value;
+      if (feature === 'any-pointer') return state.pointers.includes(value);
+      assert.fail('Unsupported media feature: ' + feature);
+    });
+  });
+}
+function viewportRuntime(initial) {
+  const state = { pointer: 'coarse', ...initial };
+  state.pointers = initial.pointers || [state.pointer];
+  const activeClasses = new Set(), values = new Map(), pending = [], timers = [], listeners = new Map(), changes = [], pageScrolls = [];
+  let frameId = 0, query = '', viewportText = '';
+  const on = source => (type, callback) => { const key = source + ':' + type; if (!listeners.has(key)) listeners.set(key, []); listeners.get(key).push(callback); };
+  const emit = (source, type, event = {}) => { for (const callback of listeners.get(source + ':' + type) || []) callback(event); };
+  const flush = () => { while (pending.length) pending.shift()(); };
+  const media = { get matches() { return matchesMedia(query, state); }, addEventListener: on('media') };
+  const win = { innerWidth: state.width, innerHeight: state.height, scrollX: 0, scrollY: 0,
+    scrollTo(x, y) { this.scrollX = x; this.scrollY = y; pageScrolls.push([x, y]); },
+    visualViewport: { height: state.height, addEventListener: on('visual') }, addEventListener: on('window'), dispatchEvent() {} };
+  const doc = { activeElement: null, documentElement: {
+    classList: { toggle(name, enabled) { enabled ? activeClasses.add(name) : activeClasses.delete(name); } },
+    style: { setProperty(name, value) { values.set(name, value); } } },
+    querySelector: () => ({ setAttribute(name, value) { viewportText = value; } }), addEventListener: on('document'),
+    dispatchEvent(event) { changes.push(event.detail?.shape); } };
+  vm.runInNewContext(mobileSource, { window: win, document: doc, Element,
+    Event: class {}, CustomEvent: class { constructor(type, init) { this.detail = init.detail; } },
+    matchMedia(value) { query = value; return media; }, requestAnimationFrame(callback) { pending.push(callback); return ++frameId; },
+    setTimeout(callback) { timers.push(callback); return timers.length; } });
+  return { state, win, doc, activeClasses, values, changes, pageScrolls, get viewport() { return viewportText; },
+    resize(next, event = 'resize') {
+      const before = media.matches;
+      Object.assign(state, next);win.innerWidth = state.width;win.innerHeight = state.height;
+      win.visualViewport.height = next.visualHeight ?? state.height;
+      if (before !== media.matches) emit('media', 'change');
+      emit('window', event);emit('visual', 'resize');flush();
+      while (timers.length) { timers.shift()();flush(); }
+    },
+    finishEditing(target) { doc.activeElement = null;emit('document', 'focusout', { target });while (timers.length) { timers.shift()();flush(); } }
+  };
+}
+const viewportCases = [
+  [390, 844, 'fine', ['fine'], true, 'Narrow phone/window keeps existing behavior'],
+  [844, 390, 'fine', ['fine'], true, 'Short landscape keeps existing behavior'],
+  [768, 1024, 'coarse', ['coarse'], true, 'Tablet portrait'],
+  [1024, 768, 'coarse', ['coarse'], true, 'Tablet landscape'],
+  [820, 1180, 'coarse', ['coarse'], true, 'Tall tablet portrait'],
+  [1180, 820, 'coarse', ['coarse'], true, 'Wide tablet landscape'],
+  [834, 1194, 'coarse', ['coarse'], true, 'Intermediate tablet portrait'],
+  [1194, 834, 'coarse', ['coarse'], true, 'Intermediate tablet landscape'],
+  [1024, 1366, 'coarse', ['coarse'], true, 'Large tablet portrait'],
+  [1366, 1024, 'coarse', ['coarse'], true, 'Large tablet landscape'],
+  [820, 1180, 'fine', ['fine', 'coarse'], true, 'Portrait with fine primary and coarse secondary pointer'],
+  [1366, 1024, 'fine', ['fine', 'coarse'], true, 'Landscape with fine primary and coarse secondary pointer'],
+  [684, 1024, 'fine', ['fine'], true, 'Narrow Split View keeps existing behavior'],
+  [700, 1366, 'fine', ['fine'], true, 'Existing narrow-window boundary'],
+  [701, 1366, 'fine', ['fine'], false, 'Pure fine pointer beyond narrow-window boundary'],
+  [1024, 768, 'fine', ['fine'], false, 'Mouse-only PC'],
+  [1366, 1024, 'fine', ['fine'], false, 'Wide mouse-only PC'],
+  [1400, 1100, 'coarse', ['coarse'], true, 'Tablet long/short edge boundary'],
+  [1100, 1400, 'coarse', ['coarse'], true, 'Rotated tablet edge boundary'],
+  [1401, 1100, 'fine', ['fine', 'coarse'], false, 'Long edge outside tablet bounds'],
+  [1101, 1400, 'coarse', ['coarse'], false, 'Short edge outside tablet bounds'],
+  [1920, 1080, 'coarse', ['coarse'], false, 'Large touch PC'],
+  [1920, 1080, 'fine', ['fine', 'coarse'], false, 'Large PC with mixed input'],
+  [1080, 1920, 'coarse', ['coarse'], false, 'Rotated large touch display'],
+];
+for (const [width, height, pointer, pointers, expected, label] of viewportCases) {
+  const runtime = viewportRuntime({ width, height, pointer, pointers });
+  check(runtime.activeClasses.has('mobile-screen'), expected, label);
+  check(runtime.viewport.includes('maximum-scale=1'), expected, label + ': viewport policy follows the layout');
+  check(runtime.values.get('--app-height'), height + 'px', label + ': CSS viewport height is available');
+}
+const tablet = viewportRuntime({ width: 1024, height: 1366, pointer: 'fine', pointers: ['fine', 'coarse'] });
+tablet.win.scrollY = 120;tablet.resize({ width: 1366, height: 1024 }, 'orientationchange');
+check(tablet.activeClasses.has('mobile-screen'), true, 'Rotating a large hybrid-input tablet retains touch layout');
+check(tablet.changes.at(-1), 'landscape:true', 'Tablet rotation announces held-input cleanup without desktop transition');
+check(JSON.stringify(tablet.pageScrolls.at(-1)), '[0,0]', 'Tablet rotation clears stale page scroll');
+tablet.resize({ width: 1024, height: 1366 }, 'orientationchange');
+check(tablet.changes.at(-1), 'portrait:true', 'Rotating back retains the tablet layout');
+tablet.doc.activeElement = input;tablet.win.scrollY = 90;
+tablet.resize({ visualHeight: 570 });
+check(tablet.activeClasses.has('mobile-screen'), true, 'Virtual keyboard does not reclassify the tablet');
+check(tablet.values.get('--app-height'), '570px', 'Tablet follows the visual viewport while keyboard is open');
+check(tablet.win.scrollY, 90, 'Editing preserves the browser scroll needed to reach the input');
+tablet.resize({ visualHeight: 1366 });tablet.finishEditing(input);
+check(tablet.values.get('--app-height'), '1366px', 'Closing keyboard restores tablet height');
+check(tablet.win.scrollY, 0, 'After editing the fixed page returns to its origin');
+tablet.resize({ width: 684, height: 1024 });
+check(tablet.activeClasses.has('mobile-screen'), true, 'Split View retains the responsive touch layout');
+tablet.resize({ width: 1920, height: 1080 });
+check(tablet.activeClasses.has('mobile-screen'), false, 'Large touch window returns to desktop instead of staying fixed');
+check(tablet.viewport.includes('maximum-scale'), false, 'Large touch window restores ordinary zoom');
 
 // Run the actual game handlers so simultaneous direction releases and browser
 // interruption events exercise the production pointer state, not a duplicate.
@@ -203,4 +309,4 @@ for (const [n, type] of ['orientationchange', 'pachi-viewport-change'].entries()
   check(game.pressedDirection, 'up', `${type}: the next tap is read as itself`);
   up.send('pointerup', 30 + n);
 }
-console.log(JSON.stringify({ ok: true, checks, coverage: 'Mobile gestures, held-pointer handoff, interruption cleanup, editable inputs, viewport changes, rotation release, desktop restoration' }));
+console.log(JSON.stringify({ ok: true, checks, viewportCases: viewportCases.length, coverage: 'Phone/tablet/desktop media queries, mixed pointers, Split View, virtual keyboard, gestures, held-pointer handoff, interruption cleanup, rotation release, desktop restoration' }));

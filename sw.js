@@ -25,6 +25,8 @@
  *   asset stays available until its replacement has actually been cached.
  * v35: effectiveness impact sounds, fielded-party growth bonuses and remixed
  *   battle arrangements refresh with the versioned battle effects client.
+ * v36: tablet touch detection, portrait/landscape controls and visible-height
+ *   dialogs update together for iPad-sized screens.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
