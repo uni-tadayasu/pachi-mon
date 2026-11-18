@@ -149,10 +149,22 @@ test('hidden acquisition and evolution do not inflate dex or five-color collecti
   assert(e.state.secrets.includes('dexwild'),'The ordinary wild collection still completes without a hidden requirement');
 });
 
-test('the operator encounter and exchange paths cannot bypass the glitch-only acquisition',()=>{
+test('authorized operator grass can capture each hidden form, while ordinary acquisition and exchange stay restricted',()=>{
   for(const id of line.ids){
-    const e=hero(),before=copy(e.state);const result=e.startAdminEncounter(id,50,owner);
-    assert(!result.ok);assert.equal(e.battle,null);assert.deepEqual(copy(e.state),before);
-    assert.throws(()=>e.tradeMonster(e.makeMonster(id,50)),/交換/);
+    for(const denied of [null,{}, {id:owner.id,isAdmin:false},{id:'invalid',isAdmin:true},{id:owner.id,isAdmin:1}]){
+      const e=hero(),before=copy(e.state);assert(!e.startAdminEncounter(id,100,denied,{shiny:true}).ok);assert.equal(e.battle,null);assert.deepEqual(copy(e.state),before);
+    }
+    // Keep the existing party at its final form/level so its unrelated battle
+    // XP cannot evolve it and legitimately increase the public collection.
+    const e=hero();e.state.party=[e.makeMonster('komorizen',100)];e.markCaught('komorizen');
+    const before=e.quests().filter(q=>['caught','types'].includes(q.metric)).map(q=>[q.id,q.progress]);
+    assert(e.startAdminEncounter(id,100,owner,{shiny:true}).ok);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,100);assert.equal(e.resonanceChance(),1);
+    assert(e.action({type:'resonate'}).ok);const mon=hidden(e)[0];assert(mon);assert.equal(mon.species,id);assert.equal(mon.level,100);assert.equal(mon.shiny,true);
+    assert.deepEqual(copy(e.moves(mon).map(move=>move.id)),['null_restore','null_curse','null_ray','null_scorch']);
+    assert.deepEqual(e.quests().filter(q=>['caught','types'].includes(q.metric)).map(q=>[q.id,q.progress]),before,'Operator off-dex captures do not increase public collection progress');
+    const loaded=new Engine(e.serialize()),restored=hidden(loaded)[0];assert.deepEqual(copy(restored),copy(mon));assert.equal(restored.species,id,'Selected forms do not auto-evolve when captured or loaded');
+    assert.throws(()=>e.tradeMonster(mon),/交換/);assert.throws(()=>loaded.tradeMonster(restored),/交換/);
+    assert(D.species[id].hiddenDex&&D.species[id].glitchOnly&&D.species[id].specialOnly);
+    assert(!Object.values(D.maps).some(map=>map.encounters.includes(id)));assert(!D.collectionRoutes.wild.includes(id));assert(!D.starters.includes(id));
   }
 });

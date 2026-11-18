@@ -38,6 +38,8 @@
  *   the adventure and both link battle modes. Save identities remain intact.
  * v42: the Null lineage's four techniques, recharge, curse and its status
  *   effects refresh together; existing move PP is migrated on save loading.
+ * v43: the operator's secret grass includes all three off-dex Null forms;
+ *   its refreshed picker keeps the existing server authorization checks.
  * v40: the source-arranged 16-bit Void battle recording is linked as an offline
  *   shell asset; active-combatant priority and recording lifecycle update together.
  * © 2026 KASAI SOLUTIONS INC. */
