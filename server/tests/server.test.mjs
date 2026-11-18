@@ -429,7 +429,7 @@ test('recovery rejects missing configuration, wrong origin, wrong key and missin
   assert.equal(env.ADMIN_CLAIM_KEY, SECRET);
 });
 
-test('the hidden recovery screen re-registers with the operator key alone, without recovery settings', async () => {
+test('explicit recovery re-registers with the operator key alone, without recovery settings', async () => {
   const {call, admin, register, env} = setup();
   const oldOwner = await admin(), candidate = await register();
   assert.equal(env.ADMIN_RECOVERY_OWNER_ID, undefined);
@@ -584,4 +584,81 @@ test('mythical proof is owner-only, fixed, session-bound and revoked on ownershi
   assert.equal((await call('/api/duel-pass/verify',{method:'POST',body:{sessionId,side,pass:issued.pass}})).status,403,'An old owner proof is invalid immediately on verification');
   assert.equal((await call('/api/duel-pass',{method:'POST',token:owner.token,body:{sessionId,side,grantId}})).status,403);
   assert.equal((await call('/api/duel-pass',{method:'POST',token:other.token,body:{sessionId,side,grantId:`admin-mythical:${other.id}`}})).status,200);
+});
+
+test('only the current owner can confirm release of the reviewed registration', async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),visitor=await register();
+  const config=await call('/api/admin/config',{token:owner.token});
+  const expectedRegistration=config.adminRegistration;
+  assert.equal(expectedRegistration.playerId,owner.id);assert(Number.isSafeInteger(expectedRegistration.claimedAt));
+  const request={method:'POST',body:{confirmed:true,expectedRegistration}};
+  assert.equal((await call('/api/admin/release',request)).status,401);
+  assert.equal((await call('/api/admin/release',{...request,token:visitor.token})).status,403);
+  for(const body of [{},{confirmed:false,expectedRegistration},{confirmed:true},{confirmed:true,expectedRegistration:{playerId:visitor.id,claimedAt:expectedRegistration.claimedAt}}]){
+    const result=await call('/api/admin/release',{method:'POST',token:owner.token,body});
+    assert.equal(result.status,400);assert.equal(result.error.code,'RELEASE_CONFIRMATION_REQUIRED');
+  }
+  const stale=await call('/api/admin/release',{...request,token:owner.token,body:{confirmed:true,expectedRegistration:{...expectedRegistration,claimedAt:expectedRegistration.claimedAt-1}}});
+  assert.equal(stale.status,409);assert.equal(stale.error.code,'ADMIN_REGISTRATION_CHANGED');
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id,owner.id);
+  assert.equal((await call('/api/status')).adminExists,true);
+});
+
+test('owner release opens registration without deleting identities, settings or gifts', async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),visitor=await register();
+  await call('/api/admin/config',{method:'PUT',token:owner.token,body:{config:changedConfig()}});
+  await call('/api/admin/grants',{method:'POST',token:owner.token,body:{requestId:crypto.randomUUID(),target:visitor.id}});
+  const expectedRegistration=(await call('/api/admin/config',{token:owner.token})).adminRegistration;
+  const before=Object.fromEntries(['players','futo_config','grant_batches','grants'].map(table=>[table,env.DB.sqlite.prepare(`SELECT * FROM ${table}`).all()]));
+  const released=await call('/api/admin/release',{method:'POST',token:owner.token,body:{confirmed:true,expectedRegistration}});
+  assert.equal(released.status,200);assert.equal(released.released,true);assert.equal(released.player.isAdmin,false);assert.equal(released.adminExists,false);
+  assert.equal((await call('/api/status')).adminExists,false);
+  const me=await call('/api/me',{token:owner.token});assert.equal(me.player.isAdmin,false);assert.deepEqual(me.initialCompanions,[]);
+  for(const table of Object.keys(before))assert.deepEqual(env.DB.sqlite.prepare(`SELECT * FROM ${table}`).all(),before[table],`${table} must survive release`);
+  assert.equal((await call('/api/admin/config',{token:owner.token})).status,403);
+  assert.equal((await call('/api/admin/release',{method:'POST',token:owner.token,body:{confirmed:true,expectedRegistration}})).status,403);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:visitor.token,body:{key:'invalid-key'}})).status,403);
+  const claimed=await call('/api/admin/claim',{method:'POST',token:visitor.token,body:{key:SECRET}});
+  assert.equal(claimed.status,200);assert.equal(claimed.player.isAdmin,true);assert.equal(claimed.adminExists,true);
+  assert.deepEqual((await call('/api/admin/config',{token:visitor.token})).config,changedConfig());
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:owner.token,body:{key:SECRET}})).status,409);
+});
+
+test('a queued release cannot delete a replacement administrator', async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),replacement=await register();
+  const expectedRegistration=(await call('/api/admin/config',{token:owner.token})).adminRegistration;
+  const originalPrepare=env.DB.prepare.bind(env.DB);
+  let resume,started;
+  const gate=new Promise(resolve=>{resume=resolve;}),atGate=new Promise(resolve=>{started=resolve;});
+  env.DB.prepare=sql=>{
+    const statement=originalPrepare(sql);
+    if(sql.startsWith('DELETE FROM admin_owner')){const first=statement.first.bind(statement);statement.first=async(...args)=>{started();await gate;return first(...args);};}
+    return statement;
+  };
+  const pending=call('/api/admin/release',{method:'POST',token:owner.token,body:{confirmed:true,expectedRegistration}});
+  await atGate;
+  const recovered=await call('/api/admin/claim',{method:'POST',token:replacement.token,body:{key:SECRET,recover:true}});assert.equal(recovered.status,200);
+  resume();assert.equal((await pending).status,409);
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id,replacement.id);
+  assert.equal((await call('/api/me',{token:replacement.token})).player.isAdmin,true);
+});
+
+for(const operation of ['config','grants'])test(`a queued ${operation} mutation loses authority after owner release`,async()=>{
+  const {call,admin,env}=setup(),owner=await admin();
+  const expectedRegistration=(await call('/api/admin/config',{token:owner.token})).adminRegistration;
+  const originalBatch=env.DB.batch.bind(env.DB);let resume,started;
+  const gate=new Promise(resolve=>{resume=resolve;}),atGate=new Promise(resolve=>{started=resolve;});
+  env.DB.batch=async statements=>{
+    const sql=statements[0].sql;
+    if((operation==='config'&&sql.startsWith('UPDATE futo_config'))||(operation==='grants'&&sql.startsWith('INSERT OR IGNORE INTO grant_batches'))){started();await gate;}
+    return originalBatch(statements);
+  };
+  const requestId=crypto.randomUUID();
+  const pending=call(`/api/admin/${operation}`,{method:operation==='config'?'PUT':'POST',token:owner.token,body:operation==='config'?{config:changedConfig()}:{requestId,target:'all'}});
+  await atGate;
+  assert.equal((await call('/api/admin/release',{method:'POST',token:owner.token,body:{confirmed:true,expectedRegistration}})).status,200);
+  resume();assert.equal((await pending).status,403);
+  assert.equal((await call('/api/status')).adminExists,false);
+  assert.equal(JSON.parse(env.DB.sqlite.prepare('SELECT config_json FROM futo_config').get().config_json).stats.hp,DEFAULT_CONFIG.stats.hp);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grant_batches WHERE id = ?').get(requestId).n,0);
 });

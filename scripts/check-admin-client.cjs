@@ -18,7 +18,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,futoMoveEntries,get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -202,86 +202,131 @@ test('recovery status survives registration, paginated me reads and identity res
   assert.equal(h.api.status.adminRecoveryAvailable,false,'Restored identity must use its fresh server flags');
 });
 
-test('an existing administrator hides the key except for explicit recovery availability',()=>{
+test('key input requires an authenticated player and explicit unregistered status',()=>{
   const h=harness({settings:true});
-  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();
-  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
-  const oldSignature=h.serviceBody.dataset.signature;
+  h.api.refreshSettings();assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+  for(const [exists,recovery] of [[true,false],[true,true],[undefined,true]]){
+    h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,exists,recovery);h.api.refreshSettings();
+    assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+    assert(!h.serviceBody.innerHTML.includes('運営を再登録'));
+  }
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,false,true);h.api.refreshSettings();
+  assert(h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));assert(h.serviceBody.innerHTML.includes('type="password"'));
+  h.keyField.value='never-keep-this-key';
   h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
-  assert.notEqual(h.serviceBody.dataset.signature,oldSignature);
-  assert(h.serviceBody.innerHTML.includes('type="password"'));
-  assert(h.serviceBody.innerHTML.includes('ドメイン変更後の運営再登録'));
-  assert(h.serviceBody.innerHTML.includes('以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します'));
-  assert(h.serviceBody.innerHTML.includes('運営を再登録'));
-  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();
-  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'),'Consumed recovery must remove the key');
+  assert.equal(h.keyField.value,'');assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+  h.api.adoptIdentity({token:TOKEN_A,id:PLAYER_A.id,name:PLAYER_A.name},PLAYER_A,true,true);h.api.refreshSettings();
+  assert(h.serviceBody.innerHTML.includes('運営として登録済み'));assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
 });
 
-test('successful recovery sends once, clears the key and consumes recovery UI',async()=>{
+test('repeated refresh taps never expose recovery or send a claim while registered',async()=>{
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:true});
+    if(c.path==='/me')return response({player:PLAYER_B,adminExists:true,adminRecoveryAvailable:true,grants:[],nextCursor:null});
+  }});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
+  for(let i=0;i<24;i++){h.clock.now+=100;h.press('refresh');}
+  await h.api.sync();
+  assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+  h.keyField.value='hidden-key';await h.api.claim({disabled:false,isConnected:true});
+  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,0);
+});
+
+test('background registration and release refreshes hide and restore the key form',async()=>{
+  let exists=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/status')return response({adminExists:exists,adminRecoveryAvailable:true});
+    if(c.path==='/me')return response({player:PLAYER_B,adminExists:exists,grants:[],nextCursor:null});
+  }});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,false);await h.api.sync();
+  assert(h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));h.keyField.value='typed-key';
+  exists=true;await h.api.sync();assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));assert.equal(h.keyField.value,'');
+  exists=false;await h.api.sync();assert(h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));assert.equal(h.keyField.value,'');
+});
+
+test('unavailable status removes a previously visible key input',async()=>{
+  const h=harness({settings:true,handle:c=>c.path==='/status'?Promise.reject(new Error('offline')):null});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,false);h.api.refreshSettings();h.keyField.value='typed-key';
+  await h.api.sync();assert.equal(h.api.status,null);assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));assert.equal(h.keyField.value,'');
+});
+
+test('normal registration sends once and clears the key after success',async()=>{
   const claimed=deferred(),newAdmin={...PLAYER_B,isAdmin:true};let complete=false,consoleOpened=0;
   const h=harness({settings:true,handle:c=>{
     if(c.path==='/admin/claim')return claimed.promise;
-    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:!complete});
-    if(c.path==='/me')return response({player:complete?newAdmin:PLAYER_B,adminExists:true,adminRecoveryAvailable:!complete,grants:[],nextCursor:null});
+    if(c.path==='/status')return response({adminExists:complete});
+    if(c.path==='/me')return response({player:complete?newAdmin:PLAYER_B,adminExists:complete,grants:[],nextCursor:null});
   }});
-  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
-  h.api.stubConsole(async()=>{consoleOpened++;});h.keyField.value='recovery-test-key';
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,false);h.api.refreshSettings();
+  h.api.stubConsole(async()=>{consoleOpened++;});h.keyField.value='registration-test-key';
   const button={disabled:false,isConnected:true},first=h.api.claim(button);
-  await until(()=>h.calls.some(c=>c.path==='/admin/claim'));
-  await h.api.claim(button);assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);
-  assert.equal(h.api.claimBusy,true);assert.equal(h.calls.find(c=>c.path==='/admin/claim').body.key,'recovery-test-key');
+  await until(()=>h.calls.some(c=>c.path==='/admin/claim'));await h.api.claim(button);
+  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);assert.equal(h.api.claimBusy,true);
+  assert.deepEqual({...h.calls.find(c=>c.path==='/admin/claim').body},{key:'registration-test-key'});
   complete=true;claimed.resolve(response({player:newAdmin,adminExists:true,adminRecoveryAvailable:false}));await first;
-  assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(h.api.status.adminRecoveryAvailable,false);
-  assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert.equal(consoleOpened,1);assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
-});
-
-test('failed recovery clears the password, releases busy state and refreshes availability',async()=>{
-  let available=true;
-  const h=harness({settings:true,handle:c=>{
-    if(c.path==='/admin/claim'){available=false;return {ok:false,status:409,json:async()=>({ok:false,error:{code:'ALREADY_CLAIMED',message:'登録済みです。'}})};}
-    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:available});
-    if(c.path==='/me')return response({player:PLAYER_B,adminExists:true,adminRecoveryAvailable:available,grants:[],nextCursor:null});
-  }});
-  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,true);h.api.refreshSettings();
-  h.keyField.value='recovery-test-key';const button={disabled:false,isConnected:true};await h.api.claim(button);
-  assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(button.disabled,false);
-  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(h.api.status.adminRecoveryAvailable,false);
+  assert.equal(h.keyField.value,'');assert.equal(h.api.claimBusy,false);assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert.equal(consoleOpened,1);
   assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
 });
 
-
-test('eight presses of お届けものを確認 in a row open the admin recovery screen',async()=>{
-  let recovery=false;
-  const newAdmin={...PLAYER_B,isAdmin:true};let admin=false;
+test('claim rechecks occupancy before sending a key and rejects stale empty state',async()=>{
   const h=harness({settings:true,handle:c=>{
-    if(c.path==='/admin/claim')return recovery?(admin=true,response({player:newAdmin,adminExists:true,adminRecoveryAvailable:false})):{ok:false,status:409,json:async()=>({ok:false,error:{code:'ADMIN_ALREADY_EXISTS',message:'運営はすでに登録されています。'}})};
-    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:false});
-    if(c.path==='/me'||c.path==='/register')return response({player:admin?newAdmin:PLAYER_B,adminExists:true,adminRecoveryAvailable:false,grants:[],nextCursor:null});
+    if(c.path==='/status')return response({adminExists:true});
+    if(c.path==='/me')return response({player:PLAYER_B,adminExists:true,grants:[],nextCursor:null});
   }});
-  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();h.api.stubConsole(async()=>{});
-  const tap=(n,gap=400)=>{for(let i=0;i<n;i++){h.clock.now+=gap;h.press('refresh');}};
-  const shown=()=>h.serviceBody.innerHTML.includes('id="pachi-admin-key"');
-  // Seven presses: still the ordinary panel; the refresh itself still works.
-  tap(7);await until(()=>h.calls.some(c=>c.path==='/register'||c.path==='/me'));assert(!shown());
-  // A pause longer than two seconds starts the count again; so does another button.
-  h.clock.now+=2500;tap(7);assert(!shown(),'the count restarts after a pause');
-  h.press('backup');tap(7);assert(!shown(),'another button restarts the count');
-  // The eighth press in a row opens the recovery screen.
-  tap(1);assert(shown(),'the eighth press opens it');
-  assert(h.serviceBody.innerHTML.includes('運営の復元'));assert(h.serviceBody.innerHTML.includes('運営を再登録'));assert(h.serviceBody.innerHTML.includes('data-admin-action="recovery-close"'));
-  assert.match(h.statusLine.textContent,/運営の復元画面を開きました/);
-  // The screen asks for the operator seat explicitly, with the key. A server not yet updated
-  // refuses: the reason is shown and the screen stays.
-  h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
-  assert.deepEqual({...h.calls.find(c=>c.path==='/admin/claim').body},{key:'owner-key',recover:true});
-  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);assert.match(h.statusLine.textContent,/最新版に更新/);assert(shown());assert.equal(h.keyField.value,'');
-  // Closing hides it; eight more presses bring it back.
-  h.press('recovery-close');assert(!shown());tap(8);assert(shown());
-  // An updated server accepts the explicit request: the key moves the admin role here and the screen closes.
-  recovery=true;h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
-  assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert(!shown());assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,2);
-  // An administrator is simply told so.
-  h.clock.now+=5000;tap(8);assert(!shown());assert.match(h.statusLine.textContent,/すでに運営として登録/);
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,false);h.api.refreshSettings();h.keyField.value='typed-key';
+  await h.api.claim({disabled:false,isConnected:true});
+  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,0);assert.equal(h.keyField.value,'');assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+});
+
+function attachOwnerConsole(h,claimedAt=1234){
+  const box={hidden:true,innerHTML:''},cancel={disabled:false,focused:false,focus(){this.focused=true;}},confirm={disabled:false};
+  const dialog={open:true,closed:0,querySelector:selector=>selector==='#pachi-release-review'?box:selector==='[data-admin-action="release-cancel"]'?cancel:selector==='.pachi-status'?h.statusLine:null,
+    querySelectorAll:()=>[cancel,confirm],close(){this.open=false;this.closed++;}};
+  h.api.attachConsole(dialog,{playerId:PLAYER_A.id,claimedAt});return {box,cancel,confirm,dialog};
+}
+
+test('release review defaults to cancel and cancellation has no server mutation',async()=>{
+  const h=harness({settings:true});adopt(h);const view=attachOwnerConsole(h);
+  h.api.prepareRelease();assert.equal(view.box.hidden,false);assert(view.box.innerHTML.includes('運営キーの入力欄'));assert(view.cancel.focused);
+  const button={dataset:{adminAction:'release-cancel'},disabled:false,isConnected:true};await h.api.handleConsole({target:{closest:()=>button}});
+  assert.equal(view.box.hidden,true);assert.equal(h.api.releaseReview,null);assert.equal(h.calls.length,0);assert(view.dialog.open);
+  adopt(h,TOKEN_B,PLAYER_B);assert.throws(()=>h.api.prepareRelease());
+});
+
+test('confirmed owner release sends once, removes ownership and restores the empty-seat form',async()=>{
+  const released=deferred();let complete=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/release')return released.promise;
+    if(c.path==='/status')return response({adminExists:!complete});
+    if(c.path==='/me')return response({player:{...PLAYER_A,isAdmin:!complete},adminExists:!complete,grants:[],nextCursor:null});
+  }});
+  adopt(h);const view=attachOwnerConsole(h);h.api.prepareRelease();const first=h.api.releaseAdmin();await until(()=>h.calls.some(c=>c.path==='/admin/release'));
+  assert.equal(h.api.releaseBusy,true);assert(view.cancel.disabled);await h.api.releaseAdmin();assert.equal(h.calls.filter(c=>c.path==='/admin/release').length,1);
+  assert.deepEqual(JSON.parse(JSON.stringify(h.calls.find(c=>c.path==='/admin/release').body)),{confirmed:true,expectedRegistration:{playerId:PLAYER_A.id,claimedAt:1234}});
+  complete=true;released.resolve(response({released:true,player:{...PLAYER_A,isAdmin:false},adminExists:false}));await first;
+  assert.equal(h.api.releaseBusy,false);assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(h.api.releaseReview,null);assert.equal(view.dialog.open,false);
+  assert(h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+});
+
+test('identity changes discard release confirmation and uncertain gifts block release',async()=>{
+  const h=harness({settings:true});adopt(h);attachOwnerConsole(h);h.api.prepareRelease();
+  adopt(h,TOKEN_B,PLAYER_B);await h.api.releaseAdmin();assert(!h.calls.some(c=>c.path==='/admin/release'));
+  adopt(h);attachOwnerConsole(h);h.api.prepareGrant('all',CONFIG);h.api.pendingGrant.uncertain=true;
+  assert.throws(()=>h.api.prepareRelease(),/配布結果/);
+});
+
+test('a delayed old-owner profile cannot restore the role after release',async()=>{
+  const stale=deferred();let reads=0,complete=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/release'){complete=true;return response({released:true,player:{...PLAYER_A,isAdmin:false},adminExists:false});}
+    if(c.path==='/status')return response({adminExists:!complete});
+    if(c.path==='/me')return reads++===0?stale.promise:response({player:{...PLAYER_A,isAdmin:false},adminExists:false,grants:[],nextCursor:null});
+  }});
+  adopt(h);attachOwnerConsole(h);h.api.prepareRelease();const oldSync=h.api.sync();await until(()=>h.calls.some(c=>c.path==='/me'));
+  const releasing=h.api.releaseAdmin();await until(()=>h.calls.some(c=>c.path==='/admin/release'));
+  await until(()=>h.ctx.LT.Admin.player.isAdmin===false);
+  stale.resolve(response({player:PLAYER_A,adminExists:true,grants:[],nextCursor:null}));await Promise.all([oldSync,releasing]);
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert(h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
 });
 
 test('legendary signature moves are excluded from Futo configuration choices',()=>{

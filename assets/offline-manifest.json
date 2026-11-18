@@ -1,9 +1,13 @@
 {
- "version": "2026-11-18",
+ "version": "2026-11-18-v32",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
    "bytes": 1338546
+  },
+  {
+   "url": "assets/battle-effects-v32.png",
+   "bytes": 2245423
   },
   {
    "url": "assets/battle-landscapes-v7.webp",
@@ -254,6 +258,6 @@
   "assets/traveller-hero.webp",
   "assets/traveller-npcs.webp"
  ],
- "totalBytes": 46262302,
+ "totalBytes": 48507725,
  "coreBytes": 7296515
 }

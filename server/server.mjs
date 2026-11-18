@@ -126,7 +126,7 @@ async function consumeLimit(env, request, action, max, milliseconds, global = fa
   // Bounded cleanup of expired counters; no migration-owned table creation here.
   await env.DB.prepare('DELETE FROM rate_limits WHERE key IN (SELECT key FROM rate_limits WHERE expires_at < ? LIMIT 20)').bind(now - 86400000).run();
 }
-async function ownerRecord(env) { return env.DB.prepare('SELECT player_id FROM admin_owner WHERE singleton = 1').first(); }
+async function ownerRecord(env) { return env.DB.prepare('SELECT player_id, claimed_at FROM admin_owner WHERE singleton = 1').first(); }
 async function initialCompanions(env, playerId) {
   // This is an owner entitlement, not a distributable grant. Keeping its stable
   // receipt separate from Futo deliveries lets existing administrators receive
@@ -376,8 +376,8 @@ async function route(request, env, url) {
   if (path === '/api/admin/claim' && method === 'POST') {
     const previousOwner = await ownerRecord(env), configured = recoveryAllowed(env, request, previousOwner);
     if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
-    // The game's hidden recovery screen asks for the operator seat explicitly (recover: true).
-    // That request is always open, with or without ADMIN_RECOVERY_* settings: the operator key,
+    // Explicit recovery requests retain the existing operator-key recovery API.
+    // The recovery request works with or without ADMIN_RECOVERY_* settings: the operator key,
     // player authentication and the rate limits below still decide. Ordinary claims still stop
     // at an existing operator.
     const early = previousOwner && !configured ? await bodyJSON(request) : null;
@@ -405,7 +405,24 @@ async function route(request, env, url) {
     return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
   }
   await requireAdmin(env, player);
-  if (path === '/api/admin/config' && method === 'GET') return configRecord(env);
+  if (path === '/api/admin/config' && method === 'GET') {
+    const owner = await ownerRecord(env);
+    if (owner?.player_id !== player.id) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。');
+    return {...await configRecord(env), adminRegistration:{playerId:owner.player_id, claimedAt:owner.claimed_at}};
+  }
+  if (path === '/api/admin/release' && method === 'POST') {
+    const body = await bodyJSON(request), expected = body.expectedRegistration;
+    if (body.confirmed !== true || expected?.playerId !== player.id || !Number.isSafeInteger(expected?.claimedAt) || expected.claimedAt < 0) {
+      fail(400, 'RELEASE_CONFIRMATION_REQUIRED', '運営登録の解除内容を確認してから操作してください。');
+    }
+    // Delete only the exact registration reviewed by the current owner. A
+    // delayed request must never release a replacement administrator.
+    const removed = await env.DB.prepare('DELETE FROM admin_owner WHERE singleton = 1 AND player_id = ? AND claimed_at = ? RETURNING player_id').bind(player.id, expected.claimedAt).first();
+    if (!removed) fail(409, 'ADMIN_REGISTRATION_CHANGED', '運営登録が変更されています。最新の状態を確認してください。');
+    // Keep player identities, configuration and delivered gifts intact.
+    const currentOwner = await ownerRecord(env);
+    return {released:true, player:{...playerView(player), isAdmin:currentOwner?.player_id === player.id}, adminExists:!!currentOwner, adminRecoveryAvailable:recoveryAllowed(env, request, currentOwner)};
+  }
   if (path === '/api/admin/config' && method === 'PUT') {
     const body = await bodyJSON(request), config = validateConfig(body.config), current = await configRecord(env);
     if (body.expectedRevision !== undefined && body.expectedRevision !== current.revision) fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。');

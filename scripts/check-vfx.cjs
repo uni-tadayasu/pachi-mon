@@ -6,6 +6,56 @@ const path=require('node:path');
 const vm=require('node:vm');
 const {runtime,canvas,imageStats}=require('./check-art.cjs');
 
+async function checkAccent(source){
+  const make=mode=>{
+    let clock=0,requests=0;const pending=[],timeouts=[];
+    class AccentImage extends canvas.Image{
+      set src(value){
+        requests++;assert.equal(value,'https://game.test/assets/battle-effects-v32.png');
+        pending.push(()=>new Promise(resolve=>{
+          const loaded=this.onload,failed=this.onerror;
+          this.onload=(...args)=>{loaded?.(...args);resolve();};this.onerror=(...args)=>{failed?.(...args);resolve();};
+          if(mode==='fail'&&requests===1){this.onerror(new Error('Expected image failure'));return;}
+          super.src=path.join(__dirname,'../assets/battle-effects-v32.png');
+        }));
+      }
+    }
+    const sandbox={LT:{},Image:AccentImage,URL,Date:{now:()=>clock},
+      document:{currentScript:{src:'https://game.test/battle-vfx.js'},createElement:()=>canvas.createCanvas(1,1)},
+      setTimeout(fn){const token={fn,cleared:false};timeouts.push(token);return token;},clearTimeout(token){if(token)token.cleared=true;}};
+    vm.runInNewContext(source,sandbox);
+    return {api:sandbox.LT.BattleVFX,requests:()=>requests,finish:()=>pending.shift()(),timeout:()=>timeouts.find(x=>!x.cleared).fn(),advance:()=>{clock+=30001;}};
+  };
+  const cv=canvas.createCanvas(768,440),c=cv.getContext('2d');
+  const event={style:'wave',kind:'damage',element:'tide',side:'ally',started:0,duration:1000,power:100,seed:17};
+  const loaded=make('normal');assert.equal(loaded.requests(),0,'Boot must not fetch battle-only art');
+  loaded.api.render(c,768,440,550,event,{quality:'low'});assert.equal(loaded.requests(),0,'Low quality must not initiate the optional atlas');
+  c.clearRect(0,0,768,440);loaded.api.render(c,768,440,550,event,{quality:'high'});const fallback=imageStats(cv).hash;
+  assert.equal(loaded.requests(),1);assert.equal(loaded.api.artStatus().state,'loading');
+  assert(imageStats(cv).opaque>0,'Every move must paint while an atlas is still downloading');
+  loaded.api.render(c,768,440,560,event,{quality:'high'});assert.equal(loaded.requests(),1,'Frames must reuse one atlas request');
+  const ready=loaded.api.preload();await loaded.finish();assert.equal(await ready,true);assert.equal(loaded.api.artStatus().sheets,1);
+  c.clearRect(0,0,768,440);loaded.api.render(c,768,440,550,event,{quality:'high'});const decorated=imageStats(cv).hash;
+  assert.notEqual(decorated,fallback,'Decoded atlas must add the actual material accent');
+  c.clearRect(0,0,768,440);loaded.api.render(c,768,440,550,event,{quality:'high'});assert.equal(imageStats(cv).hash,decorated);
+  const hashes=new Set();
+  for(const detail of [{element:'ember'},{element:'tide'},{element:'leaf'},{element:'crystal'},{element:'wind'},
+    {element:'neutral'},{element:'crystal',move:'futo_burst',style:'beam'},{element:'leaf',kind:'heal',style:'healing'}]){
+    c.clearRect(0,0,768,440);loaded.api.render(c,768,440,550,{...event,...detail},{quality:'high'});hashes.add(imageStats(cv).hash);
+  }
+  assert.equal(hashes.size,8,'All eight accent families must retain distinct visible materials');
+  assert(loaded.api.artStatus().motifCache<=loaded.api.artStatus().motifCacheLimit,'Pixel motif cache is bounded');
+  assert.equal(loaded.requests(),1,'Palette changes must never fetch duplicate sheets');
+  const failed=make('fail'),failedPromise=failed.api.preload();await failed.finish();assert.equal(await failedPromise,false);
+  c.clearRect(0,0,768,440);failed.api.render(c,768,440,550,event,{quality:'high'});assert.equal(imageStats(cv).hash,fallback,'Failure must preserve complete procedural rendering');
+  assert.equal(failed.requests(),1,'Failed assets must respect a cooldown');failed.advance();const retried=failed.api.preload();assert.equal(failed.requests(),2);await failed.finish();assert.equal(await retried,true);
+  const late=make('normal'),deadline=late.api.preload();late.timeout();assert.equal(await deadline,false);assert.equal(late.api.artStatus().state,'timed-out');
+  late.api.render(c,768,440,550,event,{quality:'high'});assert.equal(late.requests(),1,'Timeout must not multiply still-pending downloads');
+  await late.finish();assert.equal(late.api.artStatus().loaded,true,'A late image load must recover without restarting the battle');
+  c.clearRect(0,0,768,440);late.api.render(c,768,440,550,event,{quality:'high'});assert.equal(imageStats(cv).hash,decorated,'Late recovery must match normal decoding');
+  return {families:8,lazy:true,failureFallback:true,lateRecovery:true,decodedSheetLimit:1,pixelCacheLimit:loaded.api.artStatus().motifCacheLimit};
+}
+
 async function main(){
   const {LT,engine}=await runtime();
   globalThis.LT=LT;
@@ -22,6 +72,7 @@ async function main(){
   assert(moves.every(m=>api.styles.includes(api.classify(m))),'Unmapped technique');
   assert(api.budgets.low.particles < api.budgets.high.particles);
   assert(api.budgets.high.ribbonSteps <= 26 && api.budgets.high.corona <= 15);
+  assert(api.budgets.high.ornaments<=7);
   const sample=LT.DATA.moves.frost;
   assert.equal(api.fromEvent({kind:'damage',text:`敵の「${sample.name}」。30のダメージ。`,side:'enemy'},LT.DATA.moves.spark,100).style,'ice');
   assert.equal(api.fromEvent({kind:'miss',text:'攻撃は外れた。',side:'enemy'},null,100).style,'miss');
@@ -136,6 +187,9 @@ async function main(){
   hookLT.PixelSprites.duel(cv,online,1,2000);assert.equal(duelOptions.effect,undefined,'Expired motions must clear');
   const previewArg=process.argv.indexOf('--preview');
   if(previewArg>=0&&process.argv[previewArg+1]){
+    const PreviousImage=globalThis.Image;
+    globalThis.Image=class extends canvas.Image{set src(value){super.src=path.resolve(__dirname,'..',value);}};
+    try{assert.equal(await api.preload(),true,'Preview must include the actual decoded effect atlas');}finally{globalThis.Image=PreviousImage;}
     const styles=api.styles.filter(x=>x!=='miss'),tileW=384,tileH=240,cols=4,rows=Math.ceil(styles.length/cols);
     const sheet=canvas.createCanvas(tileW*cols,tileH*rows),sc=sheet.getContext('2d');sc.fillStyle='#101b2b';sc.fillRect(0,0,sheet.width,sheet.height);
     styles.forEach((style,i)=>{
@@ -152,6 +206,7 @@ async function main(){
     });
     fs.writeFileSync(process.argv[previewArg+1],await sheet.encode('webp',88));
   }
-  console.log(JSON.stringify({ok:true,moves:moves.length,moveFamilies:families.size,styles:api.styles.length,renderedFrames:rendered,qualities:2,finitePhaseBoundaryCases:api.styles.length*5,maxLowQualityCanvasCalls:largestBudget,motionHooks:true,deterministic:true,reducedMotion:true,gameplayUnchanged:true}));
+  const accent=await checkAccent(source);
+  console.log(JSON.stringify({ok:true,moves:moves.length,moveFamilies:families.size,styles:api.styles.length,renderedFrames:rendered,qualities:2,finitePhaseBoundaryCases:api.styles.length*5,maxLowQualityCanvasCalls:largestBudget,accent,motionHooks:true,deterministic:true,reducedMotion:true,gameplayUnchanged:true}));
 }
 main().catch(e=>{console.error(e.stack||e);process.exitCode=1;});
