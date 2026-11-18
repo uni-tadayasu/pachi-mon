@@ -3,7 +3,7 @@
 /* SEO: every public page has its title, description, canonical, social cards,
  * language and valid structured data; links and images resolve; the sitemap
  * lists exactly the indexable pages; the FAQ markup mirrors the visible FAQ. */
-const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const root = path.join(__dirname, '..'), SITE = 'https://www.kasai-solutions-inc.com';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const pages = ['index.html', 'guide/index.html', 'moves/index.html', 'monsters/index.html', '404.html', ...fs.readdirSync(path.join(root, 'monsters')).filter(f => f.endsWith('.html') && f !== 'index.html').map(f => `monsters/${f}`)];
@@ -28,24 +28,27 @@ for (const file of pages) {
   assert(description && description.length >= 40 && description.length <= 200, `${file}: description length ${description?.length}`);
   const canonical = attr(html, /<link rel="canonical" href="([^"]+)"/);
   assert(canonical?.startsWith(SITE + '/'), `${file}: absolute canonical`);
+  assert.equal(canonical, `${SITE}/${file.replace(/index\.html$/, '')}`, `${file}: canonical matches its public path`);
   for (const key of ['og:title', 'og:description', 'og:url', 'og:image']) assert(new RegExp(`<meta property="${key}" content="[^"]+"`).test(html), `${file}: ${key}`);
+  assert.equal(attr(html, /<meta property="og:url" content="([^"]+)"/), canonical, `${file}: social URL matches canonical`);
   assert(/<meta name="twitter:card" content="summary_large_image">/.test(html), `${file}: twitter card`);
-  if (file !== 'index.html') for (const key of ['twitter:title', 'twitter:image']) assert(new RegExp(`<meta name="${key}" content="[^"]+"`).test(html), `${file}: ${key}`);
+  for (const key of ['twitter:title', 'twitter:description', 'twitter:image']) assert(new RegExp(`<meta name="${key}" content="[^"]+"`).test(html), `${file}: ${key}`);
   assert(/<link rel="alternate" hreflang="ja"/.test(html), `${file}: hreflang`);
+  for (const lang of ['ja', 'x-default']) assert.equal(attr(html, new RegExp(`<link rel="alternate" hreflang="${lang}" href="([^"]+)"`)), canonical, `${file}: ${lang} alternate matches canonical`);
   assert(/<link rel="manifest" href="[^"]*manifest\.webmanifest">/.test(html), `${file}: app manifest`);
   for (const m of html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) JSON.parse(m[1]);
-  if (file !== 'index.html') assert.equal((html.match(/<h1[\s>]/g) || []).length, 1, `${file}: one h1`);
+  const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+  assert.equal((markup.match(/<h1[\s>]/g) || []).length, 1, `${file}: one h1`);
   const noindex = /<meta name="robots" content="noindex/.test(html);
   assert.equal(noindex, file === '404.html', `${file}: only the 404 page is noindex`);
-  if (!noindex) canonicals.set(canonical, file);
+  if (!noindex) { assert(!canonicals.has(canonical), `${file}: canonical is unique`); canonicals.set(canonical, file); }
   // Images have alt text and exist; internal links resolve (anchors included).
   for (const m of html.matchAll(/<img\b[^>]*>/g)) {
     const tag = m[0], src = attr(tag, /src="([^"]+)"/);
     assert(/alt="[^"]+"/.test(tag), `${file}: image without alt (${src})`);
     if (src && !/^https?:/.test(src)) { assert(fs.existsSync(path.join(root, dir, src.split('?')[0])), `${file}: missing image ${src}`); images++; }
   }
-  if (file === 'index.html') continue;
-  for (const m of html.matchAll(/<a\b[^>]*href="([^"]+)"/g)) {
+  for (const m of markup.matchAll(/<a\b[^>]*href="([^"]+)"/g)) {
     const href = m[1];
     if (/^(https?:|mailto:)/.test(href)) continue;
     const [target, anchor] = href.split('#');
@@ -73,4 +76,25 @@ const moves = read('moves/index.html');
 assert.equal((moves.match(/<tr id="/g) || []).length, 96, 'the move list has all 96 moves');
 assert(/<meta name="description" content="[^"]*96種/.test(home), 'the home description mentions 96 moves');
 assert.equal(redirects, 6, 'every retired species page redirects');
-console.log(JSON.stringify({ ok: true, pages: pages.length, indexable: canonicals.size, redirects, links, images, faq: visible.length }));
+// Published facts are checked against the same engine data used by the game.
+// This catches stale marketing counts even when metadata itself remains valid.
+const dataContext = vm.createContext({ console });
+for (const match of home.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+  if (/\bsrc=|application\/ld\+json/.test(match[1])) continue;
+  vm.runInContext(match[2], dataContext);
+  if (dataContext.LT?.Engine) break;
+}
+const data = dataContext.LT.DATA, publicHome = home.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''), guide = read('guide/index.html');
+assert.equal(Object.keys(data.species).length, 256);
+assert.equal(data.regionIds.length, 128);
+assert.equal(Object.keys(data.guardians).length, 32);
+assert.equal(data.limits.storage, 192);
+assert(publicHome.includes(`全${Object.keys(data.species).length}種の一覧へ`), 'the home dex count matches the species data');
+assert(publicHome.includes(`${data.regionIds.length}のステージ。`), 'the home stage count matches the map data');
+assert(publicHome.includes(`${Object.keys(data.guardians).length}の旅紋を集め`), 'the home crest count matches the guardian data');
+assert(guide.includes(`ひかえには最大${data.limits.storage}体`), 'the guide storage limit matches the engine');
+assert(visible.some(([q,a])=>/ひかえ/.test(q)&&a.includes(`${data.limits.storage}体`)), 'the FAQ explains the storage limit');
+assert(guide.includes('フルカラー（高精細ドット）が初期設定'), 'the guide explains the full-colour default');
+assert(!/全262種|64のエリア|64の探索エリア|16の証を集め/.test(publicHome), 'stale home counts were removed');
+assert(!read('monsters/komori.html').includes('通常レンタル'), 'dex pages no longer describe retired rental battles');
+console.log(JSON.stringify({ ok: true, pages: pages.length, indexable: canonicals.size, redirects, links, images, faq: visible.length, publicFactsMatchEngine: true }));

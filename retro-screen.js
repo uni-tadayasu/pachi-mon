@@ -15,7 +15,7 @@
     sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', long: 300, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
     night: Object.freeze({ id: 'night', label: '月夜液晶（4階調）', short: 'NIGHT', long: 300, palette: ['#0c0f2d', '#2e3c7b', '#7e9dda', '#e0e8ff'] }),
     mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', long: 300, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] }),
-    color: Object.freeze({ id: 'color', label: '高精細ドット（原画カラー）', short: 'HD', long: 0 }),
+    color: Object.freeze({ id: 'color', label: 'フルカラー（高精細ドット）', short: 'COLOR', long: 0 }),
     // Hidden until the title-screen trick: channels rotate, colours band hard.
     glitch: Object.freeze({ id: 'glitch', label: 'バグ色（色化け）', short: 'BUG', long: 200, levels: 5, saturate: 1.9, swap: true })
   });

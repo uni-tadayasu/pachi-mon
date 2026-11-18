@@ -57,7 +57,7 @@ function visible(cv, label, cutout = false) {
 }
 
 async function runtime(mode = 'normal') {
-  const imageErrors = [], warnings = [], deferredImages = [], pendingTimeouts = new Set(), events = new Map();
+  const imageErrors = [], warnings = [], deferredImages = [], successfulImages = [], pendingTimeouts = new Set(), events = new Map();
   let lateNotifications = 0;
   class LocalImage extends canvas.Image {
     set src(value) {
@@ -69,7 +69,14 @@ async function runtime(mode = 'normal') {
       // Force asynchronous completion so pre-load cache invalidation is tested.
       const complete = () => new Promise(resolve => {
         const onload = this.onload, onerror = this.onerror;
-        this.onload = (...args) => { try { onload?.apply(this, args); } finally { resolve(); } };
+        this.onload = (...args) => {
+          const before = lateNotifications;
+          try { onload?.apply(this, args); }
+          finally {
+            successfulImages.push({ file: relative, notifications: lateNotifications - before });
+            resolve();
+          }
+        };
         this.onerror = (...args) => { try { onerror?.apply(this, args); } finally { resolve(); } };
         if (mode === 'broken-assets') {
           imageErrors.push(relative);
@@ -127,7 +134,7 @@ async function runtime(mode = 'normal') {
     async finishDelayedImages() {
       await Promise.all(deferredImages.splice(0).map(complete => complete()));
       LT.Art.world(probe, engine, 0);
-      return { hash: imageStats(probe).hash, notifications: lateNotifications };
+      return { hash: imageStats(probe).hash, notifications: lateNotifications, successfulImages: successfulImages.slice() };
     },
   };
 }
@@ -260,7 +267,13 @@ async function main() {
   assert.equal(delayed.beforeLoad, delayed.afterLoad, 'Timed-out images should retain playable fallback graphics');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 0, 'Delayed downloads completed before the test released them');
   const recovered = await delayed.finishDelayedImages();
-  assert.equal(recovered.notifications, 14+(delayed.LT.IndividualCreatureArt?.status().successfulLoads||0), 'Every late successful image should refresh the display');
+  // Observe each completed download instead of assuming a fixed atlas count.
+  // The timed-out Futo front can also request its original fallback image, and
+  // both authored Futo views plus the female traveller are independent loads.
+  assert(recovered.successfulImages.length > 0, 'Delayed-image recovery did not release any downloads');
+  for (const image of recovered.successfulImages)
+    assert.equal(image.notifications, 1, `${image.file}: a late successful image must refresh the display exactly once`);
+  assert.equal(recovered.notifications, recovered.successfulImages.length, 'No additional or missing image-ready notifications');
   assert.notEqual(recovered.hash, delayed.afterLoad, 'The late artwork left stale world caches on screen');
   assert.equal(delayed.LT.CreatureArt.status().loaded, 4, 'Late creature atlases were not adopted');
   assert.equal(delayed.LT.CreatureArt.status().failed, 0, 'Recovered creature atlases still report failure');

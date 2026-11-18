@@ -1,7 +1,7 @@
 /* Original Pachi Monsters traveller art — © 2026 KASAI SOLUTIONS INC.
  * Generated with OpenAI image generation for this original game: detailed pixel
  * traveller (teal coat, ochre cap, rust scarf), four NPC professions, four views.
- * Lossless WebP exports preserve the authored pixels and transparent alpha.
+ * Revision 33 sheets preserve fine material details and transparent silhouettes.
  * Image atlases are authored for this project. Runtime extraction retains the
  * transparent silhouettes and a shared feet baseline for world depth sorting.
  */
@@ -10,7 +10,7 @@
   const LT = globalThis.LT = globalThis.LT || {};
   const directions = ['down', 'left', 'right', 'up'];
   const atlas = { hero: null, female: null, npcs: null };
-  const heights = {};
+  const dimensions = {};
   const cache = new Map();
   const MAX_CACHE = 160;
   const sourceBase = new URL('.', document.currentScript?.src || document.baseURI);
@@ -73,7 +73,14 @@
       const timer = setTimeout(release, 12000);
       img.onload = () => {
         if (done) return;
-        try { atlas[name] = split(img, rows); heights[name]=Math.max(...atlas[name].filter(Boolean).map(cell=>cell.h)); stats.loaded++; finish(true); }
+        try {
+          const cells = split(img, rows);
+          if (cells.some(cell => !cell)) throw new Error('An authored traveller view is empty');
+          atlas[name] = cells;
+          dimensions[name] = { width: Math.max(...cells.map(cell => cell.w)), height: Math.max(...cells.map(cell => cell.h)) };
+          // A late or replacement atlas must not keep an older extracted pose.
+          cache.clear(); stats.loaded++; finish(true);
+        }
         catch (error) { console.warn('Traveller art unavailable:', file, error); finish(false); }
       };
       img.onerror = () => finish(false);
@@ -90,7 +97,7 @@
 
   function varyCloth(ctx, role, variant) {
     if (!variant) return;
-    const pixels = ctx.getImageData(0, 0, 96, 128);
+    const pixels = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
     const shifts = [[0, 0, 0], [12, 2, -6], [-7, 5, 10], [7, -6, 12]];
     const shift = shifts[variant];
     for (let i = 0; i < pixels.data.length; i += 4) {
@@ -103,25 +110,33 @@
     ctx.putImageData(pixels, 0, 0);
   }
 
-  function get(kind = 'hero', facing = 'down', frame = 0, id = 0) {
+  function get(kind = 'hero', facing = 'down', frame = 0, id = 0, resolution = 1) {
+    const density = resolution >= 2 ? 2 : 1;
     const female = kind === 'hero-female', hero = kind === 'hero' || female, atlasName = hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
     if (!cells) return null;
     const direction = Math.max(0, directions.indexOf(facing));
     const pose = Math.max(0, Math.min(2, Number.isFinite(frame) ? Math.trunc(frame) : 0));
     const role = hero ? 0 : roleFor(kind);
     const variant = hero ? 0 : (Number(id) >>> 0) % 4;
-    const key = [hero ? atlasName : role, direction, hero ? pose : 0, variant].join(':');
+    const key = [hero ? atlasName : role, direction, hero ? pose : 0, variant, density].join(':');
     if (cache.has(key)) return cache.get(key);
     const source = cells[(hero ? pose : role) * 4 + direction];
     if (!source) return null;
-    const cv = surface(96, 128), ctx = cv.getContext('2d');
+    const cv = surface(96 * density, 128 * density), ctx = cv.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    // Shared per-atlas scale preserves the authored walking stride proportions.
-    const scale = female ? Math.min(112 / (heights.female||372), 88 / Math.max(...cells.filter(Boolean).map(cell=>cell.w))) : hero ? 112 / 372 : 112 / 295;
-    const w = Math.round(source.w * scale), h = Math.round(source.h * scale);
-    const x = Math.round((96 - w) / 2), y = 122 - h;
+    // One measured scale per sheet preserves stride proportions, even when a
+    // newly authored sheet has a different source resolution. Portraits extract
+    // the original pixels directly at 2× instead of enlarging the field sprite.
+    const extent = dimensions[atlasName];
+    const scale = Math.min(112 / extent.height, 88 / extent.width) * density;
+    const w = Math.max(1, Math.round(source.w * scale)), h = Math.max(1, Math.round(source.h * scale));
+    const x = Math.round((cv.width - w) / 2), y = 122 * density - h;
     ctx.fillStyle = '#253f4938';
-    ctx.beginPath(); ctx.ellipse(48, 121, 19, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Hard-edged scanlines keep the contact shadow on the same pixel grid.
+    for (let row = -3; row <= 3; row++) {
+      const half = Math.round(19 * Math.sqrt(1 - row * row / 16));
+      ctx.fillRect((48 - half) * density, (121 + row) * density, half * 2 * density, density);
+    }
     ctx.drawImage(source.cv, source.x, source.y, source.w, source.h, x, y, w, h);
     if (!hero) varyCloth(ctx, role, variant);
     cache.set(key, cv); stats.generated++;
@@ -130,8 +145,8 @@
   }
 
   LT.TravellerArt = {
-    ready: Promise.all([load('hero', 'traveller-hero.webp', 3), load('female', 'traveller-female.webp', 3), load('npcs', 'traveller-npcs.webp', 4)]),
-    get, stats, clearCache() { cache.clear(); },
+    ready: Promise.all([load('hero', 'traveller-hero-v33.png', 3), load('female', 'traveller-female-v33.png', 3), load('npcs', 'traveller-npcs-v33.png', 4)]),
+    get, stats, status() { return { loaded: stats.loaded, failed: stats.failed, cached: cache.size, maximum: MAX_CACHE, portraitSize: [192, 256] }; }, clearCache() { cache.clear(); },
     atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
   };
 })();

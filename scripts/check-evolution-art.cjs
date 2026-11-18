@@ -132,7 +132,7 @@ async function main() {
   const species = Object.values(LT.DATA.species);
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
   // The special monsters have their own authored art and dedicated tests;
-  // retain the exact snapshot of the 130 unchanged normal roots/singles.
+  // retain the exact snapshot of the 124 current normal roots/singles.
   const unchanged = species.filter(s => !children.has(s.id)&&!['arvelion','futo','floravelle'].includes(s.id));
   const evolved = species.filter(s => children.has(s.id));
   assert.equal(species.length, 256);
@@ -144,11 +144,15 @@ async function main() {
   assert(!run.requests.some(x => x.includes('creatures-evolution-')), 'Evolution requests occurred before use');
   const engine = new LT.Engine(); engine.newGame('komori');
   const before = { data: JSON.stringify(LT.DATA), state: JSON.stringify(engine.state) };
-  await progress('Checking 130 unchanged original forms');
+  await progress(`Checking ${unchanged.length} unchanged original forms`);
   const baseline = await unchangedDigest(LT, unchanged.map(s => s.id));
-  // Computed with untouched released renderer f91df1d954c5affaa559629b19642da24265b4f6,
-  // excluding only the independently tested Futo and Arvelion images.
-  assert.equal(baseline, '7009d789d5f9dd546e5d8d09aec4adfddfeb0917ba9999a3d46352cb8ddf6826', 'Original normal forms were changed by the evolution renderer');
+  // Verified against untouched release f91df1d954c5affaa559629b19642da24265b4f6:
+  // its original 130-ID digest is 7009d789...f6826. The current 256-species roster
+  // retired harune, kohakuon, lazur, sangoro, shigureh and tobine. Rendering the
+  // remaining 124 IDs with that same original renderer gives the digest below,
+  // identical to release 30120a63 and the current renderer. This updates the
+  // roster under test, not the expected appearance of any retained species.
+  assert.equal(baseline, 'e757b2ced8bef7cbeaee92b057d2714502ca1311305d820c80c395b89f545829', 'Original normal forms were changed by the evolution renderer');
   assert.equal(art.status().evolutionRequested, 0, 'Original forms requested evolution images');
   await progress('Original forms unchanged; checking generated evolution views');
 

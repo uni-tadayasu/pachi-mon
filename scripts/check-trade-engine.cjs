@@ -32,10 +32,11 @@ e.state.party.splice(0,1);assert(e.applyTrade(r).alreadyReceived);assert.equal(e
 // A full party and storage are supported because the outgoing slot is reused.
 e=game();while(e.state.party.length<D.limits.party)add(e);
 while(e.state.storage.length<D.limits.storage)add(e,'shizuku','storage');
-r=receipt(e,e.state.storage[211]);const originalParty=copy(e.state.party),originalBefore=e.state.storage[210].uid,originalAfter=e.state.storage[212].uid;
-outcome=e.applyTrade(r);assert(outcome.ok);assert.equal(outcome.destination,'storage');assert.equal(outcome.index,211);
+const storageIndex=Math.floor(D.limits.storage/2);
+r=receipt(e,e.state.storage[storageIndex]);const originalParty=copy(e.state.party),originalBefore=e.state.storage[storageIndex-1].uid,originalAfter=e.state.storage[storageIndex+1].uid;
+outcome=e.applyTrade(r);assert(outcome.ok);assert.equal(outcome.destination,'storage');assert.equal(outcome.index,storageIndex);
 assert.equal(e.state.storage.length,D.limits.storage);assert.deepEqual(copy(e.state.party),originalParty);
-assert.deepEqual(copy(e.state.storage[211]),copy(r.incoming));assert.equal(e.state.storage[210].uid,originalBefore);assert.equal(e.state.storage[212].uid,originalAfter);
+assert.deepEqual(copy(e.state.storage[storageIndex]),copy(r.incoming));assert.equal(e.state.storage[storageIndex-1].uid,originalBefore);assert.equal(e.state.storage[storageIndex+1].uid,originalAfter);
 assert.doesNotThrow(()=>new Engine(e.serialize()));
 
 // Moving the offered individual to another slot is safe; changing its data is not.

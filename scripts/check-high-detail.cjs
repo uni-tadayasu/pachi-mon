@@ -34,6 +34,10 @@ function settingsFor(saved){
   return JSON.parse(JSON.stringify(test.result));
 }
 const fresh=settingsFor();assert.equal(fresh.screen,'color');assert.equal(fresh.screenVersion,2);
+assert.equal(retro.label('color'),'フルカラー（高精細ドット）');
+assert.equal(fresh.crt,false,'A fresh full-colour display should not be covered in scanlines');
+assert.equal(settingsFor({screen:'color',crt:true}).crt,true,'Saved CRT preference was replaced');
+assert.equal(settingsFor({screen:'color',crt:false}).crt,false,'Saved clear-display preference was replaced');
 const migrated=settingsFor({screen:'pocket',sound:false,volume:.21,quality:'low',textSpeed:'fast',autoRun:true,crt:false});
 assert.equal(migrated.screen,'color');assert.equal(migrated.sound,false);assert.equal(migrated.volume,.21);
 assert.equal(migrated.quality,'low');assert.equal(migrated.textSpeed,'fast');assert.equal(migrated.autoRun,true);assert.equal(migrated.crt,false);

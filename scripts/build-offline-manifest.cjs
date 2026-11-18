@@ -4,8 +4,11 @@
  * service worker: the core set is stored at install, the rest on request. */
 const fs = require('node:fs'), path = require('node:path');
 const root = path.join(__dirname, '..');
+// Art provenance describes old reference sheets too; those are not runtime
+// dependencies and must not silently enlarge the player's offline download.
+const provenance = new Set(['offline-manifest.json','traveller-female-manifest.json','world-art-v33-manifest.json']);
 const sources = ['index.html', ...fs.readdirSync(root).filter(f => f.endsWith('.js')), 'assets/creatures-individual-catalog.js',
-  ...fs.readdirSync(path.join(root, 'assets')).filter(f => f.endsWith('.json') && f !== 'offline-manifest.json').map(f => `assets/${f}`)];
+  ...fs.readdirSync(path.join(root, 'assets')).filter(f => f.endsWith('.json') && !provenance.has(f)).map(f => `assets/${f}`)];
 const urls = new Set();
 for (const file of sources) {
   const text = fs.readFileSync(path.join(root, file), 'utf8');
