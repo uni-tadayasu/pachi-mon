@@ -15,12 +15,12 @@
     sepia: Object.freeze({ id: 'sepia', label: 'セピア液晶（4階調）', short: 'SEPIA', long: 300, palette: ['#29180c', '#6c4426', '#c08a4b', '#f3daa5'] }),
     night: Object.freeze({ id: 'night', label: '月夜液晶（4階調）', short: 'NIGHT', long: 300, palette: ['#0c0f2d', '#2e3c7b', '#7e9dda', '#e0e8ff'] }),
     mono: Object.freeze({ id: 'mono', label: 'モノクロ液晶（4階調）', short: 'MONO', long: 300, palette: ['#1b1b1b', '#585858', '#a8a8a8', '#ebebeb'] }),
-    color: Object.freeze({ id: 'color', label: 'フルカラー（高精細）', short: 'HD', long: 0 }),
+    color: Object.freeze({ id: 'color', label: '高精細ドット（原画カラー）', short: 'HD', long: 0 }),
     // Hidden until the title-screen trick: channels rotate, colours band hard.
     glitch: Object.freeze({ id: 'glitch', label: 'バグ色（色化け）', short: 'BUG', long: 200, levels: 5, saturate: 1.9, swap: true })
   });
-  const ORDER = Object.freeze(['pocket', 'dot', 'leaf', 'sepia', 'night', 'mono', 'color']);
-  const DEFAULT = 'pocket';
+  const ORDER = Object.freeze(['color', 'pocket', 'dot', 'leaf', 'sepia', 'night', 'mono']);
+  const DEFAULT = 'color', PREFERENCE_VERSION = 2;
   const surfaces = new Map();
   let filtersReady = false, filterSupport = null, ditherPattern = null;
 
@@ -183,8 +183,19 @@
   }
 
   const next = id => ORDER[(Math.max(0, ORDER.indexOf(id)) + 1) % ORDER.length];
-  // Menu portraits follow the same era: 64-dot sprites (40 for small icons) unless HD is chosen.
-  const portraitRaster = (id, size) => (MODES[id] || MODES[DEFAULT]).long ? (size <= 60 ? 40 : 64) : Math.max(256, Math.ceil(size * 2));
-  LT.RetroScreen = Object.freeze({ modes: MODES, order: ORDER, defaultMode: DEFAULT, apply, next, portraitRaster,
+  // HD portraits retain the authored 320px sprite grid. Small icons use 128px;
+  // large detail views can use 512px at most, and visible-only canvases remain
+  // managed by PortraitLoader. Nostalgic modes deliberately retain their grid.
+  const portraitRaster = (id, size) => (MODES[id] || MODES[DEFAULT]).long ? (size <= 60 ? 40 : 64) : size <= 60 ? 128 : Math.min(512, Math.max(320, Math.ceil(size * 2)));
+  function preference(saved) {
+    const known = saved && typeof saved === 'object' && Object.hasOwn(MODES, saved.screen);
+    const screen = known ? saved.screen : DEFAULT, explicit = saved?.screenExplicit === true;
+    // Old releases persisted POCKET with every unrelated setting and had no
+    // explicit-selection marker. Move that old default to HD once; preserve
+    // all other saved modes and every selection made with this release.
+    const oldDefault = screen === 'pocket' && !explicit && saved?.screenVersion !== PREFERENCE_VERSION;
+    return {screen:oldDefault ? DEFAULT : screen, screenExplicit:explicit, screenVersion:PREFERENCE_VERSION};
+  }
+  LT.RetroScreen = Object.freeze({ modes: MODES, order: ORDER, defaultMode: DEFAULT, apply, next, portraitRaster, preference,
     label: id => (MODES[id] || MODES[DEFAULT]).label, isMode: id => Object.hasOwn(MODES, id) });
 })();

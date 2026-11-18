@@ -1,0 +1,11 @@
+{
+  "asset": "battle-effects-v32.png",
+  "method": "built-in image generation",
+  "width": 1774,
+  "height": 887,
+  "columns": 4,
+  "rows": 2,
+  "transparentBackground": true,
+  "cells": ["fire", "water", "leaf", "crystal", "wind", "gold", "astral", "healing"],
+  "prompt": "Create a production-ready transparent pixel-art battle-effect atlas for an original Japanese monster RPG. Exactly 8 isolated effects in a perfectly regular 4-column by 2-row layout, landscape 2:1 canvas. Each equal square cell contains ONE centered complete effect with at least 12% fully transparent padding, no effect crossing its cell. These are elemental VFX accents, NOT characters or a background. Row1 left-to-right: (1) rich golden-orange and vermilion flame bloom, (2) luminous turquoise curling water crest with white foam and blue droplets, (3) emerald leaf-and-petal spiral with delicately veined leaves and a pale green seed glow, (4) violet and icy blue faceted crystal impact with separated sharp shards. Row2 left-to-right: (5) mint and pale silver crescent gust with tiny featherlike wind wisps, (6) amber-gold radial starburst and subtle concentric casting seal, (7) magenta and violet astral energy burst with pink square sparks, (8) soft emerald healing bloom with leaf motifs and golden-white diamond sparkles. Style: extremely refined high-detail 32-bit era game pixel art, crisp hand-placed stepped pixel outlines, coherent 2–4px pixel clusters, richly shaded compact forms with 5–8 colors per element, specular hot cores, carefully stepped rings and dithered falloff. Fine detail readable at 128–192 game pixels. Clear visually different silhouettes for all 8. Magical, luxurious and polished but not photographic or smooth vector. Preserve genuine fully transparent background outside the effects; no checkerboard, no black canvas, no boxes, no labels, no letters, no numbers, no logos, no border, no contact shadows, no sprites or creatures. All eight cell centers aligned exactly, equal visual scale. Frame subjects fully within their own cells."
+}

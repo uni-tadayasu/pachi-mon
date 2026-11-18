@@ -17,6 +17,8 @@
  * v30: キラシード redrawn after the owner's design (new image and code versions).
  * v31: switch confirmation, full trained allocations at Lv.50, and generated
  *   Kiraseed pixel art; updated script, stylesheet and image URLs refresh together.
+ * v32: registered-owner key privacy, confirmed release, native pixel detail,
+ *   and lazy elemental effect art; versioned clients and styles refresh together.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

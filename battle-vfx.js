@@ -1,12 +1,12 @@
-/* Pachi Monsters — layered, deterministic battle choreography.
- * © 2026 KASAI SOLUTIONS INC. No external resources or gameplay mutations.
+/* Pachi Monsters — detailed pixel materials and deterministic battle choreography.
+ * © 2026 KASAI SOLUTIONS INC. No gameplay mutations.
  */
 (() => {
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   const TAU = Math.PI * 2;
   // Fixed budgets keep the high-resolution passes bounded on touch devices.
-  const budgets = Object.freeze({low:Object.freeze({particles:12,ribbonSteps:14,corona:7}),balanced:Object.freeze({particles:20,ribbonSteps:20,corona:11}),high:Object.freeze({particles:28,ribbonSteps:26,corona:15})});
+  const budgets = Object.freeze({low:Object.freeze({particles:12,ribbonSteps:14,corona:7,ornaments:3}),balanced:Object.freeze({particles:20,ribbonSteps:20,corona:11,ornaments:5}),high:Object.freeze({particles:28,ribbonSteps:26,corona:15,ornaments:7})});
   const palettes = {
     leaf: ['#e5ffb1', '#8bdd71', '#328d70', '#fff6cd'],
     tide: ['#d9ffff', '#59dce9', '#287ec4', '#f1fdff'],
@@ -70,6 +70,132 @@
   const hash = text => { let h=2166136261; for(const s of String(text))h=Math.imul(h^s.charCodeAt(0),16777619); return h>>>0; };
   const random = (seed,i) => { let n=Math.imul((seed+i*374761393)>>>0,668265263);n=(n^(n>>>13))>>>0;return n/4294967296; };
   const mixPoint = (a,b,t) => ({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+  // Authored pixel clusters: dark silhouette, shaded body, material facets and
+  // a restrained white highlight. These are small source sprites, not blurred
+  // copies of a vector shape. One bounded cache serves every move and palette.
+  const PIXEL_MOTIFS=Object.freeze({
+    leaf:[
+      '             00 ', '         0000330 ', '      001223330  ', '    0012233320   ',
+      '   0122233220    ', '  0122333210     ', ' 01223322310     ', '01233322110      ',
+      '0233322110       ', '033322110        ', '03221100         ', '001100           '
+    ],
+    feather:[
+      '              0 ', '           0030 ', '         023330 ', '       0233430  ',
+      '     02333430   ', '   023334330    ', ' 0233343230     ', '023334330       ',
+      '003343230       ', ' 034330         ', '033230          ', '0030            '
+    ],
+    crystal:[
+      '      0      ', '     030     ', '    02340    ', '   0233440   ',
+      '  012334440  ', ' 01223344440 ', ' 01223344440 ', ' 01223344440 ',
+      ' 01223344440 ', ' 01223334440 ', ' 01222334440 ', ' 01222334440 ',
+      ' 01222334440 ', '  012233440  ', '  01223340   ', '   012340    ',
+      '    0130     ', '     00      '
+    ],
+    droplet:[
+      '      0      ', '     030     ', '     0340    ', '    02340    ',
+      '   0233440   ', '  023344440  ', ' 02334444220 ', '023344442210 ',
+      '0233444222110', '0233442222110', '0233322222110', '0232222222110',
+      '0122222221110', '012222211110 ', ' 0111111100  ', '  00000000   '
+    ],
+    flame:[
+      '        0         ', '       020        ', '       0230       ', '      02330       ',
+      '     023330       ', '     023230  0    ', '    0232230 020   ', ' 0  023223002230  ',
+      '0200232223222330  ', '0230232222222330  ', '02322322322223320 ', '02322223322223320 ',
+      '02322233332223320 ', '02322334433223320 ', '02323344443323320 ', '01233444444333210 ',
+      ' 012344444433210  ', '  0123444433210   ', '   01233332100    ', '     0000000      '
+    ],
+    glint:[
+      '       0       ', '      030      ', '      030      ', '     02320     ',
+      '    0233320    ', '   023343320   ', ' 0233344433320 ', '033344444443330',
+      ' 0233344433320 ', '   023343320   ', '    0233320    ', '     02320     ',
+      '      030      ', '      030      ', '       0       '
+    ]
+  });
+  const motifCache=new Map(),MOTIF_CACHE_LIMIT=96;
+  const shade=(hex,factor)=>/^#[\da-f]{6}$/i.test(hex)?'#'+hex.slice(1).match(/../g).map(v=>Math.round(parseInt(v,16)*factor).toString(16).padStart(2,'0')).join(''):hex;
+  function materialSprite(c,kind,palette){
+    const rows=PIXEL_MOTIFS[kind];if(!rows)return null;
+    const key=kind+':'+palette.join(':');
+    if(motifCache.has(key)){const value=motifCache.get(key);motifCache.delete(key);motifCache.set(key,value);return value;}
+    const width=Math.max(...rows.map(row=>row.length)),height=rows.length;
+    let cv;
+    try{
+      const doc=c.canvas?.ownerDocument||globalThis.document;
+      if(doc?.createElement)cv=doc.createElement('canvas');
+      else if(typeof globalThis.OffscreenCanvas==='function')cv=new globalThis.OffscreenCanvas(width,height);
+      // The offline renderer also supplies a constructible canvas. Browsers use
+      // ownerDocument above and never require a native HTMLCanvas constructor.
+      else if(c.canvas?.constructor)cv=new c.canvas.constructor(width,height);
+      if(!cv?.getContext)return null;
+      cv.width=width;cv.height=height;
+      const cc=cv.getContext('2d');if(!cc)return null;
+      const colors=[shade(palette[2],.64),palette[2],palette[1],palette[0],palette[3]];
+      rows.forEach((row,y)=>{
+        for(let x=0;x<row.length;){const value=row[x],start=x;while(x<row.length&&row[x]===value)x++;
+          if(value===' ')continue;cc.fillStyle=colors[Number(value)];cc.fillRect(start,y,x-start,1);
+        }
+      });
+    }catch(_){return null;}
+    motifCache.set(key,cv);while(motifCache.size>MOTIF_CACHE_LIMIT)motifCache.delete(motifCache.keys().next().value);
+    return cv;
+  }
+  function pixelMaterial(c,kind,x,y,width,height,angle,palette,alpha=1){
+    if(width<=0||height<=0||alpha<=0)return true;
+    const sprite=materialSprite(c,kind,palette);if(!sprite)return false;
+    c.save();c.globalAlpha*=clamp(alpha);c.imageSmoothingEnabled=false;c.translate(Math.round(x),Math.round(y));c.rotate(angle);
+    c.drawImage(sprite,-Math.round(width/2),-Math.round(height/2),Math.max(1,Math.round(width)),Math.max(1,Math.round(height)));c.restore();return true;
+  }
+  // One optional transparent 4 × 2 sheet, requested only for a battle. A slow
+  // download never blocks a move; all families retain the authored pixel and
+  // procedural layers above. A timeout releases callers but still adopts a
+  // late load, without opening another concurrent image request.
+  const accentBase=globalThis.document?.currentScript?.src||globalThis.document?.baseURI||'';
+  const accent={image:null,state:'idle',promise:null,retryAt:0,timedOut:false};
+  function preload(){
+    if(accent.state==='loaded')return Promise.resolve(true);
+    if(accent.state==='loading'||accent.state==='timed-out')return accent.promise;
+    if(accent.state==='failed'&&Date.now()<accent.retryAt)return accent.promise;
+    if(typeof globalThis.Image!=='function')return Promise.resolve(false);
+    const image=accent.image=new globalThis.Image();accent.state='loading';accent.timedOut=false;
+    let settled=false,finished=false,timer;
+    accent.promise=new Promise(resolve=>{
+      const release=ok=>{if(settled)return;settled=true;globalThis.clearTimeout?.(timer);resolve(ok);};
+      const finish=ok=>{
+        if(finished)return;finished=true;image.onload=null;image.onerror=null;
+        accent.state=ok?'loaded':'failed';accent.retryAt=ok?0:Date.now()+30000;accent.timedOut=false;
+        if(!ok)accent.image=null;release(ok);
+      };
+      image.onload=()=>finish(image.naturalWidth>=512&&image.naturalHeight>=256&&Math.abs(image.naturalWidth/image.naturalHeight-2)<.05);
+      image.onerror=()=>finish(false);image.decoding='async';image.fetchPriority='low';
+      timer=globalThis.setTimeout?.(()=>{accent.state='timed-out';accent.timedOut=true;release(false);},15000);
+      try{image.src=accentBase&&typeof globalThis.URL==='function'?new globalThis.URL('assets/battle-effects-v32.png',accentBase).href:'assets/battle-effects-v32.png';}catch(_){finish(false);}
+    });
+    return accent.promise;
+  }
+  function accentCell(event){
+    if(['faint','arrival','miss','condition'].includes(event.style))return -1;
+    if(event.move?.startsWith('futo_'))return 6;
+    if(event.style==='healing')return event.move==='arvelion_renewal'?5:7;
+    if(['shield','ascension','capture','star-rings','starfall'].includes(event.style))return event.element==='leaf'?7:5;
+    return {ember:0,tide:1,leaf:2,crystal:3,wind:4}[event.element]??5;
+  }
+  function drawAccent(c,event,x,y,s,t,size,low){
+    const image=accent.image,cell=accentCell(event);if(accent.state!=='loaded'||!image||cell<0)return;
+    const supportive=['healing','shield','ascension','capture'].includes(event.style);
+    const progress=phase(t,supportive?.12:.36,supportive?.94:.94);
+    const envelope=Math.sin(progress*Math.PI);if(envelope<=.01)return;
+    const col=cell%4,row=Math.floor(cell/4),x0=Math.floor(col*image.naturalWidth/4),y0=Math.floor(row*image.naturalHeight/2);
+    const width=Math.floor((col+1)*image.naturalWidth/4)-x0,height=Math.floor((row+1)*image.naturalHeight/2)-y0;
+    const extent=(supportive?120:130)*s*size*(.66+ease(progress)*.4);
+    const lift=(cell===0||cell===3?10:0)*s;
+    c.save();c.globalAlpha*=envelope*(low?.26:supportive?.37:.44);c.imageSmoothingEnabled=false;
+    c.translate(Math.round(x),Math.round(y-lift));
+    // A drifting leaf/air orbit and expanding impact give each accent a phase;
+    // upright fire, water and crystal retain their material's natural direction.
+    if([2,4,5,6,7].includes(cell))c.rotate((progress-.5)*(cell===4?.5:.18));
+    c.drawImage(image,x0,y0,width,height,-Math.round(extent/2),-Math.round(extent/2),Math.round(extent),Math.round(extent));c.restore();
+  }
+  const artStatus=()=>({state:accent.state,loaded:accent.state==='loaded',timedOut:accent.timedOut,sheets:accent.image?1:0,motifCache:motifCache.size,motifCacheLimit:MOTIF_CACHE_LIMIT});
   function resolveMove(event,fallback) {
     const moves=LT.DATA?.moves||{};
     if(event?.move&&moves[event.move])return moves[event.move];
@@ -160,7 +286,8 @@
     const point=mixPoint(source,target,travel),q=low?2:1;
     const snap=n=>Math.round(n/q)*q;
     c.save();c.setTransform(1,0,0,1,0,0);c.beginPath();c.rect(0,0,w,h);c.clip();
-    c.globalAlpha=fade;c.lineCap='round';c.lineJoin='round';
+    c.globalAlpha=fade;c.lineCap='square';c.lineJoin='miter';c.imageSmoothingEnabled=false;
+    if(accentCell(e)>=0){if(!low)void preload();drawAccent(c,e,cx,cy,s,t,size,low);}
     const stroke=(points,color,width=2,alpha=1,close=false)=>{
       c.save();c.globalAlpha*=clamp(alpha);c.strokeStyle=color;c.lineWidth=width*s;
       c.beginPath();points.forEach((v,i)=>i?c.lineTo(snap(v[0]),snap(v[1])):c.moveTo(snap(v[0]),snap(v[1])));if(close)c.closePath();c.stroke();c.restore();
@@ -177,14 +304,17 @@
       c.save();c.globalAlpha*=clamp(alpha);c.fillStyle=color;c.beginPath();points.forEach((v,i)=>i?c.lineTo(snap(v[0]),snap(v[1])):c.moveTo(snap(v[0]),snap(v[1])));c.closePath();c.fill();c.restore();
     };
     const star=(x,y,r,color=p[3],rotation=0,alpha=1)=>{
+      if(pixelMaterial(c,'glint',x,y,r*2,r*2,rotation,[p[0],color,p[2],p[3]],alpha))return;
       const points=[];for(let i=0;i<8;i++){const a=i*Math.PI/4+rotation,rr=i%2?r*.25:r;points.push([x+Math.cos(a)*rr,y+Math.sin(a)*rr]);}poly(points,color,alpha);
     };
     const shard=(x,y,len,angle,color=p[1],alpha=1)=>{
+      if(pixelMaterial(c,'crystal',x,y,len*.78,len*1.85,angle+Math.PI/2,[p[0],color,p[2],p[3]],alpha))return;
       const dx=Math.cos(angle),dy=Math.sin(angle),rr=len*.24;
       poly([[x+dx*len,y+dy*len],[x-dy*rr,y+dx*rr],[x-dx*len*.7,y-dy*len*.7],[x+dy*rr,y-dx*rr]],color,alpha);
       stroke([[x-dx*len*.55,y-dy*len*.55],[x+dx*len*.75,y+dy*len*.75]],p[3],1,alpha*.8);
     };
     const leaf=(x,y,r,angle,color=p[1],alpha=1)=>{
+      if(pixelMaterial(c,e.element==='wind'?'feather':'leaf',x,y,r*2.25,r*1.7,angle+Math.PI/4,[p[0],color,p[2],p[3]],alpha))return;
       c.save();c.translate(x,y);c.rotate(angle);c.globalAlpha*=clamp(alpha);c.fillStyle=color;
       c.beginPath();c.moveTo(-r,0);c.quadraticCurveTo(0,-r,r,0);c.quadraticCurveTo(0,r,-r,0);c.fill();c.strokeStyle=p[0];c.lineWidth=s;c.beginPath();c.moveTo(-r*.65,0);c.lineTo(r*.6,0);c.stroke();c.restore();
     };
@@ -231,6 +361,7 @@
     // Rounded, tapering tongues distinguish Arvelion's living lamp-fire from
     // crystalline shards. The same deterministic path serves all four moves.
     const lampFlame=(x,y,r,lean=0,color=p[1],alpha=1)=>{
+      if(pixelMaterial(c,'flame',x,y-r*.48,r*1.85,r*2.25,lean*.28,[p[0],color,p[2],p[3]],alpha))return;
       if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);
       c.fillStyle=color;c.beginPath();c.moveTo(x,y+r*.45);
       c.quadraticCurveTo(x-r,y+r*.16,x-r*.55,y-r*.6);
@@ -367,10 +498,31 @@
         const yy=Math.max(14*s,cy-H*1.12-ease(phase(t,.3,1))*14*s);c.strokeText(label,cx,yy);c.fillText(label,cx,yy);c.restore();
       }
     }
-    const attack=!['healing','shield','ascension','capture','miss'].includes(e.style);
+    const attack=!['healing','shield','ascension','capture','miss','faint','arrival'].includes(e.style);
     const charging=smooth(phase(t,0,.1))*(1-smooth(phase(t,.14,.34)));
     const bloom=Math.sin(phase(t,.4,.93)*Math.PI);
     const physical=e.category==='physical'||e.style==='impact';
+
+    // Cast seals are broken into fine luminous segments and paired material
+    // ornaments. The creature remains visible through their open centre; the
+    // evolving concentric bands carry the charge without a screen flash.
+    const seal=(x,y,radius,progress,alpha,ground=false)=>{
+      if(alpha<=.01||radius<=0)return;
+      const squash=ground?.32:.76,turn=(physical?-.35:.45)*progress;
+      for(let i=0;i<budget.ornaments;i++){
+        const a=i*TAU/budget.ornaments+turn,span=TAU/budget.ornaments*.68;
+        ellipse(x,y,radius,radius*squash,p[i%2],1.25,alpha,a,a+span);
+        if(!low)ellipse(x,y,radius*.83,radius*.83*squash,p[2],1,alpha*.6,a+.09,a+span-.09);
+        const xx=x+Math.cos(a)*radius,yy=y+Math.sin(a)*radius*squash;
+        const rr=(ground?2.6:3.8)*s;
+        star(xx,yy,rr,p[0],a,alpha*.9);
+      }
+    };
+    if(attack&&charging>.01){
+      const radius=(28+(1-charging)*19)*s*size;
+      seal(source.x,source.y+47*s,radius,t,charging*.65,true);
+      if(!physical&&!low)seal(source.x,source.y,radius*.68,-t,charging*.38);
+    }
 
     // Atmosphere is local to the two actors. No opaque or strobed full-screen
     // flash: preserve the arena, creature silhouettes and motion throughout.
@@ -436,10 +588,15 @@
           ribbon(points,10-claw*1.2,p[2],opacity*.24);
           ribbon(points,3.6,p[1],opacity*.85);
           stroke(points,p[0],1.4,opacity);
-          const tip=points[points.length-1];lampFlame(tip[0],tip[1],9*s,turn*.6,p[1],opacity);
+          const tip=points[points.length-1];
+          if(e.element==='leaf')leaf(tip[0],tip[1],13*s,turn>0?-.35:Math.PI+.35,p[1],opacity);
+          else if(e.element==='tide')shard(tip[0],tip[1],14*s,turn>0?-.35:Math.PI+.35,p[1],opacity);
+          else lampFlame(tip[0],tip[1],9*s,turn*.6,p[1],opacity);
           for(let ember=0;ember<3;ember++){
             const point=points[Math.floor((points.length-1)*(ember+1)/4)];
-            lampFlame(point[0],point[1]-phase(t,.4,.95)*25*s,(3+ember)*s,-turn*.3,p[1],opacity*.55);
+            if(e.element==='leaf')leaf(point[0],point[1]-phase(t,.4,.95)*25*s,(4+ember)*s,ember+t,p[1],opacity*.55);
+            else if(e.element==='tide')pixelMaterial(c,'droplet',point[0],point[1]+phase(t,.4,.95)*25*s,(5+ember)*s,(8+ember)*s,0,p,opacity*.65);
+            else lampFlame(point[0],point[1]-phase(t,.4,.95)*25*s,(3+ember)*s,-turn*.3,p[1],opacity*.55);
           }
         }
         impactRing(108*s);sparks(cx,cy,Math.floor(count*.65),102*s);break;
@@ -485,8 +642,8 @@
           const prev=mixPoint(source,target,Math.max(0,tt-.13));trail(prev,{x:xx,y:yy},e.style==='flame'?5:3);
           glow(xx,yy,(e.style==='flame'?19:13)*s,.35*alpha);
           if(e.style==='seed')leaf(xx,yy,7*s,direction,p[1],alpha);
-          else if(e.style==='flame'){shard(xx,yy,13*s,direction,p[1],alpha);shard(xx+3*s,yy,6*s,direction,p[0],alpha);}
-          else {ellipse(xx,yy,6*s,6*s,p[0],2,alpha);star(xx-2*s,yy-2*s,3*s,p[3],0,alpha);}
+          else if(e.style==='flame'){lampFlame(xx,yy,12*s,Math.cos(direction)*.7,p[1],alpha);}
+          else {pixelMaterial(c,'droplet',xx,yy,14*s,19*s,direction+Math.PI/2,p,alpha);ellipse(xx,yy,9*s,9*s,p[0],1,alpha*.65);}
         }impactRing();sparks(cx,cy);break;
       }
       case 'petals': {
@@ -520,7 +677,8 @@
         for(let i=0;i<count;i++){
           const a=random(seed,i)*Math.PI,rr=burst*(45+random(seed,i+51)*74)*s;
           const xx=cx+Math.cos(a)*rr,yy=cy-Math.sin(a)*rr+burst*35*s;
-          mote(xx,yy,(1.5+random(seed,i+90)*2.3)*s,p[0],hitAlpha*.85);
+          const droplet=(4+random(seed,i+90)*5)*s;
+          pixelMaterial(c,'droplet',xx,yy,droplet*.8,droplet,Math.cos(a)*.45,p,hitAlpha*.85);
           if(i%3===0)curvedTrail({x:xx-6*s,y:yy-10*s},{x:xx,y:yy},2*s,1,p[1],hitAlpha*.45);
         }
         impactRing(90*s);break;
@@ -559,6 +717,16 @@
           }
           for(let i=0;i<6;i++){const a=i*TAU/6+t*.5,r=(24+energy*8)*s;shard(source.x+Math.cos(a)*r,source.y+Math.sin(a)*r,5*s,a+Math.PI/2,p[1],energy*.8);}
           star(end.x,end.y,22*s*energy,p[0],direction,.85);
+        }
+        // Fine side facets stay off the bright spine, so the beam has a
+        // readable core and moving edges instead of an opaque white bar.
+        const filigree=Math.sin(phase(t,.16,.84)*Math.PI);
+        for(let i=0;i<budget.ornaments;i++){
+          const u=(t*.72+i/budget.ornaments)%1,pos=mixPoint(source,end,u);
+          const side=i%2?-1:1,dist=(e.style==='beam'?17:12)*s*size*filigree;
+          const x=pos.x-Math.sin(direction)*dist*side,y=pos.y+Math.cos(direction)*dist*side;
+          if(e.style==='fire-lance')lampFlame(x,y,4.5*s,-side*.5,p[1],filigree*Math.sin(u*Math.PI));
+          else shard(x,y,5*s,direction,p[0],filigree*Math.sin(u*Math.PI)*.7);
         }
         const current=Math.sin(phase(t,.1,.88)*Math.PI);
         if(current>0){
@@ -630,6 +798,7 @@
       case 'healing': {
         for(let i=0;i<3;i++){const r=(25+i*17)*s*(.8+.2*smooth(t/.3));ellipse(cx,cy+48*s-i*4*s,r,r*.3,p[i],2,.65);}
         glow(cx,cy,65*s,.23);
+        seal(cx,cy+48*s,67*s,smooth(t),Math.sin(t*Math.PI)*.58,true);
         for(let i=0;i<count;i++){
           const tt=(t+i/count)%1,xx=cx+(random(seed,i)-.5)*100*s,yy=cy+50*s-tt*125*s,alpha=Math.sin(tt*Math.PI);
           if(e.element==='leaf')leaf(xx,yy,5*s,t+i,p[i%3],alpha);
@@ -644,6 +813,7 @@
         glow(cx,cy-14*s,84*s,.22*gather,p[1]);
         ellipse(cx,cy+52*s,(38+rise*29)*s,(10+rise*9)*s,p[1],3,.7*gather);
         ellipse(cx,cy+52*s,(31+rise*21)*s,(8+rise*6)*s,p[0],1,.8*gather);
+        seal(cx,cy+52*s,(46+rise*24)*s,rise,.72*gather,true);
         for(let ribbon=0;ribbon<4;ribbon++){
           const points=[];
           for(let j=0;j<=30;j++){
@@ -674,6 +844,7 @@
         c.beginPath();c.arc(0,0,r*.82,.18,1.2);c.strokeStyle=p[0]+'88';c.lineWidth=s;c.stroke();
         c.restore();
         ellipse(cx,cy+58*s,r*.83,r*.18,p[1],2,.55*alpha);
+        seal(cx,cy,r*1.07,t,alpha*.5);
         for(let i=0;i<(low?4:7);i++){
           const a=i*2.39996+t*.4,x=cx+Math.cos(a)*r*.86,y=cy+Math.sin(a)*r*1.08;
           star(x,y,(2.5+random(seed,i)*2)*s,p[0],0,alpha*.65);
@@ -830,6 +1001,7 @@
     if(!LT.Art?.battle||!LT.PixelSprites?.duel||LT.Art.battle._pachiVFX)return false;
     const battle=LT.Art.battle,duel=LT.PixelSprites.duel;
     const wrapped=function(canvas,engine,time=0,options={}) {
+      if(options.quality!=='low'&&!motionReduced(options))void preload();
       battle(canvas,engine,time,{...options,hideLegacyEffect:true});
       if(canvas&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,options.effect,options);
     };
@@ -840,6 +1012,7 @@
       if(!time||time<lastOnlineTime){onlineQueue=[];onlineKey=null;onlineSeed=null;onlineEnd=0;onlineStarts=[];onlineTotal=0;}
       const e=time?onlineFrame(state,time):undefined,shown=time?onlineView(state,time):state;
       const options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
+      if(options.quality!=='low'&&!motionReduced(options))void preload();
       duel(canvas,shown,side,time,options);
       if(e&&time>=e.started&&!e.soundPlayed){
         e.soundPlayed=true;
@@ -855,7 +1028,7 @@
     globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;onlineStarts=[];onlineTotal=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival'],
+  const api={classify,fromEvent,anchors,render,install,preload,artStatus,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival'],
     conditions:CONDITIONS,conditionPalettes,conditionOf};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
