@@ -7,7 +7,7 @@ const {canvas,imageStats}=require('./check-art.cjs');
 const root=path.resolve(__dirname,'..'),ids=['nullmie','nullva','zeroveil'];
 const scripts=[...fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
 const source=fs.readFileSync(path.join(root,'creature-art.js'),'utf8'),settle=()=>new Promise(setImmediate);
-const isGlitch=file=>ids.some(id=>file===`assets/${id}-v39.png`);
+const isGlitch=file=>ids.some(id=>file===`assets/${id}-v46.png`);
 
 async function runtime(mode='normal'){
  const requests=[],events=[],deferred=[],active=new Set(),timers=new Set();
@@ -83,24 +83,25 @@ async function main(){
  assert.equal(run.requests.filter(isGlitch).length,1,'Front, rear and shiny duplicated the same request');
  assert.deepEqual(Array.from(await art.preload('nullmie',{back:'both'})),[true]);
  await art.preload(ids,{back:'both'});
- assert.deepEqual(run.requests.filter(isGlitch),ids.map(id=>`assets/${id}-v39.png`));
+ assert.deepEqual(run.requests.filter(isGlitch),ids.map(id=>`assets/${id}-v46.png`));
  assert.equal(art.status().glitchLoaded,3);assert.equal(art.status().glitchFailed,0);
  assert.equal(art.status().evolutionRequested,0,'Hidden evolutions requested ordinary lineage sheets');
  assert.equal(LT.IndividualCreatureArt.status().requested,0);
  assert.equal(run.events.length,3);assert(run.events.every(event=>event.type==='pachi-art-ready'));
  const hashes=new Map(),integrated=new Map(),silhouettes=[];
  for(const [stage,id]of ids.entries()){
-  const original=await canvas.loadImage(path.join(root,`assets/${id}-v39.png`));
-  assert.equal(original.width,1774);assert.equal(original.height,887);
+  const original=await canvas.loadImage(path.join(root,`assets/${id}-v46.png`)),frameSize=original.height;
+  assert.equal(original.width,frameSize*2,`${id}: expected two square front/rear frames`);
+  assert(frameSize>=320,`${id}: source frames must cover the rendered portrait resolution`);
   const views=[];
   for(const back of [false,true]){
    const cv=art.get(id,back),s=imageStats(cv),view=back?'back':'front';views.push(cv);hashes.set(id+':'+back,s.hash);
    assert.equal(cv.width,320);assert.equal(cv.height,320);
    assert(s.fraction>.05&&s.fraction<.85,`${id} ${view}: missing visible pixels or transparent background`);
    assert(s.left>=10&&s.top>=10&&s.right<310&&s.bottom<310,`${id} ${view}: the full figure needs clear margins`);
-   const half=canvas.createCanvas(887,887),hc=half.getContext('2d');hc.drawImage(original,back?887:0,0,887,887,0,0,887,887);
+   const half=canvas.createCanvas(frameSize,frameSize),hc=half.getContext('2d');hc.drawImage(original,back?frameSize:0,0,frameSize,frameSize,0,0,frameSize,frameSize);
    const sourceStats=imageStats(half);
-   assert(sourceStats.left>0&&sourceStats.top>0&&sourceStats.right<886&&sourceStats.bottom<886,`${id} ${view}: artwork reaches the source boundary`);
+   assert(sourceStats.left>0&&sourceStats.top>0&&sourceStats.right<frameSize-1&&sourceStats.bottom<frameSize-1,`${id} ${view}: artwork reaches the source boundary`);
    assert(difference(mask(cv),mask(half))<.06,`${id} ${view}: displayed silhouette lost source pixels or used the wrong half`);
    silhouettes.push(Buffer.from(mask(cv)).toString('base64'));half.width=half.height=1;
    const orientation=art.orientation(id,back);

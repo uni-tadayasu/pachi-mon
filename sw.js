@@ -42,6 +42,8 @@
  *   its refreshed picker keeps the existing server authorization checks.
  * v44: the secret grass gender selector refreshes with validated spawn options;
  *   fixed genderless species keep their existing identity rules.
+ * v46: the three Null forms use new front/rear void-beast atlases; the updated
+ *   art loader and core image manifest refresh together without changing saves.
  * v40: the source-arranged 16-bit Void battle recording is linked as an offline
  *   shell asset; active-combatant priority and recording lifecycle update together.
  * v45: the dedicated Void recording and its prefetch are removed; all Void
