@@ -44,6 +44,8 @@
  *   fixed genderless species keep their existing identity rules.
  * v40: the source-arranged 16-bit Void battle recording is linked as an offline
  *   shell asset; active-combatant priority and recording lifecycle update together.
+ * v45: the dedicated Void recording and its prefetch are removed; all Void
+ *   combatants follow ordinary scene music, with the original keeper score at 61.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

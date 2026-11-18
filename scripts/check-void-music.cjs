@@ -53,114 +53,116 @@ const solo=(ally='komori',enemy='shizuku',extra={})=>({map:'village',party:[mon(
 const team=(active,ids)=>({active,monsters:ids.map(id=>mon(id))});
 const duel=(teams,extra={})=>({theme:'meadow',battle:{teams,rival:true,...extra}});
 
-test('active 無 wins over every battle theme, while reserves, fainted and finished combatants do not',()=>{
+test('無 uses the ordinary solo battle theme on either side, including bosses and both continents',()=>{
   const {sound}=world();
-  for(const id of ['nullmie','nullva','zeroveil']){
-    for(const extra of [{},{guardian:'mio'},{rival:'test'},{towerFloor:4},{elite:'one'},{champion:D.champion2.id},{rival:'glitch-keeper'}]){
-      sound.setScene(solo(id,'shizuku',extra));assert.equal(sound.currentId,'glitchbattle');
-      sound.setScene(solo('komori',id,extra));assert.equal(sound.currentId,'glitchbattle');
-      assert(sound.recordingDefinition(sound.currentId),'void recording mode');
+  const cases=[
+    [{},'battle'],[{guardian:'mio'},'guardian'],[{rival:'test'},'rival'],
+    [{towerFloor:4},'tower'],[{elite:'one'},'elite'],
+    [{champion:true},'champion'],[{champion:D.champion2.id},'zenith'],
+    [{rival:'glitch-keeper'},'glitchbattle']
+  ];
+  for(const id of ['nullmie','nullva','zeroveil'])for(const [extra,expected] of cases){
+    for(const scene of [solo(id,'shizuku',extra),solo('komori',id,extra),solo(id,id,extra)]){
+      sound.setScene(scene);assert.equal(sound.currentId,expected,id+': '+JSON.stringify(extra));
+      assert.equal(sound.recordingDefinition(sound.currentId),null,'battle remains procedural');
     }
   }
-  sound.setScene(solo('komori','arvelion'));assert.equal(sound.currentId,'legend');
-  sound.setScene(solo('komori','shizuku'));assert.equal(sound.currentId,'battle','reserve void has no effect');
-  const faint=solo('nullmie');faint.party[0].hp=0;sound.setScene(faint);assert.equal(sound.currentId,'battle');
+  const east=Object.entries(D.maps).find(([,map])=>map.continent===2)?.[0];assert(east,'eastern continent fixture');
+  for(const id of ['nullmie','nullva','zeroveil']){
+    for(const [extra,expected] of [[{},'battle2'],[{guardian:'mio'},'guardian2'],[{rival:'test'},'rival2']]){
+      const scene=solo(id,id,extra);scene.map=east;sound.setScene(scene);assert.equal(sound.currentId,expected);
+    }
+    sound.setScene(solo(id,D.legendary.species));assert.equal(sound.currentId,'legend','legendary opponent keeps its own scene');
+    const final=solo(id,id,{guardian:'mio'});final.map='observatory';sound.setScene(final);assert.equal(sound.currentId,'finale');
+  }
+});
+
+test('online single and double battles keep normal music across every active slot and both teams',()=>{
+  const {sound}=world();
+  for(const species of ['nullmie','nullva','zeroveil'])for(const side of [0,1])for(const slots of [1,2])for(let slot=0;slot<slots;slot++){
+    const teams=[team([...Array(slots).keys()],['komori','shizuku','nullmie']),team([...Array(slots).keys()],['hibana','fuwari','nullva'])];
+    sound.setScene(duel(teams));assert.equal(sound.currentId,'rival');
+    teams[side].monsters[slot]=mon(species);sound.setScene(duel(teams));assert.equal(sound.currentId,'rival');
+    teams[side].monsters[slot].hp=0;sound.setScene(duel(teams));assert.equal(sound.currentId,'rival','fainting does not select another song');
+  }
+  sound.setScene(duel([team([0,1],['nullmie','nullva']),team([0,1],['zeroveil','nullva'])]));
+  assert.equal(sound.currentId,'rival','all four void slots still use the online theme');
+  assert.equal(sound.recordingDefinition(sound.currentId),null);
+});
+
+test('reserves, fainting, results and non-battle scenes retain their ordinary themes',()=>{
+  const {sound}=world();
+  sound.setScene(solo());assert.equal(sound.currentId,'battle','reserve void does not alter music');
+  const faint=solo('nullmie','nullva');faint.party[0].hp=0;faint.battle.enemy.hp=0;
+  sound.setScene(faint);assert.equal(sound.currentId,'battle');
   for(const [result,id] of [['won','victory'],['caught','resonance'],['lost','village'],['fled','village']]){
     sound.setScene(solo('nullmie','nullva',{result}));assert.equal(sound.currentId,id,result);
   }
-  sound.setScene(solo('komori','shizuku',{rival:'glitch-keeper'}));assert.equal(sound.currentId,'glitchbattle');assert.equal(sound.recordingDefinition(sound.currentId),null,'keeper keeps original synth');
-});
-
-test('single and double battles inspect both sides and all live active slots',()=>{
-  const {sound}=world();
-  for(const side of [0,1])for(const slots of [1,2])for(let slot=0;slot<slots;slot++){
-    const teams=[team([...Array(slots).keys()],['komori','shizuku','nullmie']),team([...Array(slots).keys()],['hibana','fuwari','nullva'])];
-    sound.setScene(duel(teams));assert.notEqual(sound.currentId,'glitchbattle','benched hidden members do not select theme');
-    teams[side].monsters[slot]=mon('zeroveil');sound.setScene(duel(teams));assert.equal(sound.currentId,'glitchbattle');
-    teams[side].monsters[slot].hp=0;sound.setScene(duel(teams));assert.notEqual(sound.currentId,'glitchbattle');
-  }
-  const teams=[team([0,1],['nullmie','nullva','komori']),team([0,1],['shizuku','hibana','fuwari'])];
-  teams[0].monsters[0].hp=0;sound.setScene(duel(teams));assert.equal(sound.currentId,'glitchbattle','other live void retains priority');
-});
-
-test('recorded priority, explicit preview, ducking, fades and unchanged scene updates share one bounded playback',async()=>{
-  const w=world(),a=w.sound;await a.setEnabled(true);await settle();const title=a.recording;
-  a.setScene(solo('nullmie'));await settle();const rec=a.group.recording,group=a.group;
-  assert.equal(rec.id,'glitchbattle');assert(rec.audio.loop);assert.equal(rec.audio.attrs.playsinline,'');
-  assert.equal(rec.gain.outputs[0],a.recordedMusicBus);assert.equal(a.recordedMusicBus.outputs[0],a.mix);
-  assert.equal(title.gain.outputs[0],a.mix,'title bypass remains unchanged');
-  rec.audio.currentTime=38;
-  for(let i=0;i<5;i++)a.setScene(solo(i%2?'nullva':'zeroveil'));
-  assert.equal(a.group,group);assert.equal(rec.audio.currentTime,38);assert.equal(rec.audio.plays,1);
-  a.duckMusic(1,.75,.4);assert(a.recordedMusicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));assert(a.musicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));
-  const volume=a.volume;a.setVolume(.22);assert.equal(a.master.gain.value,.22*.72);assert.notEqual(volume,a.volume);
-  a.preview('village');assert.equal(a.currentId,'village');assert(!a.group.recorded);w.flushTimers();assert(rec.audio.paused&&title.audio.paused);
-  a.preview(null);assert.equal(a.group.recording,rec);assert.equal(rec.audio.currentTime,0);assert(!rec.audio.paused);
-  a.setScene(solo('komori','shizuku',{rival:'glitch-keeper'}));assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded,'same ID changes to original keeper synth');
-  a.preview('glitchbattle');assert.equal(a.group.recording,rec,'explicit music-room preview selects supplied song');
-  a.preview(null);assert(!a.group.recorded,'auto restores keeper synth');
-  assert.equal(a.getTracks().length,64);assert.match(a.getTracks()[60].description,/無属性.*優先/);assert.equal(a.getTracks()[60].recording.bpm,152);
-  assert.equal(w.log.fetches.filter(url=>url.includes('void-enthusiast')).length,1);
-  await a.setEnabled(false);w.flushTimers();assert(w.log.audios.every(el=>el.paused));
-});
-
-test('out-of-order title and void loads never resurrect a retired recording',async()=>{
-  for(const first of ['title','void']){
-    const w=world({deferFetch:true}),a=w.sound;if(first==='void')a.setScene(solo('nullmie'));
-    await a.setEnabled(true);a.setScene(first==='title'?solo('nullmie'):{title:true});
-    w.ready(1);await settle();const active=a.group.recording;assert(!active.audio.paused);
-    w.ready(0);await settle();assert.equal(a.group.recording,active);assert.equal(w.log.audios.filter(el=>!el.paused).length,1);assert.equal(w.log.audios.at(-1).plays,0,'late load is cached silently');
-    await a.setEnabled(false);w.flushTimers();
+  sound.setScene(solo('nullmie','nullva',{finished:true}));assert.equal(sound.currentId,'village');
+  for(const [flag,id] of [['evolution','evolution'],['healing','healing'],['ending','ending'],['trueEnding','trueending']]){
+    const scene=solo('nullmie','nullva');scene[flag]=true;sound.setScene(scene);assert.equal(sound.currentId,id);
   }
 });
 
-test('late play promises, background suspension and disposal cannot revive music or leave blob URLs alive',async()=>{
-  const w=world(),a=w.sound;await a.setEnabled(true);await settle();
-  const pending=deferred();w.plays.push(pending);a.setScene(solo('nullmie'));await settle();const rec=a.group.recording;
-  a.setScene({title:true});pending.resolve();await settle();assert(rec.audio.paused);assert(!a.recording.audio.paused);
-  a.setScene(solo('nullmie'));await settle();await a.suspend();assert(w.log.audios.every(el=>el.paused),'including outgoing title fade');
-  await a.setEnabled(true);await settle();assert(!rec.audio.paused);assert(a.recording.audio.paused);
-  a.dispose();assert.equal(w.timers.size,0,'dispose leaves no recording pause timers');w.flushTimers();assert(w.log.audios.every(el=>el.paused));assert.equal(w.log.revoked.length,2);assert.equal(a.recordings.size,0);
-  const late=world({deferFetch:true});await late.sound.setEnabled(true);late.sound.dispose();late.ready(0);await settle();assert.equal(late.log.audios.length,0,'dispose invalidates pending fetch');
+test('introducing or switching 無 does not restart music, fetch a recording or bypass mute and ducking',async()=>{
+  const w=world(),a=w.sound;a.setScene(solo());await a.setEnabled(true);await settle();
+  const group=a.group;assert(!group.recorded);group.step=27;group.next=15.5;
+  for(const id of ['nullmie','nullva','zeroveil','komori']){
+    a.setScene(solo(id));assert.equal(a.group,group);assert.equal(group.step,27);assert.equal(group.next,15.5);
+  }
+  a.duckMusic(1,.75,.4);assert(a.musicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));
+  a.setVolume(.22);assert.equal(a.master.gain.value,.22*.72);
+  a.setScene(solo('nullmie','shizuku',{rival:'test'}));assert.equal(a.currentId,'rival');assert.notEqual(a.group,group,'actual scene change still switches music');
+  assert.deepEqual(w.log.fetches,[],'no encounter recording is requested');assert.equal(w.log.audios.length,0);
+  await a.setEnabled(false);assert.equal(a.enabled,false);assert.equal(a.group,null);
 });
 
-test('fetch and media errors fall back locally; autoplay denial recovers on the next gesture',async()=>{
-  const w=world({deferFetch:true}),a=w.sound;a.setScene(solo('nullmie'));await a.setEnabled(true);
-  w.log.requests[0].resolve({ok:false,status:404});await settle();assert(a.recordings.get('glitchbattle').failed);assert(!a.group.recorded);assert.equal(a.currentId,'glitchbattle');
-  const group=a.group;a.setScene(solo('nullva'));assert.equal(a.group,group,'fallback does not restart on polling');
-  const f=world();f.sound.setScene(solo('nullmie'));const denied=new Error('Denied');denied.name='NotAllowedError';f.plays.push(denied);await f.sound.setEnabled(true);await settle();
-  const rec=f.sound.group.recording;assert(rec.blocked);assert(f.sound.needsUnlock());f.sound.primeRecording();await settle();assert(!rec.blocked&&!rec.audio.paused);assert(!f.sound.needsUnlock());
-  rec.audio.fail();assert(rec.failed);assert(!f.sound.group.recorded);assert(rec.audio.paused);
-  const h=world();await h.sound.setEnabled(true);await settle();h.sound.setScene(solo('nullmie'));await settle();const current=h.sound.group;
-  h.sound.recording.audio.fail();assert.equal(h.sound.group,current,'retired title failure leaves void untouched');
-  await h.sound.setEnabled(false);h.flushTimers();
+test('the 64-track catalog and keeper preview restore the original synthesized track 61',async()=>{
+  const w=world(),a=w.sound,tracks=a.getTracks();
+  assert.equal(tracks.length,64);assert.equal(new Set(tracks.map(t=>t.id)).size,64);
+  const keeper=tracks[60];assert.equal(keeper.id,'glitchbattle');assert.equal(keeper.name,'61 NULL BATTLE / ヌルの挑戦');
+  assert.match(keeper.description,/裏部屋の番人戦/);assert.equal(keeper.bpm,176);assert.equal(keeper.recording,undefined);
+  for(const t of tracks)assert.equal(Boolean(t.recording),t.id==='title','only title has a recording');
+  a.setScene(solo('nullmie'));a.preview('glitchbattle');await a.setEnabled(true);await settle();
+  assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded);assert.deepEqual(w.log.fetches,[]);
+  a.preview(null);assert.equal(a.currentId,'battle');assert(!a.group.recorded);
+  a.setScene(solo('nullva','zeroveil',{rival:'glitch-keeper'}));assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded);
 });
 
-test('solo bridge follows staged arrivals, and online bridge defers victory until the visible turn finishes',()=>{
+test('the retained title recording cannot revive over a battle and remains playable on the title',async()=>{
+  const w=world({deferFetch:true}),a=w.sound;await a.setEnabled(true);
+  a.setScene(solo('nullmie'));const battle=a.group;w.ready(0);await settle();
+  const rec=a.recording;assert(rec.ready&&rec.audio.paused);assert.equal(rec.audio.plays,0);assert.equal(a.group,battle,'late title load stays silent');
+  a.preview('title');await settle();assert(a.group.recorded&&!rec.audio.paused);assert.equal(rec.gain.outputs[0],a.mix);assert(rec.audio.loop);
+  rec.audio.currentTime=38;a.preview(null);w.flushTimers();assert(rec.audio.paused);assert.equal(rec.audio.currentTime,0);
+  assert.equal(a.currentId,'battle');assert.deepEqual(w.log.fetches,['assets/music/title-16bit.mp3?v=20261117-aishiteirukara']);
+  await a.suspend();assert(rec.audio.paused);await a.setEnabled(true);await settle();assert(!a.group.recorded&&rec.audio.paused);
+  a.dispose();assert.equal(w.timers.size,0);assert.equal(w.log.revoked.length,1);assert.equal(a.recordings.size,0);
+});
+
+test('displayed solo swaps preserve normal music and online victory still waits for its visible result',()=>{
   const w=world(),a=w.sound,e=new dataContext.LT.Engine();e.newGame('komori');e.state.party=[e.makeMonster('komori',5),e.makeMonster('nullmie',5)];e.startBattle('shizuku',5);
   const display=Object.create(e);display.state={...e.state,party:copy(e.state.party)};display.battle=copy(e.battle);e.battle.activeIndex=1;
   let now=100;const ui=vm.createContext({LT:w.context.LT,sound:a,engine:e,battleView:display,playing:true,healingUntil:0,evolutionUntil:0,endingActive:false,performance:{now:()=>now},dayPhase:()=>.3,noteHeard(){},updateBattle(){}});
   const scene=html.slice(html.indexOf('  function updateScene(){'),html.indexOf('  function sceneOptions(){'));vm.runInContext(scene,ui);
   const visual=html.slice(html.indexOf('  function applyBattleVisual(visual)'),html.indexOf('  // Handheld-style message pacing.'));vm.runInContext(visual,ui);
-  ui.updateScene();assert.equal(a.currentId,'battle','engine final state must not run ahead of visible frame');
-  ui.applyBattleVisual({activeIndex:1,ally:e.state.party[1],enemy:e.battle.enemy,enemyIndex:0});assert.equal(a.currentId,'glitchbattle');
-  ui.applyBattleVisual({activeIndex:0,ally:e.state.party[0],enemy:e.battle.enemy,enemyIndex:0});assert.equal(a.currentId,'battle');
+  ui.updateScene();assert.equal(a.currentId,'battle');
+  ui.applyBattleVisual({activeIndex:1,ally:e.state.party[1],enemy:e.battle.enemy,enemyIndex:0});assert.equal(a.currentId,'battle');
+  ui.applyBattleVisual({activeIndex:0,ally:e.state.party[0],enemy:e.makeMonster('zeroveil',5),enemyIndex:0});assert.equal(a.currentId,'battle');
   vm.runInContext(fs.readFileSync(path.join(root,'battle-vfx.js'),'utf8'),w.context);
   const before=[team([0],['nullmie','komori']),team([0],['shizuku','hibana'])],after=copy(before);after[1].monsters[0].hp=0;
   const battle={seed:450,round:1,turn:1,winner:0,teams:after,events:[{kind:'turn',text:'ターン',visual:{teams:before}},{kind:'damage',text:'命中',side:0,visual:{teams:after}},{kind:'result',text:'勝利',visual:{teams:after}}]};
   w.context.LT.onlineActive=true;w.context.LT.onlineBattle=battle;w.context.LT.onlineBattleResult='won';
-  ui.updateScene();assert.equal(a.currentId,'glitchbattle','raw winner cannot interrupt playback');
+  ui.updateScene();assert.equal(a.currentId,'rival','raw winner cannot interrupt online battle music');
   now+=w.context.LT.BattleVFX.onlinePlan(battle).total+1;ui.updateScene();assert.equal(a.currentId,'victory');
-  w.context.LT.onlineActive=false;ui.battleView=null;e.battle=null;ui.updateScene();assert.equal(a.currentId,'village','closing returns to adventure scene');
+  w.context.LT.onlineActive=false;ui.battleView=null;e.battle=null;ui.updateScene();assert.equal(a.currentId,'village');
 });
 
-test('the same-origin recording is included in offline prefetch and the public 64-track catalog stays stable',()=>{
-  assert(html.includes('<link rel="prefetch" href="assets/music/void-enthusiast-16bit-v40.mp3?v=20261119-void-theme-v40">'));
-  const {sound}=world(),ids=sound.getTracks().map(t=>t.id);assert.equal(new Set(ids).size,64);assert.equal(ids[60],'glitchbattle');
+test('the retired Void recording is absent from game resources while its production record is archival',()=>{
+  const linked=[...html.matchAll(/(?:href|src)=["']([^"']+)["']/g)].map(m=>m[1]);
+  assert(!linked.some(url=>url.includes('void-enthusiast')),'no dedicated offline prefetch or audio resource');
+  assert(!html.includes('Enthusiast 2026'),'no current dedicated-song title or credits');
   const info=JSON.parse(fs.readFileSync(path.join(root,'docs/void-theme-v40.json'),'utf8'));
-  const asset=fs.readFileSync(path.join(root,info.recording.path));
-  assert.equal(asset.length,info.recording.bytes,'the published audio asset is present in full');
-  assert.equal(require('node:crypto').createHash('sha256').update(asset).digest('hex'),info.recording.sha256,'asset matches the mastered recording');
-  assert.equal(asset.toString('ascii',0,3),'ID3','MP3 container');
-  assert(Math.abs(sound.getTracks()[60].recording.seconds-info.recording.seconds)<.01,'music-room duration follows the gapless decoded asset');
+  assert.equal(info.status,'archived');assert.equal(info.playback.enabled,false);assert.equal(info.playback.recordingDistributed,false);
+  assert(!fs.existsSync(path.join(root,info.recording.path)),'retired MP3 is not shipped');
 });

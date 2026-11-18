@@ -4797,7 +4797,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 </script><script>
 /* パチモン｜Pachi Monsters — 64 original scores and a bounded Web Audio ensemble.
  * Synthesized scores and instrument definitions are authored for this game.
- * The recorded title and 無 arrangements use music supplied for this project.
+ * The recorded title arrangement uses music supplied for this project.
  * Concert-remix edition: sixteenth-note bass pickups, answering rhythm sections,
  * half-time builds and ensemble drops around the original melodic themes.
  * The title theme is a recorded 16-bit arrangement of KASAI SOLUTIONS INC.'s own song
@@ -4994,7 +4994,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     score('glitch','60 ｹﾞﾝｼﾞﾂ ﾉ ｳﾗｶﾞﾜ','バグの裏部屋。音割れしたベルが、ありえない音程で鳴る。',61,'lydian',104,5,[0,1,0,6,0,1,4,6],
       '0:1 6:1 1:1 5:1 2:2 4:2 3:2|6:3 0:1 6:2 _:4|1:1 3:1 6:1 3:1 1:2 _:2 0:2|6:6 _:4',
       '7:1 13:1 6:1 12:1 5:2 11:2 4:2|3:2 9:2 2:2 8:2 1:2|0:1 _:1 0:1 _:1 6:2 _:2 7:2|0:10','lab','bell',[0,6,3,6,1,6,3,6,4,6],'K.h.Kh.S.h',32,true),
-    score('glitchbattle','61 Enthusiast 2026（無属性・16ビットアレンジ）','無属性のパチモンが場に出ている間、ほかの戦闘曲より優先する専用曲。音楽室でも全編を試聴できます。裏部屋の番人だけの戦闘では従来の曲を使用。',58,'minor',176,4,[0,1,0,6,5,1,0,4],
+    score('glitchbattle','61 NULL BATTLE / ヌルの挑戦','裏部屋の番人戦。壊れたリードが半音でぶつかり合う。',58,'minor',176,4,[0,1,0,6,5,1,0,4],
       '0:1 1:1 0:1 6:1 0:1 1:1 0:2|7:1 6:1 7:1 1:1 0:4|0:1 1:1 3:1 1:1 0:1 -1:1 0:2|-2:4 _:4',
       '7:1 8:1 7:1 13:1 7:1 8:1 7:2|6:2 5:2 4:4|3:1 4:1 5:1 4:1 3:1 1:1 0:2|0:8','battle','lead',[0,1,0,7,0,1,0,6],'KShhKSKS',48,true),
     score('library','62 天頂の隠し書庫','隠し書庫。ハープの三拍子が、ページをめくる音になる。',65,'major',72,3,[0,3,4,0,5,1,4,0],
@@ -5011,7 +5011,6 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // The recorded title theme (A minor, 139.5 BPM, 129 bars). Fetched once; the offline
   // worker keeps it. Played from a blob URL so no range requests reach the worker.
   const TITLE_RECORDING=Object.freeze({id:'title',url:'assets/music/title-16bit.mp3?v=20261117-aishiteirukara',seconds:222,bpm:139.5,bars:129});
-  const VOID_RECORDING=Object.freeze({id:'glitchbattle',url:'assets/music/void-enthusiast-16bit-v40.mp3?v=20261119-void-theme-v40',seconds:281.788,bpm:152,bars:null});
   const FORMS={32:['A','B','Bridge','Finale'],48:['Prelude','A','B','Bridge','Finale','Coda'],64:['Prelude','A','B','A2','Bridge','Build','Finale','Coda']};
   const FORM_LABELS={Prelude:'序奏',A:'主題',A2:'主題変奏',B:'リフレイン',Bridge:'間奏',Build:'展開',Finale:'クライマックス',Coda:'結び'};
   function parsePhrase(str) {
@@ -5028,12 +5027,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     s.duration=Math.round(s.bars*s.beats*60/s.bpm);
     s.form=FORMS[s.bars];
   });
-  // Composed fields retain the original 64 scores. The title and track 61 also
-  // describe their recordings; the keeper still uses the original track 61 score.
+  // Composed fields retain the original 64 scores. Only the title carries
+  // a recording; track 61 is the original hidden-room keeper score.
   function metadata(s) {
     if(!s)return null;
     const data={id:s.id,name:s.name,description:s.description,scene:s.id,duration:s.duration,bpm:s.bpm,meter:`${s.beats}/4`,bars:s.bars,form:s.form.map(x=>FORM_LABELS[x]).join(' → '),style:s.style,edition:'concert-remix-4'};
-    const recording=s.id===TITLE_RECORDING.id?TITLE_RECORDING:s.id===VOID_RECORDING.id?VOID_RECORDING:null;
+    const recording=s.id===TITLE_RECORDING.id?TITLE_RECORDING:null;
     if(recording)data.recording={seconds:recording.seconds,bpm:recording.bpm,bars:recording.bars,form:'16ビットアレンジ（全編）'};
     return data;
   }
@@ -5093,7 +5092,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       this.quality=isMobile()?'low':'high';this.maxVoices=this.quality==='low'?40:72;this.lastFX=0;
       this.master=null;this.mix=null;this.reverb=null;this.delay=null;this.noise=null;this.fxBus=null;this.musicBus=null;this.waves={};this.duckUntil=0;this.lastMove=-Infinity;
       this.playbackSession=null;this.previousAudioType='auto';this.legacyAudio=null;this.legacyBlocked=false;this.playbackRequested=false;
-      this.recording=null;this.recordings=new Map();this.recordedMusicBus=null;this.disposed=false;
+      this.recording=null;this.recordings=new Map();this.disposed=false;
     }
     getTracks() { return SCORES.map(metadata); }
     getCurrentTrack() { return metadata(INDEX[this.previewId || this.currentId]); }
@@ -5172,18 +5171,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         return await this.setEnabled(true);
       } catch(_) {return false;}
     }
-    // Recorded arrangements share volume/mute but keep independent ownership.
+    // The recorded title shares volume/mute and keeps explicit scene ownership.
     // A late fetch, media error or play promise must never revive a retired scene.
-    hasVoidCombatant(scene=this.scene) {
-      const b=scene?.battle;
-      if(!b||typeof b!=='object'||b.result||b.finished)return false;
-      const live=mon=>!!mon&&mon.hp>0&&LT.DATA?.species?.[mon.species]?.element==='void';
-      if(Array.isArray(b.teams))return b.teams.some(team=>(team?.active||[]).some(index=>live(team.monsters?.[index])));
-      return live(scene.party?.[b.activeIndex??0])||live(b.enemy);
-    }
     recordingDefinition(id) {
       if(id===TITLE_RECORDING.id)return TITLE_RECORDING;
-      if(id===VOID_RECORDING.id&&(this.previewId===id||this.hasVoidCombatant()))return VOID_RECORDING;
       return null;
     }
     ownsRecording(rec) {return !!rec&&!this.disposed&&this.enabled&&this.group?.recorded&&this.group.recording===rec;}
@@ -5198,9 +5189,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         audio.src=rec.url=URL.createObjectURL(blob);
         const gain=ctx.createGain();gain.gain.value=0;
         ctx.createMediaElementSource(audio).connect(gain);
-        // Void uses the clean music duck bus: its mastered 16-bit timbres must not
-        // pass through the procedural glitch DAC. The title route stays unchanged.
-        gain.connect(rec.id===VOID_RECORDING.id?this.recordedMusicBus:this.mix);
+        // The title recording bypasses the procedural music DAC, as before.
+        gain.connect(this.mix);
         Object.assign(rec,{audio,gain,ready:true});
         audio.addEventListener?.('error',()=>this.failRecording(rec));
         if(this.ownsRecording(rec))this.playRecording(rec);
@@ -5288,7 +5278,6 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const lowCut=ctx.createBiquadFilter();lowCut.type='highpass';lowCut.frequency.value=28;lowCut.Q.value=.5;
       this.mix.connect(lowCut);lowCut.connect(compressor);compressor.connect(limiter);limiter.connect(this.master);this.master.connect(ctx.destination);
       this.musicBus=ctx.createGain();this.musicBus.gain.value=1;
-      this.recordedMusicBus=ctx.createGain();this.recordedMusicBus.gain.value=1;this.recordedMusicBus.connect(this.mix);
       // Keep the characteristic PCM edge with enough resolution for the richer
       // ensemble. The intentional glitch effect retains its separate coarse DAC.
       // The supplied title recording bypasses this stage, exactly as before.
@@ -5369,7 +5358,6 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if(b?.result==='won')return 'victory';
         if(b?.result==='caught')return 'resonance';
         if(!b?.result&&!b?.finished){
-        if(this.hasVoidCombatant(s))return VOID_RECORDING.id;
         if(s.champion||b?.champion)return (typeof b?.champion==='string'&&b.champion===data.champion2?.id)?'zenith':'champion';
         if(s.elite||b?.elite)return 'elite';
         if(b?.rival==='glitch-keeper')return 'glitchbattle';
@@ -5776,15 +5764,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       source.connect(filter);voice.sources.push(source);voice.nodes.push(source);source.start(time);source.stop(voice.end);source.onended=()=>this.disposeVoice(voice);
     }
     duckMusic(time,duration=.75,level=.62) {
+      if(!this.musicBus)return;
       this.duckUntil=Math.max(this.duckUntil,time+duration);
-      for(const bus of [this.musicBus,this.recordedMusicBus]) {
-        if(!bus)continue;
-        const gain=bus.gain;
-        // FX duck only music, never the user's volume or the effect tail.
-        gain.cancelScheduledValues(time);gain.setValueAtTime(Math.min(gain.value,1),time);
-        gain.linearRampToValueAtTime(level,time+.045);gain.setValueAtTime(level,this.duckUntil);
-        gain.linearRampToValueAtTime(1,this.duckUntil+.32);
-      }
+      const gain=this.musicBus.gain;
+      // FX duck only music, never the user's volume or the effect tail.
+      gain.cancelScheduledValues(time);gain.setValueAtTime(Math.min(gain.value,1),time);
+      gain.linearRampToValueAtTime(level,time+.045);gain.setValueAtTime(level,this.duckUntil);
+      gain.linearRampToValueAtTime(1,this.duckUntil+.32);
     }
     texture(time,duration,from,to,volume,pan=0,band='bandpass') {
       if(!this.ctx||!this.enabled||this.voices.size>=this.maxVoices)return;
@@ -7289,7 +7275,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(error){return {ok:false,message:error?.message||'交換の内容を確認できませんでした。'};}
   }
   function showCredits(){
-    openModal('制作・ライセンス',`<section class="credits-panel"><div class="credits-emblem" aria-hidden="true">${ico('lantern')}</div><p class="eyebrow">PACHI MONSTERS / ORIGINAL WORLD</p><h3>KASAI SOLUTIONS INC.</h3><p class="copyright-notice">© 2026 KASAI SOLUTIONS INC.</p><p>本プロジェクトで制作したキャラクター・地形・UI・BGMを使用しています。市販ゲームのROM・画像・音源は同梱していません。</p><p>タイトル曲「愛しているから」は、KASAI SOLUTIONS INC.のオリジナル曲を16ビット機の音色で編曲したものです。</p><p>無属性の専用曲「Enthusiast 2026」は、提供されたインストゥルメンタル音源を基に、原曲の展開に沿って矩形波・FM風音色・短い打楽器音で16ビット風に編曲したものです。</p><p>通信機能はPeerJSと、その依存ライブラリーを使用しています。それぞれの権利者の表記・ライセンス条件を保持しています。</p><div class="credits-components"><span>PeerJS <small>MIT</small></span><span>EventEmitter3 <small>MIT</small></span><span>peerjs-js-binarypack <small>MIT</small></span><span>webrtc-adapter <small>BSD-3-Clause</small></span></div><a class="btn" href="LICENSES.txt" target="_blank" rel="noopener">著作権・ライセンスの全文を読む</a></section>`,'credits');
+    openModal('制作・ライセンス',`<section class="credits-panel"><div class="credits-emblem" aria-hidden="true">${ico('lantern')}</div><p class="eyebrow">PACHI MONSTERS / ORIGINAL WORLD</p><h3>KASAI SOLUTIONS INC.</h3><p class="copyright-notice">© 2026 KASAI SOLUTIONS INC.</p><p>本プロジェクトで制作したキャラクター・地形・UI・BGMを使用しています。市販ゲームのROM・画像・音源は同梱していません。</p><p>タイトル曲「愛しているから」は、KASAI SOLUTIONS INC.のオリジナル曲を16ビット機の音色で編曲したものです。</p><p>通信機能はPeerJSと、その依存ライブラリーを使用しています。それぞれの権利者の表記・ライセンス条件を保持しています。</p><div class="credits-components"><span>PeerJS <small>MIT</small></span><span>EventEmitter3 <small>MIT</small></span><span>peerjs-js-binarypack <small>MIT</small></span><span>webrtc-adapter <small>BSD-3-Clause</small></span></div><a class="btn" href="LICENSES.txt" target="_blank" rel="noopener">著作権・ライセンスの全文を読む</a></section>`,'credits');
   }
 
   function exportSave(data) {
@@ -9217,7 +9203,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261118-easy-connect-v37"></script>
 <link rel="prefetch" href="assets/music/title-16bit.mp3?v=20261117-aishiteirukara">
-<link rel="prefetch" href="assets/music/void-enthusiast-16bit-v40.mp3?v=20261119-void-theme-v40">
 <link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">
 <link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">
 <script src="local-link.js?v=20261118-easy-connect-v37"></script>
