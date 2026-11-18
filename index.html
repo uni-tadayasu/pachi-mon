@@ -2645,13 +2645,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   D.elements.void={name:'無',color:'#aeb2c8',strongAgainst:null,weakAgainst:null,hiddenDex:true,statusImmune:true};
   const techniques=[
     {id:'null_restore',name:'零への回帰',element:'void',kind:'heal',category:'status',power:100,accuracy:100,pp:8,effect:'fullHealRecharge',description:'自分の体力を全回復する。反動で次の1ターンは技も交代もできない。状態異常への耐性では反動を防げない。'},
-    {id:'null_curse',name:'虚無の呪縛',element:'void',kind:'attack',category:'status',power:0,accuracy:100,pp:8,effect:'curse',description:'自分の最大体力の1/4を使い、相手を呪縛する。相手はそのターンから毎ターン末に最大体力の1/4を失う。灯焼けと重なり、交代・戦闘不能・戦闘終了で解ける。無属性には効かない。'},
+    {id:'null_curse',name:'虚無の呪縛',element:'void',kind:'attack',category:'status',power:0,accuracy:100,pp:8,effect:'curse',description:'自分の最大体力の1/4を使い、相手を永久的な呪縛にする。相手が場にいるターン末に最大体力の1/4を失う。ほかの状態異常と重なり、交代・戦闘不能・回復・戦闘終了でも解けず、道具でも治せない。無属性には効かない。'},
     {id:'null_ray',name:'ヴォイドレイ',element:'void',kind:'attack',category:'special',power:60,accuracy:100,pp:16,description:'虚無の光線を放つ特殊攻撃。属性相性による弱点や耐性がなく、どの属性にも等倍で当たる。'},
     {id:'null_scorch',name:'呪灯',element:'ember',kind:'attack',category:'status',power:0,accuracy:100,pp:16,effect:'inflictScorch',description:'命中した相手を灯焼けにする。直接のダメージはない。灯属性・無属性、灯焼けを防ぐ持ち物、すでに通常の状態異常がある相手には効かない。'}
   ];
   for(const move of techniques)D.moves[move.id]={...move,role:'hidden',hiddenDex:true};
   D.hiddenMoves=Object.freeze(techniques.map(move=>move.id));
-  D.volatileConditions=Object.freeze({curse:Object.freeze({id:'curse',name:'呪縛',color:'#9c73d6',description:'毎ターン末に最大体力の1/4を失う。ほかの状態異常と重なり、交代・戦闘不能・戦闘終了で解ける。'})});
+  // Keep the legacy catalog name for renderers; curse itself persists on the individual.
+  D.volatileConditions=Object.freeze({curse:Object.freeze({id:'curse',name:'呪縛',color:'#9c73d6',persistent:true,description:'永久的な呪縛。場にいるターン末に最大体力の1/4を失う。交代・戦闘不能・回復・戦闘終了やセーブ後も残り、道具では治せない。ほかの状態異常と重なる。'})});
   const entries=[
     {id:'nullmie',name:'ヌルミィ',color:'#8764aa',accent:'#d9f4ff',
       description:'記録の隙間からこぼれた、小さな無の怪物。暗い顔の奥に青白い目を光らせ、短い鉤爪と尾を揺らして忍び寄る。図鑑には映らず、ある裏技で仲間になる。',
@@ -3036,7 +3037,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     moveDetails(mon) { this.syncPP(mon);return this.moves(mon).map(move=>({...move,pp:mon.pp[move.id],maxPP:this.maxPP(move)})); }
     canStruggle(mon) { return this.moveDetails(mon).every(move=>move.pp===0); }
     restoreMonster(mon) {
-      mon.hp=this.stats(mon).hp;mon.pp={};delete mon.status;delete mon.statusTurns;delete mon.curse;delete mon.rechargeTurns;
+      mon.hp=this.stats(mon).hp;mon.pp={};delete mon.status;delete mon.statusTurns;delete mon.rechargeTurns;clearImmuneCondition(mon);
       for(const move of this.moves(mon))mon.pp[move.id]=this.maxPP(move);
     }
     objective() {
@@ -3473,7 +3474,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         } else {this.event(events,'パチモンがカプセルから飛び出した！ 体力を減らすと捕まえやすくなる。');this.enemyTurn(events);}
       } else if(command.type==='item') {
         this.applyItem(command.id,itemTarget);
-        this.event(events,command.id==='remedy'?`${D.items.remedy.name}で、${displayName(this.state.party[itemTarget])}の状態異常が治った。`:`${D.items[command.id].name}で、${displayName(this.state.party[itemTarget])}の体力が戻った。`,'heal');
+        this.event(events,command.id==='remedy'?`${D.items.remedy.name}で、${displayName(this.state.party[itemTarget])}の通常の状態異常が治った。${this.state.party[itemTarget].curse?' 呪縛は残っている。':''}`:`${D.items[command.id].name}で、${displayName(this.state.party[itemTarget])}の体力が戻った。`,'heal');
         this.enemyTurn(events);
       } else if(command.type==='flee') {
         this.event(events,'互いの距離を取り、草むらへ戻った。','flee');this.endBattle('fled',events);
@@ -3584,7 +3585,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     // ── Conditions and held-item reactions ─────────────────────────────────
     cureCondition(mon){delete mon.status;delete mon.statusTurns;}
-    clearBattleEffects(mon){if(mon){delete mon.curse;delete mon.rechargeTurns;}}
+    // Curse belongs to the individual; only recharge is a temporary battle effect.
+    clearBattleEffects(mon){if(mon){delete mon.rechargeTurns;clearImmuneCondition(mon);}}
     rechargeBlocks(mon,side,events){
       if(!(mon.rechargeTurns>0))return false;
       delete mon.rechargeTurns;
@@ -3824,7 +3826,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(this.state.inventory[itemId]<=0)return fail(`${D.items[itemId].name}がありません。`);
       const mon=this.state.party[index];
       clearImmuneCondition(mon);
-      if(itemId==='remedy')return mon.hp<=0?fail('倒れたパチモンには使えません。'):mon.status?{ok:true}:fail('そのパチモンは状態異常ではありません。');
+      if(itemId==='remedy')return mon.hp<=0?fail('倒れたパチモンには使えません。'):mon.status?{ok:true}:fail(mon.curse?'呪縛は道具では治せません。':'そのパチモンは状態異常ではありません。');
       if(itemId==='tonic' && mon.hp>0)return fail('夜明けの雫は、倒れたモンスターに使います。');
       if(itemId==='salve' && mon.hp<=0)return fail('倒れたモンスターには、夜明けの雫を使ってください。');
       if(itemId==='salve' && mon.hp>=this.stats(mon).hp)return fail('そのモンスターの体力は、すでに満ちています。');
@@ -3839,7 +3841,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(this.battle)return fail('共鳴の道具メニューから使ってください。');
       const check=this.checkItem(itemId,partyIndex);if(!check.ok)return check;
       this.applyItem(itemId,partyIndex);
-      return {ok:true,message:itemId==='remedy'?`${displayName(this.state.party[partyIndex])}の状態異常が治った。`:`${displayName(this.state.party[partyIndex])}の体力が戻った。`};
+      return {ok:true,message:itemId==='remedy'?`${displayName(this.state.party[partyIndex])}の通常の状態異常が治った。${this.state.party[partyIndex].curse?' 呪縛は残っている。':''}`:`${displayName(this.state.party[partyIndex])}の体力が戻った。`};
     }
     setLead(index) {
       if(this.battle)return fail('共鳴の交代メニューから選んでください。');
@@ -3858,8 +3860,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     tradeMonster(mon){
       mon=this.migrateRetired(mon,true);
       if(mon&&typeof mon==='object'&&!Array.isArray(mon)){
+        if(mon.curse!==undefined&&mon.curse!==false)throw Error('呪縛中のパチモンは交換できません。呪縛は永久に残ります。');
         if(mon.heldItem!==undefined)throw Error('持ち物を持たせたままでは交換できません。先に持ち物を外してください。');
-        const {status,statusTurns,gender,alloc,bonusPoints,moveOrder,...rest}=mon;mon=rest;
+        const {status,statusTurns,gender,alloc,bonusPoints,moveOrder,curse,...rest}=mon;mon=rest;
       }
       if(!mon || typeof mon!=='object' || Array.isArray(mon) || Object.keys(mon).some(key=>!TRADE_FIELDS.has(key)))throw Error('特別な受け取り情報を持つパチモンは交換できません。');
       const species=D.species[mon.species];
@@ -4187,6 +4190,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         }
         if(legacy)special.customMoves=D.species.futo.moves.slice();
         if(!isConditionImmune(mon)&&typeof mon.status==='string'&&STATUS[mon.status]?.persistent&&mon.hp>0)special.status=mon.status;
+        if(!isConditionImmune(mon)&&mon.curse!==undefined){
+          if(typeof mon.curse!=='boolean')error('呪縛の情報が正しくありません。');
+          if(mon.curse)special.curse=true;
+        }
         if(mon.heldItem!==undefined){if(typeof mon.heldItem!=='string'||!HELD[mon.heldItem])error('持ち物の情報が正しくありません。');special.heldItem=mon.heldItem;}
         if((mon.gender==='male'||mon.gender==='female')&&!(D.genderless||[]).includes(mon.species))special.gender=mon.gender;
         if(Number.isSafeInteger(mon.bonusPoints)&&mon.bonusPoints>0&&mon.bonusPoints<=999)special.bonusPoints=mon.bonusPoints;
@@ -5940,6 +5947,33 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         notes(compactNova?[31]:[31,28,24],'celesta',impact+.15,.08,.50,.06);
       }
     }
+    curseStatus(time,effect={}) {
+      if(!this.enabled||!this.ctx||this.ctx.state!=='running')return;
+      this.prune(this.ctx.currentTime);
+      const tick=effect.moment==='tick',nominal=tick?.38:.95;
+      // The ghost's soft landing dips in pitch before it springs upward. The
+      // quieter return and wavering tail remain bounded even on mobile; a
+      // shortened playback beat compresses the whole cue, including its tail.
+      const span=Number.isFinite(effect.duration)?Math.max(.12,effect.duration/1000):nominal;
+      const pace=Math.min(1,span/nominal),ctx=this.ctx;
+      const pulse=(offset,duration,volume,points,pan=0,halo=false)=>{
+        if(this.voices.size>=this.maxVoices)return;
+        const at=time+offset*pace,length=duration*pace,osc=ctx.createOscillator(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+        const voice={group:null,sources:[osc],nodes:[osc,filter,gain],end:at+length+.015*pace};this.voices.add(voice);
+        osc.type='sine';
+        if(!halo&&this.waves.flute&&typeof osc.setPeriodicWave==='function')osc.setPeriodicWave(this.waves.flute);
+        points.forEach(([position,hz],i)=>{if(i)osc.frequency.exponentialRampToValueAtTime(hz,at+length*position);else osc.frequency.setValueAtTime(hz,at);});
+        filter.type='lowpass';filter.Q.value=.45;filter.frequency.setValueAtTime(halo?700:1450,at);filter.frequency.exponentialRampToValueAtTime(500,at+length);
+        gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(volume,at+length*(halo?.22:.1));
+        gain.gain.exponentialRampToValueAtTime(volume*(halo?.42:.5),at+length*.55);gain.gain.exponentialRampToValueAtTime(.0001,at+length);
+        osc.connect(filter);filter.connect(gain);
+        if(typeof ctx.createStereoPanner==='function'){const p=ctx.createStereoPanner();p.pan.value=pan;gain.connect(p);p.connect(this.fxBus);voice.nodes.push(p);}else gain.connect(this.fxBus);
+        osc.start(at);osc.stop(voice.end);osc.onended=()=>this.disposeVoice(voice);
+      };
+      pulse(0,tick?.28:.56,tick?.064:.14,[[0,230],[.1,145],[.3,470],[.64,174],[.82,245],[1,166]]);
+      if(!tick)pulse(.34,.40,.043,[[0,190],[.12,140],[.34,340],[.73,175],[1,148]],.12);
+      pulse(tick?.065:.19,tick?.26:.70,tick?.011:.025,[[0,182],[.26,194],[.57,177],[.8,185],[1,165]],-.12,true);
+    }
     fx(kind,detail) {
       if(kind==='move'){this.move(detail?.move,detail?.event,detail?.effect);return;}
       if(!this.enabled||!this.ctx||this.ctx.state!=='running')return;
@@ -5971,13 +6005,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(kind==='status'){
         const condition=detail?.condition,moment=detail?.moment;
         if(moment==='cure'){play(condition==='crystal'?[91,86,95,98]:[76,83,88,91],condition==='crystal'?'bell':'mallet',.05,.3,.12);return;}
+        if(condition==='curse'){this.curseStatus(now,detail);return;}
         if(moment==='tick')this.drum(null,'rim',now,.11);
         if(condition==='bloom'){play([63,60,56,55],'pluck',.075,.2,.13);return;}
         if(condition==='bubble'){play([67,74,79,86],'mallet',.06,.18,.11);return;}
         if(condition==='scorch'){this.drum(null,'snare',now,.07);play([62,61,57],'lead',.06,.13,.09);return;}
         if(condition==='dizzy'){play([79,76,79,76,79],'flute',.07,.14,.09);return;}
         if(condition==='crystal'){play([88,95,91],'bell',.06,.36,.11);return;}
-        if(condition==='curse'){play([55,61,54,49],'bell',.08,.34,.12);play([43,42],'bass',.13,.3,.08);return;}
       }
       play([76],'mallet',.05,.12,.09);
     }
@@ -6621,7 +6655,23 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   document.fonts?.ready?.then?.(()=>refitBattleText(true));
   document.fonts?.addEventListener?.('loadingdone',()=>refitBattleText(true));
-  function updateBattle() {
+  function battleHealthOptions(event){return {event,reducedMotion:settings.reducedMotion,fastForward:battleSkip,tempo:(TEXT_PACE[settings.textSpeed]||TEXT_PACE.normal).tempo};}
+  function paintBattleHealth(prefix,mon,event=null){
+    const stats=engine.stats(mon),fill=$(prefix+'-hp'),label=$(prefix+'-hp-text');
+    if(LT.BattleHealth)return LT.BattleHealth.update(fill,label,{...battleHealthOptions(event),key:mon.uid,hp:mon.hp,max:stats.hp,def:stats.def,spDef:stats.spDef});
+    fill.style.width=`${Math.max(0,mon.hp/stats.hp*100)}%`;fill.classList.toggle('low',mon.hp/stats.hp<.25);label.textContent=`${mon.hp} / ${stats.hp}`;return 0;
+  }
+  function battleHealthDuration(visual,event){
+    if(!battleView||!visual||!LT.BattleHealth||event.kind==='switch')return 0;
+    const current={ally:battleView.state.party[battleView.battle.activeIndex],enemy:battleView.battle.enemy};
+    const move=DATA.moves[event.moveId||event.move];
+    return Math.max(0,...['ally','enemy'].map(side=>{
+      const before=current[side],after=visual[side];if(!before||before.uid!==after?.uid)return 0;
+      const stats=engine.stats(after);if(engine.stats(before).hp!==stats.hp)return 0;
+      return LT.BattleHealth.plan({...battleHealthOptions(event),from:before.hp,to:after.hp,max:stats.hp,def:stats.def,spDef:stats.spDef,kind:event.kind,category:event.category||move?.category}).duration;
+    }));
+  }
+  function updateBattle(healthEvent=null) {
     const display=battleView||engine,b = display.battle; if (!b) return;
     const ally = display.state.party[b.activeIndex], enemy = b.enemy;
     for (const [prefix,mon] of [['ally',ally],['enemy',enemy]]) {
@@ -6634,9 +6684,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       $(prefix+'-name').classList.toggle('is-shiny',!!mon.shiny);
       $(prefix+'-level').textContent = `Lv.${mon.level}`;
       $(prefix+'-type').innerHTML = typeBadge(species.element);
-      $(prefix+'-hp').style.width = `${Math.max(0,mon.hp/max*100)}%`;
-      $(prefix+'-hp').classList.toggle('low', mon.hp/max < .25);
-      $(prefix+'-hp-text').textContent = `${mon.hp} / ${max}`;
+      paintBattleHealth(prefix,mon,healthEvent);
     }
     const nextXP = engine.xpToNext(ally.level);
     $('ally-xp').textContent = '';
@@ -6684,16 +6732,24 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     display.battle={...engine.battle,enemy:JSON.parse(JSON.stringify(engine.battle.enemy))};
     return display;
   }
-  function applyBattleVisual(visual) {
+  function applyBattleVisual(visual,event=null,healthOnly=false) {
     if(!battleView||!visual)return;
+    if(healthOnly){
+      for(const side of ['ally','enemy']){
+        const current=side==='ally'?battleView.state.party[battleView.battle.activeIndex]:battleView.battle.enemy;
+        if(current?.uid===visual[side]?.uid)paintBattleHealth(side,visual[side],event);
+      }
+      return;
+    }
     battleView.state.party[visual.activeIndex]=JSON.parse(JSON.stringify(visual.ally));
     Object.assign(battleView.battle,{activeIndex:visual.activeIndex,enemy:JSON.parse(JSON.stringify(visual.enemy)),enemyIndex:visual.enemyIndex});
-    updateBattle();updateScene();
+    updateBattle(event);updateScene();
   }
   // Handheld-style message pacing. Typing runs on animation frames beside the
   // existing timed delay, so the turn order and minimum durations never change.
   const TEXT_PACE={slow:{cps:30,tempo:1.15},normal:{cps:80,tempo:1},fast:{cps:220,tempo:.7},instant:{cps:0,tempo:.55}};
   let battleSkip=false;
+  function skipBattlePlayback(){battleSkip=true;LT.BattleHealth?.finish($('ally-hp'));LT.BattleHealth?.finish($('enemy-hp'));}
   function typeLine(line,text,cps,onFrame){
     const chars=Array.from(String(text??''));
     if(!cps||typeof requestAnimationFrame!=='function'||chars.length<2){line.textContent=chars.join('');return 0;}
@@ -6748,19 +6804,24 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         const chars=Array.from(String(text??'')).length,hold=Math.round((520+chars*20)*pace.tempo);
         let delay=settings.reducedMotion?(['faint','switch'].includes(event.kind)?480:360):effect?effect.duration+420:480;
         if(!settings.reducedMotion&&(pace.tempo!==1||battleSkip))delay=Math.max(60,Math.round(delay*pace.tempo*(battleSkip?.35:1)));
-        // Health changes land on the hit (the bar drains while the line is read), not with the next message.
-        let shownAfter=false;const showAfter=()=>{if(!shownAfter){shownAfter=true;applyBattleVisual(event.visual);}};
+        // The exact HP counter and bar drain together, and finish before the next beat.
         const fatal=(event.visual?.ally?.hp??1)<=0||(event.visual?.enemy?.hp??1)<=0; // a knockout keeps the faint motion of its own event
-        const impactTimer=effect&&!battleSkip&&!fatal&&['damage','heal','recoil','attack','statusTick'].includes(event.kind)?setTimeout(showAfter,Math.round(effect.duration*(effect.impactAt||.43))):0;
+        const healthDuration=battleHealthDuration(event.visual,event);
+        const healthBeat=healthDuration>0||['damage','heal','recoil','attack','statusTick'].includes(event.kind);
+        const impactDelay=effect&&!battleSkip&&!settings.reducedMotion&&healthBeat?Math.round(effect.duration*(effect.impactAt??.43)):0;
+        let shownAfter=false;const showAfter=()=>{if(!shownAfter){shownAfter=true;applyBattleVisual(event.visual,event,fatal&&healthBeat);}};
+        const impactTimer=healthBeat&&impactDelay?setTimeout(showAfter,impactDelay):0;
+        if(healthBeat&&!impactTimer)showAfter();
+        delay=Math.max(delay,impactDelay+healthDuration+32);
         if(levelUp)delay=Math.max(delay,settings.reducedMotion?900:battleSkip?520:1600);
         const typing=settings.reducedMotion||battleSkip?typeLine(line,text,0):typeLine(line,text,pace.cps,()=>{box.scrollTop=box.scrollHeight;});
         box.scrollTop=box.scrollHeight;
         await new Promise(resolve=>setTimeout(resolve,battleSkip?Math.max(delay,typing):Math.max(delay,typing+hold)));
-        clearTimeout(impactTimer);showAfter();battleEffect=null;
+        clearTimeout(impactTimer);showAfter();if(fatal&&healthBeat)applyBattleVisual(event.visual);battleEffect=null;
         if(levelUp)hideLevelUp();
       }
     } finally {
-      hideLevelUp();battleView=null;battleEffect=null;$('game-canvas').classList.remove('battle-impact');$('battle-panel')?.classList?.remove('playing');
+      hideLevelUp();LT.BattleHealth?.finish($('ally-hp'));LT.BattleHealth?.finish($('enemy-hp'));battleView=null;battleEffect=null;$('game-canvas').classList.remove('battle-impact');$('battle-panel')?.classList?.remove('playing');
       busy=false;updateAll();save();
     }
     if(['won','caught'].includes(result.ended))sound.fx(result.ended==='caught'?'capture':'win');
@@ -7488,7 +7549,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       return;
     }
     if(e.repeat)return;
-    if(['e','E','Enter',' '].includes(e.key)){if(busy&&engine.battle){e.preventDefault();battleSkip=true;return;}if(e.target.tagName==='BUTTON' && !['e','E'].includes(e.key))return;e.preventDefault();if(engine.battle?.result)finishBattle();else interact();}
+    if(['e','E','Enter',' '].includes(e.key)){if(busy&&engine.battle){e.preventDefault();skipBattlePlayback();return;}if(e.target.tagName==='BUTTON' && !['e','E'].includes(e.key))return;e.preventDefault();if(engine.battle?.result)finishBattle();else interact();}
     else if(e.key==='Escape'){e.preventDefault();showMenu();}
     else if(['j','J'].includes(e.key))showDex();
     else if(['m','M'].includes(e.key))showMap();
@@ -7536,7 +7597,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   $('continue-btn').onclick=()=>storedSave && bootScreen(()=>begin(null,storedSave));
   $('title-settings-btn').onclick=showSettings;
   $('interact-btn').onclick=interact;
-  $('touch-action').onclick=()=>{if(busy&&engine.battle){battleSkip=true;return;}if(engine.battle?.result)finishBattle();else interact();};
+  $('touch-action').onclick=()=>{if(busy&&engine.battle){skipBattlePlayback();return;}if(engine.battle?.result)finishBattle();else interact();};
   $('touch-menu').onclick=showMenu;
   // Handheld B: tap to go back; hold while exploring to dash. SELECT opens the bag.
   const touchB=$('touch-b');
@@ -7556,7 +7617,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
   if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
-  $('battle-panel')?.addEventListener('pointerdown',()=>{if(busy&&engine.battle)battleSkip=true;});
+  $('battle-panel')?.addEventListener('pointerdown',()=>{if(busy&&engine.battle)skipBattlePlayback();});
   if($('console-palette'))$('console-palette').onclick=()=>{if(!LT.RetroScreen)return;setScreenMode(LT.RetroScreen.next(settings.screen));toast(`画面モード：${LT.RetroScreen.label(settings.screen)}`);if(activePane==='settings')showSettings();};
   if($('touch-select'))$('touch-select').onclick=()=>{if(!playing)return;if(engine.battle){toast('バトル中は「バッグ」から道具を使えます。');return;}showBag();};
   $('menu-btn').onclick=showMenu;
@@ -8249,8 +8310,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const ALLOC = D.allocation || { pointsPerLevel: 2, capPerStat: 64, keys: ['hp', 'atk', 'def', 'spAtk', 'spDef', 'speed'], hpPerPoint: 2 };
   const ALLOC_KEYS = Object.freeze([...ALLOC.keys]);
   const RULES = Object.freeze({ version: 8, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
-    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn-void-immune-v41', nullMoves: 'full-heal-then-one-recharge-turn-quarter-hp-curse-stacks-clears-on-switch-faint-end-forced-scorch-v41', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
+    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn-void-immune-v41', nullMoves: 'full-heal-then-one-recharge-turn-permanent-quarter-hp-curse-stacks-immune-only-cure-active-living-tick-forced-scorch-v49', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
     moveOrder: 'selected-owned-individual-four-slot-permutation-v48',
+    curse: 'selected-owned-individual-permanent-curse-no-adventure-writeback-v49',
     allocation: Object.freeze({ budget: ALLOC.capPerStat * ALLOC_KEYS.length, cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'selected-owned-individual-full-allocation' }) });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
@@ -8304,6 +8366,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       if (!Array.isArray(list) || list.length !== size) return fail('技の並びのデータが正しくありません。');
       for (let i = 0; i < size; i++) {
         if (!own(list, i) || !Array.isArray(list[i]) || !Duel.validateMoveOrder(list[i]).ok) return fail('技の並びのデータが正しくありません。');
+      }
+      return { ok: true };
+    }
+    // Permanent curse is carried from the chosen individual. Omitted metadata
+    // means no curse; a supplied list must explicitly describe every member.
+    static validateCurses(list, size) {
+      if (list === undefined) return { ok: true };
+      if (!Array.isArray(list) || list.length !== size) return fail('呪縛のデータが正しくありません。');
+      for (let i = 0; i < size; i++) {
+        if (!own(list, i) || typeof list[i] !== 'boolean') return fail('呪縛のデータが正しくありません。');
       }
       return { ok: true };
     }
@@ -8361,12 +8433,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const moveOrders = config.moveOrders === undefined ? [undefined, undefined] : config.moveOrders;
       if (!Array.isArray(moveOrders) || moveOrders.length !== 2 || !own(moveOrders, 0) || !own(moveOrders, 1)) throw new Error('技の並びのデータが正しくありません。');
       moveOrders.forEach((list, side) => { const check = Duel.validateMoveOrders(list, config.teams[side].length); if (!check.ok) throw new Error(check.error); });
+      const curses = config.curses === undefined ? [undefined, undefined] : config.curses;
+      if (!Array.isArray(curses) || curses.length !== 2 || !own(curses, 0) || !own(curses, 1)) throw new Error('呪縛のデータが正しくありません。');
+      curses.forEach((list, side) => { const check = Duel.validateCurses(list, config.teams[side].length); if (!check.ok) throw new Error(check.error); });
       const slots = config.mode === 'double' ? 2 : 1;
       this.state = { version: RULES.version, mode: config.mode, turn: 1, round: 1, phase: 'action', seed: config.seed, rng: config.seed,
         teams: config.teams.map((team, side) => ({ name: cleanName(config.names?.[side], `プレイヤー${side + 1}`),
           monsters: team.map((species, index) => { const alloc = allocation[side]?.[index] ?? null, item = items[side]?.[index] ?? null, s = stats(species, alloc); return { species, level: RULES.level, hp: s.hp, maxHp: s.hp, stats: s, ...(alloc ? { alloc: clone(alloc) } : {}), ...(item ? { item } : {}), moveOrder: LT.MoveOrder.normalize(moveOrders[side]?.[index]), stages: STAGES.empty(),
-            pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false }; }),
+            pp: Object.fromEntries(D.species[species].moves.map(id => [id, maxPP(D.moves[id])])), guard: false, ...(curses[side]?.[index] ? { curse: true } : {}) }; }),
           active: Array.from({ length: slots }, (_, slot) => slot) })), winner: null, reason: null, log: [], events: [] };
+      this._clearImmuneConditions();
     }
     _clearImmuneConditions() { for(const team of this.state.teams)for(const mon of team.monsters)clearImmuneCondition(mon); }
     snapshot() { this._clearImmuneConditions();return clone(this.state); }
@@ -8604,7 +8680,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     // ── Conditions and held-item reactions (the adventure's rules, on the duel's seeded random numbers).
     _cure(mon) { delete mon.status; delete mon.statusTurns; }
-    _clearVolatile(mon) { delete mon.curse; delete mon.rechargeTurns; }
+    // Curse belongs to the individual; switching, fainting and ending a duel
+    // only clear the temporary recharge, while void immunity still clears curse.
+    _clearVolatile(mon) { delete mon.rechargeTurns; clearImmuneCondition(mon); }
     _recharge(side, slot, mon) {
       if (!(mon.rechargeTurns > 0)) return false;
       mon.rechargeTurns--; if (mon.rechargeTurns <= 0) delete mon.rechargeTurns;
@@ -9123,13 +9201,26 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       <p class="link-small">部屋を作った人がルールを決定します。</p></section>
       <section class="link-box"><h4>02 / 友だちとつながる</h4>${transportToggle()}${transport==='local'?localConnect(linked,terminal):internetConnect(linked,terminal)}</section></div>
       ${peer&&!terminal?`<section class="link-roster"><div class="link-roster-heading"><h4>03 / ${count}体のチームを編成</h4><span>手持ち・ひかえから · Lv.50 · 振り分けと持ち物を反映 · 同じ種類・同じ持ち物は1つまで</span></div>${enough?`<div class="link-team-grid" style="--team-count:${count}">${selected.slice(0,count).map((uid,i)=>{const mon=byUid.get(uid)?.mon,used=new Set(selected.slice(0,count).filter((other,j)=>j!==i).map(other=>byUid.get(other)?.mon.species));return `<article class="link-team-card"><span class="link-slot-label">${i<(mode==='double'?2:1)?'先発 '+(i+1):'控え '+(i-(mode==='double'?1:0))}</span>${portrait(mon.species,100,mon)}<label><span class="sr-only">チーム ${i+1} のパチモン</span><select id="link-member-${i}" data-link-member="${i}" ${locked?'disabled':''}>${members.map(({mon:option,where})=>`<option value="${esc(option.uid)}" ${option.uid===uid?'selected':''} ${used.has(option.species)?'disabled':''}>${esc(memberLabel(option))} Lv.${option.level} · ${where}${used.has(option.species)?'（同じ種類を編成中）':''}</option>`).join('')}</select></label><span class="link-element">${esc(D.elements[species(mon.species).element].name)}タイプ</span><label class="link-item-field">持ち物<select id="link-item-${i}" data-link-item="${i}" ${locked?'disabled':''}>${itemOptions(i,count)}</select></label>${itemNote(i)}${allocBadge(mon)}</article>`;}).join('')}</div>`:`<p class="link-empty-team">対戦には、種類の違うパチモンが${count}体必要です（いま編成できるのは${kinds}種類）。冒険で仲間を増やしてから参加してください。${mode==='double'?'シングルは3体で遊べます。':''}</p>`}<div class="link-ready-row"><button id="link-ready" class="btn btn-primary" type="button" ${!linked||locked||!enough?'disabled':''}>${locked?'チーム確定済み · 相手を待っています':'このチームで準備完了'}</button><span>${view?.remoteReady?'相手：準備完了':linked?'相手：チームを編成中':'接続後に準備完了を押せます'}</span></div></section>`:''}
-      <details class="link-rules"><summary>ルールと接続について</summary><p>チームは、冒険の手持ち・ひかえにいるパチモンから選びます。選んだ個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使い、レベルは50にそろえます。アルヴェリオン・キラシード・フートも、持っていればほかのパチモンと同じ基準の能力と種族の技で戦えます（フートは冒険の能力を運営が決めるため、対戦では振り分け98ptを均等に使います）。基礎能力だけをLv.50にそろえ、ソロで割り振ったポイントは、鍛錬による追加分も含めて減らさずすべて反映します（1能力64まで、体力は1ポイントで+2）。未使用のポイントは加算されません。</p><p><strong>持ち物</strong>は、冒険で持っているもの（かばんの中、または仲間が持っているもの）から1体に1つ選べます。同じ持ち物は1つのチームに1つまでです。効果は冒険と同じで、実を食べるなどして使った持ち物も、冒険の持ち物は減りません。経験値・コイン・出会い・進化・鍛錬の持ち物は対戦では働きません。状態異常（花毒・水封・灯焼け・目眩・結晶化）も冒険と同じルールで起こり、対戦の中だけで治ります。</p><p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。かばんの道具・捕獲は使えません。100ターンで残り体力の割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>ローカル対戦は、同じWi-Fi（またはスマホのテザリング）につないだ2台の端末を、お互いの画面のQRコード（またはコードの貼り付け）で直接つなぎます。インターネットや外部サービスとは通信せず、オフラインでも遊べます。カメラは読み取りのときだけ使い、映像は保存・送信しません。</p><p>インターネット対戦では、部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
+      <details class="link-rules"><summary>ルールと接続について</summary><p>チームは、冒険の手持ち・ひかえにいるパチモンから選びます。選んだ個体のニックネーム・色違いの見た目と<strong>振り分けポイント</strong>を使い、レベルは50にそろえます。アルヴェリオン・キラシード・フートも、持っていればほかのパチモンと同じ基準の能力と種族の技で戦えます（フートは冒険の能力を運営が決めるため、対戦では振り分け98ptを均等に使います）。基礎能力だけをLv.50にそろえ、ソロで割り振ったポイントは、鍛錬による追加分も含めて減らさずすべて反映します（1能力64まで、体力は1ポイントで+2）。未使用のポイントは加算されません。</p>
+      <p><strong>持ち物</strong>は、冒険で持っているもの（かばんの中、または仲間が持っているもの）から1体に1つ選べます。同じ持ち物は1つのチームに1つまでです。効果は冒険と同じで、実を食べるなどして使った持ち物も、冒険の持ち物は減りません。経験値・コイン・出会い・進化・鍛錬の持ち物は対戦では働きません。状態異常（花毒・水封・灯焼け・目眩・結晶化）は冒険と同じルールで起こります。対戦開始時に体力とPPは全回復し、これら5つの状態異常は解けた状態になります。</p>
+      <p><strong>呪縛</strong>は、冒険で選んだ個体の状態を引き継ぎます。通信対戦中も交代・戦闘不能・回復・対戦終了では解けず、道具や持ち物で治せません。場にいて体力が残っている間、毎ターン末に最大体力の1/4を失います。無属性には効きません。通信対戦で受けた新しい呪縛を含め、対戦の結果や状態は冒険のセーブへ書き戻しません。</p>
+      <p>シングルは先発1体と控え2体、ダブルは先発2体と控え2体。各ターン、場にいる全員の技・対象または交代を選んで確定します。両者の選択後、素早さ順に行動。倒れた枠は、エフェクトが終わってから自分で控えを選びます。この交代ではターンを消費しません。かばんの道具・捕獲は使えません。100ターンで残り体力の割合による判定です。</p><p>相手の技は両者の確定後に公開します。誰かが確定してから90秒以内にターンが進まない場合や通信が切れた場合は中断となり、勝敗をつけません。チーム確定待ちは3分です。冒険の仲間・道具・セーブは変化しません。</p><p>ローカル対戦は、同じWi-Fi（またはスマホのテザリング）につないだ2台の端末を、お互いの画面のQRコード（またはコードの貼り付け）で直接つなぎます。インターネットや外部サービスとは通信せず、オフラインでも遊べます。カメラは読み取りのときだけ使い、映像は保存・送信しません。</p><p>インターネット対戦では、部屋の作成・参加時に、外部のPeerJS共有接続サービスと通信します。対戦相手にプレイヤー名とチーム情報が渡り、直接通信ではIPアドレスが相手に分かる場合があります。コードは対戦したい相手だけに伝えてください。共有サービスの停止や回線制限で接続できない場合は、時間を置くか別の回線でお試しください。</p></details>`;
   }
   function linkConditions(mon){
     const list=LT.ConditionRules?.list?.(mon)||[D.statuses?.[mon?.status]].filter(Boolean);
     return mon?.hp>0&&mon.rechargeTurns>0?[...list,{id:'recharge',name:'反動休み',color:'#82769d'}]:list;
   }
-  function hp(mon){return `<div class="link-hp-track"><span style="width:${Math.max(0,mon.hp/mon.maxHp*100)}%" class="${mon.hp/mon.maxHp<.25?'low':''}"></span></div><small>体力 ${mon.hp} / ${mon.maxHp}</small>`;}
+  function hp(mon){return `<div class="link-hp-track"><span style="width:${Math.max(0,Math.min(100,mon.hp/mon.maxHp*100))}%" class="${mon.hp/mon.maxHp<.25?'low':''}"></span></div><small data-link-hp-text>体力 ${Number.isFinite(mon.displayHp)?mon.displayHp:Math.ceil(mon.hp)} / ${mon.maxHp}</small>`;}
+  function refreshLinkHealth(now){
+    const shown=LT.BattleVFX?.onlineView?.(view?.battle,now)||view?.battle;if(!shown?.teams)return;
+    for(const card of body.querySelectorAll('[data-link-health]')){
+      const [side,index]=card.dataset.linkHealth.split(':').map(Number),mon=shown.teams[side]?.monsters[index];if(!mon)continue;
+      const fill=card.querySelector('.link-hp-track>span'),label=card.querySelector('[data-link-hp-text]');if(!fill)continue;
+      fill.style.transition='none';fill.style.width=`${Math.max(0,Math.min(100,mon.hp/mon.maxHp*100))}%`;
+      fill.classList.toggle('low',mon.hp/mon.maxHp<.25);card.classList.toggle('fainted',mon.hp<=0);
+      if(label)label.textContent=`体力 ${Number.isFinite(mon.displayHp)?mon.displayHp:Math.ceil(mon.hp)} / ${mon.maxHp}`;
+    }
+  }
   function commandOptions(duel,team,slot){
     const mon=team.monsters[team.active[slot]],current=orders.find(o=>o.slot===slot),value=current?.type==='switch'?'s'+current.index:current?.type==='struggle'?'struggle':'m'+(current?.move??0);
     const options=duel.moves(mon).map((m,i)=>`<option value="m${i}" ${value==='m'+i?'selected':''} ${m.pp<=0?'disabled':''}>${esc(m.name)}${m.category==='status'?'（変化）':''} · PP ${m.pp}/${m.maxPP}</option>`).join('');
@@ -9204,7 +9295,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     const teamStatus=t=>t.monsters.map(m=>`<span class="link-stock ${m.hp<=0?'fainted':''}" title="${esc(monLabel(m))} ${m.hp>0?'戦闘可能':'戦闘不能'}"></span>`).join('');
     const condition=m=>linkConditions(m).map(c=>`<span class="link-condition" style="--c:${esc(c.color)}">${esc(c.name)}</span>`).join('');
     const held=m=>m.item&&D.heldItems?.[m.item]?`<span class="link-held">持ち物：${esc(D.heldItems[m.item].name)}</span>`:'';
-    const combatant=(t,which)=>`<div class="link-combatants ${which}">${t.active.map((index,slot)=>{const m=t.monsters[index];return `<article class="link-combatant ${m.hp<=0?'fainted':''}"><span>${which==='foe'?'相手':'自分'} ${slot+1} · Lv.${m.level}</span><b>${esc(monLabel(m))}</b>${hp(m)}<div>${condition(m)}${held(m)}</div></article>`;}).join('')}</div>`;
+    const combatant=(t,which)=>`<div class="link-combatants ${which}">${t.active.map((index,slot)=>{const m=t.monsters[index];return `<article class="link-combatant ${m.hp<=0?'fainted':''}" data-link-health="${which==='foe'?1-side:side}:${index}"><span>${which==='foe'?'相手':'自分'} ${slot+1} · Lv.${m.level}</span><b>${esc(monLabel(m))}</b>${hp(m)}<div>${condition(m)}${held(m)}</div></article>`;}).join('')}</div>`;
     // Messages of the turn appear as their beat plays, not all at once.
     const progress=playbackLocked?LT.BattleVFX?.onlineProgress?.(b,performance.now()):null,log=b.log||[];
     const visibleLog=progress?log.slice(0,Math.max(0,log.length-Math.max(0,progress.total-progress.shown))):log;
@@ -9216,7 +9307,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       </section></div><section class="link-log" aria-label="対戦ログ"><h4>バトルログ</h4><div role="log" aria-live="polite">${visibleLog.slice(-10).map((line,i,all)=>`<p${progress&&i===all.length-1?' class="is-current"':''}>${esc(typeof line==='string'?line:line.text||line.message||'')}</p>`).join('')||'<p>両者の準備が整いました。最初の行動を選ぼう。</p>'}</div></section>`;
   }
   function draw(){const canvas=$('link-battle-canvas');if(canvas&&view?.battle&&LT.PixelSprites.duel)LT.PixelSprites.duel(canvas,view.battle,peer.role,performance.now());}
-  function loop(now){if(!dialog.open)return;if(now-lastDraw>70&&!document.hidden){lastDraw=now;draw();if(playbackLocked&&!LT.BattleVFX?.onlineBusy?.(view?.battle,now)){playbackLocked=false;render();}else if(playbackLocked&&view?.battle&&LT.BattleVFX?.onlineProgress?.(view.battle,now)?.shown!==lastShown)render();}animation=requestAnimationFrame(loop);}
+  function loop(now){if(!dialog.open)return;if(!document.hidden){if(playbackLocked)refreshLinkHealth(now);if(now-lastDraw>70){lastDraw=now;draw();if(playbackLocked&&!LT.BattleVFX?.onlineBusy?.(view?.battle,now)){playbackLocked=false;render();}else if(playbackLocked&&view?.battle&&LT.BattleVFX?.onlineProgress?.(view.battle,now)?.shown!==lastShown)render();}}animation=requestAnimationFrame(loop);}
   function reset(){generation++;const oldSession=session,oldPeer=peer;session=null;peer=null;view=null;queue=[];switchConfirmation=null;submitting=false;oldSession?.close('対戦を終了しました');oldPeer?.close('退出しました');room='';status='';error='';connecting=false;leaving=false;orders=[];orderTurn=0;playbackLocked=false;localCode='';localPaste='';localRole=null;render();}
   function failure(err){error=err?.message||String(err||'接続できませんでした。');connecting=false;render();}
   function open(options={}){
@@ -9325,17 +9416,18 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261119-null-moves-v42"></script>
+<script src="battle-health.js?v=20261119-curse-health-v49"></script>
+<script src="battle-vfx.js?v=20261119-curse-health-v49"></script>
 <script src="admin-console.js?v=20261119-null-moves-v42"></script>
-<script src="online-futo.js?v=20261119-move-order-v48"></script>
+<script src="online-futo.js?v=20261119-curse-health-v49"></script>
 <script src="secret-encounter.js?v=20261119-secret-gender-v44"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
-<script src="trade-client.js?v=20261118-easy-connect-v37"></script>
+<script src="trade-client.js?v=20261119-curse-health-v49"></script>
 <link rel="prefetch" href="assets/music/title-16bit.mp3?v=20261117-aishiteirukara">
 <link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">
 <link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">
-<script src="local-link.js?v=20261118-easy-connect-v37"></script>
+<script src="local-link.js?v=20261119-curse-health-v49"></script>
 <link rel="stylesheet" href="online-invites.css?v=20261118-easy-connect-v37">
 <script src="online-invites.js?v=20261118-easy-connect-v37"></script>
 <script src="mobile-screen.js?v=20261119-touch-guard-v38"></script>

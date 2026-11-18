@@ -278,9 +278,14 @@
       || globalThis.document?.body?.classList?.contains('reduce-motion')===true;
   }
   function render(c,w,h,time,event,options={}) {
-    if(!c||!event||event.kind==='text'||!Number.isFinite(time)||motionReduced(options))return false;
-    const duration=clamp(Number(event.duration)||940,300,2400),t=(time-event.started)/duration;
-    if(t<0||t>1)return false;
+    if(!c||!event||event.kind==='text'||!Number.isFinite(time))return false;
+    const reduced=motionReduced(options);
+    // Curse keeps a quiet, stationary ghost when motion is reduced. Every
+    // other effect retains its existing reduced-motion behavior.
+    if(reduced&&!(event.style==='condition'&&event.condition==='curse'))return false;
+    const duration=clamp(Number(event.duration)||940,300,2400),progress=(time-event.started)/duration;
+    if(progress<0||progress>1)return false;
+    const t=reduced?.5:progress;
     const e=event.style?event:{...event,style:classify(resolveMove(event)||{element:event.element},event.kind)};
     const {source,target,own}=anchors(w,h,e,options),p=e.style==='condition'?conditionPalettes[e.condition]||palettes.neutral:movePalettes[e.move]||palettes[e.element]||palettes.neutral;
     const quality=options.quality||'balanced',low=quality==='low'||w<600;
@@ -389,7 +394,7 @@
       // The art fills its box from about 8% to 95% of its height and 9% to 91% of its width.
       const H=Math.max(16,box*.44),W=Math.max(14,box*.41),foot=cy+H,u=H/110,kind=e.condition,moment=e.moment||'ongoing',ink=CONDITION_INK[kind]||'#19253d';
       const env=smooth(t/.12)*(1-smooth((t-.82)/.18)),grow=moment==='inflict'?ease(phase(t,0,.4)):1;
-      const hurt=moment==='tick'?Math.sin(phase(t,.36,.66)*Math.PI):0,cure=moment==='cure';
+      const hurt=!reduced&&moment==='tick'?Math.sin(phase(t,.36,.66)*Math.PI):0,cure=moment==='cure';
       const dot=(x,y,r,fill,alpha=1)=>{
         if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=fill;c.fill();
         c.lineWidth=Math.max(1,r*.26);c.strokeStyle=ink;c.stroke();c.beginPath();c.arc(x-r*.34,y-r*.34,r*.27,0,TAU);c.fillStyle='#ffffff';c.fill();c.restore();
@@ -476,21 +481,46 @@
           stroke(points,ink,4.2,env*.7);stroke(points,p[1],2.2,env);
         }
       }else if(kind==='curse'){
-        // Two crossing chains draw tight around the afflicted body. The pulse
-        // marks its damage tick without resembling an ice or movement seal.
-        veil(env*.32,p[2]);
-        const loosen=cure?ease(phase(t,.18,.9)):0,tight=1-.08*hurt;
-        for(const direction of [-1,1])for(let i=0,n=low?7:10;i<n;i++){
-          const v=i/(n-1),spread=1+loosen*.7;
-          const x=cx+(v-.5)*W*1.75*spread*grow* tight;
-          const y=cy+direction*(v-.5)*H*1.2*spread+Math.sin(v*Math.PI)*H*.08;
-          const rx=(8+2*Math.sin(v*Math.PI))*u,ry=5*u;
-          ellipse(x,y,rx,ry,ink,4,env*(1-loosen));
-          ellipse(x,y,rx,ry,i%2?p[1]:p[0],2,env*(1-loosen));
-        }
-        const seal=Math.sin(phase(t,.12,.9)*Math.PI);
-        ellipse(cx,cy,W*.24,H*.2,p[3],2.6,env*seal);
-        star(cx,cy,12*u,p[3],t*1.4,env*seal);
+        // A round skull-ghost springs up, stretches in the air, then squashes
+        // gently on landing. Its hollow face stays readable at mobile sizes.
+        veil(env*.15,p[2]);
+        const radius=Math.max(10,H*.32)*(.76+.24*grow),depart=cure?ease(phase(t,.2,.9)):0;
+        const pose=at=>{
+          const hop=reduced?.5:Math.abs(Math.sin(at*TAU*1.5)),spring=reduced?0:Math.cos(at*TAU*3)*.18*Math.exp(-at*.25);
+          return {x:clamp(cx+W*.16+(reduced?0:Math.sin(at*TAU)*W*.07),radius*1.2+2,w-radius*1.6-2),
+            y:clamp(cy-H*.4-hop*H*.32-depart*H*.65,radius*1.3+2,h-radius*1.8-2),sx:1+spring,sy:1-spring*.9,hop};
+        };
+        const ghost=(at,alpha,face=true)=>{
+          if(alpha<=0)return;const shape=pose(at),r=radius;
+          c.save();c.globalAlpha=clamp(alpha);c.translate(shape.x,shape.y);c.scale(shape.sx,shape.sy);c.lineJoin='round';c.lineCap='round';
+          const outline=()=>{
+            c.beginPath();c.moveTo(-r*.86,r*.43);
+            c.bezierCurveTo(-r*1.13,-r*.22,-r*.9,-r*1.04,0,-r*1.06);
+            c.bezierCurveTo(r*.94,-r*1.06,r*1.13,-r*.22,r*.84,r*.45);
+            c.quadraticCurveTo(r*.7,r*.78,r*.99,r*1.02);c.quadraticCurveTo(r*1.16,r*1.2,r*1.42,r*1.03);
+            c.quadraticCurveTo(r*1.13,r*1.75,r*.47,r*1.5);c.quadraticCurveTo(r*.19,r*1.29,-r*.06,r*1.49);
+            c.quadraticCurveTo(-r*.33,r*1.64,-r*.53,r*1.31);c.quadraticCurveTo(-r*.9,r*1.12,-r*.86,r*.43);c.closePath();
+          };
+          outline();c.fillStyle=p[0];c.fill();c.strokeStyle=ink;c.lineWidth=Math.max(1.4,2.7*u);c.stroke();
+          if(face){
+            // The lavender underside and curling tail keep it a friendly ghost,
+            // while two empty sockets, a nose and three short teeth read as a skull.
+            c.save();outline();c.clip();c.fillStyle=p[1];c.globalAlpha*=.55;c.beginPath();c.moveTo(-r*.9,r*.44);
+            c.quadraticCurveTo(-r*.15,r*.94,r*.74,r*.57);c.quadraticCurveTo(r*.72,r*1.3,r*1.4,r*1.08);
+            c.lineTo(r*1.5,r*1.9);c.lineTo(-r,r*1.9);c.closePath();c.fill();c.restore();
+            c.fillStyle=ink;
+            for(const side of [-1,1]){c.beginPath();c.ellipse(side*r*.34,-r*.13,r*.2,r*.25,side*.12,0,TAU);c.fill();}
+            c.beginPath();c.moveTo(0,r*.16);c.lineTo(-r*.12,r*.34);c.quadraticCurveTo(0,r*.4,r*.12,r*.34);c.closePath();c.fill();
+            c.beginPath();c.moveTo(-r*.34,r*.48);c.quadraticCurveTo(0,r*.66,r*.34,r*.48);c.lineTo(r*.27,r*.76);c.quadraticCurveTo(0,r*.85,-r*.27,r*.76);c.closePath();c.fill();
+            c.fillStyle='#fffaff';for(const x of [-.25,-.065,.12])c.fillRect(x*r,r*.51,r*.13,r*.2);
+            c.strokeStyle='#ffffff';c.lineWidth=Math.max(1,3*u);c.beginPath();c.moveTo(-r*.56,-r*.58);c.quadraticCurveTo(-r*.33,-r*.82,-r*.08,-r*.81);c.stroke();
+          }
+          c.restore();
+        };
+        if(!reduced)for(let i=low?1:2;i>=1;i--)ghost(Math.max(0,t-i*.055),env*(1-depart)*(.17/i),false);
+        const current=pose(t);
+        ellipse(current.x,cy+H*.43,radius*(1.12-current.hop*.22),radius*.19,p[1],1.6,env*(1-depart)*.45);
+        ghost(t,env*(1-depart));
       }else if(kind==='crystal'){
         // Outlined shards rise around the body inside a pale prism; they scatter when the crystal breaks.
         const form=moment==='inflict'?ease(phase(t,0,.45)):1,burst=cure?ease(phase(t,.16,.85)):0;
@@ -967,31 +997,63 @@
     const continuing=onlineSeed===state?.seed&&now<onlineEnd;
     onlineKey=key;onlineSeed=state?.seed;
     if(!continuing){onlineQueue=[];onlineEnd=now;}
-    let start=continuing?onlineEnd:now,previous=events.find(item=>item.visual?.teams)?.visual||{teams:state?.teams};
+    let start=continuing?onlineEnd:now;
     onlineStarts=[];onlineTotal=events.length;
-    for(const e of planOnline(events,start)){
-      const item=events[e.index],after=item.visual?.teams?item.visual:previous;
-      e.before=previous;e.after=after;onlineQueue.push(e);onlineStarts.push(e.started);start=e.until;previous=after;
+    for(const e of planOnline(events,start,{teams:state?.teams})){
+      onlineQueue.push(e);onlineStarts.push(e.started);start=e.until;
     }
     onlineEnd=onlineQueue.length?start+120:now;lastOnlineTime=now;
   }
+  function sameOnlineMonster(before,after){
+    return !!before&&!!after&&before.species===after.species
+      &&(before.uid==null&&after.uid==null||before.uid!=null&&before.uid===after.uid);
+  }
+  function onlineHealthPlans(before,after,item,options){
+    const health=LT.BattleHealth;if(!health||item.kind==='switch')return [];
+    const move=resolveMove(item,null),plans=[];
+    for(const [side,team]of(after?.teams||[]).entries())for(const [index,mon]of(team.monsters||[]).entries()){
+      const old=before?.teams?.[side]?.monsters?.[index];
+      if(!sameOnlineMonster(old,mon)||old.maxHp!==mon.maxHp||!Number.isFinite(mon.maxHp)||mon.maxHp<=0
+        ||!Number.isFinite(old.hp)||!Number.isFinite(mon.hp)||old.hp===mon.hp)continue;
+      const plan=health.plan({...options,from:old.hp,to:mon.hp,max:mon.maxHp,def:mon.stats?.def,spDef:mon.stats?.spDef,
+        kind:item.kind,category:item.category||move?.category});
+      plans.push({side,index,mon,plan});
+    }
+    return plans;
+  }
   // The timeline of one state's messages from `start`: each beat lasts until its
-  // message has been read (or its effect has played), then pauses before the next.
-  function planOnline(events,start=0){
+  // message has been read, its effect has played and its HP has settled.
+  function planOnline(events,start=0,initial=null){
     const options=settings(),reduced=motionReduced(options),tempo={slow:1.2,normal:1,fast:.72,instant:.5}[options.textSpeed]||1,beats=[];
+    let previous=(events||[]).find(item=>item.visual?.teams)?.visual||initial,pendingFaints=[];
     for(const [index,item] of (events||[]).entries()){
       const e=fromEvent(item,null,start)||textBeat(item,start);
       if(reduced&&e.kind!=='text')e.duration=Math.min(e.duration,180);
       if(e.kind==='text')e.duration=Math.round(e.duration*tempo);
-      const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo));
+      e.before=previous;e.after=item.visual?.teams?item.visual:previous;
+      e.healthPlans=onlineHealthPlans(e.before,e.after,item,{reducedMotion:reduced,tempo});
+      e.healthStarted=start+(reduced||e.kind==='text'?0:e.duration*(e.impactAt??.45));
+      const healthDuration=Math.max(0,...e.healthPlans.map(change=>change.plan.duration));
+      // Damage can be followed by a drain, an item or a condition before faint.
+      // Keep only the sprite standing until that individual's own faint beat.
+      pendingFaints=pendingFaints.filter(change=>{
+        const mon=e.after?.teams?.[change.side]?.monsters?.[change.index];
+        return sameOnlineMonster(change.mon,mon)&&mon.hp<=0
+          &&!(e.kind==='faint'&&e.side===change.side&&e.after.teams[change.side].active?.[e.slot]===change.index);
+      });
+      if(e.kind!=='faint')for(const change of e.healthPlans)if(change.plan.from>0&&change.plan.to===0){
+        pendingFaints.push({side:change.side,index:change.index,mon:change.mon,hp:change.plan.from});
+      }
+      e.pendingFaints=pendingFaints.slice();
+      const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo),e.healthStarted-start+healthDuration);
       e.index=index;e.until=start+beat+Math.round((['damage','faint','recoil','statusTick'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
-      beats.push(e);start=e.until;
+      beats.push(e);start=e.until;previous=e.after;
     }
     return beats;
   }
   // For checks and the interface: offsets of every beat and the whole playback length.
   function onlinePlan(state){
-    const beats=planOnline(state?.events||[],0);
+    const beats=planOnline(state?.events||[],0,{teams:state?.teams});
     return {beats:beats.map(e=>({kind:e.kind,index:e.index,start:e.started,until:e.until})),total:beats.length?beats.at(-1).until+120:0};
   }
   // How many messages of the current turn have started playing (for the battle log).
@@ -1009,12 +1071,31 @@
     while(onlineQueue.length&&now>=(onlineQueue[0].until??onlineQueue[0].started+onlineQueue[0].duration+75))onlineQueue.shift();
     return onlineQueue[0];
   }
+  // Clone just the changed presentation rows; authoritative snapshots and PP
+  // remain untouched even when the HP counter is between two whole numbers.
+  function onlineMonsterView(state,changes,update){
+    let teams=null;
+    for(const change of changes||[]){
+      const team=state?.teams?.[change.side],mon=team?.monsters?.[change.index];
+      if(!sameOnlineMonster(change.mon,mon))continue;
+      teams||=state.teams.slice();
+      if(teams[change.side]===team)teams[change.side]={...team,monsters:team.monsters.slice()};
+      teams[change.side].monsters[change.index]=update(mon,change);
+    }
+    return teams?{...state,teams}:state;
+  }
   function onlineView(state,now=globalThis.performance?.now?.()||0){
     if(!state?.teams)return state;
     const e=onlineFrame(state,now);
     if(!e)return state;
     const visual=now<e.started?e.before:e.kind==='switch'||e.kind==='text'||now>=e.started+e.duration?e.after:e.before;
-    return visual?.teams?{...state,teams:visual.teams}:state;
+    const shown=visual?.teams?{...state,teams:visual.teams}:state,health=LT.BattleHealth;
+    if(!health||!e.healthPlans.length)return shown;
+    if(motionReduced(settings())&&now>=e.started)e.healthInstant=true;
+    return onlineMonsterView(shown,e.healthPlans,(mon,change)=>{
+      const elapsed=now-e.healthStarted,hp=e.healthInstant?change.plan.to:elapsed<0?change.plan.from:health.sample(change.plan,elapsed);
+      return {...mon,hp,displayHp:health.displayed(change.plan,hp)};
+    });
   }
   function settings() {
     let value={};try{value=JSON.parse(globalThis.localStorage?.getItem('lumina-trail-settings-v1')||'{}');}catch(_){}
@@ -1026,7 +1107,11 @@
     const wrapped=function(canvas,engine,time=0,options={}) {
       if(options.quality!=='low'&&!motionReduced(options))void preload();
       battle(canvas,engine,time,{...options,hideLegacyEffect:true});
-      if(canvas&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,options.effect,options);
+      // Solo sprites receive time=0 in reduced motion. The stationary curse
+      // still needs a real clock so it appears for its beat and then expires.
+      const quietCurse=!time&&options.effect?.style==='condition'&&options.effect?.condition==='curse'&&motionReduced(options);
+      const effectTime=quietCurse?(globalThis.performance?.now?.()??time):time;
+      if(canvas&&(time||quietCurse))render(canvas.getContext('2d'),canvas.width,canvas.height,effectTime,options.effect,options);
     };
     wrapped._pachiVFX=true;LT.Art.battle=wrapped;LT.PixelSprites.battle=wrapped;
     LT.PixelSprites.duel=function(canvas,value,side=0,time=0) {
@@ -1036,7 +1121,8 @@
       const e=time?onlineFrame(state,time):undefined,shown=time?onlineView(state,time):state;
       const options={...settings(),effect:e,hideLegacyEffect:true,online:true,double:state.mode==='double',side};
       if(options.quality!=='low'&&!motionReduced(options))void preload();
-      duel(canvas,shown,side,time,options);
+      const spriteView=onlineMonsterView(shown,e?.pendingFaints,(mon,change)=>({...mon,hp:change.hp}));
+      duel(canvas,spriteView,side,time,options);
       if(e&&time>=e.started&&!e.soundPlayed){
         e.soundPlayed=true;
         const move=LT.DATA?.moves?.[e.move];

@@ -14,7 +14,7 @@ function harness(engine,reducedMotion=false){
  const out={frames:[],saves:0,toasts:[],draws:[],sounds:[]};
  const c=vm.createContext({engine,LT,DATA,battleView:null,battleEffect:null,busy:false,evolutionUntil:0,settings:{reducedMotion},performance:{now:()=>100},
   $:id=>nodes[id],document:{createElement:()=>({textContent:''})},toast:msg=>out.toasts.push(msg),updateScene(){},
-  updateAll(){out.draws.push({busy:c.busy,enemy:(c.battleView||engine).battle.enemy.species});},updateBattle(){},save(){out.saves++;},
+  updateAll(){out.draws.push({busy:c.busy,enemy:(c.battleView||engine).battle.enemy.species});},updateBattle(){},paintBattleHealth(){},battleHealthDuration(){return 0;},save(){out.saves++;},
   sound:{fx:name=>out.sounds.push(name),move(){}},setTimeout(fn,duration){out.frames.push({duration,busy:c.busy,effect:copy(c.battleEffect),visual:copy(c.battleView.battle),party:copy(c.battleView.state.party)});return setTimeout(fn,0);},clearTimeout(id){clearTimeout(id);}});
  const start=html.indexOf('  function captureBattleView()'),end=html.indexOf('  function openBattle()',start);
  assert(start>0&&end>start);vm.runInContext(html.slice(start,end),c);
@@ -40,7 +40,7 @@ async function run(){
  // Rhythm: each line stays at least its reading time; a hit waits for its effect plus a pause.
  e=make();({c,out}=harness(e));await c.doBattle({type:'move',index:0});
  const waits=out.frames.filter(f=>f.duration>=300);assert(waits.length>=2,'every message has its own beat');
- const lethal=out.frames.find(f=>f.effect?.kind==='damage');assert(lethal.duration>=lethal.effect.duration+400,'a hit is followed by a visible pause');
+ const lethal=out.frames.find(f=>f.effect?.kind==='damage'&&f.duration>=f.effect.duration);assert(lethal&&lethal.duration>=lethal.effect.duration+400,'a hit is followed by a visible pause');
  assert(html.includes('const fatal=(event.visual?.ally?.hp??1)<=0||(event.visual?.enemy?.hp??1)<=0'),'a knockout keeps its faint motion for its own event');
  // Duplicate inputs while playback is outstanding cannot run a second engine turn.
  e=make();({c,out}=harness(e));const pending=c.doBattle({type:'move',index:0});const turn=e.battle.turn;await c.doBattle({type:'move',index:0});await pending;assert.equal(e.battle.turn,turn);

@@ -52,6 +52,8 @@
  *   the party and storage controls refresh with the saved 1–6 member lineup.
  * v48: each companion can reorder its four learned moves without changing PP;
  *   the adventure controls and both link-battle clients refresh together.
+ * v49: permanent curses, bouncing skull ghosts and their sound refresh with
+ *   stat-aware HP playback; the shared HP helper is installed for offline play.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

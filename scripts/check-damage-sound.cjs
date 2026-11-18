@@ -14,7 +14,7 @@ for(const marker of ['original world and game data','Original creature atlas and
   vm.runInContext(select(marker),context);
 vm.runInContext(vfxSource,context);
 const {LT}=context,{Engine,Duel,DATA,BattleVFX}=LT,copy=value=>JSON.parse(JSON.stringify(value));
-const species=['komori','shizuku','hibana','fuwari','kirari'];
+const species=['komori','shizuku','hibana','fuwari','kirari','nullmie'];
 const forElement=element=>species.find(id=>DATA.species[id].element===element);
 const team=(first,size)=>[first,...species.filter(id=>id!==first)].slice(0,size);
 const classify=factor=>factor>1?'super':factor<1?'resisted':'normal';
@@ -59,7 +59,7 @@ test('solo and link combat expose the same attribute multiplier independently of
     }
     seen.add(expected);count++;
   }
-  assert.deepEqual([...seen].sort(),[.7,.8,1,1.5]);assert.equal(count,30);
+  assert.deepEqual([...seen].sort(),[.7,.8,1,1.5]);assert.equal(count,42);
 });
 
 test('three impact signatures stay distinct and use affinity, not numerical damage or log text',()=>{
@@ -136,7 +136,7 @@ test('solo fast-forward and reduced motion pass a shortened sound clock without 
     c=vm.createContext({LT,DATA,settings:{reducedMotion,textSpeed:'instant'},busy:false,battleEffect:null,battleView:null,
       performance:{now:()=>100},document:{createElement:()=>({})},
       $:id=>id==='battle-log'?box:id==='battle-actions'?{querySelectorAll:()=>[]}:{classList:{add(){},remove(){}}},
-      sound:{fx(){},move(move,event,effect){heard.push(copy(effect));}},updateAll(){},save(){},applyBattleVisual(){},
+      sound:{fx(){},move(move,event,effect){heard.push(copy(effect));}},updateAll(){},save(){},applyBattleVisual(){},battleHealthDuration(){return 0;},
       setTimeout(fn,ms){waits.push(ms);if(timers++===0)vm.runInContext('battleSkip=true',c);return setTimeout(fn,0);},clearTimeout});
     vm.runInContext(source,c);
     await c.playBattleEvents({events:[{kind:'text',text:'早送り'},original]});

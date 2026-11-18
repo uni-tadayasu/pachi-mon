@@ -384,7 +384,7 @@
         <label class="link-field">交換に出すパチモン<select id="local-trade-select">${list.length ? list.map(({ mon, where }) => `<option value="${esc(mon.uid)}" ${mon.uid === (selected || session.mine?.uid) ? 'selected' : ''}>${esc(label(mon))} · ${where}</option>`).join('') : '<option value="">交換できるパチモンがいません</option>'}</select></label>
         <div class="local-actions"><button type="button" class="btn" data-local="offer" ${list.length ? '' : 'disabled'}>これを出す</button>
         <button type="button" class="btn btn-primary" data-local="confirm" ${session.phase === 'review' && !session.myConfirm ? '' : 'disabled'}>${session.myConfirm ? '相手の確認を待っています…' : 'この内容で交換する'}</button></div>
-        <p class="local-note">持ち物を持たせているパチモン・運営専用・配布限定のパチモンは交換できません。お互いに「この内容で交換する」を押すと成立します。</p>`;
+        <p class="local-note">呪縛中・持ち物を持たせているパチモン・運営専用・配布限定のパチモンは交換できません。お互いに「この内容で交換する」を押すと成立します。</p>`;
     }
     function hint() {
       if (!session || !link?.connected) return '';
