@@ -49,6 +49,20 @@
     sig_tide:['#eefcff','#7ee3ff','#1f6fd1','#fff2b8'],
     sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a']
   };
+  // Conditions show on the afflicted monster every turn they hold: when they land,
+  // when they stop a move, as a damage tick, as an end-of-turn reminder, and when they end.
+  const CONDITIONS = Object.freeze(['bloom','bubble','scorch','dizzy','crystal']);
+  const CONDITION_ELEMENTS = {bloom:'leaf',bubble:'tide',scorch:'ember',dizzy:'wind',crystal:'crystal'};
+  const CONDITION_NAMES = {bloom:'花毒',bubble:'水封',scorch:'灯焼け',dizzy:'目眩',crystal:'結晶化'};
+  const conditionPalettes = {
+    bloom: ['#f6e6ff', '#b98ae6', '#6d3ea6', '#ff9fd6'],
+    bubble: ['#effcff', '#7fd2f2', '#2f86c4', '#ffffff'],
+    scorch: ['#fff1c7', '#ff9a4a', '#d4452a', '#ffe08a'],
+    dizzy: ['#fffbe0', '#f2d65a', '#b98a1e', '#ffffff'],
+    crystal: ['#fbf4ff', '#c8b2f4', '#7b62c8', '#fff9cf']
+  };
+  const MOMENT_DURATION = {inflict:1100,blocked:1000,ongoing:950,tick:1000,cure:820};
+  const CONDITION_INK = {bloom:'#3d1d63',bubble:'#164a73',scorch:'#6e1d10',dizzy:'#5a3d00',crystal:'#3b2c7a'};
   const clamp = (n,a=0,b=1) => Math.max(a,Math.min(b,n));
   const ease = n => 1-Math.pow(1-clamp(n),3);
   const smooth = n => { n=clamp(n); return n*n*(3-2*n); };
@@ -83,7 +97,24 @@
     if(kind==='boost')return 'ascension';
     return effectOf(move);
   }
+  function conditionOf(event) {
+    const known=kind=>CONDITIONS.includes(kind)?kind:null;
+    if(event?.kind==='status'&&event.status==='cure')return known(event.was)||(/泡/.test(event.text||'')?'bubble':/結晶/.test(event.text||'')?'crystal':null);
+    return known(event?.status);
+  }
+  function momentOf(event) {
+    if(event.kind==='statusTick')return 'tick';
+    if(event.status==='cure')return 'cure';
+    return event.blocked||/動けない/.test(event.text||'')?'blocked':event.ongoing?'ongoing':'inflict';
+  }
   function fromEvent(event,fallback=null,now=globalThis.performance?.now?.()||0) {
+    if(event?.kind==='status'||event?.kind==='statusTick'){
+      const condition=conditionOf(event);if(!condition)return null;
+      const moment=momentOf(event),amount=moment==='tick'?(Number(event.amount)||Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||0)):0;
+      return {kind:event.kind,style:'condition',condition,moment,move:'',element:CONDITION_ELEMENTS[condition],power:25,category:'status',
+        releaseAt:.1,impactAt:.45,side:event.side??'ally',slot:event.slot||0,target:event.slot||0,amount,critical:false,
+        started:now,duration:MOMENT_DURATION[moment],seed:hash('condition:'+condition+':'+moment+':'+(event.side??'ally')+':'+(event.slot||0))};
+    }
     if(!event||!['damage','attack','heal','guard','boost','miss','capture','caught','resonate','recoil','faint','switch'].includes(event.kind))return null;
     if(event.kind==='heal' && (event.amount===0||/効果がなかった|満タン|満ちている/.test(event.text||'')))return null;
     if(event.kind==='boost' && event.changed===false)return null;
@@ -105,7 +136,7 @@
       return {x:width*(doubled?(ours?(slot===1?.47:.19):(slot===1?.82:.57)):(ours?.28:.73)),
         y:height*(doubled?(ours?.75:.37):((ours?.71:.42)-(online?0:inset)*.3))};
     }
-    const source=at(own,e.slot),self=['heal','guard','boost','recoil','faint','switch'].includes(e.kind);
+    const source=at(own,e.slot),self=['heal','guard','boost','recoil','faint','switch','status','statusTick'].includes(e.kind);
     return {source,target:self?source:at(!own,e.target),own};
   }
   function motionReduced(options) {
@@ -118,7 +149,7 @@
     const duration=clamp(Number(event.duration)||940,300,2400),t=(time-event.started)/duration;
     if(t<0||t>1)return false;
     const e=event.style?event:{...event,style:classify(resolveMove(event)||{element:event.element},event.kind)};
-    const {source,target}=anchors(w,h,e,options),p=movePalettes[e.move]||palettes[e.element]||palettes.neutral;
+    const {source,target,own}=anchors(w,h,e,options),p=e.style==='condition'?conditionPalettes[e.condition]||palettes.neutral:movePalettes[e.move]||palettes[e.element]||palettes.neutral;
     const quality=options.quality||'balanced',low=quality==='low'||w<600;
     const budget=budgets[low?'low':quality==='high'?'high':'balanced'];
     const count=budget.particles,seed=e.seed||hash(e.move||e.style);
@@ -210,6 +241,132 @@
       c.quadraticCurveTo(x-r*.2,y-r*.3,x+lean*r*.4,y-r*.7);
       c.quadraticCurveTo(x+r*.45,y-r*.1,x+r*.19,y+r*.22);c.closePath();c.fill();c.restore();
     };
+    if(e.style==='condition'){condition();c.restore();return true;}
+    // ── Conditions: a motif sized to the afflicted monster, drawn around and over it.
+    // Shapes carry a dark outline so they read on pale and dark creatures alike.
+    function condition(){
+      c.globalAlpha=1; // the motif carries its own fade
+      const inset=options.online?0:clamp(Number(globalThis.LT?.battleInset)||0,0,.4);
+      const box=options.double?Math.min(w*.28,h*.52):own?Math.min(w*(options.online?.4:.38),h*(options.online?.68:.64)*(1-inset*.5)):Math.min(w*(options.online?.34:.32),h*(options.online?.57:.52)*(1-inset*.55));
+      // The art fills its box from about 8% to 95% of its height and 9% to 91% of its width.
+      const H=Math.max(16,box*.44),W=Math.max(14,box*.41),foot=cy+H,u=H/110,kind=e.condition,moment=e.moment||'ongoing',ink=CONDITION_INK[kind]||'#19253d';
+      const env=smooth(t/.12)*(1-smooth((t-.82)/.18)),grow=moment==='inflict'?ease(phase(t,0,.4)):1;
+      const hurt=moment==='tick'?Math.sin(phase(t,.36,.66)*Math.PI):0,cure=moment==='cure';
+      const dot=(x,y,r,fill,alpha=1)=>{
+        if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=fill;c.fill();
+        c.lineWidth=Math.max(1,r*.26);c.strokeStyle=ink;c.stroke();c.beginPath();c.arc(x-r*.34,y-r*.34,r*.27,0,TAU);c.fillStyle='#ffffff';c.fill();c.restore();
+      };
+      const star5=(x,y,r,fill,rotation=0,alpha=1)=>{
+        if(r<=0||alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.beginPath();
+        for(let i=0;i<10;i++){const a=rotation-Math.PI/2+i*Math.PI/5,rr=i%2?r*.46:r;if(i)c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);else c.moveTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr);}
+        c.closePath();c.lineWidth=Math.max(1.2,r*.28);c.strokeStyle=ink;c.stroke();c.fillStyle=fill;c.fill();c.restore();
+      };
+      const veil=(alpha,color=p[1])=>{
+        if(alpha<=0)return;const g=c.createRadialGradient(cx,cy-H*.1,H*.08,cx,cy-H*.1,H*1.1);g.addColorStop(0,color+'b0');g.addColorStop(.7,color+'60');g.addColorStop(1,color+'00');
+        c.save();c.globalAlpha*=clamp(alpha);c.fillStyle=g;c.beginPath();c.ellipse(cx,cy-H*.1,W*1.05,H*1.1,0,0,TAU);c.fill();c.restore();
+      };
+      const flame=(x,y,r,lean,alpha)=>{lampFlame(x,y,r*1.28,lean,p[2],alpha*.9);lampFlame(x,y,r,lean,p[1],alpha);};
+      const shardOutline=(points,fill,alpha)=>{
+        if(alpha<=0)return;c.save();c.globalAlpha*=clamp(alpha);c.beginPath();points.forEach((v,i)=>i?c.lineTo(v[0],v[1]):c.moveTo(v[0],v[1]));c.closePath();
+        c.fillStyle=fill;c.fill();c.lineWidth=Math.max(1,1.8*u);c.strokeStyle=ink;c.stroke();c.restore();
+      };
+      // Ground ring and, on a damage tick, a hurt pulse over the body.
+      ellipse(cx,foot-H*.06,W*(.82+.08*Math.sin(t*TAU)),H*.17,p[1],2.4,env*.7);
+      if(moment==='inflict'){const land=phase(t,0,.34);if(land<1)ellipse(cx,cy,W*(1.9-.85*ease(land)),H*(1.5-.45*ease(land)),p[0],3,(1-land)*env);}
+      if(hurt>0){veil(hurt*.55,p[2]);ellipse(cx,cy,W*(.6+phase(t,.36,.8)*.6),H*(.55+phase(t,.36,.8)*.5),p[0],2.6,hurt);}
+      if(kind==='bloom'){
+        // Poison spores bubble up and pop over a violet veil; petals circle the body.
+        veil(env*.4);
+        for(let i=0,n=low?9:16;i<n;i++){
+          const r0=random(seed,i),r1=random(seed,i+19),r2=random(seed,i+41),life=phase(t,r0*.45,r0*.45+.4);
+          if(life<=0||life>=1)continue;
+          const x=cx+(r1-.5)*W*1.6+Math.sin(life*TAU+i)*W*.06,y=cy+H*.55-life*H*1.55,rad=(5+r2*5)*u*(1-life*.25)*grow;
+          if(life<.84)dot(x,y,rad,i%3?p[1]:p[2],env*.95);
+          else{const pop=phase(life,.84,1);ellipse(x,y,rad*(1+pop*1.3),rad*(1+pop*1.3),p[3],2,(1-pop)*env);}
+        }
+        for(let i=0,n=low?3:5;i<n;i++){
+          const a=t*TAU*.9+i*TAU/n,rr=W*(.95-.1*Math.sin(t*TAU+i))*(.4+.6*grow);
+          leaf(cx+Math.cos(a)*rr,cy-H*.15+Math.sin(a)*rr*.3+(i%2?-1:1)*H*.14*Math.sin(t*TAU*.5+i),(9+(i%3)*2)*u*grow,a+Math.PI/2,i%2?p[3]:p[1],env);
+        }
+      }else if(kind==='bubble'){
+        // The sealing bubble: tinted, wobbling, with a bright rim; it bursts when the condition ends.
+        const by=cy-H*.04,form=moment==='inflict'?ease(phase(t,0,.36)):1,popAt=.3,pop=cure?phase(t,popAt,.8):0,shaking=cure&&t<popAt;
+        const wob=Math.sin(t*TAU*(shaking?6:2))*(shaking?.07:.04),rx=W*1.12*(1+wob)*(.35+.65*form),ry=H*1.1*(1-wob)*(.35+.65*form);
+        if(!cure||t<popAt){
+          const g=c.createRadialGradient(cx-rx*.3,by-ry*.35,rx*.1,cx,by,Math.max(rx,ry));
+          g.addColorStop(0,p[0]+'60');g.addColorStop(.7,p[1]+'38');g.addColorStop(1,p[1]+'90');
+          c.save();c.globalAlpha*=env;c.fillStyle=g;c.beginPath();c.ellipse(cx,by,rx,ry,0,0,TAU);c.fill();c.restore();
+          ellipse(cx,by,rx,ry,ink,4.2,env*.8);ellipse(cx,by,rx,ry,p[1],2.4,env);ellipse(cx,by,rx*.95,ry*.95,p[0],1.2,env*.7);
+          ellipse(cx,by,rx*.76,ry*.76,p[3],4,env*.9,Math.PI*1.08,Math.PI*1.42);mote(cx-rx*.52,by-ry*.55,6*u,p[3],env);
+        }else{
+          const flash=1-smooth(phase(t,popAt,popAt+.18));glow(cx,by,Math.max(rx,ry)*1.1,flash*.55,p[0]);
+          ellipse(cx,by,rx*(1+pop*.55),ry*(1+pop*.55),ink,5,(1-pop)*env*.6);ellipse(cx,by,rx*(1+pop*.55),ry*(1+pop*.55),p[1],3,(1-pop)*env);ellipse(cx,by,rx*(1+pop*.4),ry*(1+pop*.4),p[0],1.6,(1-pop)*env);
+          for(let i=0,n=low?8:14;i<n;i++){
+            const a=TAU*i/n+random(seed,i)*.4,dist=Math.min(W,H)*(1.05+ease(pop)*.75);
+            dot(cx+Math.cos(a)*dist*W/Math.min(W,H),by+Math.sin(a)*dist*H/Math.min(W,H)+pop*pop*H*.4,(5+random(seed,i+7)*4)*u*(1-pop*.35),i%3?p[1]:p[0],(1-pop*.7)*env);
+          }
+        }
+        for(let i=0,n=low?5:9;i<n;i++){
+          const r0=random(seed,i+60),life=phase(t,r0*.5,r0*.5+.45);if(life<=0||life>=1||(cure&&t>popAt))continue;
+          dot(cx+(random(seed,i+80)-.5)*W*1.3+Math.sin(life*TAU*1.5+i)*W*.05,cy+H*.6-life*H*1.3,(3+random(seed,i+90)*3)*u,p[1],env*(1-life*.6));
+        }
+      }else if(kind==='scorch'){
+        // Flames flicker along the base and up the sides; embers rise off the burn.
+        veil(env*.26,p[2]);
+        for(let i=0,n=low?4:6;i<n;i++){
+          const v=(i+.5)/n,x=cx+(v-.5)*W*1.75,base=foot-H*.08-Math.sin(v*Math.PI)*H*.3;
+          const flick=.78+.22*Math.sin(t*TAU*3+i*1.7)+.1*Math.sin(t*TAU*5.3+i);
+          flame(x,base,(14+9*Math.sin(v*Math.PI))*u*flick*grow,Math.sin(t*TAU*2+i)*.35,env);
+        }
+        for(const side of [-1,1]){const flick=.8+.2*Math.sin(t*TAU*3.4+side);flame(cx+side*W*.92,cy+H*.05,13*u*flick*grow,-side*.25,env*.9);}
+        for(let i=0,n=low?6:11;i<n;i++){
+          const r0=random(seed,i+30),life=phase(t,r0*.5,r0*.5+.45);if(life<=0||life>=1)continue;
+          const x=cx+(random(seed,i+50)-.5)*W*1.5+Math.sin(life*TAU*1.5+i)*W*.08,y=foot-H*.3-life*H*1.5;
+          star(x,y,(3+random(seed,i+70)*2.5)*u,i%3?p[3]:p[0],life*3,(1-life)*env);
+        }
+      }else if(kind==='dizzy'){
+        // Outlined stars circle the head (the near ones larger) beside two swirls.
+        const orbitY=cy-H*.9,orx=W*.68,ory=H*.18,spin=t*TAU*1.6,gather=moment==='inflict'?1+(1-ease(phase(t,0,.4)))*1.1:1;
+        const stars=Array.from({length:low?3:4},(_,i)=>spin+i*TAU/(low?3:4)).sort((a,b)=>Math.sin(a)-Math.sin(b));
+        for(const a of stars){
+          const depth=Math.sin(a),x=cx+Math.cos(a)*orx*gather,y=orbitY+depth*ory*gather;
+          star5(x,y,(13+depth*3.5)*u,depth>0?p[1]:p[2],a*1.2,env*(.75+.25*depth));
+        }
+        for(const side of [-1,1]){
+          const points=[],steps=low?16:28;
+          for(let j=0;j<=steps;j++){const v=j/steps,a=side*(-spin*1.3)+v*TAU*1.6,r=v*H*.2;points.push([cx+side*W*.72+Math.cos(a)*r,orbitY+H*.05+Math.sin(a)*r*.7]);}
+          stroke(points,ink,4.2,env*.7);stroke(points,p[1],2.2,env);
+        }
+      }else if(kind==='crystal'){
+        // Outlined shards rise around the body inside a pale prism; they scatter when the crystal breaks.
+        const form=moment==='inflict'?ease(phase(t,0,.45)):1,burst=cure?ease(phase(t,.16,.85)):0;
+        if(cure){const flash=Math.sin(phase(t,.08,.4)*Math.PI);glow(cx,cy-H*.1,H*1.2,flash*.6,p[0]);ellipse(cx,cy-H*.05,W*(.9+burst*.8),H*(.9+burst*.7),p[1],3,(1-burst)*env);}
+        const hex=[];for(let j=0;j<6;j++){const a=j*TAU/6+Math.PI/6;hex.push([cx+Math.cos(a)*W*1.08*form*(1+burst*.4),cy-H*.05+Math.sin(a)*H*1.05*form*(1+burst*.4)]);}
+        poly(hex,p[1],env*.2*(1-burst));stroke(hex,ink,3.6,env*.6*(1-burst),true);stroke(hex,p[0],1.8,env*.8*(1-burst),true);
+        for(let i=0,n=low?5:8;i<n;i++){
+          const v=(i+.5)/n,x0=cx+(v-.5)*W*1.95,base=foot-H*.04-Math.sin(v*Math.PI)*H*.12,tall=H*(.5+.5*Math.sin(v*Math.PI))*(.8+.2*random(seed,i))*form;
+          if(cure){
+            const a=-Math.PI/2+(v-.5)*2.6,dist=burst*H*1.25,mx=x0+Math.cos(a)*dist,my=base-tall*.5+Math.sin(a)*dist,len=Math.max(tall*.42,H*.2)*(1-burst*.3),spin=a+burst*4*(i%2?1:-1);
+            shardOutline([[mx+Math.cos(spin)*len,my+Math.sin(spin)*len],[mx-Math.sin(spin)*len*.32,my+Math.cos(spin)*len*.32],[mx-Math.cos(spin)*len*.7,my-Math.sin(spin)*len*.7],[mx+Math.sin(spin)*len*.32,my-Math.cos(spin)*len*.32]],i%2?p[1]:p[2],env*(1-burst*.45));
+            continue;
+          }
+          const lean=(v-.5)*-.4,tipX=x0+lean*tall,tipY=base-tall,w0=W*.13*(.8+.4*random(seed,i+9));
+          shardOutline([[x0-w0,base],[x0-w0*.75+(tipX-x0)*.72,base-tall*.72],[tipX,tipY],[x0+w0*.75+(tipX-x0)*.72,base-tall*.72],[x0+w0,base]],(i%2?p[1]:p[0])+'d0',env*.85);
+          stroke([[x0,base],[tipX,tipY]],p[3],1.4,env*.9);
+        }
+        const sweep=phase(t,.25,.85);
+        if(sweep>0&&sweep<1)star(cx-W*.6+sweep*W*1.2,cy-H*.25-Math.sin(sweep*Math.PI)*H*.4,12*u,p[3],t*4,env*Math.sin(sweep*Math.PI));
+        if(cure)for(let i=0;i<(low?5:9);i++){const a=TAU*i/(low?5:9),r=H*(.4+burst*.95);star(cx+Math.cos(a)*r,cy-H*.1+Math.sin(a)*r*.7,9*u,p[3],a,env*(1-burst*.8));}
+      }
+      // A short label over the monster: its condition, "can't move", or the damage it took.
+      const name=globalThis.LT?.DATA?.statuses?.[kind]?.name||CONDITION_NAMES[kind]||'';
+      const label=moment==='tick'?(e.amount?String(e.amount):''):moment==='blocked'?'動けない':cure?'':name;
+      if(label&&t>.3){
+        const alpha=smooth(phase(t,.3,.42))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
+        c.font=`900 ${Math.max(12,Math.round(21*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle=ink;c.fillStyle=p[0];
+        const yy=Math.max(14*s,cy-H*1.12-ease(phase(t,.3,1))*14*s);c.strokeText(label,cx,yy);c.fillText(label,cx,yy);c.restore();
+      }
+    }
     const attack=!['healing','shield','ascension','capture','miss'].includes(e.style);
     const charging=smooth(phase(t,0,.1))*(1-smooth(phase(t,.14,.34)));
     const bloom=Math.sin(phase(t,.4,.93)*Math.PI);
@@ -633,7 +790,7 @@
       if(reduced&&e.kind!=='text')e.duration=Math.min(e.duration,180);
       if(e.kind==='text')e.duration=Math.round(e.duration*tempo);
       const beat=Math.max(e.duration,Math.round(readTime(item.text)*tempo));
-      e.index=index;e.until=start+beat+Math.round((['damage','faint','recoil'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
+      e.index=index;e.until=start+beat+Math.round((['damage','faint','recoil','statusTick'].includes(e.kind)?ONLINE_SETTLE:ONLINE_GAP)*tempo);
       beats.push(e);start=e.until;
     }
     return beats;
@@ -689,6 +846,8 @@
         const move=LT.DATA?.moves?.[e.move];
         if(move&&typeof LT.playMoveSound==='function'){
           try{LT.playMoveSound(move,e);}catch(_){}
+        }else if(e.style==='condition'&&typeof LT.playStatusSound==='function'){
+          try{LT.playStatusSound(e);}catch(_){}
         }
       }
       if(e&&time)render(canvas.getContext('2d'),canvas.width,canvas.height,time,e,options);
@@ -696,7 +855,8 @@
     globalThis.document?.addEventListener?.('pachi-online-state',()=>{if(!LT.onlineBattle){onlineKey=null;onlineSeed=null;onlineQueue=[];onlineEnd=0;onlineStarts=[];onlineTotal=0;}});
     return true;
   }
-  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival']};
+  const api={classify,fromEvent,anchors,render,install,onlineBusy,onlineView,onlineProgress,onlinePlan,palettes,budgets,effects:MOVE_EFFECTS,effectOf,styles:[...MOVE_EFFECTS,'capture','miss','faint','arrival'],
+    conditions:CONDITIONS,conditionPalettes,conditionOf};
   LT.BattleVFX=api;install();
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })();
