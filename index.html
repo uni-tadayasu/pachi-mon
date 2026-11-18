@@ -4719,7 +4719,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 
 </script><script>
 /* パチモン｜Pachi Monsters — 64 original scores and a bounded Web Audio ensemble.
- * All melodies, arrangements and instrument definitions are authored for this game.
+ * Synthesized scores and instrument definitions are authored for this game.
+ * The recorded title and 無 arrangements use music supplied for this project.
  * Concert-remix edition: sixteenth-note bass pickups, answering rhythm sections,
  * half-time builds and ensemble drops around the original melodic themes.
  * The title theme is a recorded 16-bit arrangement of KASAI SOLUTIONS INC.'s own song
@@ -4916,7 +4917,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     score('glitch','60 ｹﾞﾝｼﾞﾂ ﾉ ｳﾗｶﾞﾜ','バグの裏部屋。音割れしたベルが、ありえない音程で鳴る。',61,'lydian',104,5,[0,1,0,6,0,1,4,6],
       '0:1 6:1 1:1 5:1 2:2 4:2 3:2|6:3 0:1 6:2 _:4|1:1 3:1 6:1 3:1 1:2 _:2 0:2|6:6 _:4',
       '7:1 13:1 6:1 12:1 5:2 11:2 4:2|3:2 9:2 2:2 8:2 1:2|0:1 _:1 0:1 _:1 6:2 _:2 7:2|0:10','lab','bell',[0,6,3,6,1,6,3,6,4,6],'K.h.Kh.S.h',32,true),
-    score('glitchbattle','61 NULL BATTLE / ヌルの挑戦','裏部屋の番人戦。壊れたリードが半音でぶつかり合う。',58,'minor',176,4,[0,1,0,6,5,1,0,4],
+    score('glitchbattle','61 Enthusiast 2026（無属性・16ビットアレンジ）','無属性のパチモンが場に出ている間、ほかの戦闘曲より優先する専用曲。音楽室でも全編を試聴できます。裏部屋の番人だけの戦闘では従来の曲を使用。',58,'minor',176,4,[0,1,0,6,5,1,0,4],
       '0:1 1:1 0:1 6:1 0:1 1:1 0:2|7:1 6:1 7:1 1:1 0:4|0:1 1:1 3:1 1:1 0:1 -1:1 0:2|-2:4 _:4',
       '7:1 8:1 7:1 13:1 7:1 8:1 7:2|6:2 5:2 4:4|3:1 4:1 5:1 4:1 3:1 1:1 0:2|0:8','battle','lead',[0,1,0,7,0,1,0,6],'KShhKSKS',48,true),
     score('library','62 天頂の隠し書庫','隠し書庫。ハープの三拍子が、ページをめくる音になる。',65,'major',72,3,[0,3,4,0,5,1,4,0],
@@ -4933,6 +4934,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // The recorded title theme (A minor, 139.5 BPM, 129 bars). Fetched once; the offline
   // worker keeps it. Played from a blob URL so no range requests reach the worker.
   const TITLE_RECORDING=Object.freeze({id:'title',url:'assets/music/title-16bit.mp3?v=20261117-aishiteirukara',seconds:222,bpm:139.5,bars:129});
+  const VOID_RECORDING=Object.freeze({id:'glitchbattle',url:'assets/music/void-enthusiast-16bit-v40.mp3?v=20261119-void-theme-v40',seconds:281.788,bpm:152,bars:null});
   const FORMS={32:['A','B','Bridge','Finale'],48:['Prelude','A','B','Bridge','Finale','Coda'],64:['Prelude','A','B','A2','Bridge','Build','Finale','Coda']};
   const FORM_LABELS={Prelude:'序奏',A:'主題',A2:'主題変奏',B:'リフレイン',Bridge:'間奏',Build:'展開',Finale:'クライマックス',Coda:'結び'};
   function parsePhrase(str) {
@@ -4949,12 +4951,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     s.duration=Math.round(s.bars*s.beats*60/s.bpm);
     s.form=FORMS[s.bars];
   });
-  // The composed fields describe each score (for the title, its fallback); the title also
-  // carries the recording that normally plays.
+  // Composed fields retain the original 64 scores. The title and track 61 also
+  // describe their recordings; the keeper still uses the original track 61 score.
   function metadata(s) {
     if(!s)return null;
     const data={id:s.id,name:s.name,description:s.description,scene:s.id,duration:s.duration,bpm:s.bpm,meter:`${s.beats}/4`,bars:s.bars,form:s.form.map(x=>FORM_LABELS[x]).join(' → '),style:s.style,edition:'concert-remix-4'};
-    if(s.id===TITLE_RECORDING.id)data.recording={seconds:TITLE_RECORDING.seconds,bpm:TITLE_RECORDING.bpm,bars:TITLE_RECORDING.bars,form:'16ビットアレンジ（全編）'};
+    const recording=s.id===TITLE_RECORDING.id?TITLE_RECORDING:s.id===VOID_RECORDING.id?VOID_RECORDING:null;
+    if(recording)data.recording={seconds:recording.seconds,bpm:recording.bpm,bars:recording.bars,form:'16ビットアレンジ（全編）'};
     return data;
   }
   const noteFor = (s,degree,octave=0) => {const mode=MODES[s.mode],oct=Math.floor(degree/7),idx=((degree%7)+7)%7;return s.key+mode[idx]+oct*12+octave*12;};
@@ -5013,7 +5016,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       this.quality=isMobile()?'low':'high';this.maxVoices=this.quality==='low'?40:72;this.lastFX=0;
       this.master=null;this.mix=null;this.reverb=null;this.delay=null;this.noise=null;this.fxBus=null;this.musicBus=null;this.waves={};this.duckUntil=0;this.lastMove=-Infinity;
       this.playbackSession=null;this.previousAudioType='auto';this.legacyAudio=null;this.legacyBlocked=false;this.playbackRequested=false;
-      this.recording=null;
+      this.recording=null;this.recordings=new Map();this.recordedMusicBus=null;this.disposed=false;
     }
     getTracks() { return SCORES.map(metadata); }
     getCurrentTrack() { return metadata(INDEX[this.previewId || this.currentId]); }
@@ -5073,7 +5076,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       this.playbackSession=null;
     }
     needsUnlock() {
-      return !this.enabled || !this.ctx || this.ctx.state!=='running' || (!this.playbackSession && (this.legacyBlocked || !!this.legacyAudio?.paused)) || (!!this.group?.recorded && !!this.recording?.blocked);
+      return !this.enabled || !this.ctx || this.ctx.state!=='running' || (!this.playbackSession && (this.legacyBlocked || !!this.legacyAudio?.paused)) || (!!this.group?.recorded && !!this.group.recording?.blocked);
     }
     // Starts sound without any interaction where the browser allows it (an installed app,
     // a site the browser already trusts, or autoplay allowed in its settings). Elsewhere the
@@ -5092,42 +5095,84 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         return await this.setEnabled(true);
       } catch(_) {return false;}
     }
-    // ── Recorded title theme, mixed and muted with the rest of the music.
-    loadRecording() {
-      if(this.recording||!this.ctx||typeof fetch!=='function'||typeof Audio!=='function'||typeof URL?.createObjectURL!=='function')return this.recording;
-      const rec=this.recording={ready:false,failed:false,blocked:false,audio:null,gain:null,url:null,pauseTimer:0};
-      fetch(TITLE_RECORDING.url).then(response=>{if(!response.ok)throw new Error(String(response.status));return response.blob();}).then(blob=>{
-        if(rec!==this.recording||!this.ctx)return;
+    // Recorded arrangements share volume/mute but keep independent ownership.
+    // A late fetch, media error or play promise must never revive a retired scene.
+    hasVoidCombatant(scene=this.scene) {
+      const b=scene?.battle;
+      if(!b||typeof b!=='object'||b.result||b.finished)return false;
+      const live=mon=>!!mon&&mon.hp>0&&LT.DATA?.species?.[mon.species]?.element==='void';
+      if(Array.isArray(b.teams))return b.teams.some(team=>(team?.active||[]).some(index=>live(team.monsters?.[index])));
+      return live(scene.party?.[b.activeIndex??0])||live(b.enemy);
+    }
+    recordingDefinition(id) {
+      if(id===TITLE_RECORDING.id)return TITLE_RECORDING;
+      if(id===VOID_RECORDING.id&&(this.previewId===id||this.hasVoidCombatant()))return VOID_RECORDING;
+      return null;
+    }
+    ownsRecording(rec) {return !!rec&&!this.disposed&&this.enabled&&this.group?.recorded&&this.group.recording===rec;}
+    loadRecording(definition=TITLE_RECORDING) {
+      if(!definition||this.disposed||!this.ctx||typeof fetch!=='function'||typeof Audio!=='function'||typeof URL?.createObjectURL!=='function')return null;
+      if(this.recordings.has(definition.id))return this.recordings.get(definition.id);
+      const ctx=this.ctx,rec={id:definition.id,ready:false,failed:false,blocked:false,audio:null,gain:null,url:null,pauseTimer:0,playRequest:0};
+      this.recordings.set(rec.id,rec);if(rec.id===TITLE_RECORDING.id)this.recording=rec;
+      fetch(definition.url).then(response=>{if(!response.ok)throw new Error(String(response.status));return response.blob();}).then(blob=>{
+        if(this.disposed||this.recordings.get(rec.id)!==rec||this.ctx!==ctx)return;
         const audio=new Audio();audio.loop=true;audio.preload='auto';audio.setAttribute('playsinline','');
         audio.src=rec.url=URL.createObjectURL(blob);
-        const gain=this.ctx.createGain();gain.gain.value=0;
-        this.ctx.createMediaElementSource(audio).connect(gain);gain.connect(this.mix);
+        const gain=ctx.createGain();gain.gain.value=0;
+        ctx.createMediaElementSource(audio).connect(gain);
+        // Void uses the clean music duck bus: its mastered 16-bit timbres must not
+        // pass through the procedural glitch DAC. The title route stays unchanged.
+        gain.connect(rec.id===VOID_RECORDING.id?this.recordedMusicBus:this.mix);
         Object.assign(rec,{audio,gain,ready:true});
-        if(this.group?.recorded&&this.enabled)this.playRecording();
-      }).catch(()=>{
-        rec.failed=true;
-        if(this.group?.recorded){this.group=null;if(this.enabled)this.switchTrack(this.previewId||this.pickScene(),true);}
-      });
+        audio.addEventListener?.('error',()=>this.failRecording(rec));
+        if(this.ownsRecording(rec))this.playRecording(rec);
+      }).catch(()=>this.failRecording(rec));
       return rec;
     }
-    playRecording() {
-      const rec=this.recording;if(!rec?.ready||!this.ctx)return;
+    failRecording(rec) {
+      if(this.disposed||this.recordings.get(rec.id)!==rec)return;
+      rec.failed=true;rec.blocked=false;rec.playRequest++;clearTimeout(rec.pauseTimer);
+      if(rec.ready){rec.audio.pause();rec.gain.gain.cancelScheduledValues(this.ctx.currentTime);rec.gain.gain.setValueAtTime(0,this.ctx.currentTime);}
+      if(this.group?.recording===rec){this.group=null;if(this.enabled)this.switchTrack(this.previewId||this.pickScene(),true);}
+      this.notify();
+    }
+    playRecording(rec=this.group?.recording) {
+      if(!rec?.ready||rec.failed||!this.ctx||!this.ownsRecording(rec))return;
       clearTimeout(rec.pauseTimer);
       const now=this.ctx.currentTime,g=rec.gain.gain;g.cancelScheduledValues(now);g.setValueAtTime(g.value,now);g.linearRampToValueAtTime(.5,now+.5);
-      if(rec.audio.paused)Promise.resolve(rec.audio.play()).then(()=>{rec.blocked=false;this.notify();},()=>{rec.blocked=true;this.notify();});
+      if(!rec.audio.paused)return;
+      const request=++rec.playRequest;
+      Promise.resolve(rec.audio.play()).then(()=>{
+        if(request!==rec.playRequest||!this.ownsRecording(rec)){if(!this.ownsRecording(rec))rec.audio.pause();return;}
+        rec.blocked=false;this.notify();
+      },error=>{
+        if(request!==rec.playRequest||!this.ownsRecording(rec))return;
+        if(error?.name==='NotSupportedError'){this.failRecording(rec);return;}
+        rec.blocked=true;this.notify();
+      });
     }
-    // Called inside a touch/click/key handler: some browsers only allow media to start there.
+    // Invoked synchronously inside touch/click/key handlers. Prewarm each ready
+    // media element at zero gain; a later asynchronous encounter can then reuse it.
     primeRecording() {
-      const rec=this.recording;
-      if(!rec?.ready||!rec.audio.paused||(this.group&&!this.group.recorded))return;
-      Promise.resolve(rec.audio.play()).then(()=>{rec.blocked=false;if(!this.group?.recorded||!this.enabled)rec.audio.pause();this.notify();},()=>{});
+      for(const rec of this.recordings.values()) {
+        if(!rec.ready||rec.failed||!rec.audio.paused)continue;
+        if(!this.ownsRecording(rec)&&this.ctx){rec.gain.gain.cancelScheduledValues(this.ctx.currentTime);rec.gain.gain.setValueAtTime(0,this.ctx.currentTime);}
+        const request=++rec.playRequest;
+        Promise.resolve(rec.audio.play()).then(()=>{
+          if(request!==rec.playRequest){if(!this.ownsRecording(rec))rec.audio.pause();return;}
+          rec.blocked=false;if(!this.ownsRecording(rec))rec.audio.pause();this.notify();
+        },()=>{});
+      }
     }
     notify(){try{globalThis.document?.dispatchEvent(new CustomEvent('pachi-audio-state'));}catch(_){}}
-    stopRecording(fade=.35,rewind=true) {
-      const rec=this.recording;if(!rec?.ready||!this.ctx)return;
+    stopRecording(fade=.35,rewind=true,rec=this.group?.recording) {
+      if(this.disposed){if(rec){rec.playRequest++;clearTimeout(rec.pauseTimer);rec.audio?.pause();}return;}
+      if(!rec?.ready||!this.ctx)return;
+      rec.playRequest++;
       const now=this.ctx.currentTime,g=rec.gain.gain;g.cancelScheduledValues(now);g.setValueAtTime(g.value,now);g.linearRampToValueAtTime(0,now+fade);
       clearTimeout(rec.pauseTimer);
-      rec.pauseTimer=setTimeout(()=>{if(this.group?.recorded&&this.enabled)return;rec.audio.pause();if(rewind)rec.audio.currentTime=0;},fade*1000+80);
+      rec.pauseTimer=setTimeout(()=>{if(this.ownsRecording(rec))return;rec.audio.pause();if(rewind)rec.audio.currentTime=0;},fade*1000+80);
     }
     async setEnabled(value) {
       const request=++this.enableRequest;
@@ -5137,6 +5182,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         this.notify();return false;
       }
       try {
+        if(this.disposed)return false;
         if(typeof document!=='undefined' && document.hidden){this.enabled=false;this.releasePlayback();return false;}
         this.preparePlayback();
         if(!this.ctx)this.setup();
@@ -5165,6 +5211,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const lowCut=ctx.createBiquadFilter();lowCut.type='highpass';lowCut.frequency.value=28;lowCut.Q.value=.5;
       this.mix.connect(lowCut);lowCut.connect(compressor);compressor.connect(limiter);limiter.connect(this.master);this.master.connect(ctx.destination);
       this.musicBus=ctx.createGain();this.musicBus.gain.value=1;
+      this.recordedMusicBus=ctx.createGain();this.recordedMusicBus.gain.value=1;this.recordedMusicBus.connect(this.mix);
       // Keep the characteristic PCM edge with enough resolution for the richer
       // ensemble. The intentional glitch effect retains its separate coarse DAC.
       // The supplied title recording bypasses this stage, exactly as before.
@@ -5244,6 +5291,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(s.battle){
         if(b?.result==='won')return 'victory';
         if(b?.result==='caught')return 'resonance';
+        if(!b?.result&&!b?.finished){
+        if(this.hasVoidCombatant(s))return VOID_RECORDING.id;
         if(s.champion||b?.champion)return (typeof b?.champion==='string'&&b.champion===data.champion2?.id)?'zenith':'champion';
         if(s.elite||b?.elite)return 'elite';
         if(b?.rival==='glitch-keeper')return 'glitchbattle';
@@ -5253,6 +5302,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if(s.rival||b?.rival)return east?'rival2':'rival';
         if(s.guardian||b?.guardian)return east?'guardian2':'guardian';
         return east?'battle2':'battle';
+        }
       }
       const interior=s.interior ?? map.interior,roomKind=s.roomKind || map.roomKind;
       if(interior) {
@@ -5272,7 +5322,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     setScene(scene) {
       if(!scene || typeof scene!=='object')return;
       this.scene={...scene};const id=this.previewId || this.pickScene();
-      if(id!==this.currentId)this.switchTrack(id);
+      this.switchTrack(id);
     }
     preview(trackId) {
       if(trackId!==null && !Object.hasOwn(INDEX,trackId))return false;
@@ -5287,13 +5337,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
     switchTrack(id,force=false) {
       if(!Object.hasOwn(INDEX,id))id='expedition';
-      if(!force && this.currentId===id && this.group)return;
+      const definition=this.recordingDefinition(id),supported=typeof fetch==='function'&&typeof Audio==='function'&&typeof URL?.createObjectURL==='function';
+      const recordingKey=definition&&supported&&!this.recordings.get(definition.id)?.failed?definition.id:null;
+      if(!force && this.currentId===id && this.group&&(this.group.recording?.id||null)===recordingKey)return;
       this.currentId=id;this.applyCrush();
       if(!this.ctx || !this.enabled)return;
       const now=this.ctx.currentTime;
       if(this.group)this.retireGroup(this.group,now,.32);
-      // The title plays the recorded arrangement; every other scene stops it.
-      if(id===TITLE_RECORDING.id){const rec=this.loadRecording();if(rec&&!rec.failed){this.group={id,recorded:true,retireAt:Infinity};this.playRecording();return;}}
+      if(definition){const rec=this.loadRecording(definition);if(rec&&!rec.failed){this.group={id,recorded:true,recording:rec,retireAt:Infinity};this.playRecording(rec);return;}}
       const bus=this.ctx.createGain();bus.gain.setValueAtTime(0,now);bus.gain.linearRampToValueAtTime(.8,now+.38);
       bus.connect(this.musicBus||this.mix);
       const send=this.ctx.createGain();send.gain.value=['ambient','snow','cave','ancient','orchestra'].includes(INDEX[id].style)?.27:.15;
@@ -5304,7 +5355,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
     retireGroup(group,now,fade=.2) {
       if(!group || group.retireAt!==Infinity)return;
-      if(group.recorded){group.retireAt=now;this.stopRecording(fade);return;}
+      if(group.recorded){group.retireAt=now;this.stopRecording(fade,true,group.recording);return;}
       group.retireAt=now+fade+.08;
       group.bus.gain.cancelScheduledValues(now);group.bus.gain.setValueAtTime(group.bus.gain.value,now);group.bus.gain.linearRampToValueAtTime(0,now+fade);
       for(const voice of group.voices)this.endVoice(voice,now+fade+.02);
@@ -5648,16 +5699,15 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       source.connect(filter);voice.sources.push(source);voice.nodes.push(source);source.start(time);source.stop(voice.end);source.onended=()=>this.disposeVoice(voice);
     }
     duckMusic(time,duration=.75,level=.62) {
-      if(!this.musicBus)return;
-      const gain=this.musicBus.gain;
-      // FX duck only the music, never the user's volume or the effect tail.
-      // Cancel a previous recovery so overlapping impacts cannot pump loudly.
-      gain.cancelScheduledValues(time);
-      gain.setValueAtTime(Math.min(gain.value,1),time);
-      gain.linearRampToValueAtTime(level,time+.045);
       this.duckUntil=Math.max(this.duckUntil,time+duration);
-      gain.setValueAtTime(level,this.duckUntil);
-      gain.linearRampToValueAtTime(1,this.duckUntil+.32);
+      for(const bus of [this.musicBus,this.recordedMusicBus]) {
+        if(!bus)continue;
+        const gain=bus.gain;
+        // FX duck only music, never the user's volume or the effect tail.
+        gain.cancelScheduledValues(time);gain.setValueAtTime(Math.min(gain.value,1),time);
+        gain.linearRampToValueAtTime(level,time+.045);gain.setValueAtTime(level,this.duckUntil);
+        gain.linearRampToValueAtTime(1,this.duckUntil+.32);
+      }
     }
     texture(time,duration,from,to,volume,pan=0,band='bandpass') {
       if(!this.ctx||!this.enabled||this.voices.size>=this.maxVoices)return;
@@ -5830,15 +5880,16 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
     async suspend() {
       this.enableRequest++;this.enabled=false;this.releasePlayback();
-      if(this.recording?.ready){clearTimeout(this.recording.pauseTimer);this.recording.audio.pause();}
+      for(const rec of this.recordings.values()){rec.playRequest++;clearTimeout(rec.pauseTimer);if(rec.ready)rec.audio.pause();}
       if(this.ctx&&this.master)this.master.gain.setTargetAtTime(0,this.ctx.currentTime,.035);
       if(this.ctx && this.ctx.state!=='closed')try{await this.ctx.suspend();}catch(_){}
     }
     dispose() {
       this.enableRequest++;this.enabled=false;this.releasePlayback();
       if(this.legacyAudio){this.legacyAudio.remove();this.legacyAudio.removeAttribute('src');this.legacyAudio=null;}
-      if(this.recording?.ready){this.recording.audio.pause();this.recording.audio.removeAttribute('src');if(this.recording.url)URL.revokeObjectURL(this.recording.url);}
-      this.recording=null;
+      this.disposed=true;
+      for(const rec of this.recordings.values()){rec.playRequest++;clearTimeout(rec.pauseTimer);if(rec.ready){rec.audio.pause();rec.audio.removeAttribute('src');rec.gain.disconnect();}if(rec.url)URL.revokeObjectURL(rec.url);}
+      this.recordings.clear();this.recording=null;
       if(!this.ctx)return;
       this.stopAll(this.ctx.currentTime);for(const voice of [...this.voices])this.disposeVoice(voice);
       for(const group of this.groups){for(const n of [group.bus,group.send,group.echoSend])try{n.disconnect();}catch(_){}}
@@ -6181,9 +6232,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function renderRatio(){return 1;}
   function dayPhase(){ return settings.dayNight ? (.3+engine.state.playSeconds/1200)%1 : .3; }
   function updateScene(){
-    if(LT.onlineActive){sound.setScene({title:!LT.onlineBattle,battle:LT.onlineBattle?{rival:true}:null,rival:!!LT.onlineBattle,theme:"meadow"});return;}
-    const b=engine.battle;
-    sound.setScene({title:!playing,map:engine.state.map,theme:engine.map.theme,roomKind:engine.map.roomKind,interior:!!engine.map.interior,music:engine.map.music,elite:b?.elite,champion:!!b?.champion,battle:b,healing:performance.now()<healingUntil,evolution:performance.now()<evolutionUntil,guardian:b?.guardian || null,tower:!!b?.towerFloor,rival:!!b?.rival,ending:!!endingActive&&endingActive!=='true',trueEnding:endingActive==='true',night:dayPhase()>.73 || dayPhase()<.13});
+    if(LT.onlineActive){
+      const raw=LT.onlineBattle,now=performance.now(),shown=raw?(LT.BattleVFX?.onlineView?.(raw,now)||raw):null;
+      const result=raw&&!LT.BattleVFX?.onlineBusy?.(raw,now)?LT.onlineBattleResult:null;
+      sound.setScene({title:!raw,battle:shown?{...shown,rival:true,result}:null,rival:!!raw,theme:'meadow'});return;
+    }
+    const display=battleView||engine,b=display.battle;
+    sound.setScene({title:!playing,map:engine.state.map,theme:engine.map.theme,roomKind:engine.map.roomKind,interior:!!engine.map.interior,music:engine.map.music,elite:b?.elite,champion:!!b?.champion,battle:b,party:display.state.party,healing:performance.now()<healingUntil,evolution:performance.now()<evolutionUntil,guardian:b?.guardian || null,tower:!!b?.towerFloor,rival:!!b?.rival,ending:!!endingActive&&endingActive!=='true',trueEnding:endingActive==='true',night:dayPhase()>.73 || dayPhase()<.13});
     noteHeard(sound.getCurrentTrack()?.id);
   }
   function sceneOptions(){
@@ -6529,7 +6584,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(!battleView||!visual)return;
     battleView.state.party[visual.activeIndex]=JSON.parse(JSON.stringify(visual.ally));
     Object.assign(battleView.battle,{activeIndex:visual.activeIndex,enemy:JSON.parse(JSON.stringify(visual.enemy)),enemyIndex:visual.enemyIndex});
-    updateBattle();
+    updateBattle();updateScene();
   }
   // Handheld-style message pacing. Typing runs on animation frames beside the
   // existing timed delay, so the turn order and minimum durations never change.
@@ -7151,7 +7206,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(error){return {ok:false,message:error?.message||'交換の内容を確認できませんでした。'};}
   }
   function showCredits(){
-    openModal('制作・ライセンス',`<section class="credits-panel"><div class="credits-emblem" aria-hidden="true">${ico('lantern')}</div><p class="eyebrow">PACHI MONSTERS / ORIGINAL WORLD</p><h3>KASAI SOLUTIONS INC.</h3><p class="copyright-notice">© 2026 KASAI SOLUTIONS INC.</p><p>本プロジェクトで制作したキャラクター・地形・UI・BGMを使用しています。市販ゲームのROM・画像・音源は同梱していません。</p><p>タイトル曲「愛しているから」は、KASAI SOLUTIONS INC.のオリジナル曲を16ビット機の音色で編曲したものです。</p><p>通信機能はPeerJSと、その依存ライブラリーを使用しています。それぞれの権利者の表記・ライセンス条件を保持しています。</p><div class="credits-components"><span>PeerJS <small>MIT</small></span><span>EventEmitter3 <small>MIT</small></span><span>peerjs-js-binarypack <small>MIT</small></span><span>webrtc-adapter <small>BSD-3-Clause</small></span></div><a class="btn" href="LICENSES.txt" target="_blank" rel="noopener">著作権・ライセンスの全文を読む</a></section>`,'credits');
+    openModal('制作・ライセンス',`<section class="credits-panel"><div class="credits-emblem" aria-hidden="true">${ico('lantern')}</div><p class="eyebrow">PACHI MONSTERS / ORIGINAL WORLD</p><h3>KASAI SOLUTIONS INC.</h3><p class="copyright-notice">© 2026 KASAI SOLUTIONS INC.</p><p>本プロジェクトで制作したキャラクター・地形・UI・BGMを使用しています。市販ゲームのROM・画像・音源は同梱していません。</p><p>タイトル曲「愛しているから」は、KASAI SOLUTIONS INC.のオリジナル曲を16ビット機の音色で編曲したものです。</p><p>無属性の専用曲「Enthusiast 2026」は、提供されたインストゥルメンタル音源を基に、原曲の展開に沿って矩形波・FM風音色・短い打楽器音で16ビット風に編曲したものです。</p><p>通信機能はPeerJSと、その依存ライブラリーを使用しています。それぞれの権利者の表記・ライセンス条件を保持しています。</p><div class="credits-components"><span>PeerJS <small>MIT</small></span><span>EventEmitter3 <small>MIT</small></span><span>peerjs-js-binarypack <small>MIT</small></span><span>webrtc-adapter <small>BSD-3-Clause</small></span></div><a class="btn" href="LICENSES.txt" target="_blank" rel="noopener">著作権・ライセンスの全文を読む</a></section>`,'credits');
   }
 
   function exportSave(data) {
@@ -8735,7 +8790,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const modeName=()=>mode==='double'?'ダブルバトル':'シングルバトル';
   const portrait=(id,size=88,mon=null)=>{const raster=LT.RetroScreen?.portraitRaster('color',size)||320;return `<canvas data-online-shiny="${mon?.shiny===true}" data-online-creature="${esc(id)}" width="${raster}" height="${raster}" style="width:${size}px;height:${size}px" aria-label="${esc(mon?monLabel(mon):label(id))}"></canvas>`;};
   function paint(){body.querySelectorAll('[data-online-creature]').forEach(c=>LT.Art.creature(c,c.dataset.onlineCreature,{shiny:c.dataset.onlineShiny==='true',motion:'idle'}));draw();}
-  function notify(){LT.onlineActive=dialog.open;LT.onlineBattle=view?.battle||null;document.dispatchEvent(new CustomEvent('pachi-online-state'));}
+  function notify(){
+    LT.onlineActive=dialog.open;LT.onlineBattle=view?.battle||null;
+    LT.onlineBattleResult=view?.outcomeConfirmed?(view.battle.winner===peer?.role?'won':view.battle.winner==='draw'?'draw':'lost'):['ended','error'].includes(view?.phase)?'interrupted':null;
+    document.dispatchEvent(new CustomEvent('pachi-online-state'));
+  }
   function announce(message){$('online-status').textContent=message;}
   function render(){
     if(!dialog.open)return;
@@ -9027,6 +9086,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261118-easy-connect-v37"></script>
 <link rel="prefetch" href="assets/music/title-16bit.mp3?v=20261117-aishiteirukara">
+<link rel="prefetch" href="assets/music/void-enthusiast-16bit-v40.mp3?v=20261119-void-theme-v40">
 <link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">
 <link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">
 <script src="local-link.js?v=20261118-easy-connect-v37"></script>
