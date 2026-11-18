@@ -124,6 +124,12 @@ const game = vm.createContext({
   sprint: false, padSprint: false, lastStep: 0,
   directions: { right: [1, 0], up: [0, -1] }, walk: (...direction) => walked.push(direction),
 });
+// The keyboard helpers (held keys by physical key) come first: blur and the other
+// interruption handlers release them too.
+const keyHelpersStart = html.indexOf('  const keyDirs=');
+const keyHelpersEnd = html.indexOf("  window.addEventListener('keydown',", keyHelpersStart);
+assert(keyHelpersStart >= 0 && keyHelpersEnd > keyHelpersStart, 'Keyboard helpers are available');
+vm.runInContext(html.slice(keyHelpersStart, keyHelpersEnd), game);
 vm.runInContext(html.slice(handlersStart, handlersEnd), game);
 right.send('pointerdown', 1);
 check(game.pressedDirection, 'right', 'First held direction moves');
@@ -170,13 +176,13 @@ for (const type of ['blur', 'visibilitychange', 'pagehide']) {
 
 game.document.hidden = false;
 right.send('pointerdown', 11);
-game.directionSource = 'ArrowUp'; game.pressedDirection = 'up';
+game.directionSource = 'keyboard'; game.pressedDirection = 'up';
 right.send('pointerup', 11);
 check(game.pressedDirection, 'up', 'Touch release respects keyboard takeover');
 modal.open = true;
 up.send('pointerdown', 12);
 check(up.classList.contains('pressed'), false, 'Modal blocks new touch movement');
-check(game.directionSource, 'ArrowUp', 'Blocked press does not take over input');
+check(game.directionSource, 'keyboard', 'Blocked press does not take over input');
 
 // Turning the phone mid-press can swallow the pointerup: rotation releases held input and re-fits the canvas.
 modal.open = false; game.directionSource = null; game.pressedDirection = null;

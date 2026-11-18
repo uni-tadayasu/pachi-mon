@@ -98,7 +98,7 @@
       if (!Array.isArray(input.ids)) return fail('チームのパチモンを選んでください。');
       if (input.ids.includes(LT.DATA.legendary?.species) && !ownedLegendary()) return fail('アルヴェリオンを仲間にしてから編成してください。');
       if (input.ids.includes('futo') && !owned()) return fail('フートを受け取ってから編成してください。');
-      if (input.ids.includes('floravelle') && !ownedMythical()) return fail('フロラヴェールを迎えてから編成してください。');
+      if (input.ids.includes('floravelle') && !ownedMythical()) return fail(`${LT.DATA.species.floravelle?.name || '幻のパチモン'}を迎えてから編成してください。`);
       if (this._closed || !this._started || !this._connected || this.duel || this._teams[this.role]) return fail('現在は編成を変更できません。');
       // Chosen individuals (by uid) bring their own look, points and item.
       const members = input.uids === undefined ? null : membersFor(input.ids, input.uids);
