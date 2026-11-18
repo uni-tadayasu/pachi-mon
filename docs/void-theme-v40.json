@@ -1,6 +1,9 @@
 {
   "version": "void-theme-v40",
   "title": "Enthusiast 2026（無属性・16ビットアレンジ）",
+  "status": "archived",
+  "removedIn": "v45",
+  "currentUse": "Removed at the user's request. Void combatants now follow ordinary scene music; track 61 is the original procedural keeper score. The MP3 is no longer distributed or prefetched. This document retains the v40 production history.",
   "source": {
     "filename": "Enthusiast 2026 [instrumental](1).mp3",
     "sha256": "19099e22186d6aefd4bcb4bc9789f9418768f6579ff4cdbea9ba9a4c91ef92f2",
@@ -165,6 +168,14 @@
     "encode": "ffmpeg -i OUTPUT.wav -codec:a libmp3lame -b:a 112k -ar 32000 -ac 2 -write_xing 1 OUTPUT.mp3"
   },
   "playback": {
+    "enabled": false,
+    "recordingDistributed": false,
+    "catalogSlot": 61,
+    "catalogId": "glitchbattle",
+    "musicRoom": "Original procedural NULL BATTLE / ヌルの挑戦; no dedicated Void recording.",
+    "priority": "No Void-specific priority. Solo and online single/double battles use ordinary scene selection."
+  },
+  "historicalPlaybackV40": {
     "catalogSlot": 61,
     "catalogId": "glitchbattle",
     "priority": "Living active void combatant on either side; both active slots in doubles. Bench members do not trigger it. Victory, capture and evolution scenes retain their own cues.",
