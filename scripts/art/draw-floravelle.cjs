@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-/* Floravelle — the operator's mythical: a sacred white elephant of spring.
+/* キラシード (id floravelle, formerly フロラヴェール) — the operator's mythical: a sacred white elephant of spring.
  * Great young-leaf ears, faceted jade tusks, a twin-domed brow crowned with leaves
  * and the flower of creation, a leaf-green saddle cloth embroidered in gold with a
  * petal hem and tassels, engraved gold anklets, and a trunk that carries a sprout.

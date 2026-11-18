@@ -13,10 +13,10 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 const response=data=>({ok:true,status:200,json:async()=>({ok:true,...data})});
 async function until(check){for(let i=0;i<100;i++){if(check())return;await Promise.resolve();}assert.fail('Expected asynchronous step was not reached');}
 function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}){
-  const calls=[],applied=[],updated=[],initial=[],toasts=[];
-  const serviceBody={dataset:{},innerHTML:''},statusLine={dataset:{},textContent:''},keyField={value:''};
+  const calls=[],applied=[],updated=[],initial=[],toasts=[],listeners={},clock={now:1_000_000};
+  const serviceBody={dataset:{},innerHTML:''},statusLine={dataset:{},textContent:''},keyField={value:'',focus(){}};
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
-  const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:null};
+  const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
   const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,futoMoveEntries,get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
@@ -26,7 +26,8 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
     setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     MutationObserver:class{observe(){}},
-    document:{getElementById:element,addEventListener(){},hidden:false},
+    document:{getElementById:element,addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},hidden:false},
+    Date:class extends Date{static now(){return clock.now;}},
     LT:{DATA:{moves:Object.fromEntries(CONFIG.moves.map(id=>[id,{name:id}]))},adminBridge:{
       getEngine:()=>null,getPlayerName:()=> 'Traveller',toast:message=>toasts.push(message),
       grantFuto:g=>{applied.push(g);return{ok:true,alreadyReceived:true};},
@@ -43,7 +44,9 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
     }
   };
   ctx.window=ctx;vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'admin-console.js'});
-  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField};
+  // Clicks on the service panel's buttons, as the page delivers them.
+  const press=action=>{const button={dataset:{adminAction:action},disabled:false,isConnected:true};for(const fn of listeners.click||[])fn({target:{closest:()=>button}});return button;};
+  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField,press,clock};
 }
 function adopt(h,token=TOKEN_A,player=PLAYER_A){h.api.adoptIdentity({token,id:player.id,name:player.name},player,true);}
 
@@ -246,6 +249,38 @@ test('failed recovery clears the password, releases busy state and refreshes ava
   assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
 });
 
+
+test('eight presses of お届けものを確認 in a row open the admin recovery screen',async()=>{
+  let recovery=false;
+  const newAdmin={...PLAYER_B,isAdmin:true};let admin=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/claim')return recovery?(admin=true,response({player:newAdmin,adminExists:true,adminRecoveryAvailable:false})):{ok:false,status:409,json:async()=>({ok:false,error:{code:'ADMIN_ALREADY_EXISTS',message:'運営はすでに登録されています。'}})};
+    if(c.path==='/status')return response({adminExists:true,adminRecoveryAvailable:false});
+    if(c.path==='/me'||c.path==='/register')return response({player:admin?newAdmin:PLAYER_B,adminExists:true,adminRecoveryAvailable:false,grants:[],nextCursor:null});
+  }});
+  h.api.adoptIdentity({token:TOKEN_B,id:PLAYER_B.id,name:PLAYER_B.name},PLAYER_B,true,false);h.api.refreshSettings();h.api.stubConsole(async()=>{});
+  const tap=(n,gap=400)=>{for(let i=0;i<n;i++){h.clock.now+=gap;h.press('refresh');}};
+  const shown=()=>h.serviceBody.innerHTML.includes('id="pachi-admin-key"');
+  // Seven presses: still the ordinary panel; the refresh itself still works.
+  tap(7);await until(()=>h.calls.some(c=>c.path==='/register'||c.path==='/me'));assert(!shown());
+  // A pause longer than two seconds starts the count again; so does another button.
+  h.clock.now+=2500;tap(7);assert(!shown(),'the count restarts after a pause');
+  h.press('backup');tap(7);assert(!shown(),'another button restarts the count');
+  // The eighth press in a row opens the recovery screen.
+  tap(1);assert(shown(),'the eighth press opens it');
+  assert(h.serviceBody.innerHTML.includes('運営の復元'));assert(h.serviceBody.innerHTML.includes('運営を再登録'));assert(h.serviceBody.innerHTML.includes('data-admin-action="recovery-close"'));
+  assert.match(h.statusLine.textContent,/運営の復元画面を開きました/);
+  // Without the server's recovery setting, the claim is refused with an explanation and the screen stays.
+  h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
+  assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,1);assert.match(h.statusLine.textContent,/復元が有効になっていない/);assert(shown());assert.equal(h.keyField.value,'');
+  // Closing hides it; eight more presses bring it back.
+  h.press('recovery-close');assert(!shown());tap(8);assert(shown());
+  // With recovery enabled on the server, the key moves the admin role here and the screen closes.
+  recovery=true;h.keyField.value='owner-key';await h.api.claim({disabled:false,isConnected:true});
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert(!shown());assert.equal(h.calls.filter(c=>c.path==='/admin/claim').length,2);
+  // An administrator is simply told so.
+  h.clock.now+=5000;tap(8);assert(!shown());assert.match(h.statusLine.textContent,/すでに運営として登録/);
+});
 
 test('legendary signature moves are excluded from Futo configuration choices',()=>{
   const h=harness();

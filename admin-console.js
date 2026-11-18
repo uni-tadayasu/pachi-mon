@@ -92,7 +92,7 @@
               initialSeen.add(companion.grantId);
               const outcome=LT.adminBridge?.[method]?.(companion);
               if(outcome?.pending||!outcome?.ok)totalPending++;
-              else if(!outcome.alreadyReceived){initialReceived++;initialNames.add(companion.species==='arvelion'?'アルヴェリオン':'フロラヴェール');}
+              else if(!outcome.alreadyReceived){initialReceived++;initialNames.add((LT.DATA?.species?.[companion.species]?.name||(companion.species==='arvelion'?'アルヴェリオン':'キラシード')));}
             }
           }
           for(const grant of data.grants||[]){
@@ -118,24 +118,40 @@
     const root=document.createElement('section');root.id='pachi-service';root.className='pachi-service';root.innerHTML='<h3>プレイヤー・お届けもの</h3><div data-service-body></div><p class="pachi-status" role="status" aria-live="polite"></p>';
     parent.append(root);refreshSettings();void sync({register:true});
   }
+  // Hidden admin recovery: eight presses of "お届けものを確認" in a row (each within
+  // two seconds of the last) open the admin-key form even when the service does not
+  // offer it. The server still decides: it accepts the key only while its one-time
+  // recovery setting names the current owner (ADMIN_RECOVERY_OWNER_ID/ORIGIN).
+  const RECOVERY_TAPS=8,RECOVERY_GAP=2000;
+  let recoveryOpen=false,recoveryNote='',refreshTaps=0,refreshTapAt=0,refreshBusy=false;
+  function countRefreshTap(now=Date.now()){refreshTaps=now-refreshTapAt<=RECOVERY_GAP?refreshTaps+1:1;refreshTapAt=now;if(refreshTaps<RECOVERY_TAPS)return false;refreshTaps=0;return true;}
+  function openRecovery(){
+    if(player?.isAdmin){say('この端末はすでに運営として登録されています。');return;}
+    recoveryOpen=true;recoveryNote='';refreshSettings();say('運営の復元画面を開きました。運営キーを入力してください。');
+    document.getElementById('pachi-admin-key')?.focus({preventScroll:false});
+  }
   function refreshSettings(){
     const root=settingsRoot()?.querySelector('#pachi-service');if(!root)return;
     const body=root.querySelector('[data-service-body]');
-    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending].join('|');
+    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,status?.adminRecoveryAvailable,claimBusy,pending,recoveryOpen].join('|');
     if(body.dataset.signature!==signature){
       body.dataset.signature=signature;
-      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true)?`<div data-claim>${status.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status.adminRecoveryAvailable?'運営を再登録':'運営になる'}</button></div>${status.adminRecoveryAvailable?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
+      body.innerHTML=`${player?`<p>プレイヤーID <span class="pachi-code">${escape(player.id)}</span></p><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">フートの運営管理</button>':(status?.adminExists===false||status?.adminRecoveryAvailable===true||(recoveryOpen&&player))?`<div data-claim>${status?.adminRecoveryAvailable?'<h4>ドメイン変更後の運営再登録</h4><p>運営キーを入力すると、以前のプレイヤーIDから現在のプレイヤーIDへ運営権限を移します。再登録できるのは1回だけです。</p>':recoveryOpen&&status?.adminExists!==false?'<h4>運営の復元</h4><p>運営キーを入力すると、運営権限をこの端末のプレイヤーIDへ移します。サーバーで復元が有効になっている時だけ受け付けます。</p>':''}<label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy?' disabled':''}>${status?.adminRecoveryAvailable||(recoveryOpen&&status?.adminExists!==false)?'運営を再登録':'運営になる'}</button>${recoveryOpen&&!status?.adminRecoveryAvailable&&status?.adminExists!==false?'<button class="btn btn-small" data-admin-action="recovery-close">閉じる</button>':''}</div>${status?.adminRecoveryAvailable||(recoveryOpen&&status?.adminExists!==false)?'':'<p>最初に登録した1人が運営になります。</p>'}</div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
     }
-    const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
+    const recoveryLine=recoveryOpen&&!player?.isAdmin?(recoveryNote||'運営の復元画面を開きました。運営キーを入力してください。'):'';
+    const line=root.querySelector('.pachi-status');line.textContent=lastError || recoveryLine || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!(lastError||recoveryLine&&recoveryNote));
   }
   function say(message,error=false){lastError=error?message:'';const line=consoleDialog?.open?consoleDialog.querySelector('.pachi-status'):settingsRoot()?.querySelector('.pachi-status');if(line){line.textContent=message;line.dataset.error=String(error);}}
   async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy)button.disabled=false;}}
   async function claim(button){
     if(claimBusy)return;const field=document.getElementById('pachi-admin-key'), key=field?.value || '';if(!key){say('運営キーを入力してください。',true);return;}
-    const recovering=status?.adminRecoveryAvailable===true;
+    const recovering=status?.adminRecoveryAvailable===true||(recoveryOpen&&status?.adminExists!==false);
     claimBusy=true;
     try{
-      await withButton(button,async()=>{try{await ensureIdentity();const data=await request('/admin/claim',{method:'POST',body:{key}});player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートとアルヴェリオンを準備しています。':'運営に登録しました。フートとアルヴェリオンを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
+      await withButton(button,async()=>{try{await ensureIdentity();let data;
+        try{data=await request('/admin/claim',{method:'POST',body:{key}});}
+        catch(err){if(recovering&&err.code==='ADMIN_ALREADY_EXISTS'){recoveryNote='サーバーで運営の復元が有効になっていないため、再登録できませんでした。サーバーの復元設定（ADMIN_RECOVERY_OWNER_ID・ADMIN_RECOVERY_ORIGIN）を確認してください。';throw new Error(recoveryNote);}throw err;}
+        recoveryOpen=false;recoveryNote='';player=data.player;status=serviceStatus(data,{adminExists:true,adminRecoveryAvailable:false});say(recovering?'運営を再登録しました。フートとアルヴェリオンを準備しています。':'運営に登録しました。フートとアルヴェリオンを準備しています。');refreshSettings();await sync({register:true,fresh:true});await openConsole();}finally{if(field)field.value='';const visibleField=document.getElementById('pachi-admin-key');if(visibleField)visibleField.value='';}});
     }finally{claimBusy=false;refreshSettings();await sync();}
   }
   function readConfig(){
@@ -261,10 +277,17 @@
   }
   document.addEventListener('click',event=>{const button=event.target.closest?.('#pachi-service [data-admin-action]');if(!button)return;
     const action=button.dataset.adminAction;
+    if(action!=='refresh')refreshTaps=0;
     if(action==='claim'){void claim(button);return;}
+    if(action==='recovery-close'){recoveryOpen=false;recoveryNote='';refreshSettings();say('');return;}
+    if(action==='refresh'){
+      if(countRefreshTap()){openRecovery();return;}
+      if(refreshBusy)return;refreshBusy=true;
+      void (async()=>{try{await sync({register:true});if(!lastError)say(pending?'空き枠や冒険の開始を待っているお届けものがあります。':'お届けものを確認しました。');}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{refreshBusy=false;}})();
+      return;
+    }
     void withButton(button,async()=>{
       if(action==='console')await openConsole();
-      if(action==='refresh'){await sync({register:true});if(!lastError)say(pending?'空き枠や冒険の開始を待っているお届けものがあります。':'お届けものを確認しました。');}
       if(action==='name'){await ensureIdentity();const name=document.getElementById('pachi-player-name').value.trim();if(!name)throw new Error('名前を入力してください。');const data=await request('/me',{method:'PATCH',body:{name}});player=data.player;status=serviceStatus(data);persist({...identity,name:player.name});refreshSettings();say('プレイヤー名を保存しました。');}
       if(action==='backup')backup();if(action==='restore')await restore();
     });
