@@ -3210,6 +3210,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const activeIndex=this.state.party.findIndex(m=>m.hp>0);
       if(activeIndex<0){this.returnToVillage();return false;}
       this.battle={enemy:this.makeMonster(species,level),activeIndex,guardian,turn:0,log:[],result:null,allyGuard:false,enemyGuard:false,healCooldown:{ally:0,enemy:0},title:guardian?`${D.guardians[guardian].name}の試練`:'野生のモンスターとのバトル'};
+      this.recordBattleParticipant();
       // One independent roll per wild encounter; trainer/tower battles never roll.
       this.battle.enemy.shiny=!!(wild&&!guardian&&!D.species[species].specialOnly&&this.rng()<1/SHINY_ODDS);
       if(this.battle.enemy.shiny)this.discover('shiny');
@@ -3225,14 +3226,32 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       this.battle.enemyIndex=0;
       return true;
     }
+    recordBattleParticipant() {
+      const b=this.battle,mon=this.state.party[b?.activeIndex];
+      if(!b || b.result || !mon || mon.hp<=0 || b.enemy.hp<=0)return;
+      b.xpParticipants??=[];
+      if(!b.xpParticipants.includes(mon.uid))b.xpParticipants.push(mon.uid);
+    }
+    awardBattleXP(amount,events) {
+      const b=this.battle;
+      if(!b || b.xpRewardedEnemyUid===b.enemy.uid)return;
+      // Participation belongs to this opponent and to individual UIDs, never
+      // party slots. Repeated KO/capture resolution cannot grant XP twice.
+      b.xpRewardedEnemyUid=b.enemy.uid;
+      const participants=new Set(b.xpParticipants||[]);
+      for(const mon of this.state.party){
+        if(b.secretEncounter && mon.uid===b.secretCaughtUid)continue;
+        this.giveXP(mon,amount*(participants.has(mon.uid)?1.5:1),events);
+      }
+    }
     defeatOpponent(events) {
       const b=this.battle;
       if(!b || b.result || b.enemy.hp>0 || b.pendingReplacement?.enemyIndex!=null)return;
       if(!this.state.party.some(mon=>mon.hp>0)){this.endBattle('lost',events);return;}
       if(b.enemyTeam && b.enemyIndex<b.enemyTeam.length-1){
         const xp=20+b.enemy.level*6;
-        this.event(events,`仲間たちは、旅の経験 ${xp} を分かち合った。`,'reward');
-        this.state.party.forEach(mon=>this.giveXP(mon,xp,events));
+        this.event(events,`仲間たちは、旅の経験 ${xp} を分かち合った。前に出た仲間は1.5倍！`,'reward');
+        this.awardBattleXP(xp,events);
         // Keep the defeated combatant on screen while its effects finish.
         // Both sides change only after the player confirms the next ally.
         b.pendingReplacement={enemyIndex:b.enemyIndex+1,allyRequired:this.state.party[b.activeIndex].hp<=0};
@@ -3252,9 +3271,11 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       }
       if(pending.enemyIndex!==null){
         b.enemyIndex=pending.enemyIndex;b.enemy=b.enemyTeam[b.enemyIndex];b.enemyGuard=false;b.healCooldown.enemy=0;this.resetBattleStages('enemy');
+        b.xpParticipants=[];
         this.markSeen(b.enemy.species);
         this.event(events,`${displayName(b.enemy)}が次に登場！ 相手の残り ${b.enemyTeam.length-b.enemyIndex} 体。`,'switch',{side:'enemy',slot:0,index:b.enemyIndex});
       }
+      this.recordBattleParticipant();
       delete b.pendingReplacement;
       return {ok:true,events};
     }
@@ -3326,6 +3347,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         const forced=ally.hp<=0;
         b.activeIndex=command.index;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');
         ally=this.state.party[b.activeIndex];
+        this.recordBattleParticipant();
         this.event(events,`${displayName(ally)}が前に出た。`,'switch',{side:'ally',slot:0,index:command.index,forced});
         if(!forced)this.enemyTurn(events);
       } else if(command.type==='resonate') {
@@ -3414,7 +3436,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(endured)damage=defender.hp-1;
       defender.hp=Math.max(0,defender.hp-damage);
       const extra=effect>1?' 強く響いた！':effect<1?' 響きは控えめだ。':'';
-      this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}`,'damage',{side,element:move.element,moveId:move.id,category:special?'special':'physical'});
+      this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}`,'damage',{side,element:move.element,moveId:move.id,category:special?'special':'physical',effectiveness:effect,critical,guarded:!!guarded,amount:damage});
       if(endured){delete defender.heldItem;this.event(events,`${displayName(defender)}は${band.name}で踏みとどまった！`,'item',{side:opp,item:band.id});}
       if(move.effect==='drain' && attacker.hp>0){const amount=Math.min(this.stats(attacker).hp-attacker.hp,Math.max(1,Math.floor(damage*.25)));attacker.hp+=amount;if(amount>0)this.event(events,`${name}は灯を分けてもらい、体力が${amount}戻った。`,'heal',{side,element:move.element,moveId:move.id});}
       const bell=holds(attacker,'drain');
@@ -3553,7 +3575,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       // positive experience award, even if it does not cause a level increase.
       evolveReady();
       if(mon.level>=MAX_LEVEL){mon.xp=0;return;}
-      mon.xp+=holds(mon,'xp')?Math.round(amount*1.5):amount;
+      // Round once after both the participation bonus and the held-item bonus.
+      mon.xp+=Math.round(amount*(holds(mon,'xp')?1.5:1));
       while(mon.level<MAX_LEVEL && mon.xp>=this.xpToNext(mon.level)) {
         mon.xp-=this.xpToNext(mon.level);
         const before=this.stats(mon),oldMax=before.hp,oldHP=mon.hp,training=!!holds(mon,'training');mon.level++;if(training)mon.bonusPoints=Math.min(999,(mon.bonusPoints||0)+1);
@@ -3579,8 +3602,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         const xp=leagueBoss?160+b.enemy.level*30:b.towerFloor?80+b.enemy.level*18:guardian?(b.rematch?60+b.enemy.level*18:100+b.enemy.level*30):rival?70+b.enemy.level*18:32+b.enemy.level*10;
         const earned=coins*(this.state.party.some(m=>holds(m,'coins'))?2:1);
         this.state.coins=Math.min(9999999,this.state.coins+earned);
-        this.event(events,`${earned} コインと、旅の経験 ${xp} を得た。`,'reward');
-        this.state.party.forEach(mon=>{if(!b.secretEncounter||mon.uid!==b.secretCaughtUid)this.giveXP(mon,xp,events);});
+        this.event(events,`${earned} コインと、旅の経験 ${xp} を得た。前に出た仲間は1.5倍！`,'reward');
+        this.awardBattleXP(xp,events);
         if(!this.isTrainerBattle() && this.rng()<0.3){this.state.inventory.chime=Math.min(999,this.state.inventory.chime+1);this.event(events,'パチカプセルを 1 個見つけた。','reward');}
         if(guardian && !b.rematch && !this.state.seals.includes(guardian.id)) {
           this.state.seals.push(guardian.id);
@@ -4637,8 +4660,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 </script><script>
 /* パチモン｜Pachi Monsters — 64 original scores and a bounded Web Audio ensemble.
  * All melodies, arrangements and instrument definitions are authored for this game.
- * Concert-ensemble edition: driving rhythm sections, scene-specific orchestration,
- * eight-bar transitions and quiet bridges around the original melodic themes.
+ * Concert-remix edition: sixteenth-note bass pickups, answering rhythm sections,
+ * half-time builds and ensemble drops around the original melodic themes.
  * The title theme is a recorded 16-bit arrangement of KASAI SOLUTIONS INC.'s own song
  * (assets/music/title-16bit.mp3, same origin); the composed 'title' score below plays
  * whenever that file cannot be loaded. No remote resources or third-party libraries.
@@ -4870,22 +4893,22 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // carries the recording that normally plays.
   function metadata(s) {
     if(!s)return null;
-    const data={id:s.id,name:s.name,description:s.description,scene:s.id,duration:s.duration,bpm:s.bpm,meter:`${s.beats}/4`,bars:s.bars,form:s.form.map(x=>FORM_LABELS[x]).join(' → '),style:s.style,edition:'concert-ensemble-3'};
+    const data={id:s.id,name:s.name,description:s.description,scene:s.id,duration:s.duration,bpm:s.bpm,meter:`${s.beats}/4`,bars:s.bars,form:s.form.map(x=>FORM_LABELS[x]).join(' → '),style:s.style,edition:'concert-remix-4'};
     if(s.id===TITLE_RECORDING.id)data.recording={seconds:TITLE_RECORDING.seconds,bpm:TITLE_RECORDING.bpm,bars:TITLE_RECORDING.bars,form:'16ビットアレンジ（全編）'};
     return data;
   }
   const noteFor = (s,degree,octave=0) => {const mode=MODES[s.mode],oct=Math.floor(degree/7),idx=((degree%7)+7)%7;return s.key+mode[idx]+oct*12+octave*12;};
   const isMobile = () => typeof matchMedia==='function' && matchMedia('(max-width: 600px)').matches;
 
-  // Independent rhythm-section parts can strike together. Each action family has
-  // its own bass movement, kick syncopation and accompaniment; score melodies,
-  // keys, meters and tempi remain the authored originals above.
+  // A rhythm section is a two-bar performance: the second bar answers the first.
+  // Pickups fall halfway between eighth-note ticks, never on a separate clock.
+  // Original melodies, keys, meters, tempi and the recorded title are unchanged.
   const ENSEMBLES = {
-    battle:{bass:[0,0,4,0,7,0,4,6],kick:'K..KK...',comp:'spiccato',accents:[0,3,6]},
-    rock:{bass:[0,0,7,0,4,0,7,4],kick:'K..K.K..',comp:'powerguitar',accents:[0,3,4,7]},
-    epic:{bass:[0,0,4,7,0,4,6,4],kick:'K...KK..',comp:'spiccato',accents:[0,3,6]},
-    heavy:{bass:[0,0,0,4,0,7,4,0],kick:'K..KK.K.',comp:'powerguitar',accents:[0,3,4,6]},
-    arena:{bass:[0,4,0,7,0,4,6,4],kick:'K...K..K',comp:'brass',accents:[0,4,6]}
+    battle:{bass:[0,0,4,0,7,0,4,6],answer:[0,4,7,4,0,7,6,4],pickups:[1,3,7],kick:'K..KK...',kickPush:[3,7],comp:'marcato',accents:[0,3,6],reply:[1,5]},
+    rock:{bass:[0,0,7,0,4,0,7,4],answer:[0,7,0,4,0,7,4,6],pickups:[1,5,7],kick:'K..K.K..',kickPush:[1,5],comp:'rhythmguitar',accents:[0,3,4,7],reply:[2,5]},
+    epic:{bass:[0,0,4,7,0,4,6,4],answer:[0,4,7,9,7,4,2,4],pickups:[1,3,5],kick:'K...KK..',kickPush:[3,7],comp:'marcato',accents:[0,3,6],reply:[1,4]},
+    heavy:{bass:[0,0,0,4,0,7,4,0],answer:[0,0,7,0,4,0,6,4],pickups:[0,4,6],kick:'K..KK.K.',kickPush:[0,4],comp:'rhythmguitar',accents:[0,3,4,6],reply:[1,5]},
+    arena:{bass:[0,4,0,7,0,4,6,4],answer:[0,7,4,0,4,7,6,4],pickups:[3,7],kick:'K...K..K',kickPush:[7],comp:'fanfare',accents:[0,4,6],reply:[3,7]}
   };
 
   // Reuse timbre definitions for every note; avoid per-frame object allocation.
@@ -4912,12 +4935,15 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     pulse50:{type:'square',wave:'pulse50',partials:[[1,1]],cut:5200,attack:.004,release:.09,hold:.64},
     pulse25:{type:'square',wave:'pulse25',partials:[[1,.92],[1.004,.08]],cut:5600,attack:.003,release:.1,hold:.66},
     pulse125:{type:'square',wave:'pulse125',partials:[[1,1]],cut:6200,attack:.002,release:.05,hold:.38},
-    wavebass:{type:'triangle',wave:'bass',partials:[[1,.94],[2,.06]],cut:1850,attack:.003,release:.045,hold:.53},
+    wavebass:{type:'triangle',wave:'drivebass',partials:[[1,.94],[2,.06]],cut:2250,attack:.003,release:.035,hold:.46},
     guitarlead:{type:'sawtooth',wave:'overdrive',partials:[[1,.95],[1.003,.05]],cut:4200,attack:.004,release:.09,hold:.64},
     powerguitar:{type:'sawtooth',wave:'overdrive',partials:[[1,.78],[1.4983,.22]],cut:2900,attack:.003,release:.055,hold:.32},
     spiccato:{type:'triangle',wave:'spiccato',partials:[[1,1]],cut:2850,attack:.006,release:.06,hold:.27},
     violin:{type:'triangle',wave:'strings',partials:[[.999,.58],[1.001,.42]],cut:3400,attack:.022,release:.13,hold:.7},
-    brass:{type:'triangle',wave:'brass',partials:[[1,.91],[1.002,.09]],cut:3700,attack:.016,release:.12,hold:.65}
+    brass:{type:'triangle',wave:'brass',partials:[[1,.91],[1.002,.09]],cut:3700,attack:.016,release:.12,hold:.65},
+    marcato:{type:'triangle',wave:'marcato',partials:[[1,1]],cut:3650,attack:.004,release:.045,hold:.29},
+    rhythmguitar:{type:'sawtooth',wave:'overdrive',partials:[[1,.76],[1.4983,.24]],cut:3500,attack:.002,release:.038,hold:.24},
+    fanfare:{type:'triangle',wave:'brass',partials:[[1,.9],[1.002,.1]],cut:4200,attack:.009,release:.08,hold:.58}
   };
 
   class LuminaAudio {
@@ -5110,7 +5136,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
           choir:[1,.12,.23,.04,.07,.018,.009],
           overdrive:[1,.57,.37,.22,.16,.09,.065,.042,.028],
           brass:[1,.54,.34,.21,.14,.08,.045,.023],
-          spiccato:[1,.52,.32,.22,.15,.095,.065,.04]
+          spiccato:[1,.52,.32,.22,.15,.095,.065,.04],
+          marcato:[1,.71,.44,.3,.21,.14,.085,.055,.03],
+          drivebass:[1,.46,.25,.13,.075,.035]
         };
         for(const [name,harmonics] of Object.entries(spectra)) {
           const real=new Float32Array(harmonics.length+1),imag=new Float32Array(harmonics.length+1);
@@ -5309,30 +5337,38 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         const previous=g.voicing||[48,55,60,64];
         const fit=notes=>notes.reduce((sum,n,i)=>sum+Math.abs(n-previous[i]),0)+(notes[3]>76?20:0)+(notes[0]<40?20:0);
         g.voicing=candidates.sort((a,b)=>fit(a)-fit(b))[0];
-        const count=intro?2:energetic&&!final?(low?2:3):low?3:4;
+        // The remix trades one held inner voice for a performed rhythmic part.
+        // This keeps room for the melody, impacts and the mobile voice budget.
+        const count=intro?2:energetic?(final?(low?2:3):(low?1:2)):low?3:4;
         const voiceKind=intro?'piano':final&&s.style==='orchestra'?'choir':energetic&&!bridge?'strings':'pad';
-        g.voicing.slice(0,count).forEach((n,i)=>this.instrument(g,voiceKind,n,time+i*.014,spb*unit*.86,(energetic?.025:.032)*dynamic,[-.5,-.18,.22,.5][i]));
+        const heldLength=energetic&&!bridge&&bar%8===7?spb-3:spb*.86;
+        g.voicing.slice(0,count).forEach((n,i)=>this.instrument(g,voiceKind,n,time+i*.014,heldLength*unit,(energetic?.023:.032)*dynamic,[-.5,-.18,.22,.5][i]));
         if(!energetic||bridge)
           this.instrument(g,'bass',noteFor(s,chord,-2),time,Math.min(spb*unit*(soft?.66:.4),1.6),(soft?.125:.17)*intensity,0);
       }
       if(energetic&&!bridge) {
-        // A muted eighth-note bass is a distinct performance, not a held root.
-        // Rock anticipates the next chord; the epic band climbs through its fifth.
-        const bassStride=s.style==='arena'&&!final?2:1;
+        // Alternate the answer bar, then pick into selected eighth notes with a
+        // short sixteenth. Shorten the first stroke so low notes stay articulated.
+        const bassStride=s.style==='arena'&&!final||build&&!secondHalf?2:1;
+        const bassLine=bar%2?band.answer:band.bass;
+        const pickup=band.pickups.includes(within)&&(!low||within!==band.pickups[1]||band.pickups.length===2)&&!turnaround&&!(build&&!secondHalf);
         if(within%bassStride===0&&!turnaround) {
-          let pitch=noteFor(s,chord+band.bass[within%band.bass.length],-2);
+          let pitch=noteFor(s,chord+bassLine[within%bassLine.length],-2);
           if(within===spb-1&&phraseBar===3)pitch=noteFor(s,s.chords[(bar+1)%s.chords.length],-2)-1;
-          this.instrument(g,'wavebass',pitch,time,unit*(within%2?.66:.82),[.152,.103,.127,.112][within%4]*intensity,0);
+          this.instrument(g,'wavebass',pitch,time,unit*(pickup?.39:within%2?.66:.78),[.152,.103,.127,.112][within%4]*intensity,0);
+        }
+        if(pickup) {
+          const nextDegree=within===spb-1?s.chords[(bar+1)%s.chords.length]:chord+bassLine[(within+1)%bassLine.length];
+          this.instrument(g,'wavebass',noteFor(s,nextDegree,-2),time+unit*.5,unit*.35,.088*intensity,0);
         }
         // Short bow strokes, palm-muted guitar or brass stabs articulate the
         // rhythm. Low quality keeps the same arrangement with one fewer voice.
         if(band.accents.includes(within)&&!turnaround) {
-          const root=noteFor(s,chord,-1),length=unit*(s.style==='rock'?.7:.82);
-          this.instrument(g,band.comp,root,at,length,.062*dynamic,-.3);
-          if(!low)this.instrument(g,band.comp,noteFor(s,chord+4,-1),at+.008,length,.039*dynamic,.3);
+          const root=noteFor(s,chord,-1),length=unit*(s.style==='rock'?.49:.62);
+          this.instrument(g,band.comp,root,at,length,.062*dynamic,-.36);
+          if(!low)this.instrument(g,band.comp,noteFor(s,chord+4,-1),at+.008,length,.035*dynamic,.34);
         }
-        if(final&&s.style==='epic'&&!low&&phraseBar%2===0&&within===0)
-          this.instrument(g,'brass',noteFor(s,chord+4),at,unit*2.6,.058*dynamic,.28);
+        this.scheduleBattleRemix(s,g,bar,within,time,unit,section,chord,dynamic,note);
       } else if(within===Math.floor(spb/2)&&!soft&&!intro) {
         this.instrument(g,'bass',noteFor(s,chord+4,-2),at,unit*1.7,.11*intensity,0);
       }
@@ -5342,6 +5378,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         (s.style==='waltz'?within===2||within===4:['folk','swing','bossa','desert'].includes(s.style)&&[3,6].includes(within))) {
         const comp=s.style==='swing'?'piano':'guitar';
         g.voicing.slice(1,low?2:3).forEach((n,i)=>this.instrument(g,comp,n,at+i*.014,unit*.9,.039*dynamic,i?-.2:.25));
+      }
+      // Scenic bands get a light pickup into the next phrase, not battle drums.
+      if(!energetic&&!soft&&!intro&&!bridge&&phraseBar===3&&within===spb-1) {
+        const next=s.chords[(bar+1)%s.chords.length];
+        this.instrument(g,'bass',noteFor(s,next,-2),time+unit*.5,unit*.4,.074*dynamic,0);
+        if(!low&&['folk','waltz','water'].includes(s.style))
+          this.instrument(g,'harp',noteFor(s,next+4),time+unit*.5,unit*.45,.033*dynamic,.3);
       }
       const stride=bridge||intro?4:low||soft||energetic&&!final?2:1;
       if(within%stride===0&&!turnaround&&!(within===0&&note?.length===1)) {
@@ -5361,6 +5404,36 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(coda&&bar===s.bars-1&&within===spb-2)
         this.instrument(g,'harp',noteFor(s,0,1),at,unit*1.7,.059,.15);
     }
+    scheduleBattleRemix(s,g,bar,within,time,unit,section,chord,dynamic,note) {
+      const band=ENSEMBLES[s.style],spb=s.beats*2,low=this.quality==='low';
+      if(!band||section==='Bridge'||bar%8===7&&within>=spb-2)return;
+      const final=section==='Finale'||section==='Coda',refrain=section==='B'||final;
+      const replyIndex=band.reply.indexOf(within);
+      // A second player answers on the other side of the stereo field. Even the
+      // reduced arrangement retains one offbeat response per bar.
+      if(replyIndex>=0&&(!low||replyIndex===bar%band.reply.length)) {
+        const answer=chord+(bar%2===replyIndex?4:2);
+        this.instrument(g,band.comp,noteFor(s,answer,-1),time+unit*.5,unit*.36,.045*dynamic,.43);
+      }
+      // A small string run approaches the next phrase; it stays below the tune.
+      // It replaces sustained padding rather than covering the lead with a wash.
+      if(!low&&['battle','epic'].includes(s.style)&&bar%4===3&&within>=spb-3&&within<=spb-2) {
+        const offset=(within-(spb-3))*2;
+        for(let i=0;i<2;i++)this.instrument(g,'marcato',noteFor(s,chord+[2,4,6,7][offset+i],-1),time+unit*i*.5,unit*.32,.039*dynamic,i?.32:-.28);
+      }
+      if(['epic','arena'].includes(s.style)) {
+        // The opening downbeat and each big return have a brass declaration.
+        // Chord tones form a short answer to the existing theme, never a new tune.
+        if(within===0&&bar%8===0&&(refrain||section==='Prelude')) {
+          this.instrument(g,'fanfare',noteFor(s,chord,-1),time,unit*1.35,.071*dynamic,-.2);
+          if(!low)this.instrument(g,'fanfare',noteFor(s,chord+4,-1),time+.008,unit*1.3,.043*dynamic,.22);
+        }
+        if(refrain&&bar%2===1&&within===spb-4&&(!note||note.length>=2))
+          this.instrument(g,'brass',noteFor(s,chord+2,-1),time+unit*.5,unit*1.2,.049*dynamic,.26);
+        if(final&&!low&&bar%4===0&&within===0)
+          this.instrument(g,'choir',noteFor(s,chord+2,-1),time+.025,unit*3.3,.026*dynamic,-.16);
+      }
+    }
     scheduleRhythm(s,g,bar,within,time,unit,section,intensity) {
       const band=ENSEMBLES[s.style],low=this.quality==='low',spb=s.beats*2;
       const bridge=section==='Bridge',intro=section==='Prelude'&&!band;
@@ -5371,28 +5444,39 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
           if(within===0)this.drum(g,'kick',time,.17*intensity);
           if(within===4)this.drum(g,'rim',time,.083*intensity);
           if(bar%8>=4&&within%2===1&&!low)this.drum(g,'hat',time,.018*intensity);
-          if(bar%8===7&&within>=spb-2)this.drum(g,'snare',time,.065+(within-(spb-2))*.022);
+          if(bar%8===6&&within===spb-2)this.drum(g,'snare',time,.06*intensity);
+          if(bar%8===7&&within>=spb-2) {
+            this.drum(g,'snare',time,.065+(within-(spb-2))*.022);
+            if(!low&&within===spb-2)this.drum(g,'snare',time+unit*.5,.047);
+          }
           return;
         }
-        const fill=bar%8===7&&within>=spb-3;
+        const fill=bar%8===7&&within>=spb-4,halfTime=section==='Build'&&bar%8<4;
         // Kick, backbeat and cymbals are independent, so the band can hit as one.
         if(band.kick[within%8]==='K'||final&&within===7&&bar%2===0)
           this.drum(g,'kick',time,(within===0?.265:.222)*intensity);
-        if(!fill&&(within===2||within===6))
+        // The extra kick leans into the next stroke, keeping the groove audible
+        // immediately at battle entry and in the reduced mobile arrangement.
+        if(!fill&&band.kickPush.includes(within)&&(!halfTime||within===7))
+          this.drum(g,'kick',time+unit*.5,.169*intensity);
+        if(!fill&&(halfTime?within===4:within===2||within===6))
           this.drum(g,'snare',time,(within===6?.153:.139)*intensity);
         if(!fill&&(!low||within%2===0)) {
           const open=within===spb-1&&bar%2===1;
           const metal=final&&bar%8<4?'ride':open?'openhat':'hat';
           this.drum(g,metal,time,(metal==='ride'?.035:open?.034:within%2?.022:.028)*intensity);
         }
+        if(!low&&!fill&&!halfTime&&band.pickups.includes(within))
+          this.drum(g,'hat',time+unit*.5,.015*intensity);
         if(!low&&refrain&&bar%2===1&&within===5)
           this.drum(g,'snare',time+unit*.5,.035*intensity);
         if(within===0&&(bar%8===0||final&&bar%4===0))
           this.drum(g,'cymbal',time,.052*intensity);
         if(fill) {
-          const pos=within-(spb-3),kind=pos===0?'tomHigh':pos===1?'tomLow':'snare';
-          this.drum(g,kind,time,[.104,.127,.151][pos]*intensity);
-          if(!low)this.drum(g,pos===2?'snare':kind,time+unit*.5,[.068,.082,.092][pos]*intensity);
+          const pos=within-(spb-4),kind=['snare','tomHigh','tomLow','snare'][pos];
+          this.drum(g,kind,time,[.088,.104,.127,.151][pos]*intensity);
+          // The final half-tick is an intentional breath before the band returns.
+          if(!low&&pos<3)this.drum(g,pos===0?'snare':kind,time+unit*.5,[.057,.068,.082][pos]*intensity);
         }
         return;
       }
@@ -5545,12 +5629,35 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(typeof ctx.createStereoPanner==='function') {const p=ctx.createStereoPanner();p.pan.value=pan;gain.connect(p);p.connect(this.fxBus);voice.nodes.push(p);}else gain.connect(this.fxBus);
       osc.start(time);osc.stop(voice.end);osc.onended=()=>this.disposeVoice(voice);
     }
+    damageImpact(event,time,pan=0) {
+      // Attribute affinity comes from combat, never the damage amount, a
+      // critical hit, guard, or the words shown in the battle log.
+      if(!this.enabled||!this.ctx||this.ctx.state!=='running'||event?.kind!=='damage'||event.amount===0)return null;
+      const factor=event.effectiveness;
+      if(!Number.isFinite(factor)||factor<=0)return null;
+      const at=Math.max(this.ctx.currentTime,Number.isFinite(time)?time:this.ctx.currentTime+.006);
+      const kind=factor>1?'super':factor<1?'resisted':'normal';
+      // At most three voices: these fit in the music scheduler's reserved FX
+      // slots even on mobile. The same melodic contour survives low quality.
+      if(kind==='super') {
+        this.drum(null,'snare',at,.11);
+        this.instrument(null,'pulse125',84,at+.003,.075,.11,pan);
+        this.instrument(null,'pulse125',96,at+.056,.10,.075,-pan);
+      } else if(kind==='resisted') {
+        this.sweep(at,.16,240,80,.10,pan);
+        this.texture(at,.10,950,310,.055,pan,'lowpass');
+      } else {
+        this.drum(null,'rim',at,.12);
+        this.instrument(null,'pluck',67,at,.085,.10,pan);
+      }
+      return kind;
+    }
     move(move,event={},effect={}) {
       if(!move||!this.enabled||!this.ctx||this.ctx.state!=='running')return;
       const now=this.ctx.currentTime+.008,id=String(move.id||move.name||'move');
       if(now-this.lastMove<.085&&this.lastMoveId===id)return;
       this.lastMove=now;this.lastMoveId=id;this.prune(this.ctx.currentTime);
-      const duration=clamp((effect?.duration||1000)/1000,.3,2.4),release=now+duration*(effect?.releaseAt??.14),impact=now+duration*(effect?.impactAt??.43);
+      const duration=clamp((effect?.duration||1000)/1000,.06,2.4),release=now+duration*(effect?.releaseAt??.14),impact=now+duration*(effect?.impactAt??.43);
       let hash=0;for(const char of id)hash=(hash*31+char.charCodeAt(0))>>>0;
       const root=56+hash%7,power=clamp(Number(move.power)||40,1,180),strength=.72+power/240;
       const pan=event.side==='enemy'?-.3:.3,miss=event.kind==='miss';
@@ -5570,7 +5677,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if(move.id==='arvelion_crown'){notes([0,7,12,19],'horn',impact,.045,.58,.06);notes([24,31],'celesta',impact+.12,.10,.66,.07);}
         return;
       }
-      const element=move.element||'crystal',physical=move.category==='physical';
+      const element=move.element||'crystal',physical=move.category==='physical',compactNova=this.quality==='low'&&move.id==='arvelion_nova';
+      // Reserve the result cue first; the elemental/legendary ornament must
+      // not exhaust the mobile voice budget before this single hit is heard.
+      this.damageImpact(event,impact,pan);
       // Charge, release, impact and tail share the VFX clock. Elemental layers
       // remain distinct while each move gets a stable tonal fingerprint.
       if(physical) {
@@ -5582,9 +5692,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       }
       if(miss){this.texture(impact,.16,3400,900,.055,-pan);return;}
       if(element==='ember') {
-        this.texture(impact,.48,2600,240,.16*strength,pan,'lowpass');
-        this.drum(null,'kick',impact,.12*strength);
-        notes([0,12,7],'lead',release,.032,.15,.075);
+        // Mobile nova uses its own explosion below, instead of doubling this
+        // fire impact. Its octave lead remains, with room for the BGM melody.
+        if(!compactNova){this.texture(impact,.48,2600,240,.16*strength,pan,'lowpass');this.drum(null,'kick',impact,.12*strength);}
+        notes(compactNova?[0,12]:[0,12,7],'lead',release,.032,.15,.075);
       } else if(element==='tide') {
         this.texture(impact,.46,1300,340,.13*strength,pan);
         notes([24,19,16,12,7],'mallet',release,.042,.30,.082);
@@ -5610,11 +5721,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         notes([0,7],'cello',impact,.025,.32,.10);
         notes([24,31],'celesta',impact+.10,.05,.43,.06);
       } else if(move.id==='arvelion_nova') {
-        this.sweep(release,.30,180,1120,.085,pan);
+        if(!compactNova)this.sweep(release,.30,180,1120,.085,pan);
         this.texture(impact,.72,3400,180,.11,0,'lowpass');
         this.drum(null,'kick',impact,.13);
-        notes([0,7,16,24],'choir',impact,.04,.70,.07);
-        notes([31,28,24],'celesta',impact+.15,.08,.50,.06);
+        notes(compactNova?[0,7]:[0,7,16,24],'choir',impact,.04,.70,.07);
+        notes(compactNova?[31]:[31,28,24],'celesta',impact+.15,.08,.50,.06);
       }
     }
     fx(kind,detail) {
@@ -5626,6 +5737,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       const play=(notes,instrument='bell',gap=.075,length=.3,velocity=.18)=>notes.forEach((n,i)=>this.instrument(null,instrument,n,now+i*gap,length,velocity));
       if(kind==='click'){play([81],'mallet',.04,.055,.09);return;}
       if(kind==='step'){this.drum(null,'hat',now,.017);return;}
+      if(kind==='damage') {
+        const event=detail?.event||detail,effect=detail?.effect;
+        if(event&&(event.kind!=='damage'||event.amount===0))return;
+        const impact=effect?clamp((effect.duration||1000)/1000,.06,2.4)*(effect.impactAt??.43):0;
+        if(this.damageImpact(event,now+impact,event?.side==='enemy'?-.3:.3))return;
+      }
       if(kind==='hit'||kind==='damage'){this.drum(null,'rim',now,.16);play([49,43],'pluck',.035,.08,.15);return;}
       if(kind==='capture'||kind==='resonate'){play([72,79,83,86,91],'bell',.082,.5,.17);return;}
       if(kind==='heal'){play([60,67,72,76,79],'piano',.09,.5,.18);return;}
@@ -6392,18 +6509,19 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         const levelUp=event.kind==='level'&&event.levelUp;
         if(levelUp){showLevelUp(event.levelUp);sound.fx('levelup');}
         const effect=LT.BattleVFX?.fromEvent(event,event.side==='enemy'?null:usedMove,performance.now());
+        const pace=TEXT_PACE[settings.textSpeed]||TEXT_PACE.normal;
+        const soundEffect=effect&&(settings.reducedMotion||battleSkip)?{...effect,duration:settings.reducedMotion?180:Math.max(60,Math.round(effect.duration*pace.tempo*.35))}:effect;
         battleEffect=effect||null;
         const quoted=/「([^」]+)」/.exec(event.text||'')?.[1];
         const audibleMove=DATA.moves[event.moveId||event.move]||(quoted?Object.values(DATA.moves).find(move=>move.name===quoted):null);
         const hasMoveSound=!!audibleMove&&['damage','attack','miss','guard','heal','boost'].includes(event.kind)&&typeof sound.move==='function'&&(event.kind!=='heal'||!!quoted);
-        if(hasMoveSound)sound.move(audibleMove,event,effect);
-        else if(event.kind==='damage')sound.fx('hit');
+        if(hasMoveSound)sound.move(audibleMove,event,soundEffect);
+        else if(event.kind==='damage')sound.fx('damage',{event,effect:soundEffect});
         else if(event.kind==='faint')sound.fx('faint');
         else if(effect?.style==='condition')sound.fx('status',effect);
         else if(event.kind==='statusTick')sound.fx('hit');
         if(['heal','evolve','caught','seal'].includes(event.kind)&&!(hasMoveSound&&event.kind==='heal'))sound.fx(event.kind==='evolve'?'evolution':event.kind==='caught'?'capture':event.kind==='heal'?'heal':'win');
         const line=document.createElement('p'),text=typeof event==='string'?event:event.text;box.appendChild(line);
-        const pace=TEXT_PACE[settings.textSpeed]||TEXT_PACE.normal;
         // Rhythm: the effect plays, then the finished line stays long enough to read
         // (scaled by the text speed setting); A/Enter still fast-forwards.
         const chars=Array.from(String(text??'')).length,hold=Math.round((520+chars*20)*pace.tempo);
@@ -6819,7 +6937,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     marker(engine.state.x,engine.state.y,'#e95c48','player');
   }
   function showHelp() {
-    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。経験値でレベルアップし、一部のモンスターは進化します。仲間は6体、残りはひかえで待ちます。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と2人のチャンピオン</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>属性の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプのパチモンはかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
+    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶとパチカプセルを1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。ソロの経験値は手持ち全員がもらえ、その相手との戦いで場に出た個体は1.5倍になります。途中の交代も対象です。相手が次のパチモンを出すと出場判定を切り替えます。「学びの帯」と重なると2.25倍。経験値でレベルアップし、一部は進化します。仲間は6体、ひかえは192体までです。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と2人のチャンピオン</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>属性の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプのパチモンはかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>`<p>${typeBadge(id)} → ${Array.isArray(e.strongAgainst)?e.strongAgainst.map(t=>typeBadge(t)).join(' '):typeBadge(e.strongAgainst)} に有利</p>`).join('')+'</div><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「バッグ」でパチカプセルや回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>着弾音は「弱点＝鋭く上がる音」「通常＝短い打撃音」「効きにくい＝低く沈む音」の3種類。ソロ・通信対戦の両方で属性相性を知らせます。急所や防御で音の種類は変わりません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。6文字コードで友だちを招待し、シングル・ダブルを選べます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   // ── Offline play: the service worker keeps the game (and, on request, all art) on the device.
   const offlinePlay={registration:null,installPrompt:null,storing:false,status:null};
@@ -7353,6 +7471,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(error){return {ok:false,pending:true,message:error?.message||'端末に保存できません。空き容量を確認して再度お試しください。'};}
   }
   LT.playMoveSound=(move,event,effect)=>sound.move?.(move,event,effect);
+  LT.playDamageSound=(event,effect)=>sound.fx('damage',{event,effect});
   LT.playStatusSound=effect=>sound.fx('status',effect);
   Object.defineProperty(LT,'soundEngine',{configurable:true,get:()=>sound});
   LT.adminBridge={
@@ -8782,7 +8901,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261118-pixel-effects-v32"></script>
+<script src="battle-vfx.js?v=20261118-battle-growth-remix-v35"></script>
 <script src="admin-console.js?v=20261118-owner-privacy-v32"></script>
 <script src="online-futo.js?v=20261118-full-allocation-v31"></script>
 <script src="secret-encounter.js?v=20261117-shiny"></script>

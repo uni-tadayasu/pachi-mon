@@ -250,7 +250,7 @@
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
       raised:event.raised,power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
       releaseAt:.14,impactAt:.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
-      amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),
+      amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),effectiveness:event.effectiveness,
       started:now,duration:event.kind==='faint'?950:event.kind==='switch'?650:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
       seed:hash((move.id||event.text||style)+':'+(event.side??'ally')+':'+(event.slot||0))};
   }
@@ -1018,7 +1018,9 @@
         e.soundPlayed=true;
         const move=LT.DATA?.moves?.[e.move];
         if(move&&typeof LT.playMoveSound==='function'){
-          try{LT.playMoveSound(move,e);}catch(_){}
+          try{LT.playMoveSound(move,e,e);}catch(_){}
+        }else if(e.kind==='damage'&&typeof LT.playDamageSound==='function'){
+          try{LT.playDamageSound(e,e);}catch(_){}
         }else if(e.style==='condition'&&typeof LT.playStatusSound==='function'){
           try{LT.playStatusSound(e);}catch(_){}
         }
