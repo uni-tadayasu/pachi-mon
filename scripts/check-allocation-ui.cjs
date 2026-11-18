@@ -90,7 +90,7 @@ const slice = (from, to) => {
   const start = html.indexOf(from), end = html.indexOf(to, start);
   assert(start > 0 && end > start, `${from.trim()} … ${to.trim()} must exist`); return html.slice(start, end);
 };
-vm.runInContext(slice('  function showParty(', '  function showStorage('), c);
+vm.runInContext(slice('  function partyDepositReason(', '  function showStorage('), c);
 vm.runInContext(slice("  document.addEventListener('click',e=>{", '  function resize() {'), c);
 
 const q = selector => content.querySelector(selector);

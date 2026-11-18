@@ -78,7 +78,7 @@ assert.equal(c.engine.state.party.length,1);assert.equal(c.navigation.source,'pa
 c.engine=fresh();c.engine.state.storage.push(c.engine.makeMonster(DATA.starters[0],5));c.confirmRelease(0);elements.get('release-cancel').onclick();
 assert.deepEqual(c.navigation,{source:'storage',index:-2});
 
-const partyStart=html.indexOf('  function showParty('),partyEnd=html.indexOf('  function showStorage(',partyStart);
+const partyStart=html.indexOf('  function partyDepositReason('),partyEnd=html.indexOf('  function showStorage(',partyStart);
 vm.runInContext(html.slice(partyStart,partyEnd),c);
 c.engine=fresh();c.showParty(1);assert(c.modal.markup.includes('data-release-source="party"'));assert(c.modal.markup.includes('>逃がす</button>'));
 c.engine.state.party.splice(1);c.showParty(0);assert(c.modal.markup.includes('disabled aria-describedby="party-release-reason"'));assert(c.modal.markup.includes('最後の1体は逃がせません。'));
