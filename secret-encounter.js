@@ -17,9 +17,9 @@
       if(!LT.adminBridge?.isPlaying?.())throw Error('冒険を再開してから使ってください。');
       if(!dialog){
         dialog=document.createElement('dialog');dialog.className='pachi-console';dialog.setAttribute('aria-labelledby','secret-title');
-        dialog.innerHTML='<header class="pachi-console-head"><h2 id="secret-title">裏技・幻の草むら</h2><button type="button" class="btn" data-secret-close>閉じる</button></header><div class="pachi-console-body"><p>全パチモンから1体を選んで野生バトルへ。パチカプセル1個で必ず仲間になります。カプセルがない場合は1個補充します。</p><form id="secret-form"><label for="secret-species">出現させるパチモン</label><select id="secret-species" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"></select><label for="secret-level">レベル（1〜100）</label><input id="secret-level" type="number" min="1" max="100" step="1" value="70" inputmode="numeric" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"><label class="secret-shiny" style="display:flex;align-items:center;gap:10px;margin:0 0 16px;font-size:16px"><input id="secret-shiny" type="checkbox" style="width:22px;height:22px"> 色違いで出現させる</label><button type="submit" class="btn btn-primary">野生で出現させる</button><p id="secret-status" role="status"></p></form><small>運営専用。通常の出現率・一般プレイヤーの入手範囲は変わりません。</small></div>';
+        dialog.innerHTML='<header class="pachi-console-head"><h2 id="secret-title">裏技・幻の草むら</h2><button type="button" class="btn" data-secret-close>閉じる</button></header><div class="pachi-console-body"><p>図鑑に登録されたパチモンから1体を選んで野生バトルへ。パチカプセル1個で必ず仲間になります。カプセルがない場合は1個補充します。</p><form id="secret-form"><label for="secret-species">出現させるパチモン</label><select id="secret-species" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"></select><label for="secret-level">レベル（1〜100）</label><input id="secret-level" type="number" min="1" max="100" step="1" value="70" inputmode="numeric" style="display:block;width:100%;font-size:16px;padding:12px;margin:8px 0 16px"><label class="secret-shiny" style="display:flex;align-items:center;gap:10px;margin:0 0 16px;font-size:16px"><input id="secret-shiny" type="checkbox" style="width:22px;height:22px"> 色違いで出現させる</label><button type="submit" class="btn btn-primary">野生で出現させる</button><p id="secret-status" role="status"></p></form><small>運営専用。通常の出現率・一般プレイヤーの入手範囲は変わりません。</small></div>';
         const select=dialog.querySelector('#secret-species');
-        for(const species of Object.values(LT.DATA.species)){
+        for(const species of Object.values(LT.DATA.species).filter(species=>!species.hiddenDex&&!species.glitchOnly)){
           const option=document.createElement('option');option.value=species.id;option.textContent=species.name+' / '+LT.DATA.elements[species.element].name;select.append(option);
         }
         document.body.append(dialog);
@@ -29,6 +29,7 @@
           event.preventDefault();if(working)return;
           const level=Number(dialog.querySelector('#secret-level').value),species=select.value,shiny=dialog.querySelector('#secret-shiny')?.checked===true,status=dialog.querySelector('#secret-status'),button=dialog.querySelector('[type="submit"]');
           if(!Number.isInteger(level)||level<1||level>100){status.textContent='レベルは1〜100の整数で入力してください。';return;}
+          if(!Object.hasOwn(LT.DATA.species,species)||LT.DATA.species[species].hiddenDex||LT.DATA.species[species].glitchOnly){status.textContent='図鑑に登録されたパチモンを選んでください。';return;}
           working=true;button.disabled=true;status.textContent='運営権限を確認しています…';
           try{
             const owner=await authorize();

@@ -212,6 +212,31 @@ async function combatScenarios(env) {
     state.storage = [];
     assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'), 'Released legendary leaves the local roster');
 
+    // The off-dex line is offered only as an owned individual. Its appearance,
+    // complete allocation and standard Lv.50 stats reach both online/local peers.
+    const hiddenIds = [...LT.DATA.glitchLine.ids];
+    assert(hiddenIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)));
+    const hiddenUnowned = env.pair(); await hiddenUnowned.start();
+    for (const id of hiddenIds) assert(!(await hiddenUnowned.sessions[0].setTeam({ ids: [id, ...normal.slice(0, 2)] })).ok);
+    assert.equal(hiddenUnowned.queue.length, 0); hiddenUnowned.close();
+    state.storage = hiddenIds.map((id, i) => ({ species: id, uid: 'null-' + i, level: 100, nickname: ['ぬる', 'ヴァ', 'ゼロ'][i], shiny: true, alloc: { hp: 64, spAtk: 64, speed: 64 } }));
+    assert(hiddenIds.every(id => LT.OnlineFuto.rosterIds(normal).includes(id)));
+    const hiddenSave = JSON.stringify(state), hidden = env.pair(); await hidden.start();
+    assert((await hidden.sessions[0].setTeam({ name: 'Null owner', ids: hiddenIds, uids: state.storage.map(mon => mon.uid) })).ok);
+    assert((await hidden.sessions[1].setTeam({ name: 'Opponent', ids: normal.slice(3, 6) })).ok);
+    await hidden.flush();
+    assert(hidden.sessions.every(session => session.snapshot().phase === 'choosing'));
+    for (const [i, mon] of hidden.sessions[0].duel.state.teams[0].monsters.entries()) {
+      assert.equal(mon.species, hiddenIds[i]); assert.equal(mon.level, 50); assert.equal(mon.nickname, state.storage[i].nickname); assert.equal(mon.shiny, true);
+      assert.deepEqual(plain(mon.stats), standard(LT, hiddenIds[i], plain(LT.Duel.normalizeAllocation(state.storage[i].alloc))));
+      assert.deepEqual(Object.keys(mon.pp), plain(LT.DATA.species[hiddenIds[i]].moves));
+    }
+    assert.equal(hidden.sessions[0].duel.fingerprint(), hidden.sessions[1].duel.fingerprint());
+    await Promise.all(hidden.sessions.map(session => session.submit(session.duel.legalOrders(session.role)))); await hidden.flush();
+    assert.equal(hidden.sessions[0].duel.fingerprint(), hidden.sessions[1].duel.fingerprint());
+    assert.equal(JSON.stringify(state), hiddenSave); hidden.close(); state.storage = [];
+    assert(hiddenIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)), 'Released/evolved-away forms do not remain selectable');
+
     // Futo: standard stats with the even spread, species moves — not the operator's adventure stats or moves.
     const pair = env.pair(); await pair.start();
     assert((await pair.sessions[0].setTeam({ name: '運営', ids: ['futo', ...normal.slice(0, 2)] })).ok);
@@ -262,6 +287,6 @@ async function combatScenarios(env) {
     const combat = await combatScenarios(env);
     assert.equal(env.serverCalls, 0, 'No server was asked for anything');
     console.log(JSON.stringify({ ok: true, combat, scenarios: ['every species accepted by the duel, special ones offered only to owners', 'ordinary teams with looks', 'unowned special monsters refused before sending',
-      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'no server calls', 'adventure save untouched'] }));
+      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'owned off-dex line with full points and synchronized peers', 'no server calls', 'adventure save untouched'] }));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

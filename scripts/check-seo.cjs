@@ -85,11 +85,18 @@ for (const match of home.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
   if (dataContext.LT?.Engine) break;
 }
 const data = dataContext.LT.DATA, publicHome = home.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''), guide = read('guide/index.html');
-assert.equal(Object.keys(data.species).length, 256);
+const publicSpecies=Object.values(data.species).filter(s=>!s.hiddenDex);
+assert.equal(publicSpecies.length, 256);
 assert.equal(data.regionIds.length, 128);
 assert.equal(Object.keys(data.guardians).length, 32);
 assert.equal(data.limits.storage, 192);
-assert(publicHome.includes(`全${Object.keys(data.species).length}種の一覧へ`), 'the home dex count matches the species data');
+assert(publicHome.includes(`全${publicSpecies.length}種の一覧へ`), 'the home dex count matches the public species data');
+for(const s of Object.values(data.species).filter(s=>s.hiddenDex)){
+  assert(!fs.existsSync(path.join(root,'monsters',s.id+'.html')), 'hidden companions have no dex page');
+  for(const file of ['monsters/index.html','moves/index.html','sitemap.xml']){
+    assert(!read(file).includes(s.name)&&!read(file).includes(s.id), `${file} does not list hidden companions`);
+  }
+}
 assert(publicHome.includes(`${data.regionIds.length}のステージ。`), 'the home stage count matches the map data');
 assert(publicHome.includes(`${Object.keys(data.guardians).length}の旅紋を集め`), 'the home crest count matches the guardian data');
 assert(guide.includes(`ひかえには最大${data.limits.storage}体`), 'the guide storage limit matches the engine');

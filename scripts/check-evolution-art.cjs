@@ -129,7 +129,7 @@ function integratedStats(LT, id, back = false) {
 
 async function main() {
   const run = await runtime(), { LT } = run, art = LT.CreatureArt;
-  const species = Object.values(LT.DATA.species);
+  const species = Object.values(LT.DATA.species).filter(s => !s.hiddenDex);
   const children = new Set(species.map(s => s.evolvesTo).filter(Boolean));
   // The special monsters have their own authored art and dedicated tests;
   // retain the exact snapshot of the 124 current normal roots/singles.
