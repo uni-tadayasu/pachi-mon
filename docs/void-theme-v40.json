@@ -1,0 +1,174 @@
+{
+  "version": "void-theme-v40",
+  "title": "Enthusiast 2026（無属性・16ビットアレンジ）",
+  "source": {
+    "filename": "Enthusiast 2026 [instrumental](1).mp3",
+    "sha256": "19099e22186d6aefd4bcb4bc9789f9418768f6579ff4cdbea9ba9a4c91ef92f2",
+    "decodedSeconds": 284.1425625,
+    "provenance": "User-supplied instrumental, transformed at the user's request. Original upload is not included in this repository."
+  },
+  "recording": {
+    "path": "assets/music/void-enthusiast-16bit-v40.mp3",
+    "bytes": 3946543,
+    "sha256": "34fdb2c472556caf1703fb9454e701a4b3acef570c4f112314ed214ce1992458",
+    "seconds": 281.78828125,
+    "containerSeconds": 281.844,
+    "codec": "mp3",
+    "sampleRate": 32000,
+    "channels": 2,
+    "bitrate": 112000
+  },
+  "arrangement": {
+    "tempoBpm": 152,
+    "approach": "source-following chromatic harmonic-template pulse/FM resynthesis, PCM-like drums, companded sample bed, filtered cross echo",
+    "pitchHandling": "chromatic; preserves source modulations, no fixed-scale snapping",
+    "voices": [
+      "25% pulse lead with softened fundamental",
+      "FM bass",
+      "FM harmony",
+      "Short quantized kick/snare/hi-hat samples",
+      "Quiet companded source-derived PCM layer",
+      "Filtered cross-channel echo"
+    ],
+    "notes": "A source-following resynthesis/remix; not a claim of perfect score transcription or a hardware-accurate console emulator. The source-derived bed preserves bends, fills and details not reliably separated by automatic transcription.",
+    "drumHits": {
+      "kick": 833,
+      "snare": 624,
+      "hat": 1223
+    },
+    "randomSeed": 3940
+  },
+  "master": {
+    "sampleFormat": "PCM16 at 32 kHz before MP3 encoding",
+    "rmsDbfsBeforeEncoding": -16.0,
+    "peakDbfsBeforeEncoding": -4.5977,
+    "rmsDbfsDecoded": -16.434601076895525,
+    "peakDbfsDecoded": -4.558893203735352,
+    "nonfiniteSamples": 0,
+    "clippedSamples": 0,
+    "loop": {
+      "trimmed_source_tail_seconds": 2.174281,
+      "crossfade_seconds": 0.18,
+      "loop_join_samples": 96
+    },
+    "decodedLoopBoundaryJump": [
+      0.0006197892944328487,
+      4.0789833292365074e-05
+    ],
+    "loopNote": "Trailing silence trimmed, 180 ms crossfade and 96-sample endpoint smoothing. Retains the composition's ending; no claim of a seamless bar-to-bar arrangement."
+  },
+  "fidelityChecks": {
+    "decoded_seconds": 281.788254,
+    "analysis": "Independent HPSS spectral chroma and 100ms RMS comparison against source; objective proxy, not listening or exact transcription proof.",
+    "full_chroma_mean": 0.9465,
+    "full_chroma_median": 0.9564,
+    "full_chroma_p10": 0.8913,
+    "rms_envelope_correlation": 0.8424,
+    "sections": [
+      {
+        "from": 0.5,
+        "to": 38,
+        "chroma_mean": 0.9577,
+        "chroma_median": 0.9626,
+        "chroma_p10": 0.921,
+        "dominant_pc_agreement": 0.6762
+      },
+      {
+        "from": 38,
+        "to": 64,
+        "chroma_mean": 0.9637,
+        "chroma_median": 0.9696,
+        "chroma_p10": 0.9302,
+        "dominant_pc_agreement": 0.6884
+      },
+      {
+        "from": 64,
+        "to": 102,
+        "chroma_mean": 0.9493,
+        "chroma_median": 0.9529,
+        "chroma_p10": 0.9097,
+        "dominant_pc_agreement": 0.6247
+      },
+      {
+        "from": 102,
+        "to": 128,
+        "chroma_mean": 0.9465,
+        "chroma_median": 0.9552,
+        "chroma_p10": 0.8872,
+        "dominant_pc_agreement": 0.5241
+      },
+      {
+        "from": 128,
+        "to": 160,
+        "chroma_mean": 0.9571,
+        "chroma_median": 0.9684,
+        "chroma_p10": 0.9051,
+        "dominant_pc_agreement": 0.7591
+      },
+      {
+        "from": 160,
+        "to": 192,
+        "chroma_mean": 0.9477,
+        "chroma_median": 0.9569,
+        "chroma_p10": 0.8934,
+        "dominant_pc_agreement": 0.783
+      },
+      {
+        "from": 192,
+        "to": 218,
+        "chroma_mean": 0.9196,
+        "chroma_median": 0.9284,
+        "chroma_p10": 0.8482,
+        "dominant_pc_agreement": 0.6321
+      },
+      {
+        "from": 218,
+        "to": 253,
+        "chroma_mean": 0.9407,
+        "chroma_median": 0.9521,
+        "chroma_p10": 0.8828,
+        "dominant_pc_agreement": 0.5415
+      },
+      {
+        "from": 253,
+        "to": 279.5,
+        "chroma_mean": 0.9297,
+        "chroma_median": 0.942,
+        "chroma_p10": 0.868,
+        "dominant_pc_agreement": 0.6095
+      }
+    ],
+    "quiet_runs_over_half_second_below_minus50_dbfs": [],
+    "nonfinite": 0,
+    "mono_clipped_samples": 0,
+    "mono_peak_dbfs": -2.0154,
+    "mono_rms_dbfs": -13.6081,
+    "stereo_decoded": {
+      "rms_dbfs": -16.4346,
+      "peak_dbfs": -4.5589,
+      "nonfinite": 0,
+      "clipped_samples": 0
+    },
+    "mono_note": "Analysis mono was produced by ffmpeg downmix, which may sum channels with power-preserving coefficients. Use stereo_decoded for delivery loudness/peaks."
+  },
+  "reproduction": {
+    "renderer": "scripts/music/render-void-theme.py",
+    "dependencies": [
+      "Python 3",
+      "numpy",
+      "scipy",
+      "soundfile",
+      "threadpoolctl",
+      "ffmpeg"
+    ],
+    "render": "python3 scripts/music/render-void-theme.py INPUT.mp3 OUTPUT.wav --report REPORT.json",
+    "encode": "ffmpeg -i OUTPUT.wav -codec:a libmp3lame -b:a 112k -ar 32000 -ac 2 -write_xing 1 OUTPUT.mp3"
+  },
+  "playback": {
+    "catalogSlot": 61,
+    "catalogId": "glitchbattle",
+    "priority": "Living active void combatant on either side; both active slots in doubles. Bench members do not trigger it. Victory, capture and evolution scenes retain their own cues.",
+    "musicRoom": "Explicit preview selects this recording. Non-void hidden-room keeper battle retains the old procedural score.",
+    "offline": "Versioned prefetch URL is cached by the service worker as a shell asset."
+  }
+}

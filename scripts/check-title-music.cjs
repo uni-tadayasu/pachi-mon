@@ -95,7 +95,7 @@ const settle = () => wait(20);
 
   // ── Publisher screen: every mode from the top menu, black screen, white KASAI SOLUTIONS INC.
   for (const needle of ["$('continue-btn').onclick=()=>storedSave && bootScreen(()=>begin(null,storedSave));", "$('start-btn').onclick=()=>bootScreen(requestNew);",
-    "else bootScreen(()=>LT.OnlineUI?.open(),'online');", "el.innerHTML='<span class=\"company-splash-name\">KASAI SOLUTIONS INC.</span>';",
+    "return new Promise(resolve=>bootScreen(()=>{", "const opened=LT.OnlineUI?.open(nextOptions)===true;", "el.innerHTML='<span class=\"company-splash-name\">KASAI SOLUTIONS INC.</span>';",
     "const stage=document.querySelector('.game-stage');", 'endBoot(false); closeModal(); updateAll(); save();', "document.getElementById('online-modal')?.addEventListener('close',()=>{if(booting&&!playing)endBoot(true);});"])
     assert(html.includes(needle), `index.html: ${needle}`);
   const css = fs.readFileSync(path.join(root, 'pachi-ui.css'), 'utf8');

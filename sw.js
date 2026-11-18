@@ -34,6 +34,8 @@
  *   fields and native game taps remain available with the refreshed client.
  * v39: off-dex glitch companions, neutral void matchups and their three
  *   front/rear sprite atlases refresh together; the atlases are offline core art.
+ * v40: the source-arranged 16-bit Void battle recording is linked as an offline
+ *   shell asset; active-combatant priority and recording lifecycle update together.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
