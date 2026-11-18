@@ -79,9 +79,11 @@ assert(e.release(0).ok);assert(e.grantFuto(futo).ok);assert.equal(e.state.storag
 // Run the real reserve renderer: all 512 legacy entries and a useful capacity
 // explanation must remain reachable, including the last entry's management actions.
 const start=html.indexOf('  function showStorage('),end=html.indexOf('  function findOwned(',start);
+const depositStart=html.indexOf('  function partyDepositReason('),depositEnd=html.indexOf('  function showParty(',depositStart);
 function storageUI(count,slot){
   const c=vm.createContext({engine:game(count),DATA:D,portrait:m=>`<img data-uid="${m.uid}">`,nameOf:m=>m.nickname||m.species,
-    escape:s=>String(s),ico:()=>'',shinyBadge:()=>'',typeBadge:()=>'',openModal:(title,body)=>{c.result={title,body};}});
+    escape:s=>String(s),ico:()=>'',shinyBadge:()=>'',typeBadge:()=>'', $:()=>null,openModal:(title,body)=>{c.result={title,body};}});
+  vm.runInContext(html.slice(depositStart,depositEnd),c);
   vm.runInContext(html.slice(start,end),c);c.showStorage(slot);return c;
 }
 let ui=storageUI(192,null);assert.match(ui.result.body,/ひかえ 192 \/ 192 体/);assert.doesNotMatch(ui.result.body,/以前の記録/);

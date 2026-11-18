@@ -13,7 +13,7 @@ const {Engine,DATA,displayName}=model.LT,hiddenIds=[...DATA.glitchLine.ids];
 const publicIds=Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex);
 function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,start);assert(start>=0&&end>start);return html.slice(start,end);}
 const source=[section('  function showDex(', '  function showMap() {'),
-  section('  function showParty(index=', '  const HELD_ITEMS='),
+  section('  function partyDepositReason(', '  const HELD_ITEMS='),
   section('  function showRecords(){', '  function showMenu() {')].join('\n');
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 function ui(complete=false){
