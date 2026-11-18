@@ -2415,15 +2415,15 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   // One condition per type. Persistent ones stay until healed; the other two end with the battle.
   D.statuses=Object.freeze({
     bloom:Object.freeze({id:'bloom',name:'花毒',reading:'はなどく',element:'leaf',chance:.10,persistent:true,color:'#9b6bd6',
-      inflict:'花毒に冒された！',description:'芽の攻撃技で10%。ターンの終わりに最大体力の1/8を失う。宿・すっきり草で治る。'}),
+      inflict:'花毒に冒された！',ongoing:'花毒に冒されている。',description:'芽の攻撃技で10%。ターンの終わりに最大体力の1/8を失う。宿・すっきり草で治る。'}),
     bubble:Object.freeze({id:'bubble',name:'水封',reading:'すいふう',element:'tide',chance:.06,persistent:false,color:'#3fa6d8',
-      inflict:'泡に閉じ込められた！',description:'潮の攻撃技で6%。泡の中で行動できない。毎ターン20%で抜け出し、灯の技を受けると泡が弾ける。バトルが終わると治る。'}),
+      inflict:'泡に閉じ込められた！',ongoing:'泡に閉じ込められている。',description:'潮の攻撃技で6%。泡の中で行動できない。毎ターン20%で抜け出し、灯の技を受けると泡が弾ける。バトルが終わると治る。'}),
     scorch:Object.freeze({id:'scorch',name:'灯焼け',reading:'ひやけ',element:'ember',chance:.10,persistent:true,color:'#e8743b',
-      inflict:'灯焼けを負った！',description:'灯の攻撃技で10%。ターンの終わりに最大体力の1/16を失い、物理技のダメージが半分になる。'}),
+      inflict:'灯焼けを負った！',ongoing:'灯焼けがうずいている。',description:'灯の攻撃技で10%。ターンの終わりに最大体力の1/16を失い、物理技のダメージが半分になる。'}),
     dizzy:Object.freeze({id:'dizzy',name:'目眩',reading:'めまい',element:'wind',chance:.10,persistent:true,color:'#d6b43a',
-      inflict:'目眩を起こした！',description:'風の攻撃技で10%。素早さが半分になり、25%の確率で行動できない。'}),
+      inflict:'目眩を起こした！',ongoing:'目が回ってふらついている。',description:'風の攻撃技で10%。素早さが半分になり、25%の確率で行動できない。'}),
     crystal:Object.freeze({id:'crystal',name:'結晶化',reading:'けっしょうか',element:'crystal',chance:.06,persistent:false,color:'#a58ce0',
-      inflict:'結晶に包まれた！',description:'晶の攻撃技で6%。結晶に包まれ、1〜3ターン行動できない。バトルが終わると治る。'})
+      inflict:'結晶に包まれた！',ongoing:'結晶に包まれている。',description:'晶の攻撃技で6%。結晶に包まれ、1〜3ターン行動できない。バトルが終わると治る。'})
   });
   D.statusByElement=Object.freeze({leaf:'bloom',tide:'bubble',ember:'scorch',wind:'dizzy',crystal:'crystal'});
   D.items.remedy={id:'remedy',name:'すっきり草',description:'状態異常（花毒・水封・灯焼け・目眩・結晶化）をすべて治す。',price:45};
@@ -3415,7 +3415,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(bell&&attacker.hp>0){const amount=Math.min(this.stats(attacker).hp-attacker.hp,Math.max(1,Math.floor(damage*bell.params.fraction)));if(amount>0){attacker.hp+=amount;this.event(events,`${name}は${bell.name}で体力を${amount}回復した。`,'heal',{side,item:bell.id});}}
       if(defender.hp<=0)this.faint(defender,opp,events);
       else{
-        if(defender.status==='bubble'&&move.element==='ember'){this.cureCondition(defender);this.event(events,`${displayName(defender)}を包む泡が、灯の熱で弾けた！`,'status',{side:opp,status:'cure'});}
+        if(defender.status==='bubble'&&move.element==='ember'){this.cureCondition(defender);this.event(events,`${displayName(defender)}を包む泡が、灯の熱で弾けた！`,'status',{side:opp,status:'cure',was:'bubble'});}
         else this.inflictCondition(defender,opp,move,events);
         this.heldReact(defender,opp,events);
       }
@@ -3438,14 +3438,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     conditionBlocks(mon,side,events){
       const kind=mon.status,name=displayName(mon);if(!kind||!STATUS[kind])return false;
       if(kind==='crystal'){
-        if((mon.statusTurns||0)>0){mon.statusTurns--;this.event(events,`${name}は結晶に包まれて動けない。`,'status',{side,status:kind});return true;}
-        this.cureCondition(mon);this.event(events,`${name}を包む結晶が砕けた！`,'status',{side,status:'cure'});return false;
+        if((mon.statusTurns||0)>0){mon.statusTurns--;this.event(events,`${name}は結晶に包まれて動けない。`,'status',{side,status:kind,blocked:true});return true;}
+        this.cureCondition(mon);this.event(events,`${name}を包む結晶が砕けた！`,'status',{side,status:'cure',was:kind});return false;
       }
       if(kind==='bubble'){
-        if(this.rng()<.2){this.cureCondition(mon);this.event(events,`${name}は泡から抜け出した！`,'status',{side,status:'cure'});return false;}
-        this.event(events,`${name}は泡に閉じ込められて動けない。`,'status',{side,status:kind});return true;
+        if(this.rng()<.2){this.cureCondition(mon);this.event(events,`${name}は泡から抜け出した！`,'status',{side,status:'cure',was:kind});return false;}
+        this.event(events,`${name}は泡に閉じ込められて動けない。`,'status',{side,status:kind,blocked:true});return true;
       }
-      if(kind==='dizzy'&&this.rng()<.25){this.event(events,`${name}は目が回って動けない！`,'status',{side,status:kind});return true;}
+      if(kind==='dizzy'&&this.rng()<.25){this.event(events,`${name}は目が回って動けない！`,'status',{side,status:kind,blocked:true});return true;}
       return false;
     }
     inflictCondition(mon,side,move,events){
@@ -3484,6 +3484,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           this.event(events,`${name}は${STATUS[mon.status].name}で${dmg}のダメージを受けた。`,'statusTick',{side,status:mon.status,amount:dmg});
           if(mon.hp<=0){this.faint(mon,side,events);continue;}
         }
+        // Every turn shows each condition once: when it stops a move, when it lands, or here.
+        else if(STATUS[mon.status]&&!events.some(e=>e.kind==='status'&&e.side===side&&e.status===mon.status))
+          this.event(events,`${name}は${STATUS[mon.status].ongoing}`,'status',{side,status:mon.status,ongoing:true});
         const regen=holds(mon,'regen');
         if(regen&&mon.hp<max){const amount=Math.min(max-mon.hp,Math.max(1,Math.floor(max*regen.params.fraction)));mon.hp+=amount;this.event(events,`${name}は${regen.name}で体力が${amount}回復した。`,'item',{side,item:regen.id});}
         this.heldReact(mon,side,events);
@@ -4252,12 +4255,13 @@ function motionProfile(id){
 function reduceMotion(options){return options.reducedMotion===true||options.motion===false||globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches===true||globalThis.document?.documentElement?.classList?.contains('reduce-motion')===true||globalThis.document?.body?.classList?.contains('reduce-motion')===true;}
 function battlePose(e,time,side,slot=0,options={}){
  const hp=options.hp;
- if(!e||!Number.isFinite(e.started))return hp<=0?{action:'faint',progress:1}:{};
+ if(!e||!Number.isFinite(e.started)||e.kind==='text')return hp<=0?{action:'faint',progress:1}:{}; // a plain message moves nobody
  const p=(time-e.started)/(e.duration||1000);
  if(p<0||p>1)return hp<=0?{action:'faint',progress:1}:{};
  const own=options.online?e.side===options.side:e.side!=='enemy';
- const source=own?'ally':'enemy',self=['heal','guard','boost','recoil','faint','switch'].includes(e.kind);
+ const source=own?'ally':'enemy',self=['heal','guard','boost','recoil','faint','switch','status','statusTick'].includes(e.kind);
  if(side===source&&(e.slot||0)===slot&&e.kind==='faint')return {action:'faint',progress:p};
+ if(side===source&&(e.slot||0)===slot&&(e.kind==='status'||e.kind==='statusTick'))return e.kind==='statusTick'?{action:'hit',progress:p}:e.moment==='cure'?{action:'cast',progress:p}:{action:'status',progress:p,statusKind:e.condition||e.status};
  if(side===source&&(e.slot||0)===slot&&e.kind==='switch')return {action:'enter',progress:p};
  if(side===source&&(e.slot||0)===slot)return {action:e.kind==='recoil'?'hit':self?'cast':e.category==='physical'?'attack':'cast',progress:p};
  if(!self&&side!==source&&(e.target||0)===slot&&e.kind!=='miss')return {action:hp<=0&&p>.75?'faint':'hit',progress:hp<=0&&p>.75?(p-.75)*4:p};
@@ -4296,6 +4300,12 @@ function creature(target,id,options={}){
   }else if(options.action==='hit'){
    const impact=Math.max(0,1-Math.abs((p-.53)/.16));
    dx-=direction*size*.06*impact;rotation-=direction*impact*.045;sy-=impact*.035;sx+=impact*.035;
+  }else if(options.action==='status'){
+   // A condition takes hold: dizzy monsters sway, sealed ones float in their bubble, the rest tremble.
+   const held=Math.sin(Math.min(1,p)*Math.PI);
+   if(options.statusKind==='dizzy'){rotation+=Math.sin(p*Math.PI*4)*.07*held;dx+=Math.sin(p*Math.PI*4)*size*.02*held;}
+   else if(options.statusKind==='bubble')dy-=held*size*.045+Math.sin(p*Math.PI*6)*size*.006*held;
+   else{dx+=Math.sin(p*Math.PI*18)*size*.011*held;sy-=held*.015;}
   }else if(options.action==='faint'){
    dy+=p*size*.11;rotation+=direction*p*.15;sy*=1-p*.12;opacity=1-p*.25;
   }else if(options.action==='enter'){
@@ -5517,6 +5527,16 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       if(kind==='leaf'){play([69,72,76,81],'pluck',.035,.22,.14);return;}
       if(kind==='wind'){this.drum(null,'hat',now,.08);play([76,83,88],'flute',.05,.25,.13);return;}
       if(kind==='crystal'){play([79,86,90,95],'bell',.045,.4,.13);return;}
+      if(kind==='status'){
+        const condition=detail?.condition,moment=detail?.moment;
+        if(moment==='cure'){play(condition==='crystal'?[91,86,95,98]:[76,83,88,91],condition==='crystal'?'bell':'mallet',.05,.3,.12);return;}
+        if(moment==='tick')this.drum(null,'rim',now,.11);
+        if(condition==='bloom'){play([63,60,56,55],'pluck',.075,.2,.13);return;}
+        if(condition==='bubble'){play([67,74,79,86],'mallet',.06,.18,.11);return;}
+        if(condition==='scorch'){this.drum(null,'snare',now,.07);play([62,61,57],'lead',.06,.13,.09);return;}
+        if(condition==='dizzy'){play([79,76,79,76,79],'flute',.07,.14,.09);return;}
+        if(condition==='crystal'){play([88,95,91],'bell',.06,.36,.11);return;}
+      }
       play([76],'mallet',.05,.12,.09);
     }
     async suspend() {
@@ -6252,6 +6272,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if(hasMoveSound)sound.move(audibleMove,event,effect);
         else if(event.kind==='damage')sound.fx('hit');
         else if(event.kind==='faint')sound.fx('faint');
+        else if(effect?.style==='condition')sound.fx('status',effect);
         else if(event.kind==='statusTick')sound.fx('hit');
         if(['heal','evolve','caught','seal'].includes(event.kind)&&!(hasMoveSound&&event.kind==='heal'))sound.fx(event.kind==='evolve'?'evolution':event.kind==='caught'?'capture':event.kind==='heal'?'heal':'win');
         const line=document.createElement('p'),text=typeof event==='string'?event:event.text;box.appendChild(line);
@@ -6264,7 +6285,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         // Health changes land on the hit (the bar drains while the line is read), not with the next message.
         let shownAfter=false;const showAfter=()=>{if(!shownAfter){shownAfter=true;applyBattleVisual(event.visual);}};
         const fatal=(event.visual?.ally?.hp??1)<=0||(event.visual?.enemy?.hp??1)<=0; // a knockout keeps the faint motion of its own event
-        const impactTimer=effect&&!battleSkip&&!fatal&&['damage','heal','recoil','attack'].includes(event.kind)?setTimeout(showAfter,Math.round(effect.duration*(effect.impactAt||.43))):0;
+        const impactTimer=effect&&!battleSkip&&!fatal&&['damage','heal','recoil','attack','statusTick'].includes(event.kind)?setTimeout(showAfter,Math.round(effect.duration*(effect.impactAt||.43))):0;
         if(levelUp)delay=Math.max(delay,settings.reducedMotion?900:battleSkip?520:1600);
         const typing=settings.reducedMotion||battleSkip?typeLine(line,text,0):typeLine(line,text,pace.cps,()=>{box.scrollTop=box.scrollHeight;});
         box.scrollTop=box.scrollHeight;
@@ -7150,6 +7171,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(error){return {ok:false,pending:true,message:error?.message||'端末に保存できません。空き容量を確認して再度お試しください。'};}
   }
   LT.playMoveSound=(move,event,effect)=>sound.move?.(move,event,effect);
+  LT.playStatusSound=effect=>sound.fx('status',effect);
   Object.defineProperty(LT,'soundEngine',{configurable:true,get:()=>sound});
   LT.adminBridge={
     commitTrade,
@@ -7599,8 +7621,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   // monster can hold (2 per level, 64 per stat, HP +2 per point).
   const ALLOC = D.allocation || { pointsPerLevel: 2, capPerStat: 64, keys: ['hp', 'atk', 'def', 'spAtk', 'spDef', 'speed'], hpPerPoint: 2 };
   const ALLOC_KEYS = Object.freeze([...ALLOC.keys]);
-  const RULES = Object.freeze({ version: 5, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
-    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint',
+  const RULES = Object.freeze({ version: 6, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
+    items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn',
     allocation: Object.freeze({ budget: ALLOC.pointsPerLevel * (50 - 1), cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'first-owned-individual-scaled-down-to-budget' }) });
   function stable(value) {
     if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
@@ -7897,7 +7919,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       if (bell && mon.hp > 0) { const amount = Math.min(mon.maxHp - mon.hp, Math.max(1, Math.floor(dealt * bell.params.fraction))); if (amount > 0) { mon.hp += amount; this._event(`${name}は${bell.name}で体力が${amount}回復した。`, 'item', { side, slot, item: bell.id, amount }); } }
       if (target.hp === 0) this._faint(1 - side, targetSlot, target);
       else {
-        if (target.status === 'bubble' && move.element === 'ember') { this._cure(target); this._event(`${this._name(1 - side, target)}を包む泡が、灯の熱で弾けた！`, 'status', { side: 1 - side, slot: targetSlot, status: 'cure' }); }
+        if (target.status === 'bubble' && move.element === 'ember') { this._cure(target); this._event(`${this._name(1 - side, target)}を包む泡が、灯の熱で弾けた！`, 'status', { side: 1 - side, slot: targetSlot, status: 'cure', was: 'bubble' }); }
         else this._inflict(1 - side, targetSlot, target, move);
         this._react(1 - side, targetSlot, target);
       }
@@ -7918,14 +7940,14 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const kind = mon.status, name = this._name(side, mon);
       if (!kind || !own(STATUS, kind)) return false;
       if (kind === 'crystal') {
-        if ((mon.statusTurns || 0) > 0) { mon.statusTurns--; this._event(`${name}は結晶に包まれて動けない。`, 'status', { side, slot, status: kind }); return true; }
-        this._cure(mon); this._event(`${name}を包む結晶が砕けた！`, 'status', { side, slot, status: 'cure' }); return false;
+        if ((mon.statusTurns || 0) > 0) { mon.statusTurns--; this._event(`${name}は結晶に包まれて動けない。`, 'status', { side, slot, status: kind, blocked: true }); return true; }
+        this._cure(mon); this._event(`${name}を包む結晶が砕けた！`, 'status', { side, slot, status: 'cure', was: kind }); return false;
       }
       if (kind === 'bubble') {
-        if (this._random() < .2) { this._cure(mon); this._event(`${name}は泡から抜け出した！`, 'status', { side, slot, status: 'cure' }); return false; }
-        this._event(`${name}は泡に閉じ込められて動けない。`, 'status', { side, slot, status: kind }); return true;
+        if (this._random() < .2) { this._cure(mon); this._event(`${name}は泡から抜け出した！`, 'status', { side, slot, status: 'cure', was: kind }); return false; }
+        this._event(`${name}は泡に閉じ込められて動けない。`, 'status', { side, slot, status: kind, blocked: true }); return true;
       }
-      if (kind === 'dizzy' && this._random() < .25) { this._event(`${name}は目が回って動けない！`, 'status', { side, slot, status: kind }); return true; }
+      if (kind === 'dizzy' && this._random() < .25) { this._event(`${name}は目が回って動けない！`, 'status', { side, slot, status: kind, blocked: true }); return true; }
       return false;
     }
     _inflict(side, slot, mon, move) {
@@ -7962,6 +7984,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           this._event(`${name}は${STATUS[mon.status].name}で${amount}ダメージ。`, 'statusTick', { side, slot, status: mon.status, amount });
           if (mon.hp === 0) { this._faint(side, slot, mon); return; }
         }
+        // Every turn shows each condition once: when it stops a move, when it lands, or here.
+        else if (own(STATUS, mon.status) && !this.state.events.some(e => e.kind === 'status' && e.side === side && (e.slot || 0) === slot && e.status === mon.status))
+          this._event(`${name}は${STATUS[mon.status].ongoing}`, 'status', { side, slot, status: mon.status, ongoing: true });
         const regen = holds(mon, 'regen');
         if (regen && mon.hp < mon.maxHp) { const amount = Math.min(mon.maxHp - mon.hp, Math.max(1, Math.floor(mon.maxHp * regen.params.fraction))); mon.hp += amount; this._event(`${name}は${regen.name}で体力が${amount}回復した。`, 'item', { side, slot, item: regen.id, amount }); }
         this._react(side, slot, mon);
@@ -8537,7 +8562,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 })();
 
 </script>
-<script src="battle-vfx.js?v=20261117-rhythm"></script>
+<script src="battle-vfx.js?v=20261118-conditions"></script>
 <script src="admin-console.js?v=20261117-moves96"></script>
 <script src="online-futo.js?v=20261117-items"></script>
 <script src="secret-encounter.js?v=20261117-shiny"></script>
