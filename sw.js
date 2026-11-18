@@ -30,6 +30,8 @@
  * v37: online battle/trade invitation links and the same-Wi-Fi QR flow refresh
  *   together. Bluetooth tethering requirements are explicit; the browser client
  *   does not provide direct Bluetooth peer communication.
+ * v38: touch selection/callout guards also cover larger tablets; editable
+ *   fields and native game taps remain available with the refreshed client.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
