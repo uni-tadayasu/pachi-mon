@@ -35,8 +35,7 @@
   };
   const dialogOpen = () => !!document.querySelector('dialog[open]');
 
-  function moveBattleControls(nextDesktop) {
-    const active = document.activeElement;
+  function moveBattleControls(nextDesktop, active) {
     const restoreFocus = active && (battleUI.contains(active) || battlePanel.contains(active));
     if (nextDesktop) {
       sidebar.append(battleUI, battlePanel);
@@ -52,6 +51,7 @@
     const nextDesktop = isDesktop();
     const changedLayout = nextDesktop !== desktop;
     const playing = document.body.classList.contains('is-playing');
+    const active = document.activeElement;
     root.classList.toggle('desktop-fit', nextDesktop);
     // A phone/tablet layout must never inherit an in-page desktop expansion.
     if (!nextDesktop) fallbackExpanded = false;
@@ -59,7 +59,7 @@
     // source visible until its focused control has moved back to mobile.
     const hideSidebar = !nextDesktop || !document.body.classList.contains('in-battle');
     if (nextDesktop) sidebar.hidden = hideSidebar;
-    if (changedLayout) moveBattleControls(nextDesktop);
+    if (changedLayout) moveBattleControls(nextDesktop, active);
     desktop = nextDesktop;
     sidebar.hidden = hideSidebar;
 
