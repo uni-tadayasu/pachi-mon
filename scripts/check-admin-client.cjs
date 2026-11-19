@@ -19,7 +19,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,loadAdminDevices,renderAdminDevices,prepareDeviceGrant,prepareDeviceRevoke,confirmDeviceChange,get adminDevices(){return adminDevices;},get deviceReview(){return deviceReview;},get deviceBusy(){return deviceBusy;},attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,restoreAdminReserveTeam,adoptReserveTeam,renderAdminReserveTeam,get reserveTeam(){return reserveTeam;},get reserveBusy(){return reserveBusy;},prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,loadAdminDevices,renderAdminDevices,prepareDeviceGrant,prepareDeviceRevoke,confirmDeviceChange,get adminDevices(){return adminDevices;},get deviceReview(){return deviceReview;},get deviceBusy(){return deviceBusy;},attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -744,4 +744,84 @@ test('main self-release reviews the actual successor in sub then sub-sub order',
   const h=harness({handle:c=>c.path==='/admin/devices'?response(deviceData(devices)):null});adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();h.api.prepareRelease();
   assert(view.releaseBox.innerHTML.includes(`登録済みの${label}がメイン運営を引き継ぎます`));assert(view.releaseBox.innerHTML.includes('入力欄は表示されません'));assert(h.calls.every(c=>c.method==='GET'));
  }
+});
+
+// The recovery action must use the same current-server identity as automatic delivery.
+let reserveModel;
+function reserveRules(){
+  if(reserveModel)return reserveModel;
+  const ctx=vm.createContext({console});
+  for(const [,attributes,code] of fs.readFileSync(require.resolve('../index.html'),'utf8').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
+    if(/\bsrc=|application\/ld\+json/.test(attributes))continue;
+    vm.runInContext(code,ctx);if(ctx.LT?.Engine)break;
+  }
+  return reserveModel=ctx.LT.AdminReserveRules;
+}
+function reserveBundle(role='main',id=PLAYER_A.id){
+  return {version:1,playerId:id,role,members:[{main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'}[role],'floravelle','zeroveil','pearlseria','hyogald','rurigorm'].map(species=>({grantId:`admin-trained-v64:${role}:${id}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};
+}
+function enableReserve(h){h.ctx.LT.AdminReserveRules=reserveRules();return h;}
+
+test('each current role receives its own trained six once per paginated synchronization',async()=>{
+  for(const role of ['main','sub','sub-sub']){
+    const owner={...PLAYER_A,adminRole:role},bundle=reserveBundle(role),applied=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:bundle,grants:[],nextCursor:c.search.includes('cursor=')?null:4}):null,
+      bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:6};}}}));
+    adopt(h,TOKEN_A,owner);await h.api.sync();
+    assert.equal(applied.length,1);assert.equal(applied[0].value.role,role);assert.equal(applied[0].value.members.length,6);
+    assert.equal(applied[0].options,undefined);assert.equal(h.ctx.LT.Admin.pending,0);
+    assert(h.toasts.some(message=>message.includes('6体をひかえに追加')));
+  }
+});
+
+test('reserve delivery rejects ordinary players and mismatched role, owner, species or growth',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},applied=[];let profile=owner,bundle=reserveBundle();
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:profile,adminReserveTeam:bundle,grants:[]}):null,
+    bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:6};}}}));
+  for(const invalid of [reserveBundle('sub'),reserveBundle('main',PLAYER_B.id),{...reserveBundle(),members:reserveBundle().members.slice(1)},
+    {...reserveBundle(),members:reserveBundle().members.map((mon,i)=>i===0?{...mon,bonusPoints:100}:mon)}]){
+    bundle=invalid;adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(applied.length,0);
+  }
+  profile={...owner,isAdmin:false,adminRole:null};bundle=reserveBundle();adopt(h,TOKEN_A,owner);await h.api.sync();
+  assert.equal(applied.length,0);assert.equal(h.api.reserveTeam,null);
+});
+
+test('reserve capacity failures stay pending and a later synchronization can safely retry',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},bundle=reserveBundle();let blocked=true,attempts=0;
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:bundle,grants:[]}):null,
+    bridge:{receiveAdminReserveTeam:()=>{attempts++;return blocked?{ok:false,pending:true,message:'ひかえに6体分の空きが必要です。'}:{ok:true,added:6};},adminReserveTeamStatus:()=>({newCount:6})}}));
+  adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,6);assert.equal(h.toasts.length,0);
+  blocked=false;await h.api.sync();assert.equal(attempts,2);assert.equal(h.ctx.LT.Admin.pending,0);
+});
+
+test('manual reserve restore refreshes authorization and repeated taps share one request',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'},bundle=reserveBundle('sub'),pending=deferred(),applied=[];
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:1,restored:1,message:'1体を復元しました。'};}}}));
+  adopt(h,TOKEN_A,owner);
+  const first=h.api.restoreAdminReserveTeam(),second=h.api.restoreAdminReserveTeam();
+  await until(()=>h.calls.some(c=>c.path==='/me'));assert.equal(h.calls.filter(c=>c.path==='/me').length,1);assert.equal(await second,null);
+  pending.resolve(response({player:owner,adminReserveTeam:bundle}));const outcome=await first;
+  assert.equal(outcome.added,1);assert.equal(applied.length,1);assert.equal(applied[0].options.restore,true);assert.equal(h.api.reserveBusy,false);
+});
+
+test('manual reserve restore discards responses after identity switch or current server revocation',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},bundle=reserveBundle(),pending=deferred(),applied=[];
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:6};}}}));
+  adopt(h,TOKEN_A,owner);const restore=h.api.restoreAdminReserveTeam();await until(()=>h.calls.length===1);
+  adopt(h,TOKEN_B,PLAYER_B);pending.resolve(response({player:owner,adminReserveTeam:bundle}));
+  await assert.rejects(restore,error=>error.staleIdentity===true);assert.equal(applied.length,0);assert.equal(h.api.reserveTeam,null);
+  const revoked=enableReserve(harness({handle:c=>c.path==='/me'?response({player:{...owner,isAdmin:false,adminRole:null},adminReserveTeam:null}):null,
+    bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:6};}}}));
+  adopt(revoked,TOKEN_A,owner);await assert.rejects(revoked.api.restoreAdminReserveTeam(),/現在の運営登録/);
+  assert.equal(applied.length,0);assert.equal(revoked.ctx.LT.Admin.player.isAdmin,false);
+});
+
+test('a newer role heartbeat prevents an older reserve bundle from being delivered',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},pending=deferred(),applied=[];
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:c.path==='/world/presence'?response({self:{id:owner.id,isAdmin:true,adminRole:'sub'}}):null,
+    bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:6};}}}));
+  adopt(h,TOKEN_A,owner);const sync=h.api.sync();await until(()=>h.calls.some(c=>c.path==='/me'));
+  await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+  pending.resolve(response({player:owner,adminReserveTeam:reserveBundle(),grants:[]}));await sync;
+  assert.equal(applied.length,0);assert.equal(h.ctx.LT.Admin.player.adminRole,'sub');assert.equal(h.api.reserveTeam,null);
 });

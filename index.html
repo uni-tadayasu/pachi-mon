@@ -257,7 +257,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 }
   </script>
 
-  <link rel="stylesheet" href="admin-console.css?v=20261119-sub-admin-v62">
+  <link rel="stylesheet" href="admin-console.css?v=20261120-admin-trained-v64">
 <style>@layer legacy{
 /* Companion identity and traveller choice */
 .player-name-entry{margin:10px 0}.player-name-entry .nickname-label{margin:8px 0 5px;font-size:13px}.player-name-entry .nickname-input{padding:9px 11px;min-height:44px;font-size:16px}.player-name-entry small{display:block;margin-top:5px;overflow-wrap:anywhere}.player-profile-setting p,#player-journal-name{overflow-wrap:anywhere;word-break:normal}.player-profile-setting .btn{flex-shrink:0}.avatar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.avatar-card{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0;padding:18px 12px;border:1px solid #7cbaaa88;border-radius:18px;background:linear-gradient(160deg,#e6f5e7,#cce6df);color:#254b49;cursor:pointer}.avatar-card:hover,.avatar-card:focus-visible{outline:3px solid #bd9854;outline-offset:2px}.avatar-card canvas{display:block;width:min(100%,180px);height:auto;image-rendering:pixelated}.avatar-card strong{font-size:18px}.avatar-card span{font-size:12px}.creature-view{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}.creature-view-controls{display:flex;gap:5px}.creature-view-controls .btn{padding:6px 9px;min-height:34px;font-size:12px}.creature-view-controls .selected{background:#dcece4;border-color:#518879}.nickname-summary{display:flex;align-items:center;gap:16px}.nickname-label{display:block;font-weight:700;margin:14px 0 8px}.nickname-input{width:100%;min-width:0;padding:13px;border:1px solid #72948a;border-radius:10px;background:#fffdf4;color:#253c39;font:inherit;font-size:18px;user-select:text;-webkit-user-select:text;touch-action:manipulation}.nickname-input[aria-invalid=true]{border-color:#bb5454}.nickname-input:focus{outline:2px solid #5b9c8c;outline-offset:2px}.shiny-badge{display:inline-block;padding:3px 8px;margin:4px 6px 4px 0;border-radius:20px;background:#f8edb8;color:#76560d;font-size:12px;font-weight:800}.shiny-mark{color:#b48216;margin-left:4px}.is-shiny{color:#b48530}.species-name{color:#678079;font-size:12px;margin:4px 0}.shiny-portrait{filter:drop-shadow(0 0 5px #eec76066)}
@@ -2966,9 +2966,31 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const holds = (mon, kind) => { const item = heldOf(mon); return item && item.kind === kind ? item : null; };
   const KASAI_REWARD_ID = /^kasai-reward:P[0-9a-f]{16}$/;
   const isKasaiReward = mon => mon?.species === 'floravelle' && KASAI_REWARD_ID.test(mon.grantId || '');
+  const ADMIN_RESERVE_PREFIX = 'admin-trained-v64';
+  const ADMIN_RESERVE_STARTERS = Object.freeze({main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'});
+  const ADMIN_RESERVE_COMMON = Object.freeze(['floravelle','zeroveil','pearlseria','hyogald','rurigorm']);
+  function adminReserveMember(mon){
+    const match = /^admin-trained-v64:(main|sub|sub-sub):(P[0-9a-f]{16}):([a-z][a-z0-9_]*)$/.exec(mon?.grantId || '');
+    if(!match)return null;
+    const [,role,playerId,species]=match;
+    if(mon.species!==species||![ADMIN_RESERVE_STARTERS[role],...ADMIN_RESERVE_COMMON].includes(species))return null;
+    return {role,playerId,species,gender:role==='sub'?'female':'male'};
+  }
+  function normalizeAdminReserveBundle(bundle){
+    if(!bundle||typeof bundle!=='object'||Array.isArray(bundle)||bundle.version!==1||typeof bundle.playerId!=='string'||!/^P[0-9a-f]{16}$/.test(bundle.playerId)||typeof bundle.role!=='string'||!Object.hasOwn(ADMIN_RESERVE_STARTERS,bundle.role)||!Array.isArray(bundle.members)||bundle.members.length!==6)throw Error('運営の育成済みメンバー情報が正しくありません。');
+    const species=[ADMIN_RESERVE_STARTERS[bundle.role],...ADMIN_RESERVE_COMMON],gender=bundle.role==='sub'?'female':'male';
+    const members=species.map((id,index)=>{
+      const member=bundle.members[index],grantId=`${ADMIN_RESERVE_PREFIX}:${bundle.role}:${bundle.playerId}:${id}`;
+      if(!member||typeof member!=='object'||Array.isArray(member)||member.grantId!==grantId||member.species!==id||member.level!==100||member.gender!==gender||member.heldItem!=='trainband'||member.bonusPoints!==99||!Object.hasOwn(D.species,id))throw Error('運営の育成済みメンバー情報が正しくありません。');
+      return {grantId,species:id,level:100,gender,heldItem:'trainband',bonusPoints:99};
+    });
+    return {version:1,playerId:bundle.playerId,role:bundle.role,members};
+  }
   const genderOf = mon => {
     if (!mon) return 'none';
     if (isKasaiReward(mon) && (mon.gender === 'male' || mon.gender === 'female')) return mon.gender;
+    const reserve=adminReserveMember(mon);
+    if(reserve&&mon.gender===reserve.gender)return mon.gender;
     if ((D.genderless || []).includes(mon.species)) return 'none';
     if (mon.gender === 'male' || mon.gender === 'female') return mon.gender;
     return hashText(mon.uid || mon.species) % 2 ? 'female' : 'male';
@@ -3236,6 +3258,42 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const destination=this.state.party.length<MAX_PARTY?'party':'storage';
       this.state[destination].push(mon);this.state.giftReceipts=[...receipts,id];this.markCaught(mon.species);
       return {ok:true,grantId:id,destination,message:`運営専用の幻パチモン、${D.species[mon.species].name}を${destination==='party'?'仲間':'ひかえ'}に迎えました。`};
+    }
+    adminReserveTeamStatus(bundle){
+      let normalized;try{normalized=normalizeAdminReserveBundle(bundle);}catch(error){return fail(error.message);}
+      const receipts=new Set(this.state.giftReceipts||[]),owned=new Map([...this.state.party.map(mon=>[mon.grantId,{mon,destination:'party'}]),...this.state.storage.map(mon=>[mon.grantId,{mon,destination:'storage'}])]);
+      const members=normalized.members.map(member=>{
+        const found=owned.get(member.grantId),present=!!found&&found.mon.species===member.species;
+        return {...member,name:D.species[member.species].name,owned:present,received:receipts.has(member.grantId)||present,destination:present?found.destination:null};
+      });
+      const missing=members.filter(member=>!member.owned),newCount=missing.filter(member=>!member.received).length,restorableCount=missing.length-newCount,availableSlots=Math.max(0,MAX_STORAGE-this.state.storage.length),started=this.state.started===true;
+      return {ok:true,total:6,ownedCount:6-missing.length,missingCount:missing.length,newCount,restorableCount,availableSlots,started,
+        canReceive:started&&!this.battle&&newCount>0&&availableSlots>=newCount,
+        canRestore:started&&!this.battle&&missing.length>0&&availableSlots>=missing.length,members};
+    }
+    receiveAdminReserveTeam(bundle,options={}){
+      const status=this.adminReserveTeamStatus(bundle);if(!status.ok)return status;
+      if(!status.started)return {...fail('冒険を始めると育成済みメンバーをひかえに受け取れます。'),pending:true};
+      const restore=options?.restore===true,missing=status.members.filter(member=>!member.owned&&(restore||!member.received));
+      if(!missing.length)return {ok:true,alreadyReceived:true,added:0,restored:0,remainingMissing:status.missingCount,grantIds:[],destination:'storage',message:status.missingCount?'育成済みメンバーは受け取り済みです。いなくなった個体は運営管理から復元できます。':'育成済みメンバー6体は受け取り済みです。'};
+      if(this.battle)return {...fail('バトルが終わると育成済みメンバーを受け取れます。'),pending:true};
+      if(status.availableSlots<missing.length)return {...fail(`ひかえに${missing.length}体分の空きが必要です。現在の空きは${status.availableSlots}体です。`),pending:true,requiredSlots:missing.length,availableSlots:status.availableSlots};
+      const receipts=new Set(this.state.giftReceipts||[]),newReceipts=missing.filter(member=>!receipts.has(member.grantId));
+      if(receipts.size+newReceipts.length>GIFT_LIMIT)return {...fail('受け取り記録が上限に達しました。'),pending:true};
+      const additions=missing.map(member=>{
+        // Growth has no hidden history: Lv.100 supplies 198 ordinary points,
+        // and 99 level increases with trainband supply 99 additional points.
+        // Leave all 297 points available so the owner can choose the build.
+        const mon=this.makeMonster(member.species,100);
+        Object.assign(mon,{grantId:member.grantId,gender:member.gender,heldItem:'trainband',bonusPoints:99});
+        return mon;
+      });
+      this.state.storage.push(...additions);
+      for(const mon of additions){receipts.add(mon.grantId);this.markCaught(mon.species);}
+      if(additions.some(mon=>D.glitchLine?.ids.includes(mon.species)))this.state.flags.nullLineClaimed=true;
+      this.state.giftReceipts=[...receipts];
+      const restored=missing.filter(member=>member.received).length;
+      return {ok:true,added:additions.length,restored,remainingMissing:status.missingCount-additions.length,grantIds:additions.map(mon=>mon.grantId),destination:'storage',message:`Lv.100の育成済みメンバー${additions.length}体をひかえに${restored?'復元':'追加'}しました。各個体に振り分けポイント297があります。`};
     }
     receiveKasaiReward(receipt){
       const id=receipt?.grantId??receipt?.id;
@@ -4508,7 +4566,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       }
       if(!Object.hasOwn(directions,raw.facing))error('向きの情報が正しくありません。');
       if(!Array.isArray(raw.party) || raw.party.length<1 || raw.party.length>MAX_PARTY || !Array.isArray(raw.storage) || raw.storage.length>LEGACY_STORAGE_LIMIT)error('仲間の人数が正しくありません。');
-      const ids=new Set();
+      const ids=new Set(),reserveIds=new Set();
       const validateMonster=input=>{
         const mon=this.migrateRetired(input);
         if(!mon || typeof mon!=='object' || !Object.hasOwn(D.species,mon.species) || typeof mon.uid!=='string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(mon.uid) || ids.has(mon.uid))error('モンスターの情報が正しくありません。');
@@ -4528,7 +4586,10 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         if(D.species[mon.species].adminOnly&&mon.grantId===undefined)error('運営専用パチモンの受け取り情報がありません。');
         if(mon.grantId!==undefined){
           if(typeof mon.grantId!=='string'||!GIFT_ID.test(mon.grantId))error('受け取りIDが正しくありません。');
-          if(mon.species!=='futo'&&!(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))&&!(mon.species===D.mythical.species&&/^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))&&!isKasaiReward(mon))error('初期メンバーの情報が正しくありません。');
+          const reserve=adminReserveMember(mon);
+          if(mon.grantId.startsWith(ADMIN_RESERVE_PREFIX+':')&&(!reserve||mon.level!==100||mon.bonusPoints!==99||mon.gender!==reserve.gender||reserveIds.has(mon.grantId)))error('運営の育成済みメンバー情報が正しくありません。');
+          if(reserve)reserveIds.add(mon.grantId);
+          if(mon.species!=='futo'&&!(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))&&!(mon.species===D.mythical.species&&/^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))&&!isKasaiReward(mon)&&!reserve)error('初期メンバーの情報が正しくありません。');
           special.grantId=mon.grantId;
           if(mon.species===D.legendary.species&&/^admin-legendary:[a-zA-Z0-9_.:-]+$/.test(mon.grantId))special.shiny=true;
         }
@@ -4552,7 +4613,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         }
         if(mon.heldItem!==undefined){if(typeof mon.heldItem!=='string'||!HELD[mon.heldItem])error('持ち物の情報が正しくありません。');special.heldItem=mon.heldItem;}
         if(isKasaiReward(mon)&&!['male','female'].includes(mon.gender))error('カサイの報酬の性別情報が正しくありません。');
-        if((mon.gender==='male'||mon.gender==='female')&&(!(D.genderless||[]).includes(mon.species)||isKasaiReward(mon)))special.gender=mon.gender;
+        if((mon.gender==='male'||mon.gender==='female')&&(!(D.genderless||[]).includes(mon.species)||isKasaiReward(mon)||adminReserveMember(mon)))special.gender=mon.gender;
         if(Number.isSafeInteger(mon.bonusPoints)&&mon.bonusPoints>0&&mon.bonusPoints<=999)special.bonusPoints=mon.bonusPoints;
         if(mon.alloc&&typeof mon.alloc==='object'&&!Array.isArray(mon.alloc)&&mon.customStats===undefined){
           const alloc={};let sum=0,valid=true;
@@ -4656,6 +4717,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   LT.PlayerIdentity=Object.freeze({normalizeName:normalizePlayerName,countName:countNickname,onlineName:playerOnlineName,defaultName:DEFAULT_PLAYER_NAME,maxLength:MAX_PLAYER_NAME});
   LT.displayName=displayName;
   LT.genderOf=genderOf;
+  LT.AdminReserveRules=Object.freeze({normalizeBundle:normalizeAdminReserveBundle,member:adminReserveMember,isMember:mon=>!!adminReserveMember(mon)});
   LT.ConditionRules=Object.freeze({statuses:STATUS,byElement:STATUS_BY_ELEMENT,held:HELD,allocation:ALLOC,isImmune:isConditionImmune,clearImmune:clearImmuneCondition,list:conditionList,volatile:D.volatileConditions||{}});
   LT.normalizeFutoMoves=futoMoves;
   LT.BattleStages=BattleStages;
@@ -6985,6 +7047,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         if((latest?.giftReceipts||[]).some(id=>id.startsWith('kasai-reward:')&&!observedKasaiReceipts.has(id))){
           reloadTradeSave('別のタブでカサイの勝利報酬を受け取りました。最新の冒険記録を開き直します。');return true;
         }
+        // Restoring a received operator member reuses its grant ID but creates
+        // a new individual. Compare both identifiers against this tab's last
+        // saved state so a sleeping tab cannot erase a delivery or restoration.
+        const knownReserve=new Set([...(storedSave?.party||[]),...(storedSave?.storage||[])].filter(mon=>String(mon.grantId||'').startsWith('admin-trained-v64:')).map(mon=>mon.grantId+'|'+mon.uid));
+        if([...(latest?.party||[]),...(latest?.storage||[])].some(mon=>String(mon.grantId||'').startsWith('admin-trained-v64:')&&!knownReserve.has(mon.grantId+'|'+mon.uid))){
+          reloadTradeSave('別のタブで育成済みメンバーを受け取り・復元しました。最新の冒険記録を開き直します。');return true;
+        }
         if(receipts.some(id=>!observedTradeReceipts.has(id))){
           reloadTradeSave('別のタブで交換が完了しました。最新の冒険記録を開き直します。');return true;
         }
@@ -7753,14 +7822,14 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function confirmRelease(index, source='storage') {
     if (!['party','storage'].includes(source)) return;
     const mon=engine.state[source][index]; if(!mon || engine.battle || !playing)return;
-    const uid=mon.uid, expectedEngine=engine;
+    const uid=mon.uid, expectedEngine=engine,trained=LT.AdminReserveRules?.isMember(mon)===true;
     const returnToSource=()=>{
       if(source==='party'){
         const current=engine.state.party.findIndex(other=>other.uid===uid);
         showParty(current<0?Math.min(index,engine.state.party.length-1):current);
       } else showStorage(-2);
     };
-    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から永久に外します。一度逃がすと元には戻せません。${DATA.species[mon.species].hiddenDex?(DATA.offDexLines?.ids.includes(mon.species)?'出会いの記録は残ります。再び仲間にするには、運営専用の幻の草むらで出会う必要があります。':'受け取りの記録は残り、同じ裏技から再入手できません。'):'図鑑の発見・捕獲済みの記録は残ります。'}</p>${mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
+    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から外します。${trained?'現在のニックネーム・ポイント配分・持ち物などの変更は、復元した個体には引き継がれません。':`一度逃がすと元には戻せません。${DATA.species[mon.species].hiddenDex?(DATA.offDexLines?.ids.includes(mon.species)?'出会いの記録は残ります。再び仲間にするには、運営専用の幻の草むらで出会う必要があります。':'受け取りの記録は残り、同じ裏技から再入手できません。'):'図鑑の発見・捕獲済みの記録は残ります。'}`}</p>${trained?'<p>同じ役職の運営登録中なら、運営管理の「Lv.100の運営メンバー」からLv.100・振り分け前297ポイントの状態で復元できます。</p>':mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
     $('release-cancel').onclick=returnToSource;
     const button=$('release-confirm');
     button.onclick=()=>{
@@ -8406,12 +8475,25 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // has safely written the local save. A full party/storage keeps the gift in
   // the server inbox; no receipt is consumed before space is available.
   function persistGiftMutation(method,...args){
+    if(method==='receiveAdminReserveTeam'){
+      const owner=LT.Admin?.player,bundle=args[0];
+      if(owner?.isAdmin!==true||!owner.adminRole||bundle?.playerId!==owner.id||bundle?.role!==owner.adminRole)return {ok:false,message:'現在の運営権限を確認できません。'};
+      if(LT.onlineActive||LT.localTradeActive||LT.KasaiLive?.isActive?.())return {ok:false,pending:true,message:'通信対戦や交換が終わると育成済みメンバーを受け取れます。'};
+    }
     if(tradeLocked())return {ok:false,pending:true,message:'交換が終わるとお届けものを受け取れます。'};
     if(busy||engine.battle&&playing)return {ok:false,pending:true,message:'バトルや会話の処理が終わると受け取れます。'};
     const source=playing?engine.state:storedSave;
     if(!source)return {ok:false,pending:true,message:'冒険を始めると受け取れます。'};
     try{
-      if(method==='receiveKasaiReward'&&localStorage.getItem(SAVE_KEY)!==JSON.stringify(storedSave))return {ok:false,pending:true,message:'別のタブで冒険記録が更新されています。このページを再読み込みしてから、カサイに話しかけて報酬を確認してください。'};
+      if(method==='receiveAdminReserveTeam'){
+        // Older saves are normalized on load. Compare their game state rather
+        // than JSON key order so a normal migration does not look like another
+        // tab's edit; real progress and inventory changes still stop this write.
+        const raw=localStorage.getItem(SAVE_KEY);
+        let sameSave=false;
+        try{sameSave=typeof raw==='string'&&JSON.stringify(new Engine(JSON.parse(raw)).serialize())===JSON.stringify(new Engine(storedSave).serialize());}catch(_){}
+        if(!sameSave)return {ok:false,pending:true,message:'別のタブで冒険記録が更新されています。このページを再読み込みしてから、運営管理で育成済みメンバーを確認してください。'};
+      }else if(method==='receiveKasaiReward'&&localStorage.getItem(SAVE_KEY)!==JSON.stringify(storedSave))return {ok:false,pending:true,message:'別のタブで冒険記録が更新されています。このページを再読み込みしてから、カサイに話しかけて報酬を確認してください。'};
       const candidate=new Engine(JSON.parse(JSON.stringify(source)));
       const result=candidate[method](...args);
       if(!result.ok)return result;
@@ -8427,13 +8509,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       // Write the new save first. If storage fails, both the in-memory state and
       // server receipt remain untouched and a later retry is safe.
       localStorage.setItem(SAVE_KEY,serialized);
-      if(method==='receiveKasaiReward')rememberTradeSave(data);
+      if(['receiveKasaiReward','receiveAdminReserveTeam'].includes(method))rememberTradeSave(data);
       storedSave=data;
       if(playing)engine.state=candidate.state;
       lastSave=performance.now();
       if(playing)updateAll();else loadStored();
       document.dispatchEvent(new CustomEvent('pachi-party-changed'));
-      document.dispatchEvent(new CustomEvent('pachi-gift-received',{detail:{grantId:result.grantId}}));
+      document.dispatchEvent(new CustomEvent('pachi-gift-received',{detail:{grantId:result.grantId,...(result.grantIds?{grantIds:result.grantIds}: {})}}));
       return result;
     }catch(error){return {ok:false,pending:true,message:error?.message||'端末に保存できません。空き容量を確認して再度お試しください。'};}
   }
@@ -8542,6 +8624,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     grantFuto:grant=>persistGiftMutation('grantFuto',grant),
     receiveAdminLegendary:companion=>persistGiftMutation('receiveAdminLegendary',companion),
     receiveAdminMythical:companion=>persistGiftMutation('receiveAdminMythical',companion),
+    receiveAdminReserveTeam:(bundle,options)=>persistGiftMutation('receiveAdminReserveTeam',bundle,options),
+    adminReserveTeamStatus:bundle=>{
+      const owner=LT.Admin?.player;
+      if(owner?.isAdmin!==true||!owner.adminRole||bundle?.playerId!==owner.id||bundle?.role!==owner.adminRole)return {ok:false,message:'現在の運営権限を確認できません。'};
+      try{return (playing?engine:storedSave?new Engine(storedSave):new Engine()).adminReserveTeamStatus(bundle);}
+      catch(error){return {ok:false,message:error?.message||'冒険の記録を確認できません。'};}
+    },
     updateOwnedFuto:(grantId,config)=>persistGiftMutation('updateOwnedFuto',grantId,config),
     refresh:()=>{if(playing)updateAll();else loadStored();},
     saveNow:()=>playing?save():false,
@@ -9921,7 +10010,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     const allowed=new Set(LT.OnlineFuto?.rosterIds?.(ids)||ids.filter(id=>id!==D.legendary?.species));
     const futo=LT.OnlineFuto?.owned?.()?.uid,myth=LT.OnlineFuto?.ownedMythical?.()?.uid,state=LT.adminBridge?.getEngine?.()?.state;
     const list=[...(state?.party||[]).map(mon=>({mon,where:'手持ち'})),...(state?.storage||[]).map(mon=>({mon,where:'ひかえ'}))];
-    return list.filter(({mon})=>D.species[mon.species]&&allowed.has(mon.species)&&(mon.species!=='futo'||mon.uid===futo)&&(mon.species!=='floravelle'||mon.uid===myth));
+    return list.filter(({mon})=>D.species[mon.species]&&allowed.has(mon.species)&&(mon.species!=='futo'||mon.uid===futo)&&(mon.species!=='floravelle'||(LT.OnlineFuto?.isMythicalMember?.(mon)??mon.uid===myth)));
   }
   const memberLabel=mon=>`${mon.shiny?'✦ ':''}${mon.nickname?`${mon.nickname}（${label(mon.species)}）`:label(mon.species)}`;
   function defaultItem(mon,slot,count){
@@ -10220,13 +10309,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
 <script src="battle-vfx.js?v=20261119-fine-pixels-v52"></script>
-<script src="admin-console.js?v=20261119-sub-admin-v62"></script>
+<script src="admin-console.js?v=20261120-admin-trained-v64"></script>
 <script src="secret-rooms.js?v=20261119-sub-admin-v62"></script>
 <script src="kasai-challenge.js?v=20261119-kasai-live-v58"></script>
 <script src="kasai-party.js?v=20261119-sub-admin-v62"></script>
 <script src="kasai-live-model.js?v=20261119-kasai-live-v58"></script>
 <script src="kasai-live.js?v=20261119-sub-admin-v62"></script>
-<script src="online-futo.js?v=20261119-kasai-reward-v56"></script>
+<script src="online-futo.js?v=20261120-admin-trained-v64"></script>
 <script src="secret-encounter.js?v=20261119-all-species-v55"></script>
 <script src="field-world.js?v=20261119-sub-admin-v62"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
