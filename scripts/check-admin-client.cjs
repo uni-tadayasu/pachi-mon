@@ -11,6 +11,7 @@ const PLAYER_B={id:'P'+'b'.repeat(16),name:'B',isAdmin:false};
 const CONFIG={level:100,stats:{hp:500,atk:150,def:150,spAtk:180,spDef:150,speed:160,accuracy:110,evasion:100},moves:['supernova','atlas_crystal_4','starlight','shell']};
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const response=data=>({ok:true,status:200,json:async()=>({ok:true,...data})});
+const apiError=(status,code,message=code)=>({ok:false,status,json:async()=>({ok:false,error:{code,message}})});
 async function until(check){for(let i=0;i<100;i++){if(check())return;await Promise.resolve();}assert.fail('Expected asynchronous step was not reached');}
 function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}){
   const calls=[],applied=[],updated=[],initial=[],toasts=[],listeners={},emitted=[],clock={now:1_000_000};
@@ -18,7 +19,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,loadAdminDevices,renderAdminDevices,prepareDeviceGrant,prepareDeviceRevoke,confirmDeviceChange,get adminDevices(){return adminDevices;},get deviceReview(){return deviceReview;},get deviceBusy(){return deviceBusy;},attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -36,7 +37,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
       receiveAdminMythical:g=>{initial.push(g);return{ok:true,alreadyReceived:true};},
       updateOwnedFuto:(id,g)=>{updated.push(g);return{ok:true};},...bridge}},
     fetch:async(url,options)=>{
-      const call={path:new URL(url).pathname.replace('/api',''),search:new URL(url).search,token:options.headers.Authorization?.replace('Bearer ',''),body:options.body?JSON.parse(options.body):undefined};calls.push(call);
+      const call={path:new URL(url).pathname.replace('/api',''),search:new URL(url).search,method:options.method,token:options.headers.Authorization?.replace('Bearer ',''),body:options.body?JSON.parse(options.body):undefined};calls.push(call);
       const result=handle(call);if(result)return await result;
       if(call.path==='/status')return response({adminExists:false});
       if(call.path==='/register')return response({player:call.body.token===TOKEN_B?PLAYER_B:PLAYER_A,adminExists:true});
@@ -471,4 +472,276 @@ test('owner decoration button closes management before opening the room editor',
   const click=()=>h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:'decorate-room'},disabled:false,isConnected:true})}});
   await click();assert.equal(decorations,0);assert.equal(view.dialog.open,true);
   playing=true;await click();assert.equal(decorations,1);assert.equal(view.dialog.closed,1);
+});
+
+const MAIN_DEVICE={playerId:PLAYER_A.id,name:'メインの旅人',role:'main',claimedAt:1234};
+const SUB_DEVICE={playerId:PLAYER_B.id,name:'サブの旅人',role:'sub',claimedAt:2345};
+const PLAYER_C={id:'P'+'c'.repeat(16),name:'第三の旅人',isAdmin:false},TOKEN_C='C'.repeat(43);
+const SUB_SUB_DEVICE={playerId:PLAYER_C.id,name:PLAYER_C.name,role:'sub-sub',claimedAt:3456};
+const deviceData=(devices=[MAIN_DEVICE],canManageDevices=true)=>({devices,capacity:3,canManageDevices});
+function attachDeviceConsole(h){
+  const role={value:'',disabled:false},box={html:'',get innerHTML(){return this.html;},set innerHTML(html){this.html=html;role.value=(html.match(/<option value="(sub|sub-sub)" selected>/)||html.match(/<option value="(sub|sub-sub)"/))?.[1]||'';}},releaseBox={hidden:true,innerHTML:''},input={value:'',disabled:false};
+  const cancel={disabled:false,focused:false,focus(){this.focused=true;}},confirm={disabled:false},existing={disabled:true};
+  const dialog={open:true,closed:0,
+    querySelector(selector){
+      if(selector==='#pachi-admin-devices')return box;
+      if(selector==='#pachi-release-review')return releaseBox;
+      if(selector==='#pachi-device-player-id')return box.innerHTML.includes('id="pachi-device-player-id"')?input:null;
+      if(selector==='#pachi-device-role')return box.innerHTML.includes('id="pachi-device-role"')?role:null;
+      if(selector==='[data-admin-action="device-cancel"]'||selector==='[data-admin-action="release-cancel"]')return cancel;
+      if(selector==='.pachi-status')return h.statusLine;
+      return null;
+    },querySelectorAll:()=>[input,role,cancel,confirm,existing],close(){this.open=false;this.closed++;}};
+  h.api.attachConsole(dialog,{playerId:h.ctx.LT.Admin.player?.id,claimedAt:1234});
+  const click=(action,extra={})=>h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:action,...extra},disabled:false,isConnected:true})}});
+  return{box,releaseBox,input,role,cancel,confirm,existing,dialog,click};
+}
+
+test('device registration lives only in the main console and disappears at capacity',async()=>{
+  let devices=[MAIN_DEVICE];
+  const h=harness({settings:true,handle:c=>c.path==='/admin/devices'?response(deviceData(devices)):null});
+  adopt(h);h.api.refreshSettings();const view=attachDeviceConsole(h);await h.api.loadAdminDevices();
+  assert(!h.serviceBody.innerHTML.includes('pachi-device-player-id'));assert(!h.serviceBody.innerHTML.includes('device-add-review'));
+  assert(view.box.innerHTML.includes('id="pachi-device-player-id"'));assert(view.box.innerHTML.includes('登録済み 1 / 3台'));
+  assert(view.box.innerHTML.includes('<option value="sub"'));assert(view.box.innerHTML.includes('<option value="sub-sub"'));
+  devices=[MAIN_DEVICE,SUB_DEVICE];await h.api.loadAdminDevices();
+  assert(view.box.innerHTML.includes('id="pachi-device-player-id"'));assert(!view.box.innerHTML.includes('<option value="sub"'));assert(view.box.innerHTML.includes('<option value="sub-sub"'));assert.equal(view.role.value,'sub-sub');
+  devices=[MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE];await h.api.loadAdminDevices();
+  assert(!view.box.innerHTML.includes('id="pachi-device-player-id"'));assert(!view.box.innerHTML.includes('device-add-review'));
+  assert(!view.box.innerHTML.includes('id="pachi-device-role"'));assert(view.box.innerHTML.includes('登録済み 3 / 3台'));
+  for(const device of devices)assert(view.box.innerHTML.includes(device.playerId));
+  for(const name of ['カサイ','サカイ','イサカ'])assert(view.box.innerHTML.includes(`<strong>${name}</strong>`));
+  assert(view.box.innerHTML.includes('data-device-id="'+SUB_DEVICE.playerId+'"'));assert(view.box.innerHTML.includes('device-revoke-review'));
+  assert(view.box.innerHTML.includes('サブ運営の解除を確認'));assert(view.box.innerHTML.includes('サブサブ運営の解除を確認'));
+  assert(view.existing.disabled,'Already disabled controls stay disabled after a roster fetch');
+});
+
+test('both deputies can read all devices and self-release but cannot grant or revoke others',async()=>{
+ for(const [token,current,device] of [[TOKEN_B,PLAYER_B,SUB_DEVICE],[TOKEN_C,PLAYER_C,SUB_SUB_DEVICE]]){
+  const h=harness({settings:true,handle:c=>c.path==='/admin/devices'?response(deviceData([MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE],false)):null});
+  adopt(h,token,{...current,isAdmin:true});h.api.refreshSettings();const view=attachDeviceConsole(h);await h.api.loadAdminDevices();
+  for(const row of [MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE])assert(view.box.innerHTML.includes(row.playerId));
+  assert(!view.box.innerHTML.includes('device-revoke-review'));assert(!view.box.innerHTML.includes('device-add-review'));assert(!view.box.innerHTML.includes('pachi-device-player-id'));
+  assert(h.serviceBody.innerHTML.includes('data-admin-action="console"'),'Sub retains the existing operational console');
+  const count=h.calls.length;await assert.rejects(h.api.prepareDeviceGrant(),/メイン運営/);await assert.rejects(h.api.prepareDeviceRevoke(MAIN_DEVICE.playerId),/メイン運営/);
+  assert.equal(h.calls.length,count);h.api.prepareRelease();assert.equal(h.api.releaseReview.registration.playerId,current.id);assert.equal(h.api.releaseReview.registration.claimedAt,device.claimedAt);
+ }
+});
+
+test('either promoted deputy immediately refreshes its operator name, controls and self-release registration',async()=>{
+ for(const [token,current,device] of [[TOKEN_B,PLAYER_B,SUB_DEVICE],[TOKEN_C,PLAYER_C,SUB_SUB_DEVICE]]){
+  let promoted=false;
+  const h=harness({settings:true,handle:c=>c.path==='/admin/devices'?response(promoted?deviceData([{...device,role:'main',claimedAt:4567}]):deviceData([MAIN_DEVICE,device],false)):null});
+  adopt(h,token,{...current,isAdmin:true,adminRole:device.role});const view=attachDeviceConsole(h);
+  const title={textContent:''},heading={textContent:''},decorate={textContent:''},query=view.dialog.querySelector;
+  view.dialog.querySelector=selector=>selector==='#pachi-console-title'?title:selector==='.pachi-owner-identity h3'?heading:selector==='[data-admin-action="decorate-room"]'?decorate:query(selector);
+  h.api.refreshSettings();await h.api.loadAdminDevices();
+  assert.equal(h.ctx.LT.Admin.player.adminRole,device.role);assert(!view.box.innerHTML.includes('device-add-review'));
+  const expectedName=device.role==='sub'?'サカイ':'イサカ';assert.equal(title.textContent,expectedName+'の運営管理');assert.equal(heading.textContent,expectedName);assert.equal(decorate.textContent,expectedName+'の部屋を飾る');assert(h.serviceBody.innerHTML.includes(expectedName+'の運営管理'));
+  promoted=true;await h.api.loadAdminDevices();assert.equal(h.ctx.LT.Admin.player.adminRole,'main');assert(view.box.innerHTML.includes('device-add-review'));
+  assert.equal(title.textContent,'カサイの運営管理');assert.equal(heading.textContent,'謎のトレーナー カサイ');assert.equal(decorate.textContent,'カサイの部屋を飾る');assert(h.serviceBody.innerHTML.includes('カサイの運営管理'));assert.equal(h.ctx.LT.Admin.player.name,current.name);
+  h.api.prepareRelease();assert.equal(h.api.releaseReview.registration.claimedAt,4567);
+ }
+});
+
+test('ordinary players see no device UI and cannot make device requests',async()=>{
+  const h=harness({settings:true});adopt(h,TOKEN_B,PLAYER_B);h.api.refreshSettings();const view=attachDeviceConsole(h);
+  h.api.renderAdminDevices();assert.equal(view.box.innerHTML,'');
+  assert(!h.serviceBody.innerHTML.includes('device-add-review'));assert(!h.serviceBody.innerHTML.includes('data-admin-action="console"'));
+  await assert.rejects(h.api.loadAdminDevices(),/運営端末/);assert.equal(h.calls.length,0);
+});
+
+test('device lookup reviews the exact escaped profile and cancellation sends no mutation',async()=>{
+  const target={playerId:PLAYER_B.id,name:'<img src=x onerror=alert(1)>',isAdmin:false};
+  const h=harness({handle:c=>c.path==='/admin/devices'?response({...deviceData(),...(c.search?{candidate:target}:{})}):null});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;await h.api.prepareDeviceGrant();
+  assert.equal(h.calls.at(-1).method,'GET');assert.equal(h.calls.at(-1).search,'?playerId='+PLAYER_B.id);
+  assert.equal(h.api.deviceReview.target.playerId,PLAYER_B.id);assert.equal(h.api.deviceReview.target.name,target.name);
+  assert(view.box.innerHTML.includes('&lt;img'));assert(!view.box.innerHTML.includes('<img src=x'));
+  assert(view.box.innerHTML.includes('同じ運営機能'));assert(view.box.innerHTML.includes('メイン運営だけ'));assert(view.cancel.focused);
+  assert(!view.box.innerHTML.includes(TOKEN_A));assert(!view.box.innerHTML.includes(TOKEN_B));
+  await view.click('device-cancel');assert.equal(h.api.deviceReview,null);assert(h.calls.every(c=>c.method==='GET'));assert(view.box.innerHTML.includes('id="pachi-device-player-id"'));
+});
+
+test('confirmed sub registration sends its role once and leaves only the third seat available',async()=>{
+  const posted=deferred();
+  const h=harness({handle:c=>c.path==='/admin/devices'?(c.method==='POST'?posted.promise:response({...deviceData(),...(c.search?{candidate:{playerId:PLAYER_B.id,name:PLAYER_B.name,isAdmin:false}}:{})})):null});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;await h.api.prepareDeviceGrant();
+  const first=h.api.confirmDeviceChange();await until(()=>h.calls.some(c=>c.method==='POST'));
+  assert.equal(h.api.deviceBusy,true);assert(view.cancel.disabled);assert.equal(await h.api.confirmDeviceChange(),null);
+  assert.deepEqual(h.calls.filter(c=>c.method==='POST').map(c=>({path:c.path,body:c.body})),[{path:'/admin/devices',body:{playerId:PLAYER_B.id,role:'sub',confirmed:true}}]);
+  posted.resolve(response({...deviceData([MAIN_DEVICE,SUB_DEVICE]),added:true}));await first;
+  assert.equal(h.api.deviceBusy,false);assert.equal(h.api.deviceReview,null);assert(view.box.innerHTML.includes('pachi-device-player-id'));
+  assert(view.box.innerHTML.includes('登録済み 2 / 3台'));assert.equal(view.role.value,'sub-sub');assert(!view.box.innerHTML.includes('<option value="sub"'));assert(h.statusLine.textContent.includes('お届けものを確認'));
+});
+
+test('the third role is reviewed explicitly and the confirmed request preserves the chosen vacant seat',async()=>{
+ for(const initial of [[MAIN_DEVICE],[MAIN_DEVICE,SUB_DEVICE]]){
+  let devices=initial;
+  const h=harness({handle:c=>{
+    if(c.path!=='/admin/devices')return null;
+    if(c.method==='POST'){devices=[...initial,SUB_SUB_DEVICE];return response({...deviceData(devices),added:true});}
+    return response({...deviceData(devices),...(c.search?{candidate:{playerId:PLAYER_C.id,name:PLAYER_C.name,isAdmin:false}}:{})});
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_C.id;view.role.value='sub-sub';await h.api.prepareDeviceGrant();
+  assert.equal(h.api.deviceReview.target.role,'sub-sub');assert(view.box.innerHTML.includes('役割：サブサブ運営'));assert(view.box.innerHTML.includes('この端末をサブサブ運営に登録する'));
+  await view.click('device-cancel');assert.equal(view.role.value,'sub-sub');assert(h.calls.every(c=>c.method==='GET'));
+  view.input.value=PLAYER_C.id;await h.api.prepareDeviceGrant();await h.api.confirmDeviceChange();
+  assert.deepEqual(h.calls.filter(c=>c.method==='POST').map(c=>c.body),[{playerId:PLAYER_C.id,role:'sub-sub',confirmed:true}]);
+  if(initial.length===1){assert(view.box.innerHTML.includes('pachi-device-player-id'));assert.equal(view.role.value,'sub');assert(!view.box.innerHTML.includes('<option value="sub-sub"'));}
+  else{assert(view.box.innerHTML.includes('登録済み 3 / 3台'));assert(!view.box.innerHTML.includes('id="pachi-device-player-id"'));assert(!view.box.innerHTML.includes('id="pachi-device-role"'));}
+ }
+});
+
+test('a role occupied during lookup prevents review and does not silently select another role for the same player',async()=>{
+  const h=harness({handle:c=>c.path==='/admin/devices'?response({...deviceData(c.search?[MAIN_DEVICE,SUB_DEVICE]:[MAIN_DEVICE]),...(c.search?{candidate:{playerId:PLAYER_C.id,name:PLAYER_C.name,isAdmin:false}}:{})}):null});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_C.id;
+  for(const role of ['main','invalid','']){view.role.value=role;await assert.rejects(h.api.prepareDeviceGrant(),/役割/);}
+  assert.equal(h.calls.length,1,'Invalid selected roles are rejected before looking up a player');
+  view.role.value='sub';await assert.rejects(h.api.prepareDeviceGrant(),/サブ運営はすでに登録/);
+  assert.equal(h.api.deviceReview,null);assert.equal(view.role.value,'sub-sub');assert(h.calls.every(c=>c.method==='GET'));
+});
+
+test('role conflicts refresh available seats without resending or changing the reviewed appointment',async()=>{
+ for(const code of ['ADMIN_ROLE_OCCUPIED','ADMIN_ROLE_CHANGED']){
+  let changed=false;
+  const h=harness({handle:c=>{
+    if(c.path!=='/admin/devices')return null;
+    if(c.method==='POST'){changed=true;return apiError(409,code);}
+    const devices=changed?code==='ADMIN_ROLE_OCCUPIED'?[MAIN_DEVICE,SUB_DEVICE]:[MAIN_DEVICE,SUB_SUB_DEVICE]:[MAIN_DEVICE];
+    return response({...deviceData(devices),...(c.search?{candidate:{playerId:PLAYER_C.id,name:PLAYER_C.name,isAdmin:false}}:{})});
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_C.id;await h.api.prepareDeviceGrant();
+  await assert.rejects(h.api.confirmDeviceChange(),err=>err.code===code);assert.equal(h.api.deviceReview,null);
+  assert.equal(await h.api.confirmDeviceChange(),null);assert.deepEqual(h.calls.filter(c=>c.method==='POST').map(c=>c.body),[{playerId:PLAYER_C.id,role:'sub',confirmed:true}]);
+  assert.equal(view.role.value,code==='ADMIN_ROLE_OCCUPIED'?'sub-sub':'sub');
+ }
+});
+
+test('revocation reviews the latest registration and submits its exact claimedAt once',async()=>{
+  let removed=false;const latestSub={...SUB_DEVICE,claimedAt:3456};
+  const h=harness({handle:c=>{
+    if(c.path==='/admin/devices/revoke'){removed=true;return response({...deviceData(),revoked:true});}
+    if(c.path==='/admin/devices')return response(deviceData(removed?[MAIN_DEVICE]:[MAIN_DEVICE,latestSub]));
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();await h.api.prepareDeviceRevoke(PLAYER_B.id);
+  assert.equal(h.api.deviceReview.target.claimedAt,latestSub.claimedAt);assert(view.box.innerHTML.includes(new Date(latestSub.claimedAt).toISOString()));assert(view.cancel.focused);
+  await view.click('device-cancel');assert(!h.calls.some(c=>c.method==='POST'));
+  await h.api.prepareDeviceRevoke(PLAYER_B.id);await h.api.confirmDeviceChange();
+  assert.deepEqual(h.calls.filter(c=>c.method==='POST').map(c=>c.body),[{playerId:PLAYER_B.id,confirmed:true,claimedAt:latestSub.claimedAt}]);
+  assert(view.box.innerHTML.includes('id="pachi-device-player-id"'));assert(!view.box.innerHTML.includes(SUB_DEVICE.playerId));
+  await assert.rejects(h.api.prepareDeviceRevoke(PLAYER_A.id),/この端末の運営登録/);
+});
+
+test('main can review and dismiss the third role from a full roster while preserving the other deputy',async()=>{
+  let removed=false;
+  const h=harness({handle:c=>{
+    if(c.path==='/admin/devices/revoke'){removed=true;return response({...deviceData([MAIN_DEVICE,SUB_DEVICE]),revoked:true});}
+    if(c.path==='/admin/devices')return response(deviceData(removed?[MAIN_DEVICE,SUB_DEVICE]:[MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE]));
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();await h.api.prepareDeviceRevoke(PLAYER_C.id);
+  assert(view.box.innerHTML.includes('役割：サブサブ運営'));assert(view.box.innerHTML.includes('この端末のサブサブ運営登録を解除する'));
+  assert.equal(h.api.deviceReview.target.claimedAt,SUB_SUB_DEVICE.claimedAt);await h.api.confirmDeviceChange();
+  assert.deepEqual(h.calls.filter(c=>c.method==='POST').map(c=>c.body),[{playerId:PLAYER_C.id,confirmed:true,claimedAt:SUB_SUB_DEVICE.claimedAt}]);
+  assert(view.box.innerHTML.includes(SUB_DEVICE.playerId));assert(!view.box.innerHTML.includes(SUB_SUB_DEVICE.playerId));assert.equal(view.role.value,'sub-sub');
+});
+
+test('a filled capacity race refreshes the roster without retrying the mutation',async()=>{
+  let full=false;
+  const h=harness({handle:c=>{
+    if(c.path!=='/admin/devices')return null;
+    if(c.method==='POST'){full=true;return apiError(409,'ADMIN_CAPACITY_REACHED');}
+    return response({...deviceData(full?[MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE]:[MAIN_DEVICE]),...(c.search?{candidate:{playerId:PLAYER_B.id,name:PLAYER_B.name,isAdmin:false}}:{})});
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;await h.api.prepareDeviceGrant();
+  await assert.rejects(h.api.confirmDeviceChange(),err=>err.code==='ADMIN_CAPACITY_REACHED');
+  assert.equal(h.calls.filter(c=>c.method==='POST').length,1);assert.equal(h.api.deviceReview,null);assert(!view.box.innerHTML.includes('pachi-device-player-id'));assert(view.box.innerHTML.includes(SUB_DEVICE.playerId));
+});
+
+test('a changed target registration requires a new review before another revocation',async()=>{
+  let changed=false;
+  const h=harness({handle:c=>{
+    if(c.path==='/admin/devices/revoke'){changed=true;return apiError(409,'ADMIN_REGISTRATION_CHANGED');}
+    if(c.path==='/admin/devices')return response(deviceData([MAIN_DEVICE,{...SUB_DEVICE,claimedAt:changed?9999:SUB_DEVICE.claimedAt}]));
+  }});
+  adopt(h);attachDeviceConsole(h);await h.api.loadAdminDevices();await h.api.prepareDeviceRevoke(PLAYER_B.id);
+  await assert.rejects(h.api.confirmDeviceChange(),err=>err.code==='ADMIN_REGISTRATION_CHANGED');
+  assert.equal(h.api.deviceReview,null);assert.equal(await h.api.confirmDeviceChange(),null);assert.equal(h.calls.filter(c=>c.method==='POST').length,1);
+  await h.api.prepareDeviceRevoke(PLAYER_B.id);assert.equal(h.api.deviceReview.target.claimedAt,9999);
+});
+
+test('identity changes discard delayed candidate lookups and their confirmations',async()=>{
+  const lookup=deferred();
+  const h=harness({handle:c=>c.path==='/admin/devices'?(c.search?lookup.promise:response(deviceData())):null});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;const waiting=h.api.prepareDeviceGrant();await until(()=>h.calls.some(c=>c.search));
+  adopt(h,TOKEN_B,PLAYER_B);lookup.resolve(response({...deviceData(),candidate:{playerId:PLAYER_B.id,name:PLAYER_B.name,isAdmin:false}}));
+  await assert.rejects(waiting,err=>err.staleIdentity===true);assert.equal(h.api.deviceReview,null);assert.equal(h.api.adminDevices,null);assert.equal(h.ctx.LT.Admin.player.id,PLAYER_B.id);
+  assert.equal(await h.api.confirmDeviceChange(),null);assert(!h.calls.some(c=>c.method==='POST'));assert.equal(view.box.innerHTML,'');
+});
+
+test('identity changes after a device review prevent submitting it',async()=>{
+  const h=harness({handle:c=>c.path==='/admin/devices'?response({...deviceData(),candidate:{playerId:PLAYER_B.id,name:PLAYER_B.name,isAdmin:false}}):null});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;await h.api.prepareDeviceGrant();
+  adopt(h,TOKEN_B,PLAYER_B);await h.api.confirmDeviceChange();assert.equal(h.api.deviceReview,null);assert(!h.calls.some(c=>c.method==='POST'));
+});
+
+test('lost device mutation responses require a fresh roster instead of offering a stale form',async()=>{
+  let granted=false;
+  const h=harness({handle:c=>{
+    if(c.path!=='/admin/devices')return null;
+    if(c.method==='POST'){granted=true;return Promise.reject(new Error('Network response lost'));}
+    return response({...deviceData(granted?[MAIN_DEVICE,SUB_DEVICE]:[MAIN_DEVICE]),...(c.search?{candidate:{playerId:PLAYER_B.id,name:PLAYER_B.name,isAdmin:false}}:{})});
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();view.input.value=PLAYER_B.id;await h.api.prepareDeviceGrant();
+  await assert.rejects(h.api.confirmDeviceChange(),/Network response lost/);
+  assert.equal(h.api.deviceReview,null);assert.equal(h.api.adminDevices,null);assert(!view.box.innerHTML.includes('pachi-device-player-id'));assert(view.box.innerHTML.includes('devices-refresh'));
+  await h.api.loadAdminDevices();assert(view.box.innerHTML.includes('登録済み 2 / 3台'));assert.equal(view.role.value,'sub-sub');assert.equal(h.calls.filter(c=>c.method==='POST').length,1);
+});
+
+test('lost admin access closes management and keeps the public key hidden while another admin remains',async()=>{
+  let lost=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/devices')return response(deviceData([MAIN_DEVICE,SUB_DEVICE]));
+    if(c.path==='/admin/devices/revoke'){lost=true;return apiError(403,'ADMIN_REQUIRED');}
+    if(c.path==='/status')return response({adminExists:true});
+    if(c.path==='/me')return response({player:{...PLAYER_A,isAdmin:!lost},adminExists:true,grants:[],nextCursor:null});
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();
+  // The server may revoke the actor after a review and before the confirmed request.
+  await h.api.prepareDeviceRevoke(PLAYER_B.id);await assert.rejects(h.api.confirmDeviceChange(),err=>err.code==='ADMIN_REQUIRED');
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(view.dialog.open,false);assert.equal(h.api.adminDevices,null);assert.equal(view.box.innerHTML,'');
+  assert(!h.serviceBody.innerHTML.includes('data-admin-action="console"'));assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));
+});
+
+test('a main-only rejection refreshes capabilities without stripping ordinary sub permissions',async()=>{
+  let demoted=false;
+  const h=harness({handle:c=>{
+    if(c.path==='/admin/devices/revoke'){demoted=true;return apiError(403,'MAIN_ADMIN_REQUIRED');}
+    if(c.path==='/admin/devices')return response(deviceData(demoted?[{...MAIN_DEVICE,role:'sub'},{...SUB_DEVICE,role:'main'}]:[MAIN_DEVICE,SUB_DEVICE],!demoted));
+  }});
+  adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();await h.api.prepareDeviceRevoke(PLAYER_B.id);
+  await assert.rejects(h.api.confirmDeviceChange(),err=>err.code==='MAIN_ADMIN_REQUIRED');
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,true);assert.equal(view.dialog.open,true);assert.equal(h.api.deviceReview,null);
+  assert(!view.box.innerHTML.includes('device-revoke-review'));assert(!view.box.innerHTML.includes('device-add-review'));
+});
+
+test('main self-release review explains succession and sub release keeps the key private',async()=>{
+  let released=false;
+  const h=harness({settings:true,handle:c=>{
+    if(c.path==='/admin/devices')return response(deviceData([MAIN_DEVICE,SUB_DEVICE],c.token===TOKEN_A));
+    if(c.path==='/admin/release'){released=true;return response({released:true,player:{...PLAYER_B,isAdmin:false},adminExists:true});}
+    if(c.path==='/status')return response({adminExists:true});
+    if(c.path==='/me')return response({player:{...PLAYER_B,isAdmin:!released},adminExists:true,grants:[],nextCursor:null});
+  }});
+  adopt(h);const mainView=attachDeviceConsole(h);await h.api.loadAdminDevices();h.api.prepareRelease();
+  assert(mainView.releaseBox.innerHTML.includes('登録済みのサブ運営がメイン運営を引き継ぎます'));assert(mainView.releaseBox.innerHTML.includes('入力欄は表示されません'));
+  adopt(h,TOKEN_B,{...PLAYER_B,isAdmin:true});const subView=attachDeviceConsole(h);await h.api.loadAdminDevices();h.api.prepareRelease();await h.api.releaseAdmin();
+  assert.equal(subView.dialog.open,false);assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert(!h.serviceBody.innerHTML.includes('id="pachi-admin-key"'));assert(h.statusLine.textContent.includes('別の運営端末'));
+});
+
+test('main self-release reviews the actual successor in sub then sub-sub order',async()=>{
+ for(const [devices,label] of [[[MAIN_DEVICE,SUB_DEVICE,SUB_SUB_DEVICE],'サブ運営'],[[MAIN_DEVICE,SUB_SUB_DEVICE],'サブサブ運営']]){
+  const h=harness({handle:c=>c.path==='/admin/devices'?response(deviceData(devices)):null});adopt(h);const view=attachDeviceConsole(h);await h.api.loadAdminDevices();h.api.prepareRelease();
+  assert(view.releaseBox.innerHTML.includes(`登録済みの${label}がメイン運営を引き継ぎます`));assert(view.releaseBox.innerHTML.includes('入力欄は表示されません'));assert(h.calls.every(c=>c.method==='GET'));
+ }
 });

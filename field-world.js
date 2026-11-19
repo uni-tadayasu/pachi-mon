@@ -5,8 +5,18 @@
   const DIRECTIONS=new Set(['down','left','right','up']);
   const PLAYER_ID=/^P[0-9a-f]{16}$/;
   const KASAI='謎のトレーナー カサイ';
+  const operatorNames={main:KASAI,sub:'サカイ','sub-sub':'イサカ'};
   const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+  function worldProfile(person){
+    // Avatar text alone is never an operator credential. An absent role is the
+    // original server's main-only format; explicit invalid roles fail closed.
+    const role=person?.isAdmin===true?(person.adminRole==='sub'||person.adminRole==='sub-sub'?person.adminRole:person.adminRole==='main'||person.adminRole===undefined?'main':null):null;
+    return {name:role?operatorNames[role]:typeof person?.name==='string'&&person.name?person.name.slice(0,40):'旅人',isAdmin:!!role,adminRole:role,
+      avatar:role==='main'?'kasai':role==='sub'?'sub-admin':role==='sub-sub'?'sub-sub-admin':person?.avatar==='female'?'female':'male'};
+  }
+  const profileKey=person=>JSON.stringify([person?.id,person?.isAdmin,[typeof person?.adminRole,person?.adminRole],person?.name,person?.avatar]);
+  const portraitKind=person=>{const profile=worldProfile(person);return profile.isAdmin?profile.avatar:profile.avatar==='female'?'hero-female':'hero';};
 
   // Keep a bounded interpolation buffer, not a second source of game state.
   class WorldPresence {
@@ -20,7 +30,7 @@
       const now=this.clock(),serverTime=Number(data?.serverTime);
       if(!Number.isFinite(serverTime)||!PLAYER_ID.test(data?.self?.id||'')||!Array.isArray(data?.players))throw Error('フィールドの接続情報を確認できません。');
       if(this.map!==map||this.self?.id!==data.self.id)this.clear();
-      this.map=map;this.self={...data.self};this.ttl=clamp(Number(data.ttlMs)||15000,5000,30000);
+      this.map=map;this.self={...data.self,...worldProfile(data.self)};this.ttl=clamp(Number(data.ttlMs)||15000,5000,30000);
       const next=new Map();
       for(const row of data.players.slice(0,80)){
         if(!PLAYER_ID.test(row?.id||'')||row.id===this.self.id||row.map!==map||!Number.isFinite(row.x)||!Number.isFinite(row.y)||!DIRECTIONS.has(row.facing)||!Number.isFinite(row.updatedAt)||serverTime-row.updatedAt>this.ttl||row.updatedAt>serverTime+2000)continue;
@@ -28,9 +38,9 @@
         if(old&&row.updatedAt<old.updatedAt){next.set(row.id,old);continue;}
         const current=old?this.position(old,now):row;
         const same=old&&old.targetX===row.x&&old.targetY===row.y;
-        if(same){next.set(row.id,{...old,name:String(row.name||'旅人').slice(0,40),status:row.status,isAdmin:row.isAdmin===true,avatar:row.avatar,facing:row.facing,updatedAt:row.updatedAt,seenAt:now,age:Math.max(0,serverTime-row.updatedAt)});continue;}
+        if(same){next.set(row.id,{...old,...worldProfile(row),status:row.status,facing:row.facing,updatedAt:row.updatedAt,seenAt:now,age:Math.max(0,serverTime-row.updatedAt)});continue;}
         const jump=!old||distance(current,row)>8;
-        next.set(row.id,{...row,name:String(row.name||'旅人').slice(0,40),isAdmin:row.isAdmin===true,fromX:jump?row.x:current.x,fromY:jump?row.y:current.y,targetX:row.x,targetY:row.y,sampleAt:now,seenAt:now,age:Math.max(0,serverTime-row.updatedAt),duration:clamp(old?now-old.sampleAt:500,180,850),moved:!jump&&distance(current,row)>.01});
+        next.set(row.id,{...row,...worldProfile(row),fromX:jump?row.x:current.x,fromY:jump?row.y:current.y,targetX:row.x,targetY:row.y,sampleAt:now,seenAt:now,age:Math.max(0,serverTime-row.updatedAt),duration:clamp(old?now-old.sampleAt:500,180,850),moved:!jump&&distance(current,row)>.01});
       }
       this.peers=next;this.receivedAt=now;
       return this;
@@ -67,6 +77,7 @@
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let timer=null,inFlight=null,leavePromise=null,epoch=0,lastSent=0,failures=0,clockOffset=0,connected=false,lastMap='',lastProfile='',lastPayload='',bar=null,dialog=null,dialogMode='',selectedPeer=null,incoming=null,outgoing=null,working=false;
   let population=null,populationRequest=null,populationEpoch=0,populationNext=0,populationQuery='',populationOnlyActive=true,populationError='';
+  let presenceProfile=null,presenceProfileKey='';
   const handled=new Set(),cleanup=new Set();
   const game=()=>LT.adminBridge?.getEngine?.();
   const playing=()=>LT.adminBridge?.isPlaying?.()===true;
@@ -78,7 +89,15 @@
     return LT.Admin.worldRequest(path,options);
   };
   const mine=()=>LT.Admin?.player?.id||model.self?.id;
-  const localAdmin=()=>LT.Admin?.player?.isAdmin===true||(model.self?.id===LT.Admin?.player?.id&&model.self?.isAdmin===true);
+  function localProfile(){
+    const player=LT.Admin?.player;if(!PLAYER_ID.test(player?.id||''))return null;
+    // A later /me result takes precedence over an earlier presence response.
+    // Otherwise, the latest heartbeat can revoke a cached operator appearance.
+    const current=model.self?.id===player.id&&player===presenceProfile&&profileKey(player)===presenceProfileKey?model.self:player;
+    return worldProfile(current);
+  }
+  const localAdmin=()=>localProfile()?.isAdmin===true;
+  const localName=()=>{const profile=localProfile();return profile?.isAdmin?profile.name:null;};
   const isBusy=(allowLiveRead=false)=>!!(LT.adminBridge?.isBusy?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isWorking?.()||LT.KasaiLive?.isWorking?.()||(!allowLiveRead&&LT.KasaiLive?.locked?.())||LT.onlineActive||LT.tradeActive||LT.localTradeActive||LT.Trade?.isLocked?.()||document.querySelector('dialog[open]'));
   function networkStatus(){
     // Creating an invitation opens its room before publishing the directed offer.
@@ -155,7 +174,7 @@
     const query=populationQuery.trim().toLocaleLowerCase(),visible=[...rows.values()].filter(row=>(!populationOnlyActive||row.count>0)&&(!query||row.name.toLocaleLowerCase().includes(query)))
       .sort((a,b)=>(Number(b.map===currentMap)-Number(a.map===currentMap))||(b.count-a.count)||a.name.localeCompare(b.name,'ja'));
     summary.textContent=`世界全体 ${population.total}人 · このステージ ${counts.get(currentMap)?.count||0}人（自分を含む）`;
-    list.innerHTML=visible.map(row=>`<li class="world-population-row${row.map===currentMap?' is-current':''}"${row.map===currentMap?' aria-current="location"':''}><span><strong>${escape(row.name)}</strong><small>${row.map===currentMap?'現在地':row.kind==='kasai'?'カサイの部屋':row.kind==='secret'?'プレイヤーの秘密部屋':'フィールド・建物'}</small></span><span class="world-population-count">${row.count}<small>人</small></span></li>`).join('')||'<li class="world-population-empty">該当するステージはありません。</li>';
+    list.innerHTML=visible.map(row=>`<li class="world-population-row${row.map===currentMap?' is-current':''}"${row.map===currentMap?' aria-current="location"':''}><span><strong>${escape(row.name)}</strong><small>${row.map===currentMap?'現在地':row.kind==='kasai'?'運営の部屋':row.kind==='secret'?'プレイヤーの秘密部屋':'フィールド・建物'}</small></span><span class="world-population-count">${row.count}<small>人</small></span></li>`).join('')||'<li class="world-population-empty">該当するステージはありません。</li>';
     updated.textContent=populationError||`約5秒ごとに更新 · 退出した人は最大${Math.ceil(population.ttlMs/1000)}秒で一覧から外れます。`;
   }
   async function refreshPopulation(){
@@ -174,11 +193,12 @@
     dialog.querySelector('#world-population-search').addEventListener('input',event=>{populationQuery=String(event.target.value||'');renderPopulation();});
     void refreshPopulation();return true;
   }
-  function portrait(person){return `<canvas width="150" height="160" data-traveller="${person.isAdmin?'kasai':person.avatar==='female'?'hero-female':'hero'}" aria-label="${escape(person.name)}の姿"></canvas>`;}
+  function portrait(person){return `<canvas width="150" height="160" data-traveller="${portraitKind(person)}" aria-label="${escape(worldProfile(person).name)}の姿"></canvas>`;}
   function showPerson(peer){
-    selectedPeer={...peer};
-    const busy=peer.status==='busy';
-    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${peer.isAdmin?(busy?'カサイはいま取り込み中です。対戦の受付が再開するまでお待ちください。':'「やあ。君のパチモンたちの力、特別なステージで見せてもらおうか。」'):busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy?'disabled':''}>${peer.isAdmin?'カサイとバトル':'対戦を申し込む'}</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">${peer.isAdmin?'カサイ本人と専用ステージへ移動します。60秒以内に近づいて話しかけ、カサイが承諾すると対戦が始まります。':'相手が承諾すると通信を始めます。'}交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
+    peer={...peer,...worldProfile(peer)};selectedPeer={...peer};
+    const busy=peer.status==='busy',sub=peer.adminRole==='sub'||peer.adminRole==='sub-sub',trainer=sub?escape(peer.name):'カサイ';
+    const adminNote=sub?`${trainer}本人と専用ステージへ移動します。60秒以内に近づいて話しかけ、相手が承諾すると対戦が始まります。`:'カサイ本人と専用ステージへ移動します。60秒以内に近づいて話しかけ、カサイが承諾すると対戦が始まります。';
+    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.adminRole==='sub-sub'?'SUB SUB ADMIN':sub?'SUB ADMIN':peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${peer.isAdmin?(busy?`${trainer}はいま取り込み中です。対戦の受付が再開するまでお待ちください。`:sub?'運営の専用ステージで対戦できます。':'「やあ。君のパチモンたちの力、特別なステージで見せてもらおうか。」'):busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy?'disabled':''}>${peer.isAdmin?`${trainer}とバトル`:'対戦を申し込む'}</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">${peer.isAdmin?adminNote:'相手が承諾すると通信を始めます。'}交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
   }
   function openNearby(){
     if(!playing()||isBusy())return false;
@@ -212,13 +232,14 @@
     const state=game()?.state;
     if(!active()||!state||distance({x:peer.targetX??peer.x,y:peer.targetY??peer.y},state)>3){say('相手に近づいてから話しかけてください。');return;}
     if(peer.isAdmin&&kind==='battle'){
-      if(peer.id===mine()||localAdmin()){say('運営カサイは自分自身に挑戦できません。');return;}
-      if(peer.status==='busy'){say('カサイはいま取り込み中です。少し待ってから話しかけてください。');return;}
+      const trainer=peer.adminRole==='main'?'カサイ':peer.name;
+      if(peer.id===mine()||localAdmin()){say('運営は、自分自身や別の運営に挑戦できません。');return;}
+      if(peer.status==='busy'){say(`${trainer}はいま取り込み中です。少し待ってから話しかけてください。`);return;}
       dialog?.close();setWorking(true);
-      try{if(!LT.KasaiLive?.request)throw Error('カサイとの対戦を読み込み中です。');const result=await LT.KasaiLive.request(peer.id);if(result?.ok===false)say(result.message||'カサイに申し込めませんでした。');}catch(error){say(error?.message||'カサイに申し込めませんでした。');}finally{setWorking(false);schedule(50);}return;
+      try{if(!LT.KasaiLive?.request)throw Error(`${trainer}との対戦を読み込み中です。`);const result=await LT.KasaiLive.request(peer.id);if(result?.ok===false)say(result.message||`${trainer}に申し込めませんでした。`);}catch(error){say(error?.message||`${trainer}に申し込めませんでした。`);}finally{setWorking(false);schedule(50);}return;
     }
     setWorking(true);
-    const current={target:{id:peer.id,name:peer.name,isAdmin:peer.isAdmin===true,avatar:peer.avatar},kind,phase:'preparing',id:null,createdAt:Date.now()};outgoing=current;
+    const current={target:{id:peer.id,...worldProfile(peer)},kind,phase:'preparing',id:null,createdAt:Date.now()};outgoing=current;
     dialog?.close();
     try{
       if(inFlight)await inFlight;
@@ -246,7 +267,7 @@
     if(working||outgoing||!active()||(!dialog?.open&&isBusy()))return false;
     if(invitation.expiresAt<=Date.now()+clockOffset)return false;
     incoming=invitation;
-    const person=invitation.from,kind=invitation.kind==='trade'?'交換':'対戦';
+    const person={...invitation.from,...worldProfile(invitation.from)},kind=invitation.kind==='trade'?'交換':'対戦';
     show(`${kind}のお誘い`,`${portrait(person)}<p class="world-inviter"><strong>${escape(person.name)}</strong>から${kind}に誘われています。</p><p>${invitation.kind==='trade'?'部屋に入ってから、お互いのパチモンを選びます。両者が確認するまで交換は確定しません。':'承諾すると対戦の準備画面へ進みます。冒険の途中から参加できます。'}</p><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="accept">${kind}を受ける</button><button type="button" class="btn" data-world-action="decline">今回は見送る</button></div>`,'incoming');
     return true;
   }
@@ -282,6 +303,8 @@
       const next=list.find(item=>item.id===incoming.id);
       if(!next||next.state!=='pending'||next.expiresAt<=data.serverTime){
         handled.add(incoming.id);incoming=null;if(dialogMode==='incoming')dialog?.close();
+      }else if(profileKey(next.from)!==profileKey(incoming.from)){
+        incoming=next;if(dialog?.open&&dialogMode==='incoming')showIncoming(next);
       }
     }
     if(handled.size>120){const keep=[...handled].slice(-60);handled.clear();keep.forEach(id=>handled.add(id));}
@@ -304,11 +327,19 @@
         const delay=270-(Date.now()-lastSent);if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));
         if(currentEpoch!==epoch||!active())return false;
         lastSent=Date.now();
+        const playerProfile=LT.Admin?.player,playerProfileKey=profileKey(playerProfile);
         const data=await api('/world/presence',{method:'POST',body:payload});
         if(currentEpoch!==epoch||!active())return false;
+        if(playerProfile?.id&&LT.Admin?.player?.id!==playerProfile.id)return false;
         if(game()?.state?.map!==payload.map){model.clear();return false;}
         model.ingest(data,payload.map);clockOffset=data.serverTime-Date.now();connected=true;failures=0;lastPayload=JSON.stringify(payload);
-        const profile=[model.self.id,model.self.isAdmin,model.self.name].join(':');if(lastProfile!==profile){lastProfile=profile;LT.adminBridge?.refresh?.();}
+        presenceProfile=playerProfile;presenceProfileKey=playerProfileKey;
+        const profile=profileKey(model.self);if(lastProfile!==profile){lastProfile=profile;LT.adminBridge?.refresh?.();}
+        if(dialog?.open&&dialogMode==='person'&&selectedPeer){
+          const current=model.peers.get(selectedPeer.id);
+          if(!current)dialog.close();
+          else if(profileKey(current)!==profileKey(selectedPeer)||current.status!==selectedPeer.status)showPerson(current);
+        }
         processInvitations(data);return true;
       }catch(error){
         if(currentEpoch!==epoch)return false;
@@ -350,14 +381,14 @@
   }
   LT.World={
     actors:map=>online()?model.actors(map):[],
-    localKind:avatar=>localAdmin()?'kasai':avatar==='female'?'hero-female':'hero',
-    displayName:()=>localAdmin()?KASAI:null,
+    localKind:avatar=>{const profile=localProfile();return profile?.isAdmin?portraitKind(profile):avatar==='female'?'hero-female':'hero';},
+    displayName:localName,
     interact(){if(!active()||!connected||isBusy())return false;const state=game()?.state,peer=state&&model.nearby(state,2)[0];if(!peer)return false;showPerson(peer);return true;},
     isDialogOpen:()=>dialog?.open===true,
     closeDialog(){if(!dialog?.open||working)return false;if(dialogMode==='incoming')void respond(false);else dialog.close();return true;},
     moved,openNearby,openPopulation,
     refreshPresence:async()=>{if(inFlight)await inFlight;return pulse();},
-    status:()=>({enabled:true,connected,players:model.actors(game()?.state?.map).length,displayName:localAdmin()?KASAI:null})
+    status:()=>({enabled:true,connected,players:model.actors(game()?.state?.map).length,displayName:localName()})
   };
   document.addEventListener('pachi-game-ready',()=>{if(dialogMode==='population')dialog?.close();invalidatePopulation();schedule(50);});
   document.addEventListener('pachi-admin-bridge-ready',()=>schedule(50));
@@ -367,6 +398,6 @@
   root.addEventListener?.('offline',()=>{void leave();schedule(1500);});
   root.addEventListener?.('online',()=>{failures=0;schedule(0);});
   root.addEventListener?.('pagehide',()=>{clearTimeout(timer);void leave();});
-  root.addEventListener?.('storage',event=>{if(event.key==='pachi-player-identity-v1'){epoch++;model.clear();model.self=null;incoming=null;outgoing=null;dialog?.close();schedule(250);}});
+  root.addEventListener?.('storage',event=>{if(event.key==='pachi-player-identity-v1'){epoch++;model.clear();model.self=null;presenceProfile=null;presenceProfileKey='';incoming=null;outgoing=null;dialog?.close();schedule(250);}});
   mount();status();schedule(800);
 })();

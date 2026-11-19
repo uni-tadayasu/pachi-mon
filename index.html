@@ -257,7 +257,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 }
   </script>
 
-  <link rel="stylesheet" href="admin-console.css?v=20261118-owner-privacy-v32">
+  <link rel="stylesheet" href="admin-console.css?v=20261119-sub-admin-v62">
 <style>@layer legacy{
 /* Companion identity and traveller choice */
 .player-name-entry{margin:10px 0}.player-name-entry .nickname-label{margin:8px 0 5px;font-size:13px}.player-name-entry .nickname-input{padding:9px 11px;min-height:44px;font-size:16px}.player-name-entry small{display:block;margin-top:5px;overflow-wrap:anywhere}.player-profile-setting p,#player-journal-name{overflow-wrap:anywhere;word-break:normal}.player-profile-setting .btn{flex-shrink:0}.avatar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}.avatar-card{display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0;padding:18px 12px;border:1px solid #7cbaaa88;border-radius:18px;background:linear-gradient(160deg,#e6f5e7,#cce6df);color:#254b49;cursor:pointer}.avatar-card:hover,.avatar-card:focus-visible{outline:3px solid #bd9854;outline-offset:2px}.avatar-card canvas{display:block;width:min(100%,180px);height:auto;image-rendering:pixelated}.avatar-card strong{font-size:18px}.avatar-card span{font-size:12px}.creature-view{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}.creature-view-controls{display:flex;gap:5px}.creature-view-controls .btn{padding:6px 9px;min-height:34px;font-size:12px}.creature-view-controls .selected{background:#dcece4;border-color:#518879}.nickname-summary{display:flex;align-items:center;gap:16px}.nickname-label{display:block;font-weight:700;margin:14px 0 8px}.nickname-input{width:100%;min-width:0;padding:13px;border:1px solid #72948a;border-radius:10px;background:#fffdf4;color:#253c39;font:inherit;font-size:18px;user-select:text;-webkit-user-select:text;touch-action:manipulation}.nickname-input[aria-invalid=true]{border-color:#bb5454}.nickname-input:focus{outline:2px solid #5b9c8c;outline-offset:2px}.shiny-badge{display:inline-block;padding:3px 8px;margin:4px 6px 4px 0;border-radius:20px;background:#f8edb8;color:#76560d;font-size:12px;font-weight:800}.shiny-mark{color:#b48216;margin-left:4px}.is-shiny{color:#b48530}.species-name{color:#678079;font-size:12px;margin:4px 0}.shiny-portrait{filter:drop-shadow(0 0 5px #eec76066)}
@@ -4669,7 +4669,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 <script src="creature-art.js?v=20261119-offdex-v54"></script>
 <script src="assets/creatures-individual-catalog.js?v=20261117-256"></script>
 <script src="individual-creature-art.js?v=20261117-shiny-coats"></script>
-<script src="traveller-art.js?v=20261119-world-v55-live"></script>
+<script src="traveller-art.js?v=20261119-sub-admin-v62"></script>
 <script src="room-art.js?v=20261119-wall-rooms-v59"></script>
 <script src="field-art.js?v=20261119-fine-pixels-v52"></script>
 <script src="battle-art.js?v=20261119-fine-pixels-v52"></script>
@@ -5201,10 +5201,10 @@ function world(canvas,engine,time=0,options={}){if(!canvas||!engine?.state)retur
 const left=Math.floor(cx/64)-2,top=Math.floor(cy/64)-3,right=Math.ceil((cx+LW)/64)+2,bottom=Math.ceil((cy+LH)/64)+2;
 if(time)for(let y=Math.max(0,top);y<Math.min(m.height,bottom);y++)for(let x=Math.max(0,left);x<Math.min(m.width,right);x++)if(tile(m,x,y)==='~'&&hash(x,y)%3===0){const shift=(Math.floor(time/180)%5)*2;r(c,x*64+8+shift,y*64+12,8,2,p.foam);r(c,x*64+16+shift,y*64+16,4,2,p.foam);r(c,x*64+4+shift,y*64+24,4,2,mix(p.foam,p.water,.4));}
 const objects=info.objects.filter(o=>o.kind!=='tree'||(o.x>=left&&o.x<=right&&o.y>=top&&o.y<=bottom)).slice();for(const n of m.npcs||[])if(n.x>=left&&n.x<=right&&n.y>=top&&n.y<=bottom)objects.push({kind:'npc',n,depth:(n.y+1)*64});for(const remote of LT.World?.actors?.(m.id)||[])if(remote.x>=left&&remote.x<=right&&remote.y>=top&&remote.y<=bottom)objects.push({kind:'remote',player:remote,depth:(remote.y+1)*64});const moving=options.moving===undefined?Math.abs(px-engine.state.x)+Math.abs(py-engine.state.y)>.01:options.moving,follow={down:[-.65,-.7],up:[.65,.7],left:[.8,.25],right:[-.8,.25]}[engine.state.facing]||[-.65,-.7],mon=engine.state.party?.[0];if(mon)objects.push({kind:'follower',x:(px+follow[0])*64,y:(py+follow[1])*64,depth:(py+follow[1]+1)*64});objects.push({kind:'hero',depth:(py+1)*64});objects.sort((a,b)=>a.depth-b.depth);
-for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(m.theme,o.variant),o.x*64-32,o.y*64-88);else if(o.kind==='building'||o.kind==='furniture')c.drawImage(o.cv,o.left,o.top);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state);else if(o.kind==='remote'){const v=o.player;c.drawImage(personSprite(v.isAdmin?'kasai':v.avatar==='female'?'hero-female':'hero',v.facing,walkFrame({moving:v.moving},time),seed(v.id)),Math.round(v.x*64-16),Math.round(v.y*64-64));}else if(o.kind==='hero')c.drawImage(personSprite(LT.World?.localKind?.(engine.state.avatar)||(engine.state.avatar==='female'?'hero-female':'hero'),engine.state.facing,walkFrame({...options,moving},time),0),Math.round(px*64-16),Math.round(py*64-64));else if(o.kind==='follower'){const x=Math.round(o.x),y=Math.round(o.y),bob=moving&&Math.floor(time/140)%2?-4:0;r(c,x+12,y+52,44,4,p.grass3);if(LT.PixelSprites?.creature)LT.PixelSprites.creature(c,mon.species,{x:x-12,y:y-32+bob,size:96,back:engine.state.facing==='up',facing:engine.state.facing,shiny:!!mon.shiny,motion:moving?'walk':'idle',time});else{box(c,x+12,y+4+bob,44,48,'#7cb6a3','#3e5f62');r(c,x+16,y-8+bob,12,20,'#7cb6a3');r(c,x+40,y-8+bob,12,20,'#7cb6a3');r(c,x+20,y+16+bob,4,8,'#344453');r(c,x+40,y+16+bob,4,8,'#344453');}}}
+for(const o of objects){if(o.kind==='tree')c.drawImage(treeSprite(m.theme,o.variant),o.x*64-32,o.y*64-88);else if(o.kind==='building'||o.kind==='furniture')c.drawImage(o.cv,o.left,o.top);else if(o.kind==='npc')npc(c,o.n,time,p,engine.state);else if(o.kind==='remote'){const v=o.player;c.drawImage(personSprite(v.isAdmin?(v.adminRole==='sub-sub'?'sub-sub-admin':v.adminRole==='sub'?'sub-admin':'kasai'):v.avatar==='female'?'hero-female':'hero',v.facing,walkFrame({moving:v.moving},time),seed(v.id)),Math.round(v.x*64-16),Math.round(v.y*64-64));}else if(o.kind==='hero')c.drawImage(personSprite(LT.World?.localKind?.(engine.state.avatar)||(engine.state.avatar==='female'?'hero-female':'hero'),engine.state.facing,walkFrame({...options,moving},time),0),Math.round(px*64-16),Math.round(py*64-64));else if(o.kind==='follower'){const x=Math.round(o.x),y=Math.round(o.y),bob=moving&&Math.floor(time/140)%2?-4:0;r(c,x+12,y+52,44,4,p.grass3);if(LT.PixelSprites?.creature)LT.PixelSprites.creature(c,mon.species,{x:x-12,y:y-32+bob,size:96,back:engine.state.facing==='up',facing:engine.state.facing,shiny:!!mon.shiny,motion:moving?'walk':'idle',time});else{box(c,x+12,y+4+bob,44,48,'#7cb6a3','#3e5f62');r(c,x+16,y-8+bob,12,20,'#7cb6a3');r(c,x+40,y-8+bob,12,20,'#7cb6a3');r(c,x+20,y+16+bob,4,8,'#344453');r(c,x+40,y+16+bob,4,8,'#344453');}}}
 LT.Rooms?.drawEntrances?.(c,m);
 // Labels are painted after world depth sorting; remote travellers never alter collision or saves.
-for(const v of LT.World?.actors?.(m.id)||[]){if(v.x<left||v.x>right||v.y<top||v.y>bottom)continue;const lx=Math.round(v.x*64+32),ly=Math.round(v.y*64-75),near=Math.abs(v.x-engine.state.x)+Math.abs(v.y-engine.state.y)<=3;const label=v.isAdmin?'謎のトレーナー カサイ':String(v.name||'旅人').slice(0,20);c.save();c.font='bold 18px sans-serif';c.textAlign='center';c.textBaseline='middle';const w=Math.min(280,Math.ceil(c.measureText(label).width)+18);c.fillStyle=v.isAdmin?'#183f4aee':'#203b4bee';c.fillRect(lx-w/2,ly-14,w,28);c.strokeStyle=v.isAdmin?'#e7cf8b':'#c8e8d4';c.lineWidth=2;c.strokeRect(lx-w/2,ly-14,w,28);c.fillStyle=v.isAdmin?'#ffe4a7':'#f4ffef';c.fillText(label,lx,ly,w-12);if(near){c.font='bold 16px sans-serif';c.fillStyle='#203b4b';c.fillRect(lx-44,ly-42,88,24);c.fillStyle='#fff5cb';c.fillText(v.status==='busy'?'取り込み中':'話しかける',lx,ly-30,84);}c.restore();}
+for(const v of LT.World?.actors?.(m.id)||[]){if(v.x<left||v.x>right||v.y<top||v.y>bottom)continue;const lx=Math.round(v.x*64+32),ly=Math.round(v.y*64-75),near=Math.abs(v.x-engine.state.x)+Math.abs(v.y-engine.state.y)<=3;const label=v.isAdmin?(v.adminRole==='sub'?'サカイ':v.adminRole==='sub-sub'?'イサカ':'謎のトレーナー カサイ'):String(v.name||'旅人').slice(0,20);c.save();c.font='bold 18px sans-serif';c.textAlign='center';c.textBaseline='middle';const w=Math.min(280,Math.ceil(c.measureText(label).width)+18);c.fillStyle=v.isAdmin?'#183f4aee':'#203b4bee';c.fillRect(lx-w/2,ly-14,w,28);c.strokeStyle=v.isAdmin?'#e7cf8b':'#c8e8d4';c.lineWidth=2;c.strokeRect(lx-w/2,ly-14,w,28);c.fillStyle=v.isAdmin?'#ffe4a7':'#f4ffef';c.fillText(label,lx,ly,w-12);if(near){c.font='bold 16px sans-serif';c.fillStyle='#203b4b';c.fillRect(lx-44,ly-42,88,24);c.fillStyle='#fff5cb';c.fillText(v.status==='busy'?'取り込み中':'話しかける',lx,ly-30,84);}c.restore();}
 for(const e of m.exits||[]){if(tile(m,e.x,e.y)==='D'&&!m.interior)continue;const locked=(e.requires&&!engine.state.seals.includes(e.requires))||((LT.DATA.maps[e.to]?.requiredSeals||0)>(engine.state.seals?.length||0)),x=e.x*32+16,y=e.y*32+16;grid(c,2,()=>{if(locked){box(c,x-6,y-4,14,12,'#e0b579','#665768');r(c,x-4,y-10,10,6,'#665768');r(c,x-2,y-8,6,4,p.grass);r(c,x,y,2,4,'#665768');r(c,x-3,y-2,8,1,'#f3d297');}else if(!m.interior){const d=e.x===0?'left':e.x===m.width-1?'right':e.y===0?'up':'down';if(d==='left'||d==='right')poly(c,[[x+(d==='right'?6:-6),y],[x+(d==='right'?-4:4),y-6],[x+(d==='right'?-4:4),y+6]],'#f8e9aa');else poly(c,[[x,y+(d==='down'?6:-6)],[x-6,y+(d==='down'?-4:4)],[x+6,y+(d==='down'?-4:4)]],'#f8e9aa');}});}
 c.restore();
 const dot=n=>Math.floor(n/2)*2;if(!m.interior&&options.weather==='snow')for(let i=0;i<26;i++)r(c,dot((hash(i,6)%LW+Math.floor(time/70))%LW),dot((hash(i,9)%LH+Math.floor(time/45))%LH),2,2,'#f4faed');if(!m.interior&&options.weather==='embers')for(let i=0;i<19;i++)r(c,dot((hash(i,8)%LW+Math.floor(time/140))%LW),dot((hash(i,2)%LH-Math.floor(time/60)+LH*99)%LH),2,4,i%2?'#ffce77':'#d58b67');if(!m.interior&&options.weather==='rain')for(let i=0;i<42;i++){const x=dot((hash(i,3)%LW+Math.floor(time/25))%LW),y=dot((hash(i,4)%LH+Math.floor(time/12))%LH);r(c,x,y,2,10,'#9ebed1');}
@@ -5535,7 +5535,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 
   class LuminaAudio {
     constructor() {
-      this.ctx=null;this.enabled=false;this.volume=.55;this.scene={title:true};this.previewId=null;
+      this.ctx=null;this.enabled=false;this.volume=.10;this.scene={title:true};this.previewId=null;
       this.currentId='title';this.group=null;this.groups=new Set();this.voices=new Set();this.lastError=null;this.enableRequest=0;
       this.quality=isMobile()?'low':'high';this.maxVoices=this.quality==='low'?40:72;this.lastFX=0;
       this.master=null;this.mix=null;this.reverb=null;this.delay=null;this.noise=null;this.fxBus=null;this.musicBus=null;this.recordedMusicBus=null;this.waves={};this.duckUntil=0;this.lastMove=-Infinity;
@@ -6851,7 +6851,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let moveAnim = null, pressedDirection = null, directionSource = null;
   let shopQuantity = 1, selectedAvatar = 'male', selectedPlayerName = LT.PlayerIdentity.defaultName, lastPortraitFrame = 0;
   let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
-  let settings = { sound:true, volume:.42, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:false, screen:LT.RetroScreen?.defaultMode||'color', textSpeed:'normal', autoRun:false };
+  let settings = { sound:true, volume:.10, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:false, screen:LT.RetroScreen?.defaultMode||'color', textSpeed:'normal', autoRun:false };
   try {
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if(saved && typeof saved==='object') {
@@ -7014,7 +7014,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }
   }
   function begin(starter, data) {
-    if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから冒険記録を切り替えられます。');return;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから冒険記録を切り替えられます。');return;}
     if(tradeLocked()){endBoot(true);LT.Trade?.resume?.();toast('交換の結果を確認してから冒険を再開できます。');return;}
     try { const candidate = new Engine(data); if (!data) { const result=candidate.newGame(starter, selectedAvatar, selectedPlayerName);if(!result.ok)throw Error(result.message); } engine=candidate; } catch (err) { endBoot(true); toast(err.message || 'セーブデータを読み込めません。'); return; }
     playing = true; busy = false; introPending = !data; pressedDirection = null; moveAnim = null; endingActive=false;
@@ -7925,7 +7925,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
 
   function openOnlineFromMenu(options={}){
-    if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから通信対戦できます。');return false;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから通信対戦できます。');return false;}
     if(LT.onlineActive||$('online-modal')?.open)return false;
     if(busy||introPending||engine.battle){toast('現在のバトルや演出が終わってから開いてください。');return false;}
     if(LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.()){toast('交換が完了してから対戦を開いてください。');return false;}
@@ -7938,7 +7938,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('ローカル通信',`<p class="notice"><strong>おすすめは、同じWi-Fi＋QRコードです。</strong>インターネット回線は不要です。オフラインで遊ぶ前に、両方の端末で一度ゲームを読み込んでください。2台を同じWi-Fiにつなぎ、お互いのQRコードを読み取ると接続できます。</p><div class="menu-grid local-menu"><button type="button" class="btn" data-ui="local-battle">${ico('gamepad')}<span>ローカル対戦<small>シングル・ダブル</small></span></button><button type="button" class="btn" data-ui="local-trade">${ico('switch')}<span>ローカル交換<small>手持ち・ひかえから1体</small></span></button></div><p class="local-note">カメラが使えない端末は、コードの貼り付けで接続できます。テザリングなしのBluetooth直接通信は、ブラウザー版では未対応です。</p>`,'local');
   }
   function openTradeFromMenu(options={}){
-    if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから交換できます。');return false;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから交換できます。');return false;}
     if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.()){toast('冒険中の移動できるときに交換できます。');return false;}
     if(!LT.Trade){toast('交換を準備できません。ページを再読み込みしてください。');return false;}
     if(globalThis.navigator?.onLine===false){toast('オフラインのため、通信交換は使えません。メニューの「ローカル通信」から、同じネットワークの端末とローカル交換できます。');return false;}
@@ -7994,18 +7994,18 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const link=document.createElement('a');link.href=url;link.download='Pachi_Monsters_Save.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('セーブデータを書き出しました。');
   }
   async function importSave(file) {
-    if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから記録を読み込んでください。');return;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから記録を読み込んでください。');return;}
     if(tradeLocked()){toast('交換を完了または中止してから記録を読み込んでください。');return;}
     if (!file) return;
     if (engine.battle && playing) { toast('バトルを終えてから読み込んでください。'); return; }
     try {
       if(file.size>524288)throw new Error('セーブデータのサイズが大きすぎます。');
       const data=JSON.parse(await file.text());
-      if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから記録を読み込んでください。');return;}
+      if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから記録を読み込んでください。');return;}
       const checked=new Engine(data); const state=checked.state;
       if(tradeLocked()){toast('交換を完了または中止してから記録を読み込んでください。');return;}
       openModal('この記録を読み込みますか？', `<p class="dialogue-text">${escape(state.playerName)} · ${escape(DATA.maps[state.map].name)} · 旅紋 ${state.seals.length}/${sealCount} · ${state.caught.filter(id=>DATA.species[id]&&!DATA.species[id].hiddenDex).length}種<br>現在の冒険記録を、この記録で置き換えます。</p><div class="modal-actions"><button class="btn" data-ui="close">やめる</button><button class="btn btn-primary" id="confirm-import">読み込む</button></div>`);
-      $('confirm-import').onclick=()=>{if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してから記録を読み込んでください。');return;}begin(null,checked.serialize());toast('冒険記録を読み込みました。');};
+      $('confirm-import').onclick=()=>{if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから記録を読み込んでください。');return;}begin(null,checked.serialize());toast('冒険記録を読み込みました。');};
     } catch(err) { toast('読み込めません：'+(err.message || '有効なパチモンのセーブデータを選んでください。')); }
   }
   // ── Publisher screen. Each mode from the top menu (continue, new adventure, online
@@ -8038,7 +8038,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   $('modal').addEventListener('close',()=>{if(booting?.started)setTimeout(()=>{if(booting?.started&&!playing&&!$('modal').open&&!LT.onlineActive)endBoot(true);},60);});
   document.getElementById('online-modal')?.addEventListener('close',()=>{if(booting&&!playing)endBoot(true);});
   function goTitle() {
-    if(LT.KasaiLive?.isActive?.()){toast('カサイのステージを退出してからタイトルに戻れます。');return;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してからタイトルに戻れます。');return;}
     if(tradeLocked()){LT.Trade?.open?.();return;}
     if (engine.battle) { toast('バトルを終えてからタイトルに戻れます。'); return; }
     save();playing=false;introPending=false;endingActive=false;updateScene();closeModal();$('title-screen').hidden=false;document.body.classList.remove('is-playing');window.scrollTo({top:0,behavior:'instant'});loadStored();paintPortraits($('title-screen'));
@@ -8384,7 +8384,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   document.addEventListener('pachi-online-return',()=>{if(playing)showMenu();});
   document.addEventListener("pachi-online-state",()=>{pressedDirection=null;directionSource=null;sprint=false;padSprint=false;updateScene();});
   LT.requestOnline=(options={})=>{
-    if(LT.KasaiLive?.isActive?.()){toast('カサイとの対戦が終わり、ステージを退出してから通信対戦できます。');return false;}
+    if(LT.KasaiLive?.isActive?.()){toast('運営との対戦が終わり、ステージを退出してから通信対戦できます。');return false;}
     if(booting||LT.onlineActive||$('online-modal')?.open||LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.())return false;
     if(!LT.OnlineUI)return false;
     const nextOptions={...options};
@@ -8445,7 +8445,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     closeModal,showDialogue,
     getEngine:()=>playing?engine:storedSave?new Engine(storedSave):null,
     enterSharedRoom:map=>{
-      if(LT.KasaiLive?.isActive?.())return {ok:false,message:'カサイのステージを退出してから移動できます。'};
+      if(LT.KasaiLive?.isActive?.())return {ok:false,message:'運営のステージを退出してから移動できます。'};
       if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'冒険中の移動できるときに入室できます。'};
       const point=map?.returnPoint,outside=point&&DATA.maps[point.map];
       if(!map?.sharedRoom||!/^room:P[0-9a-f]{16}$/.test(map.id)||!outside||outside.sharedRoom||!engine.walkable(outside,point.x,point.y)||!engine.walkable(map,map.spawn?.x,map.spawn?.y))return {ok:false,message:'部屋の入口と出口を確認できません。'};
@@ -8483,12 +8483,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     stageKasaiLive:(room,session)=>{
       if(!session||!['challenger','kasai'].includes(session.role)||!['staging','permission','battle','result'].includes(session.state)||room?.kind!=='kasai'||room.id!==session.roomId)return {ok:false,message:'対戦ステージを確認できません。'};
       if(kasaiLiveStage?.id===session.id&&engine.state.map==='room:'+session.roomId)return LT.adminBridge.enforceKasaiLive(session);
-      if(!LT.adminBridge.canEnterKasaiLive())return {ok:false,message:'現在の操作が終わってから、もう一度カサイに話しかけてください。'};
+      if(!LT.adminBridge.canEnterKasaiLive())return {ok:false,message:'現在の操作が終わってから、もう一度相手に話しかけてください。'};
       let map;try{map=LT.RoomArt.createMap(room);}catch(_){return {ok:false,message:'対戦ステージを読み込めません。'};}
       const point=session.returnPosition,outside=point&&DATA.maps[point.map];
       if(!outside||outside.sharedRoom||!engine.walkable(outside,point.x,point.y))return {ok:false,message:'フィールドへの帰り道を確認できません。'};
-      if(session.role==='kasai'&&(LT.Admin?.player?.isAdmin!==true||room.id!==LT.Admin.player.id))return {ok:false,message:'運営カサイの権限を確認できません。'};
-      if(session.role==='challenger'&&(LT.Admin?.player?.isAdmin===true||room.id===LT.Admin?.player?.id))return {ok:false,message:'運営カサイは自分自身に挑戦できません。'};
+      if(session.role==='kasai'&&(LT.Admin?.player?.isAdmin!==true||room.id!==LT.Admin.player.id))return {ok:false,message:'運営の権限を確認できません。'};
+      if(session.role==='challenger'&&(LT.Admin?.player?.isAdmin===true||room.id===LT.Admin?.player?.id))return {ok:false,message:'運営は自分自身に挑戦できません。'};
       if(!save())return {ok:false,message:'冒険を保存できないため、対戦ステージに入れません。'};
       map.returnPoint={...point};DATA.maps[map.id]=map;
       kasaiLiveStage={id:session.id,roomId:room.id,role:session.role,returnPosition:{...point}};document.body.classList?.add('is-kasai-live');
@@ -8522,12 +8522,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       document.dispatchEvent(new CustomEvent('pachi-online-state'));
     },
     startKasaiBattle:challenge=>{
-      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'進行中の操作が終わってからカサイに話しかけてください。'};
-      if(LT.Admin?.player?.isAdmin===true||LT.Admin?.player?.id&&LT.Admin.player.id===engine.map?.roomOwner)return {ok:false,message:'運営カサイは自分自身に挑戦できません。自分の部屋は「秘密部屋」から飾れます。'};
-      return {ok:false,message:'カサイ本人にフィールドで話しかけ、リアルタイム対戦に挑戦してください。'};
+      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'進行中の操作が終わってから運営トレーナーに話しかけてください。'};
+      if(LT.Admin?.player?.isAdmin===true||LT.Admin?.player?.id&&LT.Admin.player.id===engine.map?.roomOwner)return {ok:false,message:'運営は自分自身に挑戦できません。自分の部屋は「秘密部屋」から飾れます。'};
+      return {ok:false,message:'運営トレーナー本人にフィールドで話しかけ、リアルタイム対戦に挑戦してください。'};
     },
     startSecretEncounter:(species,level,owner,options={})=>{
-      if(LT.KasaiLive?.isActive?.())return {ok:false,message:'カサイのステージを退出してから幻の草むらを使えます。'};
+      if(LT.KasaiLive?.isActive?.())return {ok:false,message:'運営のステージを退出してから幻の草むらを使えます。'};
       if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
       if(!owner||owner.isAdmin!==true||LT.Admin?.player?.isAdmin!==true||owner.id!==LT.Admin.player.id)return {ok:false,message:'運営権限を確認できません。'};
       const result=engine.startAdminEncounter(species,level,owner,{shiny:options?.shiny===true,gender:options?.gender});
@@ -8536,7 +8536,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     },
     getPlayerName:()=>playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName,
     isPlaying:()=>playing,
-    receiveKasaiReward:receipt=>LT.Admin?.player?.isAdmin===true?{ok:false,message:'運営カサイは自分との対戦報酬を受け取れません。'}:persistGiftMutation('receiveKasaiReward',receipt),
+    receiveKasaiReward:receipt=>LT.Admin?.player?.isAdmin===true?{ok:false,message:'運営は自分との対戦報酬を受け取れません。'}:persistGiftMutation('receiveKasaiReward',receipt),
     grantFuto:grant=>persistGiftMutation('grantFuto',grant),
     receiveAdminLegendary:companion=>persistGiftMutation('receiveAdminLegendary',companion),
     receiveAdminMythical:companion=>persistGiftMutation('receiveAdminMythical',companion),
@@ -9812,7 +9812,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   let trainerPassSession='',trainerChecks=0,trainerVerified=false,trainerPassSent=false,trainerWaitTimer=0,trainerInbox=[],trainerSeen=new Set();
   try{const saved=localStorage.getItem('pachi-link-name');if(saved?.trim()){name=saved;explicitName=true;}}catch(_){}
   const localKasai=()=>LT.Admin?.player?.isAdmin===true;
-  const localTrainerName=()=>localKasai()?KASAI_NAME:name.trim()||LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);
+  const localTrainerName=()=>localKasai()?(LT.Admin.player.adminRole==='sub'?'サカイ':LT.Admin.player.adminRole==='sub-sub'?'イサカ':KASAI_NAME):name.trim()||LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);
   const directedField=()=>transport==='internet'&&!!worldEncounter?.id;
   const fieldIdentityReady=()=>!directedField()||trainerVerified&&trainerPassSent;
   function resetTrainerProofs(){clearTimeout(trainerWaitTimer);trainerWaitTimer=0;trainerPassSession='';trainerChecks=0;trainerVerified=false;trainerPassSent=false;trainerInbox=[];trainerSeen=new Set();}
@@ -9845,9 +9845,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     void Promise.resolve().then(()=>LT.Admin.worldRequest('/world/trainer-pass/verify',{method:'POST',body:{sessionId:battleId,side:message.side,pass:message.pass}})).then(data=>{
       if(g!==generation||session!==current||peer!==currentPeer||session.sessionId!==battleId||!dialog.open||!view?.connected||trainerVerified)return;
       const trainer=data?.trainer;
-      if(!trainer||typeof trainer.id!=='string'||!/^P[0-9a-f]{16}$/.test(trainer.id)||typeof trainer.name!=='string'||!trainer.name.trim()||trainer.name.length>64||typeof trainer.isAdmin!=='boolean'||!['male','female','kasai'].includes(trainer.avatar)){stopFieldIdentity();return;}
+      if(!trainer||typeof trainer.id!=='string'||!/^P[0-9a-f]{16}$/.test(trainer.id)||typeof trainer.name!=='string'||!trainer.name.trim()||trainer.name.length>64||typeof trainer.isAdmin!=='boolean'||!['male','female','kasai','sub-admin','sub-sub-admin'].includes(trainer.avatar)||trainer.isAdmin&&trainer.adminRole!==undefined&&!['main','sub','sub-sub'].includes(trainer.adminRole)){stopFieldIdentity();return;}
       if(directedField()&&trainer.id!==worldEncounter.id){stopFieldIdentity('フィールドで話しかけた相手と接続先が一致しません。対戦を中止しました。');return;}
-      const profile={id:trainer.id,name:trainer.isAdmin?KASAI_NAME:trainer.name,isAdmin:trainer.isAdmin,avatar:trainer.isAdmin?'kasai':trainer.avatar==='female'?'female':'male'};
+      const adminRole=trainer.isAdmin?(trainer.adminRole==='sub-sub'?'sub-sub':trainer.adminRole==='sub'?'sub':'main'):null;
+      const profile={id:trainer.id,name:adminRole==='main'?KASAI_NAME:adminRole==='sub'?'サカイ':adminRole==='sub-sub'?'イサカ':trainer.name,isAdmin:trainer.isAdmin,adminRole,avatar:trainer.isAdmin?(adminRole==='sub-sub'?'sub-sub-admin':adminRole==='sub'?'sub-admin':'kasai'):trainer.avatar==='female'?'female':'male'};
       trainerVerified=true;trainerInbox=[];
       LT.onlineEncounter={kasai:localKasai()||profile.isAdmin,opponent:profile,verified:true};
       finishFieldIdentity();
@@ -10108,7 +10109,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     }
     if(!explicitName)name=LT.PlayerIdentity.onlineName(LT.adminBridge?.getEngine?.()?.state.playerName||LT.PlayerIdentity.defaultName);
     returnToMenu=options.returnToMenu===true;
-    worldEncounter=options.encounter&&typeof options.encounter==='object'?{id:String(options.encounter.id||''),name:String(options.encounter.name||'旅人').slice(0,64),isAdmin:options.encounter.isAdmin===true,avatar:options.encounter.avatar==='kasai'?'kasai':options.encounter.avatar==='female'?'female':'male'}:null;
+    worldEncounter=options.encounter&&typeof options.encounter==='object'?{id:String(options.encounter.id||''),name:String(options.encounter.name||'旅人').slice(0,64),isAdmin:options.encounter.isAdmin===true,adminRole:options.encounter.isAdmin===true?(options.encounter.adminRole==='sub-sub'?'sub-sub':options.encounter.adminRole==='sub'?'sub':'main'):null,avatar:options.encounter.isAdmin===true?(options.encounter.adminRole==='sub-sub'?'sub-sub-admin':options.encounter.adminRole==='sub'?'sub-admin':'kasai'):options.encounter.avatar==='female'?'female':'male'}:null;
     worldRoomReady=typeof options.onRoomReady==='function'?options.onRoomReady:null;worldRoomNotified=false;worldNotice='';resetTrainerProofs();
     LT.onlineEncounter={kasai:localKasai()||worldEncounter?.isAdmin===true,opponent:worldEncounter};
     transport=invitedCode||options.autoHost===true||options.autoJoin===true?'internet':options.transport==='local'||(options.transport!=='internet'&&globalThis.navigator?.onLine===false)?'local':'internet';
@@ -10217,15 +10218,15 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
 <script src="battle-vfx.js?v=20261119-fine-pixels-v52"></script>
-<script src="admin-console.js?v=20261119-kasai-live-v58"></script>
-<script src="secret-rooms.js?v=20261119-wall-rooms-v59"></script>
+<script src="admin-console.js?v=20261119-sub-admin-v62"></script>
+<script src="secret-rooms.js?v=20261119-sub-admin-v62"></script>
 <script src="kasai-challenge.js?v=20261119-kasai-live-v58"></script>
-<script src="kasai-party.js?v=20261119-kasai-live-v58"></script>
+<script src="kasai-party.js?v=20261119-sub-admin-v62"></script>
 <script src="kasai-live-model.js?v=20261119-kasai-live-v58"></script>
-<script src="kasai-live.js?v=20261119-kasai-live-v58"></script>
+<script src="kasai-live.js?v=20261119-sub-admin-v62"></script>
 <script src="online-futo.js?v=20261119-kasai-reward-v56"></script>
 <script src="secret-encounter.js?v=20261119-all-species-v55"></script>
-<script src="field-world.js?v=20261119-kasai-live-v58"></script>
+<script src="field-world.js?v=20261119-sub-admin-v62"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261119-world-v55-live"></script>

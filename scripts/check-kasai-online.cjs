@@ -127,6 +127,31 @@ test('the verified local administrator sends the exact Kasai display name withou
   await h.click('link-ready');assert.equal(peer.sent.find(message=>message.t==='ready').team.name,KASAI);h.close();
 });
 
+for(const [role,registeredName,avatar,displayName] of [['sub','紫の旅人','sub-admin','サカイ'],['sub-sub','金色の旅人','sub-sub-admin','イサカ']]) {
+  test(`${role} operator trainer proof applies the fixed operator name and distinct avatar`,async()=>{
+    const api=await service();try{
+      const main=await api.player('メイン',true),deputy=await api.player(registeredName),visitor=await api.player('訪問者');
+      await main.call('/admin/devices',{body:{playerId:deputy.player.id,role,confirmed:true}});
+      const h=harness({player:visitor.player,request:visitor.call}),peer=await h.connectHost();await h.hello(peer);
+      const hello=peer.sent.find(message=>message.t==='hello');
+      const {pass}=await deputy.call('/world/trainer-pass',{body:{sessionId:hello.session,side:1}});
+      peer.receive({t:'trainer-profile',sessionId:hello.session,side:1,pass});
+      await until(()=>h.LT.onlineEncounter?.verified,'Operator trainer proof must verify');
+      const profile=h.LT.onlineEncounter.opponent;
+      assert.equal(profile.name,displayName);assert.equal(profile.adminRole,role);
+      assert.equal(profile.avatar,avatar);assert.equal(profile.isAdmin,true);
+      assert.equal(h.LT.onlineEncounter.kasai,true,'Both deputies retain the operator battle features');
+      h.close();
+    }finally{api.close();}
+  });
+
+  test(`the local ${role} operator uses its fixed operator name in battle readiness`,async()=>{
+    const h=harness({player:{id:'P1111111111111111',name:registeredName,isAdmin:true,adminRole:role}}),peer=await h.connectHost();await h.hello(peer);
+    assert(h.nodes.get('online-content').innerHTML.includes('value="'+displayName+'" disabled'));
+    await h.click('link-ready');assert.equal(peer.sent.find(message=>message.t==='ready').team.name,displayName);assert.equal(h.LT.Admin.player.name,registeredName);h.close();
+  });
+}
+
 test('directed field rooms block readiness until the signed account matches the exact intended trainer',async()=>{
   const api=await service();try{
     const me=await api.player('誘う人'),expected=await api.player('会った相手',true),wrong=await api.player('別のアカウント');

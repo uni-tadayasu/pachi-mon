@@ -1,0 +1,138 @@
+{
+  "image": "sub-admin-overworld-v62.png",
+  "imageWidth": 1086,
+  "imageHeight": 1448,
+  "description": "ImageGen reference-based transparent secondary administrator sheet; rendering crop metadata only. Source RGBA pixels are unmodified.",
+  "sourceSha256": "1248e2355b08ba7a874a4b28a6be88d24928be095e4ea50b6fcb74d66d8e58e9",
+  "frames": [
+    {
+      "direction": "down",
+      "phase": "idle",
+      "sx": 94,
+      "sy": 20,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 109,
+      "anchorY": 331
+    },
+    {
+      "direction": "down",
+      "phase": "walk1",
+      "sx": 424,
+      "sy": 20,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 120,
+      "anchorY": 331
+    },
+    {
+      "direction": "down",
+      "phase": "walk2",
+      "sx": 758,
+      "sy": 20,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 105,
+      "anchorY": 331
+    },
+    {
+      "direction": "left",
+      "phase": "idle",
+      "sx": 94,
+      "sy": 382,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 93,
+      "anchorY": 329
+    },
+    {
+      "direction": "left",
+      "phase": "walk1",
+      "sx": 424,
+      "sy": 382,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 101,
+      "anchorY": 325
+    },
+    {
+      "direction": "left",
+      "phase": "walk2",
+      "sx": 758,
+      "sy": 382,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 106,
+      "anchorY": 325
+    },
+    {
+      "direction": "right",
+      "phase": "idle",
+      "sx": 94,
+      "sy": 740,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 112,
+      "anchorY": 326
+    },
+    {
+      "direction": "right",
+      "phase": "walk1",
+      "sx": 424,
+      "sy": 740,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 119,
+      "anchorY": 324
+    },
+    {
+      "direction": "right",
+      "phase": "walk2",
+      "sx": 758,
+      "sy": 740,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 120,
+      "anchorY": 324
+    },
+    {
+      "direction": "up",
+      "phase": "idle",
+      "sx": 94,
+      "sy": 1097,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 109,
+      "anchorY": 327
+    },
+    {
+      "direction": "up",
+      "phase": "walk1",
+      "sx": 424,
+      "sy": 1097,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 104,
+      "anchorY": 327
+    },
+    {
+      "direction": "up",
+      "phase": "walk2",
+      "sx": 758,
+      "sy": 1097,
+      "sw": 228,
+      "sh": 338,
+      "anchorX": 109,
+      "anchorY": 327
+    }
+  ],
+  "renderSize": [
+    96,
+    128
+  ],
+  "renderFeetY": 122,
+  "fitExtent": {
+    "width": 200,
+    "height": 325
+  }
+}

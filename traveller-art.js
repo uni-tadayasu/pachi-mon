@@ -4,6 +4,7 @@
  * Revision 33 sheets preserve fine material details and transparent silhouettes.
  * Revision 52 samples the original artwork on a finer 48×64 display grid.
  * Revision 55 adds Kasai's reference-based, four-direction walking sheet.
+ * Revision 62 adds a distinct purple-haired secondary administrator sheet.
  * Image atlases are authored for this project. Runtime extraction retains the
  * transparent silhouettes and a shared feet baseline for world depth sorting.
  */
@@ -11,7 +12,7 @@
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   const directions = ['down', 'left', 'right', 'up'];
-  const atlas = { hero: null, female: null, npcs: null, kasai: null };
+  const atlas = { hero: null, female: null, npcs: null, kasai: null, 'sub-admin': null, 'sub-sub-admin': null };
   const dimensions = {};
   const cache = new Map();
   const MAX_CACHE = 160;
@@ -73,6 +74,45 @@
     return result;
   }
 
+  // This sheet keeps its original RGBA pixels. Fixed crops include the whole
+  // coat and hair; measured support-foot anchors share one ground baseline.
+  // The same values are documented in assets/sub-admin-overworld-v62.json.
+  function splitSubAdmin(img) {
+    const width = img.naturalWidth || img.width, height = img.naturalHeight || img.height;
+    if (width !== 1086 || height !== 1448) throw new Error('Unexpected secondary administrator sheet dimensions');
+    const columnX = [94, 424, 758], rowY = [20, 382, 740, 1097];
+    const anchors = [
+      [[109, 331], [120, 331], [105, 331]],
+      [[93, 329], [101, 325], [106, 325]],
+      [[112, 326], [119, 324], [120, 324]],
+      [[109, 327], [104, 327], [109, 327]]
+    ], result = [];
+    for (let pose = 0; pose < 3; pose++) for (let direction = 0; direction < 4; direction++) {
+      const [anchorX, anchorY] = anchors[direction][pose];
+      result.push({ cv: img, x: columnX[pose], y: rowY[direction], w: 228, h: 338,
+        anchorX, anchorY, fitWidth: 200, fitHeight: 325 });
+    }
+    return result;
+  }
+
+  function splitThirdAdmin(img) {
+    const width = img.naturalWidth || img.width, height = img.naturalHeight || img.height;
+    if (width !== 1086 || height !== 1448) throw new Error('Unexpected third administrator sheet dimensions');
+    const columnX = [110, 442, 774], rowY = [10, 374, 730, 1081];
+    const anchors = [
+      [[97, 343], [100, 343], [102, 343]],
+      [[98, 331], [100, 331], [105, 331]],
+      [[99, 328], [100, 327], [106, 326]],
+      [[102, 343], [104, 343], [103, 344]]
+    ], result = [];
+    for (let pose = 0; pose < 3; pose++) for (let direction = 0; direction < 4; direction++) {
+      const [anchorX, anchorY] = anchors[direction][pose];
+      result.push({ cv: img, x: columnX[pose], y: rowY[direction], w: 220, h: 350,
+        anchorX, anchorY, fitWidth: 180, fitHeight: 336 });
+    }
+    return result;
+  }
+
   function load(name, file, rows, splitter = split) {
     return new Promise(resolve => {
       const img = new Image();
@@ -129,7 +169,7 @@
 
   function get(kind = 'hero', facing = 'down', frame = 0, id = 0, resolution = 1) {
     const density = resolution >= 2 ? 2 : 1;
-    const female = kind === 'hero-female', kasai = kind === 'kasai', hero = kind === 'hero' || female || kasai, atlasName = kasai ? 'kasai' : hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
+    const female = kind === 'hero-female', special = kind === 'kasai' || kind === 'sub-admin' || kind === 'sub-sub-admin', hero = kind === 'hero' || female || special, atlasName = special ? kind : hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
     if (!cells) return null;
     const direction = Math.max(0, directions.indexOf(facing));
     const pose = Math.max(0, Math.min(2, Number.isFinite(frame) ? Math.trunc(frame) : 0));
@@ -167,8 +207,8 @@
   }
 
   LT.TravellerArt = {
-    ready: Promise.all([load('hero', 'traveller-hero-v33.png', 3), load('female', 'traveller-female-v33.png', 3), load('npcs', 'traveller-npcs-v33.png', 4), load('kasai', 'kasai-overworld-v55.png', 4, splitKasai)]),
+    ready: Promise.all([load('hero', 'traveller-hero-v33.png', 3), load('female', 'traveller-female-v33.png', 3), load('npcs', 'traveller-npcs-v33.png', 4), load('kasai', 'kasai-overworld-v55.png', 4, splitKasai), load('sub-admin', 'sub-admin-overworld-v62.png', 4, splitSubAdmin), load('sub-sub-admin', 'sub-sub-admin-overworld-v62.png', 4, splitThirdAdmin)]),
     get, stats, status() { return { loaded: stats.loaded, failed: stats.failed, cached: cache.size, maximum: MAX_CACHE, portraitSize: [192, 256] }; }, clearCache() { cache.clear(); },
-    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], specialAvatars: ['kasai'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
+    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], specialAvatars: ['kasai','sub-admin','sub-sub-admin'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
   };
 })();

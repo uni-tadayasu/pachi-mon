@@ -83,6 +83,9 @@
  * v60b: keep the compact desktop header stretched across the viewport.
  * v61: short desktop battles fit both HUD cards and all command rows;
  *   compact type badges and height-aware text fitting refresh together.
+ * v62: first-play volume starts at 10%; three primary-managed operator seats,
+ *   Sakai/Isaka identities, revocation, purple/blond walking art and exact-owner room
+ *   visits refresh together without changing saved audio preferences.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

@@ -5,14 +5,31 @@
   const API = 'https://pachi-mon-admin-hub.hisa-0128-1996.chatgpt.site/api';
   const KEY = 'pachi-player-identity-v1';
   const PENDING_KEY = 'pachi-pending-distribution-v1';
+  const adminRoleLabels={main:'運営',sub:'サブ運営','sub-sub':'サブサブ運営'};
+  const deputyRoles=['sub','sub-sub'];
+  const roleName=role=>role==='sub'?'サカイ':role==='sub-sub'?'イサカ':'カサイ';
+  const trainerName=()=>roleName(player?.adminRole);
   const fields = [['hp','体力',99999],['atk','物理攻撃',9999],['def','物理防御',9999],['spAtk','特殊攻撃',9999],['spDef','特殊防御',9999],['speed','素早さ',9999],['accuracy','命中',300],['evasion','回避',300]];
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let identity = null, player = null, status = null, syncing = null, registration = null, pending = 0, lastError = '', consoleDialog = null, revision = 0, savedConfig = null, claimBusy = false;
   let identityEpoch=0, restoreAttempt=0, syncQueued=false, registerQueued=false, sendBusy=false, pendingGrant=null;
   let adminRegistration=null, releaseReview=null, releaseBusy=false, refreshBusy=false;
+  let adminDevices=null, deviceReview=null, deviceInput='', deviceRole='sub', deviceBusy=false;
+  function clearDeviceState(){adminDevices=null;deviceReview=null;deviceInput='';deviceRole='sub';}
   const staleIdentity=()=>Object.assign(new Error('プレイヤー情報が切り替わりました。'),{staleIdentity:true});
   function announcePlayer(){
+    refreshConsoleIdentity();
     if(typeof CustomEvent==='function')document.dispatchEvent?.(new CustomEvent('pachi-admin-state',{detail:player?{id:player.id,isAdmin:player.isAdmin===true}:null}));
+  }
+  function refreshConsoleIdentity(){
+    if(!consoleDialog?.open||player?.isAdmin!==true)return;
+    const name=trainerName(),labels={
+      '#pachi-console-title':`${name}の運営管理`,
+      '.pachi-owner-identity h3':name==='カサイ'?'謎のトレーナー カサイ':name,
+      '.pachi-owner-identity p:nth-of-type(2)':`${name}戦は、あなたが接続中のときに挑戦者と戦うリアルタイム対戦です。入室時の保存済み手持ち・レベル・技・育成を使います。ステージで話しかけられたら対戦を許可してください。自分自身には挑戦できません。`,
+      '[data-admin-action="decorate-room"]':`${name}の部屋を飾る`
+    };
+    for(const [selector,text] of Object.entries(labels)){const node=consoleDialog.querySelector?.(selector);if(node)node.textContent=text;}
   }
   function storedIdentity(raw){
     if(typeof raw!=='string'||raw.length>4096)return null;
@@ -28,7 +45,7 @@
   function randomToken(){ const bytes=crypto.getRandomValues(new Uint8Array(32)); return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
   function persist(next){
     localStorage.setItem(KEY,JSON.stringify(next));
-    if(identity?.token!==next.token){identityEpoch++;player=null;status=null;pending=0;registration=null;pendingGrant=null;adminRegistration=null;releaseReview=null;}
+    if(identity?.token!==next.token){identityEpoch++;player=null;status=null;pending=0;registration=null;pendingGrant=null;adminRegistration=null;releaseReview=null;clearDeviceState();}
     identity=next;
   }
   function serviceStatus(data,previous=status){
@@ -36,7 +53,7 @@
       adminRecoveryAvailable:typeof data?.adminRecoveryAvailable==='boolean'?data.adminRecoveryAvailable:previous?.adminRecoveryAvailable===true};
   }
   function adoptIdentity(next,nextPlayer,adminExists,adminRecoveryAvailable=false){
-    persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;adminRegistration=null;releaseReview=null;
+    persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;adminRegistration=null;releaseReview=null;clearDeviceState();
     if(consoleDialog?.open)consoleDialog.close();
   }
   async function request(path, {method='GET',body,token=identity?.token,auth=true,guardIdentity=true,keepalive=false}={}){
@@ -93,9 +110,12 @@
         const initialSeen=new Set(),initialNames=new Set();
         do{
           if(epoch!==identityEpoch)throw staleIdentity();
+          const requestedProfile=player;
           const data=await request('/me?limit=50'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{token});
           if(epoch!==identityEpoch)throw staleIdentity();
-          player=data.player;status=serviceStatus(data);
+          // A newer heartbeat may appoint or dismiss this device while this
+          // inbox page is in flight. Its role must not be rolled back here.
+          if(player===requestedProfile)player=data.player;status=serviceStatus(data);
           // Initial companions are a current-owner entitlement, separate from
           // the Futo inbox and its administrator distribution controls.
           if(player?.isAdmin===true){
@@ -137,21 +157,21 @@
   function canClaim(){return !!player && player.isAdmin!==true && status?.adminExists===false;}
   function refreshSettings(){
     announcePlayer();
-    if(player?.isAdmin===false&&consoleDialog?.open){adminRegistration=null;releaseReview=null;consoleDialog.close();}
+    if(player?.isAdmin===false){adminRegistration=null;releaseReview=null;clearDeviceState();if(consoleDialog?.open)consoleDialog.close();}
     const root=settingsRoot()?.querySelector('#pachi-service');if(!root)return;
     const body=root.querySelector('[data-service-body]');
-    const signature=[!!player,player?.isAdmin,player?.id,status?.adminExists,claimBusy,releaseBusy,pending].join('|');
+    const signature=[!!player,player?.isAdmin,player?.adminRole,player?.id,player?.name,status?.adminExists,claimBusy,releaseBusy,pending].join('|');
     if(!canClaim()){const field=document.getElementById('pachi-admin-key');if(field)field.value='';}
     if(body.dataset.signature!==signature){
       body.dataset.signature=signature;
-      body.innerHTML=`${player?`<label for="pachi-player-id">プレイヤーID</label><input id="pachi-player-id" class="pachi-code" value="${escape(player.id)}" readonly autocomplete="off" spellcheck="false"><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?'<p><strong>運営として登録済み</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">カサイの運営管理</button>':canClaim()?`<div data-claim><label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy||releaseBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy||releaseBusy?' disabled':''}>運営になる</button></div><p>最初に登録した1人が運営になります。</p></div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
+      body.innerHTML=`${player?`<label for="pachi-player-id">プレイヤーID</label><input id="pachi-player-id" class="pachi-code" value="${escape(player.id)}" readonly autocomplete="off" spellcheck="false"><div class="pachi-inline"><div><label for="pachi-player-name">配布先に表示する名前</label><input id="pachi-player-name" maxlength="24" autocomplete="nickname" value="${escape(player.name)}"></div><button class="btn btn-small" data-admin-action="name">名前を保存</button></div>`:'<p>プレイヤー情報を確認しています…</p>'}${player?.isAdmin?`<p><strong>${adminRoleLabels[player.adminRole]||'運営'}として登録済み · ${trainerName()}</strong> · フートの能力設定・配布ができます。</p><p>アルヴェリオンは運営の初期メンバーとして1体使用できます。アルヴェリオンの配布機能はありません。</p><button class="btn btn-primary" data-admin-action="console">${trainerName()}の運営管理</button>`:canClaim()?`<div data-claim><label for="pachi-admin-key">運営キー</label><div class="pachi-inline"><div><input id="pachi-admin-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="運営キーを入力"${claimBusy||releaseBusy?' disabled':''}></div><button class="btn btn-primary" data-admin-action="claim"${claimBusy||releaseBusy?' disabled':''}>運営になる</button></div><p>最初に登録した1人が運営になります。</p></div>`:status?.adminExists?'<p>運営は登録済みです。お届けものは冒険中に自動で受け取れます。</p>':'<p>運営の登録状況を確認しています…</p>'}${pending?`<p>受け取り待ちの仲間：${pending}体。冒険を始め、戦闘を終えるか、仲間・ひかえに空きを作ると受け取れます。</p>`:''}<div class="pachi-actions"><button class="btn btn-small" data-admin-action="refresh">お届けものを確認</button>${player?'<button class="btn btn-small" data-admin-action="backup">プレイヤー情報を書き出す</button>':''}<button class="btn btn-small" data-admin-action="restore">プレイヤー情報を復元</button></div>`;
     }
     const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
   }
   function say(message,error=false){lastError=error?message:'';const line=consoleDialog?.open?consoleDialog.querySelector('.pachi-status'):settingsRoot()?.querySelector('.pachi-status');if(line){line.textContent=message;line.dataset.error=String(error);}}
-  async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy&&!releaseBusy)button.disabled=false;}}
+  async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy&&!releaseBusy&&!deviceBusy)button.disabled=false;}}
   async function claim(button){
-    if(claimBusy||releaseBusy)return;
+    if(claimBusy||releaseBusy||deviceBusy)return;
     const field=document.getElementById('pachi-admin-key'),key=field?.value||'';
     if(!canClaim()){if(field)field.value='';refreshSettings();return;}
     if(!key){say('運営キーを入力してください。',true);return;}
@@ -173,33 +193,151 @@
     const box=consoleDialog?.querySelector('#pachi-release-review');if(!box)return;
     box.hidden=!releaseReview;
     if(!releaseReview){box.innerHTML='';return;}
-    box.innerHTML='<h4>運営登録を解除しますか？</h4><p>解除すると、他のプレイヤーにも運営キーの入力欄が表示されます。再び運営になるには運営キーが必要です。冒険の記録や配布済みの仲間は削除されません。</p><div class="pachi-actions"><button class="btn" data-admin-action="release-cancel">解除せず戻る</button><button class="btn pachi-release-confirm" data-admin-action="release-confirm">運営登録を解除する</button></div>';
+    const own=adminDevices?.devices.find(device=>device.playerId===player?.id);
+    const successor=own?.role==='main'&&deputyRoles.map(role=>adminDevices.devices.find(device=>device.role===role)).find(Boolean);
+    const succession=successor?`この端末の登録を解除すると、登録済みの${adminRoleLabels[successor.role]}がメイン運営を引き継ぎます。一般プレイヤー向けの運営キーの入力欄は表示されません。`:'メイン運営を解除すると、登録済みのサブ運営、サブサブ運営の順で、残る端末がメイン運営を引き継ぎます。';
+    box.innerHTML=`<h4>この端末の運営登録を解除しますか？</h4><p>解除するのは、このプレイヤーIDの運営登録だけです。${succession}運営が0台になったときだけ、他のプレイヤーに運営キーの入力欄が再び表示されます。冒険の記録や配布済みの仲間は削除されません。</p><div class="pachi-actions"><button class="btn" data-admin-action="release-cancel">解除せず戻る</button><button class="btn pachi-release-confirm" data-admin-action="release-confirm">この端末の運営登録を解除する</button></div>`;
   }
   function prepareRelease(){
-    if(releaseBusy||sendBusy)return;
+    if(releaseBusy||sendBusy||deviceBusy)return;
     if(pendingGrant?.uncertain)throw new Error('配布結果の確認が終わってから、運営登録を解除してください。');
     if(!player?.isAdmin||adminRegistration?.playerId!==player.id||!Number.isSafeInteger(adminRegistration?.claimedAt))throw new Error('運営登録の最新の状態を確認してから、もう一度お試しください。');
     releaseReview={registration:{...adminRegistration},epoch:identityEpoch};renderReleaseReview();
     consoleDialog?.querySelector('[data-admin-action="release-cancel"]')?.focus({preventScroll:false});
   }
   async function releaseAdmin(){
-    const review=releaseReview;if(releaseBusy||sendBusy||!review)return;
+    const review=releaseReview;if(releaseBusy||sendBusy||deviceBusy||!review)return;
     if(review.epoch!==identityEpoch||review.registration.playerId!==player?.id||!player?.isAdmin){releaseReview=null;renderReleaseReview();throw staleIdentity();}
     if(pendingGrant?.uncertain)throw new Error('配布結果の確認が終わってから、運営登録を解除してください。');
     releaseBusy=true;
     const controls=[...(consoleDialog?.querySelectorAll('button,input,select')||[])];
     const disabled=controls.map(control=>control.disabled);controls.forEach(control=>{control.disabled=true;});
+    let message='';
     try{
       const data=await request('/admin/release',{method:'POST',body:{confirmed:true,expectedRegistration:review.registration}});
-      identityEpoch++;registration=null;player=data.player;status=serviceStatus(data,null);adminRegistration=null;releaseReview=null;
+      identityEpoch++;registration=null;player=data.player;status=serviceStatus(data,null);adminRegistration=null;releaseReview=null;clearDeviceState();
       clearPendingGrant();if(consoleDialog?.open)consoleDialog.close();refreshSettings();
-      await sync({fresh:true});say('運営登録を解除しました。運営キーを持つプレイヤーが再登録できます。');
+      message=data.adminExists?'この端末の運営登録を解除しました。別の運営端末は引き続き利用できます。':'この端末の運営登録を解除しました。運営が0台になったため、運営キーで再登録できます。';await sync({fresh:true});
     }catch(err){
       if(!err.staleIdentity){adminRegistration=null;releaseReview=null;await sync({fresh:true});}
       throw err;
     }finally{
       releaseBusy=false;controls.forEach((control,index)=>{control.disabled=disabled[index];});renderReleaseReview();refreshSettings();
     }
+    if(message)say(message);
+  }
+  function deviceActor(epoch=identityEpoch,ownerId=player?.id){
+    if(epoch!==identityEpoch||ownerId!==player?.id)throw staleIdentity();
+    if(player?.isAdmin!==true||!consoleDialog?.open)throw new Error('現在の運営端末から管理画面を開いてください。');
+  }
+  function canManageAdminDevices(){return player?.isAdmin===true&&adminDevices?.canManageDevices===true&&adminDevices.devices.some(device=>device.playerId===player.id&&device.role==='main');}
+  function requireDeviceManager(){deviceActor();if(!canManageAdminDevices())throw new Error('サブ運営・サブサブ運営の登録・解除はメイン運営から行ってください。');}
+  function applyDeviceData(data){
+    if(data?.capacity!==3||!Array.isArray(data.devices)||data.devices.length>3)throw new Error('運営端末の一覧を確認できませんでした。再読み込みしてください。');
+    const devices=data.devices.map(device=>{
+      if(!/^P[0-9a-f]{16}$/.test(device?.playerId||'')||typeof device.name!=='string'||!Object.hasOwn(adminRoleLabels,device.role)||!Number.isSafeInteger(device.claimedAt)||device.claimedAt<0||device.claimedAt>8640000000000000)throw new Error('運営端末の情報を確認できませんでした。');
+      return {playerId:device.playerId,name:device.name,role:device.role,claimedAt:device.claimedAt};
+    });
+    if(new Set(devices.map(device=>device.playerId)).size!==devices.length||new Set(devices.map(device=>device.role)).size!==devices.length||!devices.some(device=>device.playerId===player?.id))throw new Error('この端末の運営登録を確認できませんでした。再読み込みしてください。');
+    adminDevices={capacity:3,devices,canManageDevices:data.canManageDevices===true};
+    const own=devices.find(device=>device.playerId===player.id);adminRegistration={playerId:own.playerId,claimedAt:own.claimedAt};
+    if(player.adminRole!==own.role){player={...player,adminRole:own.role};refreshSettings();}
+    if(devices.length===3||own.role!=='main')deviceInput='';
+    const vacant=deputyRoles.filter(role=>!devices.some(device=>device.role===role));if(!vacant.includes(deviceRole))deviceRole=vacant[0]||'sub';
+    if(own.role!=='main')deviceReview=null;
+    return adminDevices;
+  }
+  function renderAdminDevices(){
+    const box=consoleDialog?.querySelector('#pachi-admin-devices');if(!box)return;
+    if(player?.isAdmin!==true){box.innerHTML='';return;}
+    const disabled=deviceBusy?' disabled':'',refresh=`<button type="button" class="btn btn-small" data-admin-action="devices-refresh"${disabled}>運営端末を再読み込み</button>`;
+    if(!adminDevices){box.innerHTML='<p>運営端末の最新の登録状況を確認してください。</p>'+refresh;return;}
+    const {devices,capacity}=adminDevices,canManage=canManageAdminDevices(),vacant=deputyRoles.filter(role=>!devices.some(device=>device.role===role));
+    const list=devices.map(device=>`<li class="pachi-device"><div><strong>${roleName(device.role)}</strong><span class="pachi-device-role">${adminRoleLabels[device.role]}${device.playerId===player.id?' · この端末':''} · 登録名：${escape(device.name)}</span><code>${escape(device.playerId)}</code></div>${device.playerId===player.id?'<span class="pachi-device-current">利用中</span>':canManage&&deputyRoles.includes(device.role)?`<button type="button" class="btn btn-small" data-admin-action="device-revoke-review" data-device-id="${escape(device.playerId)}"${disabled}>${adminRoleLabels[device.role]}の解除を確認</button>`:''}</li>`).join('');
+    let review='';
+    if(deviceReview){
+      const target=deviceReview.target,grant=deviceReview.kind==='grant',roleLabel=adminRoleLabels[target.role];
+      review=`<div id="pachi-device-review" class="pachi-review"><h4>${grant?`この端末を${roleLabel}に登録しますか？`:`この端末の${roleLabel}登録を解除しますか？`}</h4><p><strong>${escape(target.name)}</strong><br><code>${escape(target.playerId)}</code><br>役割：${roleLabel} · 表示名：${roleName(target.role)}</p>${grant?`<p>${roleLabel}は、フートの能力設定・配布・専用ステージの管理など、同じ運営機能を利用できます。メイン運営は、いつでもこの登録を解除できます。運営端末の追加・解除はメイン運営だけが行えます。</p>`:`<p>登録日時：<time datetime="${escape(new Date(target.claimedAt).toISOString())}">${escape(new Date(target.claimedAt).toLocaleString('ja-JP'))}</time></p><p>このプレイヤーIDの${roleLabel}権限を解除します。冒険の記録や配布済みの仲間は削除されません。ほかの運営端末は引き続き利用できます。</p>`}<div class="pachi-actions"><button type="button" class="btn" data-admin-action="device-cancel"${disabled}>やめる</button><button type="button" class="btn ${grant?'btn-primary':'pachi-release-confirm'}" data-admin-action="device-confirm"${disabled}>${grant?`この端末を${roleLabel}に登録する`:`この端末の${roleLabel}登録を解除する`}</button></div></div>`;
+    }
+    const form=canManage&&vacant.length&&!deviceReview?`<div class="pachi-device-form"><div class="pachi-device-role-picker"><label for="pachi-device-role">登録する役割</label><select id="pachi-device-role"${disabled}>${vacant.map(role=>`<option value="${role}"${role===deviceRole?' selected':''}>${adminRoleLabels[role]} · ${roleName(role)}</option>`).join('')}</select></div><label for="pachi-device-player-id">追加する端末のプレイヤーID</label><div class="pachi-inline"><input id="pachi-device-player-id" type="text" maxlength="17" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Pから始まるプレイヤーID" value="${escape(deviceInput)}"${disabled}><button type="button" class="btn btn-primary" data-admin-action="device-add-review"${disabled}>登録先を確認</button></div><p>追加する端末で「冒険の設定」を開き、表示されたプレイヤーIDを入力してください。空いている役割を選び、確認画面で役割・名前・IDを確かめてから登録します。</p></div>`:devices.length>=capacity?`<p class="pachi-device-capacity">運営端末は3台とも登録済みです。${canManage?'端末を入れ替える場合は、対象のサブ運営・サブサブ運営の登録を解除してください。':'サブ運営・サブサブ運営の登録・解除はメイン運営が行います。'}</p>`:!canManage?'<p>サブ運営・サブサブ運営の登録・解除はメイン運営が行います。</p>':'';
+    box.innerHTML=`<p>登録済み ${devices.length} / ${capacity}台。フートの能力設定・配布・専用ステージの管理は、すべての運営端末で利用できます。サブ運営・サブサブ運営の登録・解除はメイン運営が行います。</p><ul class="pachi-device-list">${list}</ul>${form}${review}<div class="pachi-actions">${refresh}</div>`;
+  }
+  function setDeviceBusy(value){
+    deviceBusy=value;
+    for(const control of consoleDialog?.querySelectorAll('button,input,select')||[]){
+      if(value){control._disabledBeforeDevices=control.disabled;control.disabled=true;}
+      else if(control._disabledBeforeDevices!==undefined){control.disabled=control._disabledBeforeDevices;delete control._disabledBeforeDevices;}
+    }
+  }
+  async function loseDeviceAccess(epoch){
+    if(epoch!==identityEpoch)throw staleIdentity();
+    identityEpoch++;registration=null;player={...player,isAdmin:false,adminRole:null};status=null;adminRegistration=null;releaseReview=null;clearDeviceState();
+    if(consoleDialog?.open)consoleDialog.close();refreshSettings();await sync({fresh:true});
+  }
+  async function withDeviceOperation(action){
+    if(deviceBusy||sendBusy||releaseBusy)return null;
+    const epoch=identityEpoch,ownerId=player?.id;deviceActor(epoch,ownerId);setDeviceBusy(true);renderAdminDevices();
+    try{return await action({epoch,ownerId});}
+    catch(err){
+      if(!err.staleIdentity&&epoch===identityEpoch){
+        deviceReview=null;
+        if(err.status===409||err.status===403&&err.code==='MAIN_ADMIN_REQUIRED'){
+          adminDevices=null;
+          try{const latest=await request('/admin/devices');deviceActor(epoch,ownerId);applyDeviceData(latest);}catch(refreshError){if(refreshError.staleIdentity)throw refreshError;if(refreshError.status===403&&refreshError.code!=='MAIN_ADMIN_REQUIRED')await loseDeviceAccess(epoch);}
+        }else if(err.status===403){
+          // Retire older in-flight profiles before reflecting a lost role.
+          await loseDeviceAccess(epoch);
+        }
+      }
+      throw err;
+    }finally{setDeviceBusy(false);renderAdminDevices();}
+  }
+  async function loadAdminDevices(){
+    return withDeviceOperation(async({epoch,ownerId})=>{deviceReview=null;const data=await request('/admin/devices');deviceActor(epoch,ownerId);return applyDeviceData(data);});
+  }
+  async function prepareDeviceGrant(){
+    requireDeviceManager();
+    const id=consoleDialog?.querySelector('#pachi-device-player-id')?.value.trim()||'',role=consoleDialog?.querySelector('#pachi-device-role')?.value;
+    if(!/^P[0-9a-f]{16}$/.test(id))throw new Error('Pから始まる17文字のプレイヤーIDを入力してください。');
+    if(!deputyRoles.includes(role))throw new Error('登録する役割を選んでください。');
+    if(id===player?.id)throw new Error('この端末はすでに運営として登録されています。');
+    deviceInput=id;deviceRole=role;
+    await withDeviceOperation(async({epoch,ownerId})=>{
+      deviceReview=null;
+      const data=await request('/admin/devices?playerId='+encodeURIComponent(id));deviceActor(epoch,ownerId);applyDeviceData(data);requireDeviceManager();
+      const target=data.candidate;
+      if(target?.playerId!==id||typeof target.name!=='string'||typeof target.isAdmin!=='boolean')throw new Error('登録先のプレイヤーを確認できませんでした。');
+      if(target.isAdmin||adminDevices.devices.some(device=>device.playerId===id))throw new Error('このプレイヤーIDはすでに運営として登録されています。');
+      if(adminDevices.devices.length>=adminDevices.capacity)throw new Error('運営端末は3台とも登録済みです。登録済みの端末を確認してください。');
+      if(adminDevices.devices.some(device=>device.role===role))throw new Error(`${adminRoleLabels[role]}はすでに登録されています。空いている役割を選び直してください。`);
+      deviceReview={kind:'grant',target:{playerId:id,name:target.name,role},epoch,ownerId};
+    });
+    consoleDialog?.querySelector('[data-admin-action="device-cancel"]')?.focus({preventScroll:false});
+  }
+  async function prepareDeviceRevoke(id){
+    requireDeviceManager();
+    if(!/^P[0-9a-f]{16}$/.test(id||'')||id===player?.id)throw new Error('この端末の解除は「この端末の運営登録」から行ってください。');
+    await withDeviceOperation(async({epoch,ownerId})=>{
+      deviceReview=null;const data=await request('/admin/devices');deviceActor(epoch,ownerId);applyDeviceData(data);requireDeviceManager();
+      const target=adminDevices.devices.find(device=>device.playerId===id);
+      if(!target)throw new Error('この端末の運営登録はすでに変更されています。最新の一覧を確認してください。');
+      if(!deputyRoles.includes(target.role))throw new Error('解除できるのはサブ運営・サブサブ運営の登録だけです。');
+      deviceReview={kind:'revoke',target:{...target},epoch,ownerId};
+    });
+    consoleDialog?.querySelector('[data-admin-action="device-cancel"]')?.focus({preventScroll:false});
+  }
+  async function confirmDeviceChange(){
+    const review=deviceReview;if(!review||deviceBusy||sendBusy||releaseBusy)return null;
+    deviceActor(review.epoch,review.ownerId);requireDeviceManager();
+    return withDeviceOperation(async({epoch,ownerId})=>{
+      if(deviceReview!==review||review.epoch!==epoch||review.ownerId!==ownerId)throw staleIdentity();
+      const grant=review.kind==='grant',body={playerId:review.target.playerId,confirmed:true,...(grant?{role:review.target.role}:{claimedAt:review.target.claimedAt})};
+      // A lost response must require a fresh membership read before another edit.
+      adminDevices=null;
+      const data=await request(grant?'/admin/devices':'/admin/devices/revoke',{method:'POST',body});deviceActor(epoch,ownerId);applyDeviceData(data);
+      deviceReview=null;deviceInput='';say(grant?data.added===false?'この端末はすでに運営として登録されています。':'運営端末を追加しました。追加した端末で「お届けものを確認」を押すと、運営管理を開けます。':'指定した端末の運営登録を解除しました。');
+      return data;
+    });
   }
   function readConfig(){
     const stats={};for(const [key,,max]of fields){const value=Number(consoleDialog.querySelector(`[name="${key}"]`).value);if(!Number.isInteger(value)||value<1||value>max)throw new Error('能力値を指定された範囲の整数で入力してください。');stats[key]=value;}
@@ -223,7 +361,7 @@
   function savePendingGrant(){localStorage.setItem(PENDING_KEY,JSON.stringify(pendingGrant));}
   function clearPendingGrant(){localStorage.removeItem(PENDING_KEY);pendingGrant=null;}
   function prepareGrant(target,config){
-    if(sendBusy)throw new Error('配布結果を確認しています。少しお待ちください。');
+    if(sendBusy||deviceBusy)throw new Error('操作の結果を確認しています。少しお待ちください。');
     if(pendingGrant?.uncertain)throw new Error('前の配布結果を確認してください。同じ内容で再送しても重複配布されません。');
     pendingGrant={ownerId:player.id,grant:{requestId:crypto.randomUUID(),target,config},uncertain:false};savePendingGrant();
   }
@@ -243,7 +381,7 @@
     }
   }
   async function submitPendingGrant(){
-    if(sendBusy)return null;
+    if(sendBusy||deviceBusy)return null;
     const item=pendingGrant;if(!item)return null;
     if(item.ownerId!==player?.id)throw new Error('配布を準備したプレイヤー情報に戻してから再試行してください。');
     setSending(true);
@@ -263,14 +401,17 @@
     return Object.entries(LT.DATA.moves).filter(([id,move])=>id!=='struggle'&&!exclusive.has(id)&&!move.hiddenDex);
   }
   async function openConsole(){
-    if(sendBusy||releaseBusy)throw new Error('操作の結果を確認しています。少しお待ちください。');
+    if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の結果を確認しています。少しお待ちください。');
     await ensureIdentity();if(!player?.isAdmin)throw new Error('運営として登録されていません。');
-    const data=await request('/admin/config');savedConfig=data.config;revision=data.revision;adminRegistration=data.adminRegistration||null;releaseReview=null;
-    if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy||releaseBusy){event.preventDefault();say('操作の結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{void sync();});}
+    const data=await request('/admin/config');savedConfig=data.config;revision=data.revision;adminRegistration=data.adminRegistration||null;releaseReview=null;clearDeviceState();
+    if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy||releaseBusy||deviceBusy){event.preventDefault();say('操作の結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{deviceReview=null;void sync();});}
     const cfg={...data.config,moves:LT.FutoRules?.normalizeMoves?LT.FutoRules.normalizeMoves(data.config.moves):data.config.moves};const moveLabel=m=>m.kind==='attack'?`${m.category==='physical'?'物理':'特殊'}・威力${m.power}`:m.kind==='heal'?`体力${m.power}%回復`:m.kind==='boost'?'全能力アップ':'防御';const options=selected=>futoMoveEntries().map(([id,m])=>`<option value="${escape(id)}"${id===selected?' selected':''}>${escape(m.name)} · ${escape(moveLabel(m))}</option>`).join('');
-    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">カサイの運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><section class="pachi-owner-identity"><h3>謎のトレーナー カサイ</h3><p>専用の姿で世界のプレイヤーと冒険。幻の草むらでは、すべてのパチモンに出会えます。</p><p>カサイ戦は、あなたが接続中のときに挑戦者と戦うリアルタイム対戦です。入室時の保存済み手持ち・レベル・技・育成を使います。ステージで話しかけられたら対戦を許可してください。自分自身には挑戦できません。</p><div class="pachi-actions"><button type="button" class="btn btn-primary" data-admin-action="decorate-room">カサイの部屋を飾る</button><button type="button" class="btn" data-admin-action="sync-kasai-party">対戦用の手持ちを更新</button><button type="button" class="btn btn-primary" data-admin-action="secret-grass">裏技・幻の草むら</button></div></section><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>運営登録</legend><p>登録を解除すると、運営キーの入力欄を再び公開します。</p><button class="btn" data-admin-action="release-review">運営登録の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
+    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">${trainerName()}の運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><section class="pachi-owner-identity"><h3>${trainerName()==='カサイ'?'謎のトレーナー カサイ':trainerName()}</h3><p>専用の姿で世界のプレイヤーと冒険。幻の草むらでは、すべてのパチモンに出会えます。</p><p>${trainerName()}戦は、あなたが接続中のときに挑戦者と戦うリアルタイム対戦です。入室時の保存済み手持ち・レベル・技・育成を使います。ステージで話しかけられたら対戦を許可してください。自分自身には挑戦できません。</p><div class="pachi-actions"><button type="button" class="btn btn-primary" data-admin-action="decorate-room">${trainerName()}の部屋を飾る</button><button type="button" class="btn" data-admin-action="sync-kasai-party">対戦用の手持ちを更新</button><button type="button" class="btn btn-primary" data-admin-action="secret-grass">裏技・幻の草むら</button></div></section><fieldset class="pachi-owner-controls pachi-device-controls"><legend>運営端末</legend><div id="pachi-admin-devices"></div></fieldset><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>この端末の運営登録</legend><p>この端末の登録だけを解除します。別の運営端末が残っていれば、運営キーの入力欄は公開されません。</p><button class="btn" data-admin-action="release-review">この端末の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
     consoleDialog._playersCursor=null;pendingGrant=loadPendingGrant();renderPendingGrant();
-    if(!consoleDialog.open)consoleDialog.showModal();await loadPlayers(false);renderPendingGrant();
+    if(!consoleDialog.open)consoleDialog.showModal();renderAdminDevices();
+    try{await loadAdminDevices();}catch(err){if(!err.staleIdentity)say(err.message,true);}
+    if(!consoleDialog?.open||player?.isAdmin!==true)return;
+    await loadPlayers(false);renderPendingGrant();
   }
   async function loadPlayers(more){
     const data=await request('/admin/players?limit=50'+(more&&consoleDialog._playersCursor?'&cursor='+encodeURIComponent(consoleDialog._playersCursor):''));
@@ -281,12 +422,12 @@
     consoleDialog._playersCursor=data.nextCursor;consoleDialog.querySelector('[data-admin-action="more-players"]').hidden=!data.nextCursor;
   }
   async function handleConsole(event){const button=event.target.closest('[data-admin-action]');if(!button)return;const action=button.dataset.adminAction;
-    if(button.disabled||sendBusy||releaseBusy)return;
+    if(button.disabled||sendBusy||releaseBusy||deviceBusy)return;
     if(action==='close-console'){consoleDialog.close();return;}
     await withButton(button,async()=>{
       if(action==='secret-grass'){await LT.SecretEncounter?.open?.();return;}
       if(action==='decorate-room'){
-        if(!LT.adminBridge?.isPlaying?.())throw new Error('冒険を再開してから、カサイの部屋を飾ってください。');
+        if(!LT.adminBridge?.isPlaying?.())throw new Error(`冒険を再開してから、${trainerName()}の部屋を飾ってください。`);
         consoleDialog.close();const opened=await LT.Rooms?.decorateMine?.();if(!opened)LT.adminBridge?.toast?.('部屋の編集を開けませんでした。移動できる状態で、秘密部屋から開いてください。');return;
       }
       if(action==='sync-kasai-party'){
@@ -294,6 +435,11 @@
         if(!LT.adminBridge?.saveNow?.())throw new Error('冒険を再開し、バトルを終えてから手持ちを保存してください。');
         const result=await LT.KasaiParty?.sync?.({force:true});if(!result?.ok)throw new Error(result?.message||'手持ちを更新できませんでした。');say(result.message||'現在の手持ちを反映しました。');return;
       }
+      if(action==='devices-refresh'){await loadAdminDevices();return;}
+      if(action==='device-add-review'){await prepareDeviceGrant();return;}
+      if(action==='device-revoke-review'){await prepareDeviceRevoke(button.dataset.deviceId);return;}
+      if(action==='device-cancel'){deviceReview=null;renderAdminDevices();return;}
+      if(action==='device-confirm'){await confirmDeviceChange();return;}
       if(action==='release-review'){prepareRelease();return;}
       if(action==='release-cancel'){releaseReview=null;renderReleaseReview();return;}
       if(action==='release-confirm'){await releaseAdmin();return;}
@@ -316,7 +462,7 @@
   }
   async function restore(){
     if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
-    if(sendBusy||releaseBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
+    if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
     const file=document.createElement('input');file.type='file';file.accept='.json,application/json';
     file.onchange=async()=>{
       const attempt=++restoreAttempt;
@@ -327,7 +473,7 @@
         if(data.kind!=='pachi-player-identity'||!/^[A-Za-z0-9_-]{43}$/.test(data.token))throw new Error('プレイヤー情報の形式が違います。');
         const me=await request('/me',{token:data.token,guardIdentity:false});
         if(attempt!==restoreAttempt)throw staleIdentity();
-        if(sendBusy||releaseBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
+        if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
         if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
         adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists,me.adminRecoveryAvailable);
         await sync({fresh:true});
@@ -366,7 +512,7 @@
     }
     identityEpoch++;restoreAttempt++;
     identity=next;player=null;status=null;pending=0;registration=null;pendingGrant=null;
-    adminRegistration=null;releaseReview=null;revision=0;savedConfig=null;lastError='';
+    adminRegistration=null;releaseReview=null;revision=0;savedConfig=null;lastError='';clearDeviceState();
     if(consoleDialog?.open)consoleDialog.close();
     refreshSettings();LT.adminBridge?.refresh?.();
     // Do not echo a storage event back to disk. Registration/profile reads use
@@ -379,13 +525,22 @@
     async worldRequest(path,options={}){
       if(typeof path!=='string'||!/^\/world\/(?:presence|population|trainer-pass(?:\/verify)?|invitations(?:\/[a-zA-Z0-9-]+(?:\/(?:respond|cancel))?)?|rooms(?:\/(?:mine|kasai|catalog|P[0-9a-f]{16}(?:\/relocate)?)|\?map=[a-zA-Z0-9_%.-]+)?|kasai\/(?:party|live(?:\/[a-zA-Z0-9-]+\/(?:arrive|talk|answer|actions|leave|ack|claim))?|challenges(?:\/[a-zA-Z0-9-]+\/(?:complete|cancel))?|reward(?:\/ack)?))$/.test(path))throw new Error('交流先の指定が正しくありません。');
       await ensureIdentity();
+      const requestedProfile=player;
       const data=await request(path,{method:options.method||'GET',...(options.body!==undefined?{body:options.body}:{}),keepalive:options.keepalive===true});
-      if(data.self&&data.self.id===player?.id){const changed=player.isAdmin!==data.self.isAdmin;player={...player,isAdmin:data.self.isAdmin===true};if(changed)announcePlayer();}
+      // A heartbeat carries the full current role, including appointments and
+      // promotion. Never overwrite a newer /me profile with a delayed reply.
+      if(data.self&&data.self.id===player?.id&&player===requestedProfile){
+        const role=data.self.isAdmin===true?(Object.hasOwn(adminRoleLabels,data.self.adminRole)?data.self.adminRole:data.self.adminRole===undefined?'main':null):null;
+        if(player.isAdmin!==!!role||player.adminRole!==role){
+          player={...player,isAdmin:!!role,adminRole:role};
+          clearDeviceState();refreshSettings();if(consoleDialog?.open)renderAdminDevices();LT.adminBridge?.refresh?.();
+        }
+      }
       return data;
     },
     async tradeIdentity({fresh=false}={}){
       await ensureIdentity();
-      if(fresh){const data=await request('/me?limit=1');player=data.player;status=serviceStatus(data);announcePlayer();}
+      if(fresh){const requestedProfile=player,data=await request('/me?limit=1');if(player===requestedProfile)player=data.player;status=serviceStatus(data);refreshSettings();}
       return {...player};
     },
     async tradeRequest(path,options={}){
@@ -394,9 +549,9 @@
       return request(path,{method:options.method||'GET',...(options.body!==undefined?{body:options.body}:{})});
     },
     async authorizeSecretEncounter(){
-      await ensureIdentity();const epoch=identityEpoch,data=await request('/me?limit=1');
+      await ensureIdentity();const epoch=identityEpoch,requestedProfile=player,data=await request('/me?limit=1');
       if(epoch!==identityEpoch)throw staleIdentity();
-      player=data.player;status=serviceStatus(data);
+      if(player===requestedProfile)player=data.player;status=serviceStatus(data);refreshSettings();
       if(player?.isAdmin!==true)throw new Error('この操作は現在の運営だけが使用できます。');
       return {...player};
     },
