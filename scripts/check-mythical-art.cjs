@@ -12,7 +12,11 @@ async function main(){
  assert.notEqual(stats[0].hash,stats[1].hash);
  const mirror=canvas.createCanvas(320,320),mc=mirror.getContext('2d');mc.translate(320,0);mc.scale(-1,1);mc.drawImage(views[0],0,0);
  assert.notEqual(imageStats(mirror).hash,stats[1].hash,'Rear cannot be a mirrored front');
- assert(Math.abs(stats[0].bottom-stats[1].bottom)<=1);assert(Math.abs(stats[0].top-stats[1].top)<=2);
+ assert(Math.abs(stats[0].bottom-stats[1].bottom)<=1,'Front and rear must share the same foot baseline');
+ // Independently authored views may differ slightly in apparent height with perspective.
+ // Keep their scale within 3%, while the baseline and safe margins remain exact above.
+ const heights=stats.map(s=>s.bottom-s.top+1);
+ assert(Math.abs(heights[0]-heights[1])<=Math.ceil(Math.max(...heights)*.03),'Front and rear must retain a consistent apparent scale');
  for(const back of [false,true]){
   assert.equal(art.orientation(id,back).direction,back?1:-1);assert.equal(art.orientation(id,back).authoredBack,back);
   const shiny=imageStats(art.get(id,back,{shiny:true}));assert.notEqual(shiny.hash,stats[+back].hash);assert.equal(shiny.opaque,stats[+back].opaque);

@@ -54,6 +54,9 @@
  *   the adventure controls and both link-battle clients refresh together.
  * v49: permanent curses, bouncing skull ghosts and their sound refresh with
  *   stat-aware HP playback; the shared HP helper is installed for offline play.
+ * v50: all creatures gain a shared coarse pixel renderer and refreshed dex
+ *   thumbnails; Kiraseed's frog-slime art, bulky stats and four techniques
+ *   refresh with their dedicated effects and sounds. The pixel helper is core code.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

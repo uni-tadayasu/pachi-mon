@@ -13,6 +13,7 @@ assert.equal(D.mythical.species,'floravelle');assert.equal(D.mythical.adminLevel
 assert.equal(D.species.floravelle.element,'leaf');assert(D.species.floravelle.adminOnly&&D.species.floravelle.specialOnly);
 assert.equal(D.species.floravelle.rarity,'mythical');assert(!D.species.floravelle.evolvesTo);
 assert.equal(D.content.species,254);assert.equal(D.content.totalSpecies,256);assert.equal(D.content.specialSpecies,2);
+assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,3);assert.equal(D.content.playableSpecies,259);assert.equal(Object.keys(D.species).length,259);
 assert.deepEqual(copy(D.species.floravelle.moves),ids);assert(ids.every(id=>D.moves[id].element==='leaf'));
 assert(Object.values(D.maps).every(m=>!m.encounters.includes('floravelle')));
 assert(!D.starters.includes('floravelle'));assert(!D.collectionRoutes.wild.includes('floravelle'));
@@ -40,25 +41,22 @@ assert(e.receiveAdminMythical(grant).pending);assert(!e.state.giftReceipts.lengt
 function fight(){const e=make();assert(e.receiveAdminMythical(grant).ok);e.startBattle('arvelion',70);e.battle.activeIndex=1;e.rng=()=>.5;return {e,mon:get(e),enemy:e.battle.enemy};}
 function cast(e,mon,enemy,id){const events=[];e.applyMove(mon,enemy,D.moves[id],'ally',events);return events;}
 function damage(guard){const {e,mon,enemy}=fight();e.battle.enemyGuard=guard;const hp=enemy.hp;cast(e,mon,enemy,ids[0]);return hp-enemy.hp;}
-assert.equal(damage(true),damage(false),'翠天の槍 pierces guard');
-let f=fight();cast(f.e,f.mon,f.enemy,ids[1]);assert(Object.values(f.e.battle.stages.ally).every(v=>v===1));assert(f.e.battle.allyGuard);
-assert(f.e.battle.log.at(-1).includes('葉の結界'));assert.equal(f.mon.pp[ids[1]],1);
-for(const k of Object.keys(f.e.battle.stages.ally))f.e.battle.stages.ally[k]=6;
-cast(f.e,f.mon,f.enemy,ids[1]);assert(Object.values(f.e.battle.stages.ally).every(v=>v===6));
-f=fight();f.mon.hp=1;cast(f.e,f.mon,f.enemy,ids[2]);assert.equal(f.mon.hp,1+Math.ceil(f.e.stats(f.mon).hp*.45));
-f.mon.hp=f.e.stats(f.mon).hp-1;cast(f.e,f.mon,f.enemy,ids[2]);assert.equal(f.mon.hp,f.e.stats(f.mon).hp);
-f=fight();f.mon.hp=1;const enemyHP=f.enemy.hp;cast(f.e,f.mon,f.enemy,ids[3]);assert.equal(f.mon.hp,1+Math.floor((enemyHP-f.enemy.hp)*.25));
+assert(damage(true)<damage(false),'若葉の刃 is a physical attack that respects guard');
+let f=fight();const poisonedHP=f.enemy.hp;cast(f.e,f.mon,f.enemy,ids[1]);assert.equal(f.enemy.status,'bloom');assert.equal(f.enemy.hp,poisonedHP);assert(Object.values(f.e.battle.stages.ally).every(v=>v===0));assert(!f.e.battle.allyGuard);assert.equal(f.mon.pp[ids[1]],1);
+cast(f.e,f.mon,f.enemy,ids[1]);assert.equal(f.enemy.status,'bloom');assert.equal(f.enemy.hp,poisonedHP);assert.equal(f.mon.pp[ids[1]],0);
+f=fight();f.mon.hp=1;const enemyHP=f.enemy.hp;cast(f.e,f.mon,f.enemy,ids[2]);assert(f.enemy.hp<enemyHP);assert.equal(f.mon.hp,1);assert.equal(f.mon.rechargeTurns,1);
+f=fight();f.mon.hp=1;cast(f.e,f.mon,f.enemy,ids[3]);assert.equal(f.mon.hp,1+Math.ceil(f.e.stats(f.mon).hp*.5));
+f.mon.hp=f.e.stats(f.mon).hp-1;cast(f.e,f.mon,f.enemy,ids[3]);assert.equal(f.mon.hp,f.e.stats(f.mon).hp);
 const initialStats=f.e.stats(f.mon);f.e.giveXP(f.mon,999999,[]);assert.equal(f.mon.level,100);assert.equal(f.mon.species,'floravelle');assert.equal(f.mon.xp,0);assert.equal(f.e.state.stats.evolutions,0);
 for(const key of ['hp','atk','def','spAtk','spDef','speed'])assert(f.e.stats(f.mon)[key]>initialStats[key]);
 f.e.battle=null;assert.equal(get(new Engine(f.e.serialize())).level,100);
-// These standard effects share the production duel engine even though direct
-// rental creation of this special-only species is intentionally refused.
-const d=new Duel({mode:'single',seed:7,teams:[['arvelion','komori','shizuku'],['arvelion','hibana','komori']]});
+// The real mythical participates in link battles with the same four effects.
+const d=new Duel({mode:'single',seed:7,teams:[['floravelle','komori','shizuku'],['arvelion','hibana','komori']]});
 const actor=d.active(0)[0];actor.pp=Object.fromEntries(ids.map(id=>[id,D.moves[id].pp]));d._random=()=>.5;
 function apply(id){d._apply({side:0,slot:0,target:0,technique:D.moves[id]},actor);}
-apply(ids[1]);assert(Object.values(actor.stages).every(v=>v===1));assert(actor.guard);assert(d.state.log.at(-1).includes('葉の結界'));
-actor.hp=1;apply(ids[2]);assert.equal(actor.hp,1+Math.ceil(actor.maxHp*.45));
-actor.hp=1;const enemy=d.active(1)[0],hp=enemy.hp;apply(ids[3]);assert.equal(actor.hp,1+Math.floor((hp-enemy.hp)*.25));
+apply(ids[1]);assert.equal(d.active(1)[0].status,'bloom');assert(Object.values(actor.stages).every(v=>v===0));assert(!actor.guard);
+actor.hp=1;apply(ids[3]);assert.equal(actor.hp,1+Math.ceil(actor.maxHp*.5));
+actor.hp=1;const enemy=d.active(1)[0],hp=enemy.hp;apply(ids[2]);assert(enemy.hp<hp);assert.equal(actor.hp,1);assert.equal(actor.rechargeTurns,1);
 // Real bridge transaction must leave both in-memory and persisted saves intact
 // on quota failure, then deliver once on retry.
 const start=html.indexOf('  function persistGiftMutation(method,...args){'),end=html.indexOf('  LT.playMoveSound=',start);
@@ -70,4 +68,4 @@ for(const playing of [true,false]){
  failWrite=false;assert(bridge.persistGiftMutation('receiveAdminMythical',grant).ok);assert.equal(writes,1);assert(stored.giftReceipts.includes(grant.grantId));
  assert(bridge.persistGiftMutation('receiveAdminMythical',grant).alreadyReceived);assert.equal(writes,1);
 }
-console.log('Mythical checks passed: owner entitlement validation, 256/254 counts, no ordinary acquisition, link battles at standard Lv.50 stats, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, leaf moves and solo/duel effects.');
+console.log('Mythical checks passed: owner entitlement validation, 254 ordinary / 256 dex / 259 playable species, no ordinary acquisition, link battles at standard Lv.50 stats, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, physical leaf moves, poison, recharge and half restoration in solo/duel.');

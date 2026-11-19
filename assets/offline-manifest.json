@@ -1,5 +1,5 @@
 {
- "version": "20261119-null-beast-v46",
+ "version": "20261119-pixel-kiraseed-v50",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -218,8 +218,8 @@
    "bytes": 3035115
   },
   {
-   "url": "assets/floravelle.png?v=20261118-kiraseed-pixel-v31",
-   "bytes": 1699010
+   "url": "assets/floravelle.png?v=20261119-kiraseed-v50",
+   "bytes": 889974
   },
   {
    "url": "assets/futo-back-v2.png",
@@ -273,6 +273,6 @@
   "assets/traveller-npcs-v33.png",
   "assets/zeroveil-v46.png"
  ],
- "totalBytes": 60646664,
+ "totalBytes": 59837628,
  "coreBytes": 19435454
 }

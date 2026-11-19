@@ -29,7 +29,7 @@ for (const element of ['leaf', 'tide', 'ember', 'wind', 'crystal']) {
 for (const m of Object.values(M)) {
   assert(m.name && m.description, m.id); assert(['attack', 'heal', 'guard', 'boost'].includes(m.kind), m.id);
   if (m.kind === 'attack') {
-    const conditionMove = m.hiddenDex && ['curse', 'inflictScorch'].includes(m.effect);
+    const conditionMove = (m.hiddenDex && ['curse', 'inflictScorch'].includes(m.effect)) || (m.id === 'forest_crown' && m.role === 'special' && m.effect === 'inflictBloom' && m.alwaysHits === true);
     assert((conditionMove ? m.category === 'status' && m.power === 0 : ['physical', 'special'].includes(m.category) && m.power > 0) && m.accuracy > 0 && m.accuracy <= 100, m.id);
   }
   assert(!/こうげき|ぼうぎょ|とくこう|とくぼう|すばやさ|最大HP/.test(m.description), `${m.id} uses the current stat names`);

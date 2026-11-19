@@ -36,8 +36,12 @@
   };
   const NAMED_EFFECTS = {nudge:'impact',pulse:'ripples',dawnstep:'impact',dew:'ripples',struggle:'impact',
     futo_breaker:'impact',futo_burst:'beam',arvelion_rend:'astral-rend',arvelion_nova:'creation-nova',
-    verdant_lance:'astral-rend',root_drain:'roots',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova',
+    verdant_lance:'seed',forest_crown:'petals',genesis_bloom:'roots',root_drain:'healing',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova',
     null_curse:'astral-rend',null_ray:'beam',null_scorch:'flame'};
+  // ID-based variations keep Kiraseed's four techniques within the existing
+  // material families; these same cue points drive their sound and HP timing.
+  const KIRASEED_CUES={verdant_lance:{duration:1180,impactAt:.43},forest_crown:{duration:1100,impactAt:.45},
+    genesis_bloom:{duration:1400,impactAt:.48},root_drain:{duration:1200,impactAt:.43}};
   const movePalettes = {
     futo_breaker:['#fff1fb','#ff8bcf','#913eb7','#ffecbd'],
     futo_burst:['#fff5ff','#ee7bda','#873ed4','#ffd6ed'],
@@ -47,6 +51,10 @@
     arvelion_nova:['#fff3bd','#ffae32','#d94416','#fff8df'],
     arvelion_crown:['#fff2b2','#ffd159','#dc7c22','#fff8de'],
     arvelion_renewal:['#fff4ca','#ffc963','#e08a32','#fff9e9'],
+    verdant_lance:['#f1ffd0','#a2dc61','#326a43','#fff8c6'],
+    forest_crown:['#fff0d2','#d5a1df','#764c96','#ffe89e'],
+    genesis_bloom:['#e4ffbd','#88bf59','#386643','#f6dda3'],
+    root_drain:['#fbffd5','#b4e27d','#5c9460','#ffe5a4'],
     sig_leaf:['#fbffe0','#b6f26a','#2f9e4f','#ffe9a3'],
     sig_tide:['#eefcff','#7ee3ff','#1f6fd1','#fff2b8'],
     sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a'],
@@ -253,12 +261,13 @@
     if(event.kind==='boost' && event.changed===false)return null;
     const move=['faint','switch'].includes(event.kind)?{element:event.element}:resolveMove(event,fallback)||{element:event.element};
     const style=classify(move,event.kind),large=(move.power||0)>=40;
+    const cue=['damage','attack','heal'].includes(event.kind)?KIRASEED_CUES[move.id||event.move]:null;
     const amount=Number.isFinite(event.amount)?event.amount:Number(/(\d+)(?:のダメージ|ダメージ)/.exec(event.text||'')?.[1]||/(?:体力が|HPが)(\d+)/.exec(event.text||'')?.[1]||0);
     return {kind:event.kind,style,move:move.id||event.move||'',element:event.element||move.element||'neutral',
       raised:event.raised,power:move.power||25,category:move.category||(['heal','guard','boost'].includes(event.kind)?'status':'special'),
-      releaseAt:.14,impactAt:.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
+      releaseAt:.14,impactAt:cue?.impactAt??.43,side:event.side??'ally',slot:event.slot||0,target:event.target||0,
       amount,critical:event.critical===true||/鮮やかな一撃|急所/.test(event.text||''),effectiveness:event.effectiveness,
-      started:now,duration:event.kind==='faint'?950:event.kind==='switch'?650:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940,
+      started:now,duration:cue?.duration??(event.kind==='faint'?950:event.kind==='switch'?650:event.kind==='miss'?720:event.kind==='boost'?1400:event.kind==='heal'||event.kind==='guard'?1050:large?1180:940),
       seed:hash((move.id||event.text||style)+':'+(event.side??'ally')+':'+(event.slot||0))};
   }
   function anchors(width,height,e,options={}) {
@@ -687,6 +696,26 @@
       case 'seed':
       case 'water-orbs':
       case 'flame': {
+        if(e.move==='verdant_lance'){
+          const blades=low?3:5;
+          for(let i=0;i<blades;i++){
+            const delay=i*.024,flight=smooth(phase(t,.14+delay,.43+delay)),offset=(i-(blades-1)/2)*17*s;
+            const at=u=>{const pos=mixPoint(source,target,u),arc=Math.sin(u*Math.PI)*offset+u*offset*.2;
+              return {x:pos.x-Math.sin(direction)*arc,y:pos.y+Math.cos(direction)*arc};};
+            const pos=at(flight),tail=at(Math.max(0,flight-.17)),alpha=smooth(phase(t,.1+delay,.2+delay))*(1-smooth(phase(t,.48+delay,.67+delay)));
+            curvedTrail(tail,pos,offset*.14,3.8,p[2],alpha*.45);curvedTrail(tail,pos,offset*.14,1.6,p[0],alpha*.8);
+            const angle=direction+Math.sin(flight*Math.PI)*.35+(i%2?1:-1)*t*.55;
+            if(!low){const echo=at(Math.max(0,flight-.065));leaf(echo.x,echo.y,17*s,angle,p[0],alpha*.23);}
+            leaf(pos.x,pos.y,(17+i%2*3)*s,angle,p[1],alpha);
+          }
+          const cut=smooth(phase(t,.4,.49))*(1-smooth(phase(t,.6,.84))),reach=(24+ease(phase(t,.4,.57))*31)*s;
+          for(const sign of [-1,1])curvedTrail({x:cx-reach,y:cy-sign*reach*.66},{x:cx+reach,y:cy+sign*reach*.66},sign*9*s,2.6,p[0],cut);
+          for(let i=0;i<(low?5:8);i++){
+            const a=i*2.39996,drift=ease(phase(t,.43,.9)),r=(22+drift*52)*s;
+            leaf(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.62+drift*15*s,5*s,a+t*2,p[i%2],hitAlpha*.7);
+          }
+          impactRing(71*s);break;
+        }
         const n=e.power>=40?7:5;
         for(let i=0;i<n;i++){
           const tt=ease(phase(t,.09+i*.038,.41+i*.038)),pos=mixPoint(source,target,tt),arc=Math.sin(tt*Math.PI)*(i-n/2)*10*s;
@@ -700,12 +729,63 @@
         }impactRing();sparks(cx,cy);break;
       }
       case 'petals': {
+        if(e.move==='forest_crown'){
+          const spread=ease(phase(t,.36,.78)),gather=smooth(phase(t,.12,.26)),lift=phase(t,.46,.94);
+          for(let i=0;i<count;i++){
+            const flight=smooth(phase(t,.14+(i%3)*.025,.45+(i%3)*.025)),center=mixPoint(source,target,flight);
+            const a=i*2.39996+t*.6,r=(7+spread*(22+random(seed,i)*43))*s;
+            const x=center.x+Math.cos(a)*r,y=center.y+Math.sin(a)*r*.64-lift*(10+random(seed,i+34)*26)*s;
+            const alpha=gather*(1-smooth(phase(t,.78,.98))),flower=i%(low?4:6)===0;
+            if(flower){
+              const petal=(6+random(seed,i+22)*3)*s;
+              for(let k=0;k<5;k++){const turn=k*TAU/5+t*.8;leaf(x+Math.cos(turn)*petal*.8,y+Math.sin(turn)*petal*.65,petal*.72,turn,p[1],alpha*.9);}
+              mote(x,y,petal*.45,p[2],alpha);mote(x-petal*.08,y-petal*.12,petal*.27,p[3],alpha);
+            }else{
+              const dust=(2.6+random(seed,i+12)*2.3)*s;
+              mote(x,y,dust+1.1*s,p[2],alpha*.65);mote(x,y,dust,i%3?p[3]:p[0],alpha);
+              if(!low)star(x-dust*.3,y-dust*.4,dust*.45,p[0],0,alpha*.6);
+            }
+          }
+          glow(cx,cy-12*s,76*s,Math.sin(phase(t,.4,.98)*Math.PI)*.18,p[1]);
+          ellipse(cx,cy+44*s,(25+spread*40)*s,(8+spread*12)*s,p[1],1.5,hitAlpha*.45);break;
+        }
         for(let i=0;i<count;i++){const a=i*2.39996+t*TAU,r=(18+random(seed,i)*74)*s*size;
           const pos=mixPoint(source,target,ease(phase(t,.08,.48)));const spread=.2+.8*ease(phase(t,.28,.8));
           leaf(pos.x+Math.cos(a)*r*spread,pos.y+Math.sin(a)*r*.62*spread,(4+random(seed,i+20)*5)*s,a+t*2,i%4===0?'#ffc7df':i%3===0?p[3]:p[1],.9);
         }impactRing(91*s*size);break;
       }
       case 'roots': {
+        if(e.move==='genesis_bloom'){
+          const ground=cy+61*s,roots=low?3:5,rumble=smooth(phase(t,.09,.24))*(1-smooth(phase(t,.6,.91)));
+          for(let i=0;i<(low?4:6);i++){
+            const a=i*TAU/(low?4:6),r=(24+ease(phase(t,.1,.4))*52)*s;
+            const crack=[[cx,ground],[cx+Math.cos(a)*r*.48,ground+Math.sin(a)*r*.13],[cx+Math.cos(a+.22)*r*.7,ground+Math.sin(a+.22)*r*.2],[cx+Math.cos(a)*r,ground+Math.sin(a)*r*.3]];
+            stroke(crack,'#2b3524',5,rumble);stroke(crack,p[3],1.2,rumble*.7);
+          }
+          for(let i=0;i<roots;i++){
+            const lane=i-(roots-1)/2,delay=Math.abs(lane)*.033,growth=ease(phase(t,.23+delay,.48+delay));
+            const height=(171-Math.abs(lane)*21)*s,base=cx+lane*30*s,alpha=smooth(phase(t,.2+delay,.3+delay))*(1-smooth(phase(t,.77,.99)));
+            const points=[];
+            for(let k=0;k<=budget.ribbonSteps;k++){
+              const u=k/budget.ribbonSteps*growth;
+              points.push([base+Math.sin(u*3.8+lane*.7)*14*s+lane*u*8*s,ground-u*height]);
+            }
+            ribbon(points,22-Math.abs(lane)*2,'#283d2d',alpha);ribbon(points,16-Math.abs(lane)*1.4,'#796342',alpha);
+            ribbon(points,9-Math.abs(lane)*.7,p[2],alpha);stroke(points,p[1],3.2,alpha*.85);
+            const tip=points.at(-1);leaf(tip[0],tip[1]-7*s,15*s,-Math.PI/2+lane*.25,p[1],alpha*growth);
+            for(let branch=1;branch<=(low?1:2);branch++){
+              const u=(.3+branch*.2)*growth,at=points[Math.min(points.length-1,Math.round(u/Math.max(.001,growth)*budget.ribbonSteps))],sign=(i+branch)%2?-1:1;
+              const end={x:at[0]+sign*27*s*growth,y:at[1]-22*s*growth};
+              curvedTrail({x:at[0],y:at[1]},end,-sign*8*s,6,p[2],alpha);leaf(end.x,end.y,12*s,sign>0?-.5:Math.PI+.5,p[1],alpha*growth);
+            }
+          }
+          const erupt=ease(phase(t,.46,.88)),soil=Math.sin(phase(t,.43,.97)*Math.PI);
+          for(let i=0;i<(low?7:12);i++){
+            const sign=i%2?-1:1,x=cx+sign*(12+erupt*(30+random(seed,i)*65))*s,y=ground-Math.sin(erupt*Math.PI)*(25+random(seed,i+40)*55)*s+erupt*16*s,r=(3+random(seed,i+60)*4)*s;
+            poly([[x-r,y-r*.6],[x+r*.5,y-r],[x+r,y+r*.5],[x-r*.7,y+r]],i%2?'#7f6845':'#c4ab71',soil);
+          }
+          ellipse(cx,ground,(26+erupt*78)*s,(7+erupt*21)*s,p[3],3,soil*.6);impactRing(105*s);break;
+        }
         const growth=ease(phase(t,.16,.62));
         for(let i=0;i<(low?5:8);i++){
           const offset=(i-(low?5:8)/2)*17*s,xx=cx+offset,base=cy+67*s;
@@ -849,6 +929,28 @@
         }impactRing(105*s);sparks(cx,cy);break;
       }
       case 'healing': {
+        if(e.move==='root_drain'){
+          const shine=Math.sin(phase(t,.04,.97)*Math.PI),sun={x:cx+(own?-22:22)*s,y:Math.max(22*s,cy-137*s)},radius=18*s;
+          for(let i=0;i<3;i++){
+            const spread=(i-1)*23*s,top=9*s,bottom=(14+i*4)*s;
+            poly([[sun.x-top+spread*.15,sun.y],[sun.x+top+spread*.15,sun.y],[cx+spread+bottom,cy+49*s],[cx+spread-bottom,cy+49*s]],p[3],shine*.14);
+          }
+          glow(sun.x,sun.y,46*s,shine*.45,p[3]);
+          c.save();c.globalAlpha*=shine;c.fillStyle=p[3];c.strokeStyle='#98773a';c.lineWidth=1.5*s;
+          c.beginPath();c.arc(sun.x,sun.y,radius,0,TAU);c.fill();c.stroke();c.restore();
+          mote(sun.x-4*s,sun.y-4*s,radius*.56,p[0],shine*.8);
+          for(let i=0;i<(low?6:8);i++){
+            const a=i*TAU/(low?6:8)+t*.12;
+            stroke([[sun.x+Math.cos(a)*radius*1.35,sun.y+Math.sin(a)*radius*1.35],[sun.x+Math.cos(a)*radius*1.8,sun.y+Math.sin(a)*radius*1.8]],p[3],2.5,shine*.75);
+          }
+          glow(cx,cy,66*s,shine*.25,p[1]);seal(cx,cy+49*s,61*s,smooth(t),shine*.55,true);
+          for(let i=0;i<(low?8:14);i++){
+            const rise=(t*.95+i/(low?8:14))%1,a=i*2.39996+rise*1.3,r=(26+random(seed,i)*27)*s,alpha=Math.sin(rise*Math.PI)*shine;
+            leaf(cx+Math.cos(a)*r,cy+49*s-rise*119*s,(6+random(seed,i+24)*4)*s,a-.8,p[i%2],alpha);
+          }
+          for(const sign of [-1,1])star(cx+sign*26*s,cy-15*s,6*s,p[0],0,shine*.8);
+          ellipse(cx,cy+48*s,(32+ease(t)*23)*s,(9+ease(t)*7)*s,p[1],2,shine*.65);break;
+        }
         for(let i=0;i<3;i++){const r=(25+i*17)*s*(.8+.2*smooth(t/.3));ellipse(cx,cy+48*s-i*4*s,r,r*.3,p[i],2,.65);}
         glow(cx,cy,65*s,.23);
         seal(cx,cy+48*s,67*s,smooth(t),Math.sin(t*Math.PI)*.58,true);
