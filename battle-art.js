@@ -52,6 +52,9 @@
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
     c.drawImage(atlas,sx,sy,sw,sh,0,0,w,h);
+    // Apply the scene's display grid before caching, keeping the original
+    // atlas, crop and output size. The text/HUD is rendered independently.
+    LT.ScenePixels?.apply?.(cv, { long: 384 });
     cache.set(key,cv);
     while (cache.size > 4) cache.delete(cache.keys().next().value);
     return cv;

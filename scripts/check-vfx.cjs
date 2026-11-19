@@ -154,11 +154,15 @@ async function main(){
   // The proxy counts actual canvas work, not an implementation-mirroring loop.
   let calls=0;
   const geometry=new Set(['moveTo','lineTo','quadraticCurveTo','bezierCurveTo','arc','ellipse','fillRect','strokeRect','translate','rotate','scale']);
-  const measured=new Proxy(c,{
+  const measure=target=>new Proxy(target,{
     get(target,key){const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;
       return (...args)=>{calls++;if(geometry.has(key))for(const n of args)if(typeof n==='number')assert(Number.isFinite(n),`${String(key)} received a nonfinite coordinate`);return value.apply(target,args);};},
     set(target,key,value){return Reflect.set(target,key,value,target);}
   });
+  const measured=measure(c),scenePixels=LT.ScenePixels;
+  // Count work in the transparent effect layer as well as final composition.
+  // Measuring only the destination would hide the particle-quality budgets.
+  if(scenePixels?.layer)LT.ScenePixels={...scenePixels,layer(ctx,w,h,options,draw){return scenePixels.layer(ctx,w,h,options,layer=>draw(measure(layer)));}};
   let largestBudget=0;
   for(const style of api.styles)for(const time of [100,101,530,1099,1100]){
     const event={style,kind:'damage',element:'crystal',side:'enemy',started:100,duration:1000,power:100,seed:17};
@@ -172,6 +176,7 @@ async function main(){
   c.clearRect(0,0,768,440);api.render(c,768,440,640,{...variant,category:'special'});assert.notEqual(imageStats(cv).hash,physical,'Physical and special impact language must differ');
   calls=0;api.render(measured,768,440,640,variant,{quality:'low'});const lowCalls=calls;
   calls=0;api.render(measured,768,440,640,variant,{quality:'high'});assert(calls>lowCalls,'High quality must add visual detail while low quality reduces work');
+  if(scenePixels)LT.ScenePixels=scenePixels;
   // Both battle hooks must convey choreography to the underlying monster
   // renderer, including source/target slots for doubles.
   let soloOptions,duelOptions,soundCalls=0;

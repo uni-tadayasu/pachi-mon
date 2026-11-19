@@ -57,6 +57,9 @@
  * v50: all creatures gain a shared coarse pixel renderer and refreshed dex
  *   thumbnails; Kiraseed's frog-slime art, bulky stats and four techniques
  *   refresh with their dedicated effects and sounds. The pixel helper is core code.
+ * v51: scenery, people, battle backgrounds/effects and title art share visible
+ *   pixel grids; stepped UI surfaces refresh alongside the new scene helper,
+ *   title helper and CSS. Native text, source artwork and saved data stay intact.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
