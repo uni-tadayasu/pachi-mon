@@ -122,9 +122,10 @@ for (const [index, id] of ids.entries()) {
   const s = D.species[id], number = pad(index + 1), url = `${SITE}/monsters/${id}.html`;
   const stats = engine.stats({ species: id, level: 50 });
   const moves = engine.moves({ species: id }).filter(Boolean);
+  const ability = LT.Abilities.get(s);
   const chain = lineage(id);
   const evoText = s.evolvesTo ? `Lv.${s.evolveLevel}で${D.species[s.evolvesTo].name}に進化` : preOf[id] ? `${D.species[preOf[id].from].name}からLv.${preOf[id].level}で進化` : '進化しない';
-  const description = `${s.name}（No.${number}）は${speciesTypeName(s)}のパチモン。${s.description}`.slice(0, 118) + ' 能力値・覚える技・進化・入手方法を掲載。';
+  const description = `${s.name}（No.${number}）は${speciesTypeName(s)}のパチモン。${s.description}`.slice(0, 118) + ' 特性・能力値・覚える技・進化・入手方法を掲載。';
   const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../${dexSprite(cid)}" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy" decoding="async"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
   const prev = ids[index - 1], next = ids[index + 1];
   const body = `${crumbNav([['トップ', '../'], ['パチモン図鑑', './'], [s.name, '']], 1)}
@@ -142,22 +143,23 @@ for (const [index, id] of ids.entries()) {
   <table class="facts"><tbody>
     <tr><th>図鑑番号</th><td>No.${number}</td></tr>
     <tr><th>タイプ</th><td>${esc(speciesTypeName(s))}</td></tr>
+    <tr><th>特性</th><td><strong>${esc(ability.name)}</strong><br>${esc(ability.description)}</td></tr>
     <tr><th>進化</th><td>${esc(evoText)}</td></tr>
     <tr><th>入手方法</th><td>${esc(obtain(id))}</td></tr>
   </tbody></table>
   <h2>Lv.50の能力値</h2>
   <table class="stats"><tbody>${STAT_ORDER.map(key => `<tr><th>${esc(D.statLabels[key])}</th><td>${stats[key]}</td><td class="bar"><span style="width:${Math.min(100, Math.round(stats[key] / statMax[key] * 100))}%"></span></td></tr>`).join('')}</tbody></table>
-  <p class="note">上の数値は、振り分けポイントと持ち物の補正を含まないLv.50の基礎能力です。冒険中の能力値はレベルに応じて上がります。通信対戦は基礎能力をLv.50にそろえ、選んだ個体の振り分けポイントはすべて加算します。</p>
+  <p class="note">上の数値は、振り分けポイント・持ち物・戦闘中の特性の補正を含まないLv.50の基礎能力です。冒険中の能力値はレベルに応じて上がります。通信対戦は基礎能力をLv.50にそろえ、選んだ個体の振り分けポイントはすべて加算します。</p>
   <h2>覚える技</h2>
   <div class="table-wrap"><table class="moves"><thead><tr><th>技</th><th>タイプ</th><th>分類</th><th>威力</th><th>命中</th><th>PP</th><th>効果</th></tr></thead><tbody>${moves.map(m => `<tr><th><a href="../moves/#${esc(m.id)}">${esc(m.name)}</a></th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${movePower(m)}</td><td>${moveAccuracy(m)}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td></tr>`).join('')}</tbody></table></div>
   ${chainHtml}
   <h2>タイプ相性</h2>
   <table class="facts"><tbody><tr><th>弱点となる技</th><td>${esc(incomingList(s, factor => factor > 1))}</td></tr><tr><th>軽減できる技</th><td>${esc(incomingList(s, factor => factor < 1))}</td></tr></tbody></table>
-  <p>${TYPES.of(s).length === 2 ? '複合タイプでは、受ける技と2つのタイプの相性を掛け合わせます。' : ''}${esc(typeList(TYPES.of(s)))}の技を使うと、タイプ一致により威力が1.15倍になります。<a href="../guide/#types">全タイプの相性表</a>も確認できます。</p>
+  <p>${TYPES.of(s).length === 2 ? '複合タイプでは、受ける技と2つのタイプの相性を掛け合わせます。' : ''}${esc(typeList(TYPES.of(s)))}の技を使うと、タイプ一致により威力が1.15倍になります。上の相性表には特性や持ち物の補正を含みません。<a href="../guide/#types">全タイプの相性表</a>も確認できます。</p>
   <p class="cta"><a class="button" href="../">${esc(s.name)}に会いに行く — 無料で遊ぶ ▶</a></p>
 </article>
 <nav class="pager" aria-label="前後のパチモン">${prev ? `<a href="${prev}.html">◀ No.${pad(index)} ${esc(D.species[prev].name)}</a>` : '<span></span>'}<a href="./">図鑑一覧</a>${next ? `<a href="${next}.html">No.${pad(index + 2)} ${esc(D.species[next].name)} ▶</a>` : '<span></span>'}</nav>`;
-  fs.writeFileSync(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の進化・技・入手方法｜パチモン図鑑`, description, body, image: `${SITE}/${dexSprite(id)}`, imageAlt: `${s.name}のドット絵`,
+  fs.writeFileSync(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の特性・進化・技・入手方法｜パチモン図鑑`, description, body, image: `${SITE}/${dexSprite(id)}`, imageAlt: `${s.name}のドット絵`,
     jsonld: [crumbs([['トップ', `${SITE}/`], ['パチモン図鑑', `${SITE}/monsters/`], [s.name, url]])] }));
 }
 
@@ -202,6 +204,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   </tbody></table></div>
   <p>標準マッピングのゲームパッドにも対応しています。左スティック・十字キーで移動、下側のボタンで決定、右側のボタンで戻ります。</p>
   <h2 id="battle">バトルの基本</h2>
+  <p><strong>特性</strong>は、すべてのパチモンが種族ごとに1つ持つ、自動で働く能力です。手持ち・ひかえの仲間にも自動で反映され、覚えるための道具やコインは不要です。進化すると進化先の種族の特性になります。冒険のバトル、通信シングル・ダブルで同じ効果が働きます。特性名と正確な効果は、パチモンの詳細・図鑑・通信のチーム編成・交換の確認画面で読めます。戦闘中は特性名を選ぶと効果を確認できます。</p>
   <p>バトルは「たたかう・バッグ・パチモン・にげる」から行動を選びます。素早さの高いほうが先に動き、防御の技は優先して発動します。技にはPP（使用回数）があり、すべて使い切ると反動を受ける「踏ん張り打ち」になります。宿や休み場では体力とPPを無料で全回復できます。</p>
   <ul><li>物理技は「物理攻撃」と相手の「物理防御」、特殊技は「特殊攻撃」と相手の「特殊防御」でダメージが決まります。</li><li>自分のどちらかのタイプと一致する技は、威力が1回だけ1.15倍になります。</li><li>防御の技は次に受けるダメージを半分にします。「守りを貫く」技は防御を無視します。</li><li>回復の技は最大体力の一定割合を回復し、吸収の技は与えたダメージの25%を回復します。</li></ul>
   <h2 id="types">タイプ相性表</h2>

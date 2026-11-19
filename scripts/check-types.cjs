@@ -168,7 +168,7 @@ delete D.species[actorId];delete D.species[targetId];
 
 // Compatibility includes secondary types and the numeric chart, so two clients
 // with different rules stop at the handshake instead of diverging during play.
-assert.equal(Duel.rules.version,9);assert.match(Duel.rules.types,/two-type-product/);
+assert.equal(Duel.rules.version,10);assert.match(Duel.rules.types,/two-type-product/);
 const initialFingerprint=Duel.rulesFingerprint(),original=D.species.komori;
 D.species.komori={...original,types:[original.element,original.element==='thunder'?'ice':'thunder']};
 assert.notEqual(Duel.rulesFingerprint(),initialFingerprint);D.species.komori=original;assert.equal(Duel.rulesFingerprint(),initialFingerprint);

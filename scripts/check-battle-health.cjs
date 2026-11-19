@@ -30,13 +30,15 @@ function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,sta
 function solo(){
  const e=new Engine();assert(e.newGame('komori').ok);e.state.party[0].level=50;e.restoreMonster(e.state.party[0]);e.state.party.push(e.makeMonster('shizuku',50));e.markCaught('shizuku');assert(e.startBattle('kirari',50));
  const nodes=new Map(),{c,time,H}=runtime({engine:e,DATA:D,settings:{textSpeed:'normal',reducedMotion:false},busy:false,battleView:null,battleEffect:null,evolutionUntil:0,
-  refitBattleText(){},battleActions(){},nameOf:model.LT.displayName,visibleConditions:()=>[],typeBadge:()=>'',updateScene(){},saved:0,beats:[],
+  refitBattleText(){},battleActions(){},nameOf:model.LT.displayName,visibleConditions:()=>[],updateScene(){},saved:0,beats:[],
   save:()=>{c.saved++;},updateAll:()=>c.updateBattle(),sound:{fx(){},move(){}},
   document:{querySelector:selector=>selector==='.enemy-card .hp-label'?node('enemy-label'):null,createElement:()=>element()},$:id=>node(id)
  });
  function node(id){if(!nodes.has(id))nodes.set(id,element());return nodes.get(id);}
  const log=node('battle-log'),append=log.appendChild;log.appendChild=function(child){c.beats.push({at:time.now,ally:counter(node('ally-hp-text')),enemy:counter(node('enemy-hp-text'))});return append.call(this,child);};
  c.LT.BattleVFX={fromEvent:(event,move,started)=>['damage','heal','recoil','statusTick','faint','switch'].includes(event.kind)?{kind:event.kind,style:event.kind==='faint'?'faint':'impact',started,duration:200,impactAt:.5}:null};
+ vm.runInContext(section('  const escape = s =>','  let engine = new Engine();'),c);
+ vm.runInContext(section('  function typeBadge(','  const nameOf='),c);
  vm.runInContext(section('  function battleHealthOptions(','  function battleActions('),c);
  vm.runInContext(section('  function captureBattleView(','  async function doBattle('),c);
  c.battleView=c.captureBattleView();c.updateBattle();return {c,time,H,nodes,node};
@@ -122,11 +124,32 @@ async function main(){
 
  await test('solo rendering uses event defense categories and updates snapshots without changing the game state',()=>{
   const {c,time,node}=solo(),before=copy({state:c.engine.state,battle:c.engine.battle}),old=c.battleView.state.party[0],after={...copy(old),hp:old.hp-80},event={kind:'damage',side:'enemy',moveId:'futo_burst'},frame=visual(c,after);
+  for(const [side,mon]of [['ally',old],['enemy',c.battleView.battle.enemy]]){
+   for(const type of model.LT.TypeSystem.of(mon))assert(node(side+'-type').innerHTML.includes(D.elements[type].name),'The real type helpers render the current species');
+   const ability=model.LT.Abilities.get(mon);assert.equal(node(side+'-ability').dataset.ability,mon.species);assert(node(side+'-ability').textContent.includes(ability.name));assert.equal(node(side+'-ability').hidden,false);
+  }
   const stats=c.engine.stats(after),expected=c.LT.BattleHealth.plan({from:old.hp,to:after.hp,max:stats.hp,def:stats.def,spDef:stats.spDef,kind:'damage',category:'special'}).duration;
   assert.equal(c.battleHealthDuration(frame,event),expected);c.applyBattleVisual(frame,event);assert.equal(c.battleView.state.party[0].hp,after.hp);assert.equal(counter(node('ally-hp-text')),old.hp);
   time.tick(expected/2);assert(counter(node('ally-hp-text'))<old.hp&&counter(node('ally-hp-text'))>after.hp);c.updateBattle();time.tick(expected);assert.equal(counter(node('ally-hp-text')),after.hp);
   assert.deepEqual(copy({state:c.engine.state,battle:c.engine.battle}),before);
   c.settings.reducedMotion=true;const healed=visual(c,{...after,hp:old.hp});assert.equal(c.battleHealthDuration(healed,{kind:'heal'}),0);c.applyBattleVisual(healed,{kind:'heal'});assert.equal(counter(node('ally-hp-text')),old.hp);
+ });
+
+ await test('solo ability recovery events animate actual engine healing and finish before the next message without changing saves',async()=>{
+  for(const kind of ['regeneration','reserve']){
+   const {c,time,node}=solo(),id=Object.keys(D.species).find(id=>model.LT.Abilities.get(id)?.kind===kind);assert(id,kind+' has a species');
+   const mon=c.engine.makeMonster(id,50),max=c.engine.stats(mon).hp;mon.hp=Math.floor(max/4);c.engine.state.party[0]=mon;
+   c.battleView=c.captureBattleView();c.updateBattle();const from=mon.hp,events=[];
+   c.engine.endOfTurn(events);const event=events.find(event=>event.kind==='ability'&&event.side==='ally'&&event.amount>0);assert(event,'The real engine emits ability recovery');
+   assert.equal(events.length,1,'No unrelated effects are required for this recovery');assert.equal(event.visual.ally.hp,from+event.amount);
+   const to=mon.hp,duration=c.battleHealthDuration(event.visual,event);assert(duration>0,'Ability HP changes use the same smooth health plan');
+   c.engine.event(events,'次の合図。','turn');const original=copy({state:c.engine.state,battle:c.engine.battle,events});
+   const promise=c.playBattleEvents({events});assert.equal(counter(node('ally-hp-text')),from);time.tick(duration/2);
+   assert(counter(node('ally-hp-text'))>from&&counter(node('ally-hp-text'))<to,'The counter rises through intermediate HP');assert.equal(c.beats.length,1);
+   await time.until(promise);assert.equal(c.beats.length,2);assert(c.beats[1].at>=duration);assert.equal(c.beats[1].ally,to,'The next message sees the completed recovery');
+   assert.equal(counter(node('ally-hp-text')),to);assert.equal(c.busy,false);assert.equal(time.pending,0);assert.equal(c.saved,1);
+   assert.deepEqual(copy({state:c.engine.state,battle:c.engine.battle,events}),original,'Playback cannot apply the ability a second time or edit its snapshots');
+  }
  });
 
  await test('solo event playback completes a fatal HP drain before fainting and resets the replacement identity',async()=>{
@@ -174,6 +197,22 @@ async function main(){
    }
    assert(V.onlineBusy(state,start+timeline.total-1));assert.equal(V.onlineBusy(state,start+timeline.total),false);
    assert.equal(V.onlineView(state,start+timeline.total).teams[1].monsters[slot].hp,220);assert.deepEqual(copy(state),original,'HP, PP and all authoritative event snapshots stay unchanged');
+  }
+ });
+
+ await test('online single and double ability recoveries animate the correct slot and preserve authoritative HP',()=>{
+  for(const mode of ['single','double'])for(const kind of ['regeneration','reserve']){
+   const {H,V}=online(),fixture=onlineFixture(mode),slot=mode==='double'?1:0,start=100,id=Object.keys(D.species).find(id=>model.LT.Abilities.get(id)?.kind===kind);assert(id);
+   const mon=fixture.frame.teams[1].monsters[slot];mon.species=id;mon.hp=75;fixture.events[0].visual=copy(fixture.frame);
+   const ability=model.LT.Abilities.get(mon),recovery=model.LT.Abilities.endTurn(mon,mon.maxHp);assert(recovery.amount>0);
+   fixture.push({kind:'ability',side:1,slot,ability:ability.id,abilityId:ability.id,amount:recovery.amount,text:`特性「${ability.name}」で体力が回復した。`},frame=>{frame.teams[1].monsters[slot].hp+=recovery.amount;});
+   fixture.push({kind:'turn',text:'次の合図。'});
+   const state=fixture.state(),original=copy(state),timeline=V.onlinePlan(state),event=state.events[1],before=state.events[0].visual.teams[1].monsters[slot],after=event.visual.teams[1].monsters[slot],{impact,plan}=onlineChange(H,V,event,before,after),beat=timeline.beats[1];
+   assert(plan.duration>0);assert(timeline.beats[2].start>=beat.start+impact+plan.duration,'The next message waits for ability HP to settle');V.onlineView(state,start);
+   const mid=start+beat.start+impact+plan.duration/2,shown=V.onlineView(state,mid),healed=shown.teams[1].monsters[slot];
+   approximately(healed.hp,H.sample(plan,plan.duration/2),'Ability recovery follows the continuous HP plan');assert(healed.hp>before.hp&&healed.hp<after.hp);assert.equal(healed.displayHp,H.displayed(plan,healed.hp));assert(V.onlineBusy(state,mid));
+   if(mode==='double')assert.equal(shown.teams[1].monsters[0].hp,300,'The other double-battle slot does not inherit the recovery');
+   assert.equal(V.onlineView(state,start+beat.start+impact+plan.duration+1).teams[1].monsters[slot].hp,after.hp);assert.deepEqual(copy(state),original,'Presentation never reapplies healing to the authoritative state');
   }
  });
 
