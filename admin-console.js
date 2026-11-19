@@ -15,6 +15,8 @@
   let identityEpoch=0, restoreAttempt=0, syncQueued=false, registerQueued=false, sendBusy=false, pendingGrant=null;
   let adminRegistration=null, releaseReview=null, releaseBusy=false, refreshBusy=false;
   let adminDevices=null, deviceReview=null, deviceInput='', deviceRole='sub', deviceBusy=false;
+  let reserveTeam=null, reserveMessage='', reserveBusy=false;
+  function clearReserveState(){reserveTeam=null;reserveMessage='';}
   function clearDeviceState(){adminDevices=null;deviceReview=null;deviceInput='';deviceRole='sub';}
   const staleIdentity=()=>Object.assign(new Error('プレイヤー情報が切り替わりました。'),{staleIdentity:true});
   function announcePlayer(){
@@ -45,7 +47,7 @@
   function randomToken(){ const bytes=crypto.getRandomValues(new Uint8Array(32)); return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
   function persist(next){
     localStorage.setItem(KEY,JSON.stringify(next));
-    if(identity?.token!==next.token){identityEpoch++;player=null;status=null;pending=0;registration=null;pendingGrant=null;adminRegistration=null;releaseReview=null;clearDeviceState();}
+    if(identity?.token!==next.token){identityEpoch++;player=null;status=null;pending=0;registration=null;pendingGrant=null;adminRegistration=null;releaseReview=null;clearDeviceState();clearReserveState();}
     identity=next;
   }
   function serviceStatus(data,previous=status){
@@ -53,7 +55,7 @@
       adminRecoveryAvailable:typeof data?.adminRecoveryAvailable==='boolean'?data.adminRecoveryAvailable:previous?.adminRecoveryAvailable===true};
   }
   function adoptIdentity(next,nextPlayer,adminExists,adminRecoveryAvailable=false){
-    persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;adminRegistration=null;releaseReview=null;clearDeviceState();
+    persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;adminRegistration=null;releaseReview=null;clearDeviceState();clearReserveState();
     if(consoleDialog?.open)consoleDialog.close();
   }
   async function request(path, {method='GET',body,token=identity?.token,auth=true,guardIdentity=true,keepalive=false}={}){
@@ -106,7 +108,7 @@
         epoch=identityEpoch;await ensureIdentity();
         if(epoch!==identityEpoch)throw staleIdentity();
         const token=identity.token;
-        let cursor='', totalPending=0, received=0, initialReceived=0;
+        let cursor='', totalPending=0, received=0, initialReceived=0, reserveReceived=0;
         const initialSeen=new Set(),initialNames=new Set();
         do{
           if(epoch!==identityEpoch)throw staleIdentity();
@@ -116,6 +118,17 @@
           // A newer heartbeat may appoint or dismiss this device while this
           // inbox page is in flight. Its role must not be rolled back here.
           if(player===requestedProfile)player=data.player;status=serviceStatus(data);
+          if(!cursor){
+            adoptReserveTeam(data);
+            if(reserveTeam){
+              const outcome=LT.adminBridge?.receiveAdminReserveTeam?.(reserveTeam);
+              if(outcome?.pending||!outcome?.ok){
+                const waiting=LT.adminBridge?.adminReserveTeamStatus?.(reserveTeam);
+                totalPending+=waiting?.newCount||6;
+                reserveMessage=outcome?.message||'冒険を始めると、指定の6体をひかえへ追加できます。';
+              }else{reserveReceived+=outcome.added||0;reserveMessage=outcome.message||'';}
+            }
+          }
           // Initial companions are a current-owner entitlement, separate from
           // the Futo inbox and its administrator distribution controls.
           if(player?.isAdmin===true){
@@ -142,9 +155,48 @@
           cursor=data.nextCursor == null?'':String(data.nextCursor);
         }while(cursor);
         pending=totalPending;
-        if(received||initialReceived)LT.adminBridge?.toast?.(`${received?'フートを受け取りました。':''}${initialReceived?'運営の初期メンバーに'+[...initialNames].join('・')+'が加わりました。':''}旅の仲間・ひかえを確認してください。`);
+        if(received||initialReceived||reserveReceived)LT.adminBridge?.toast?.(`${received?'フートを受け取りました。':''}${initialReceived?'運営の初期メンバーに'+[...initialNames].join('・')+'が加わりました。':''}${reserveReceived?`Lv.100の運営メンバー${reserveReceived}体をひかえに追加しました。`:''}旅の仲間・ひかえを確認してください。`);
       }catch(err){if(!err.staleIdentity&&epoch===identityEpoch){status=null;lastError=err.message;}}
-      if(epoch===identityEpoch)refreshSettings();
+      if(epoch===identityEpoch){refreshSettings();renderAdminReserveTeam();}
+  }
+  function adoptReserveTeam(data){
+    clearReserveState();
+    if(player?.isAdmin!==true||data?.player?.isAdmin!==true||data.player.id!==player.id||data.player.adminRole!==player.adminRole)return null;
+    try{
+      const bundle=LT.AdminReserveRules?.normalizeBundle?.(data.adminReserveTeam);
+      if(bundle?.playerId===player.id&&bundle.role===player.adminRole)reserveTeam=bundle;
+    }catch(_){}
+    return reserveTeam;
+  }
+  function renderAdminReserveTeam(){
+    const box=consoleDialog?.open&&consoleDialog.querySelector?.('#pachi-admin-reserve');if(!box)return;
+    if(player?.isAdmin!==true){box.innerHTML='';return;}
+    if(reserveTeam?.playerId!==player.id||reserveTeam?.role!==player.adminRole){clearReserveState();box.innerHTML='<p>Lv.100の運営メンバーを確認しています。</p>';return;}
+    const state=LT.adminBridge?.adminReserveTeamStatus?.(reserveTeam);
+    const members=state?.ok?state.members:reserveTeam.members;
+    const disabled=reserveBusy||deviceBusy||releaseBusy||sendBusy||state?.missingCount===0;
+    const gender=reserveTeam.role==='sub'?'メス':'オス';
+    box.innerHTML=`<p><strong>${trainerName()}の6体 · 全員Lv.100・${gender}</strong></p><p>Lv.1から鍛錬の帯を持って育てた状態です。通常198＋鍛錬99の合計297ポイントを、好きな能力に振り分けられます。</p><ul class="pachi-reserve-list">${members.map(mon=>`<li><span><strong>${escape(mon.name||LT.DATA?.species?.[mon.species]?.name||mon.species)}</strong><small>Lv.100 · ${mon.gender==='female'?'♀':'♂'}</small></span><span class="pachi-reserve-state">${mon.owned?mon.destination==='party'?'手持ちにいます':'ひかえにいます':mon.received?'復元できます':'受け取り待ち'}</span></li>`).join('')}</ul><p>初回はひかえに追加します。復元では、手持ち・ひかえにいない指定メンバーだけを追加します。</p><div class="pachi-actions"><button type="button" class="btn btn-primary" data-admin-action="restore-reserve"${disabled?' disabled':''}>${reserveBusy?'確認しています…':'足りないメンバーをひかえに復元'}</button></div><p class="pachi-reserve-note" role="status" aria-live="polite">${escape(reserveMessage||(!state?.started?'先に冒険を始めてください。':state?.missingCount===0?'指定の6体はそろっています。':state?.availableSlots<state?.missingCount?`ひかえに${state.missingCount}体分の空きが必要です。現在の空きは${state.availableSlots}体です。`:'現在の運営登録を確認してから復元します。'))}</p>`;
+  }
+  async function restoreAdminReserveTeam(){
+    if(reserveBusy||deviceBusy||releaseBusy||sendBusy)return null;
+    await ensureIdentity();
+    if(reserveBusy||deviceBusy||releaseBusy||sendBusy)return null;
+    if(player?.isAdmin!==true)throw new Error('現在の運営だけがメンバーを復元できます。');
+    const epoch=identityEpoch,actorId=player.id,actorRole=player.adminRole;
+    reserveBusy=true;reserveMessage='運営登録と受け取り内容を確認しています…';renderAdminReserveTeam();
+    try{
+      const requestedProfile=player,data=await request('/me?limit=1');
+      if(epoch!==identityEpoch||player?.id!==actorId||player?.adminRole!==actorRole)throw staleIdentity();
+      if(player===requestedProfile)player=data.player;status=serviceStatus(data);refreshSettings();
+      if(!adoptReserveTeam(data))throw new Error('現在の運営登録に対応するメンバーを確認できませんでした。');
+      const outcome=LT.adminBridge?.receiveAdminReserveTeam?.(reserveTeam,{restore:true});
+      reserveMessage=outcome?.message||'メンバーを復元できませんでした。冒険を始めてから、もう一度お試しください。';
+      if(!outcome?.ok)throw new Error(reserveMessage);
+      if(outcome.added)LT.adminBridge?.toast?.(reserveMessage);
+      say(reserveMessage);return outcome;
+    }catch(err){if(!err.staleIdentity&&epoch===identityEpoch)reserveMessage=err.message;throw err;}
+    finally{reserveBusy=false;if(epoch===identityEpoch)renderAdminReserveTeam();}
   }
   function settingsRoot(){const title=document.getElementById('modal-title');return title?.textContent==='冒険の設定'?document.getElementById('modal-content'):null;}
   function mountSettings(){
@@ -157,7 +209,7 @@
   function canClaim(){return !!player && player.isAdmin!==true && status?.adminExists===false;}
   function refreshSettings(){
     announcePlayer();
-    if(player?.isAdmin===false){adminRegistration=null;releaseReview=null;clearDeviceState();if(consoleDialog?.open)consoleDialog.close();}
+    if(player?.isAdmin===false){adminRegistration=null;releaseReview=null;clearDeviceState();clearReserveState();if(consoleDialog?.open)consoleDialog.close();}
     const root=settingsRoot()?.querySelector('#pachi-service');if(!root)return;
     const body=root.querySelector('[data-service-body]');
     const signature=[!!player,player?.isAdmin,player?.adminRole,player?.id,player?.name,status?.adminExists,claimBusy,releaseBusy,pending].join('|');
@@ -169,7 +221,7 @@
     const line=root.querySelector('.pachi-status');line.textContent=lastError || (status?'接続済み · 冒険のセーブはこれまで通り端末内に保存されます。':'確認中…');line.dataset.error=String(!!lastError);
   }
   function say(message,error=false){lastError=error?message:'';const line=consoleDialog?.open?consoleDialog.querySelector('.pachi-status'):settingsRoot()?.querySelector('.pachi-status');if(line){line.textContent=message;line.dataset.error=String(error);}}
-  async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy&&!releaseBusy&&!deviceBusy)button.disabled=false;}}
+  async function withButton(button,action){button.disabled=true;try{await action();}catch(err){if(!err.staleIdentity)say(err.message,true);}finally{if(button.isConnected&&!sendBusy&&!releaseBusy&&!deviceBusy&&!reserveBusy)button.disabled=false;}}
   async function claim(button){
     if(claimBusy||releaseBusy||deviceBusy)return;
     const field=document.getElementById('pachi-admin-key'),key=field?.value||'';
@@ -404,11 +456,13 @@
     if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の結果を確認しています。少しお待ちください。');
     await ensureIdentity();if(!player?.isAdmin)throw new Error('運営として登録されていません。');
     const data=await request('/admin/config');savedConfig=data.config;revision=data.revision;adminRegistration=data.adminRegistration||null;releaseReview=null;clearDeviceState();
-    if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy||releaseBusy||deviceBusy){event.preventDefault();say('操作の結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{deviceReview=null;void sync();});}
+    if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy||releaseBusy||deviceBusy||reserveBusy){event.preventDefault();say('操作の結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{deviceReview=null;void sync();});}
     const cfg={...data.config,moves:LT.FutoRules?.normalizeMoves?LT.FutoRules.normalizeMoves(data.config.moves):data.config.moves};const moveLabel=m=>m.kind==='attack'?`${m.category==='physical'?'物理':'特殊'}・威力${m.power}`:m.kind==='heal'?`体力${m.power}%回復`:m.kind==='boost'?'全能力アップ':'防御';const options=selected=>futoMoveEntries().map(([id,m])=>`<option value="${escape(id)}"${id===selected?' selected':''}>${escape(m.name)} · ${escape(moveLabel(m))}</option>`).join('');
-    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">${trainerName()}の運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><section class="pachi-owner-identity"><h3>${trainerName()==='カサイ'?'謎のトレーナー カサイ':trainerName()}</h3><p>専用の姿で世界のプレイヤーと冒険。幻の草むらでは、すべてのパチモンに出会えます。</p><p>${trainerName()}戦は、あなたが接続中のときに挑戦者と戦うリアルタイム対戦です。入室時の保存済み手持ち・レベル・技・育成を使います。ステージで話しかけられたら対戦を許可してください。自分自身には挑戦できません。</p><div class="pachi-actions"><button type="button" class="btn btn-primary" data-admin-action="decorate-room">${trainerName()}の部屋を飾る</button><button type="button" class="btn" data-admin-action="sync-kasai-party">対戦用の手持ちを更新</button><button type="button" class="btn btn-primary" data-admin-action="secret-grass">裏技・幻の草むら</button></div></section><fieldset class="pachi-owner-controls pachi-device-controls"><legend>運営端末</legend><div id="pachi-admin-devices"></div></fieldset><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>この端末の運営登録</legend><p>この端末の登録だけを解除します。別の運営端末が残っていれば、運営キーの入力欄は公開されません。</p><button class="btn" data-admin-action="release-review">この端末の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
+    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">${trainerName()}の運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><section class="pachi-owner-identity"><h3>${trainerName()==='カサイ'?'謎のトレーナー カサイ':trainerName()}</h3><p>専用の姿で世界のプレイヤーと冒険。幻の草むらでは、すべてのパチモンに出会えます。</p><p>${trainerName()}戦は、あなたが接続中のときに挑戦者と戦うリアルタイム対戦です。入室時の保存済み手持ち・レベル・技・育成を使います。ステージで話しかけられたら対戦を許可してください。自分自身には挑戦できません。</p><div class="pachi-actions"><button type="button" class="btn btn-primary" data-admin-action="decorate-room">${trainerName()}の部屋を飾る</button><button type="button" class="btn" data-admin-action="sync-kasai-party">対戦用の手持ちを更新</button><button type="button" class="btn btn-primary" data-admin-action="secret-grass">裏技・幻の草むら</button></div></section><fieldset class="pachi-owner-controls pachi-reserve-controls"><legend>Lv.100の運営メンバー</legend><div id="pachi-admin-reserve"></div></fieldset><fieldset class="pachi-owner-controls pachi-device-controls"><legend>運営端末</legend><div id="pachi-admin-devices"></div></fieldset><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>この端末の運営登録</legend><p>この端末の登録だけを解除します。別の運営端末が残っていれば、運営キーの入力欄は公開されません。</p><button class="btn" data-admin-action="release-review">この端末の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
     consoleDialog._playersCursor=null;pendingGrant=loadPendingGrant();renderPendingGrant();
-    if(!consoleDialog.open)consoleDialog.showModal();renderAdminDevices();
+    if(!consoleDialog.open)consoleDialog.showModal();renderAdminDevices();renderAdminReserveTeam();
+    await sync({fresh:true});
+    if(!consoleDialog?.open||player?.isAdmin!==true)return;
     try{await loadAdminDevices();}catch(err){if(!err.staleIdentity)say(err.message,true);}
     if(!consoleDialog?.open||player?.isAdmin!==true)return;
     await loadPlayers(false);renderPendingGrant();
@@ -422,7 +476,7 @@
     consoleDialog._playersCursor=data.nextCursor;consoleDialog.querySelector('[data-admin-action="more-players"]').hidden=!data.nextCursor;
   }
   async function handleConsole(event){const button=event.target.closest('[data-admin-action]');if(!button)return;const action=button.dataset.adminAction;
-    if(button.disabled||sendBusy||releaseBusy||deviceBusy)return;
+    if(button.disabled||sendBusy||releaseBusy||deviceBusy||reserveBusy)return;
     if(action==='close-console'){consoleDialog.close();return;}
     await withButton(button,async()=>{
       if(action==='secret-grass'){await LT.SecretEncounter?.open?.();return;}
@@ -435,6 +489,7 @@
         if(!LT.adminBridge?.saveNow?.())throw new Error('冒険を再開し、バトルを終えてから手持ちを保存してください。');
         const result=await LT.KasaiParty?.sync?.({force:true});if(!result?.ok)throw new Error(result?.message||'手持ちを更新できませんでした。');say(result.message||'現在の手持ちを反映しました。');return;
       }
+      if(action==='restore-reserve'){await restoreAdminReserveTeam();return;}
       if(action==='devices-refresh'){await loadAdminDevices();return;}
       if(action==='device-add-review'){await prepareDeviceGrant();return;}
       if(action==='device-revoke-review'){await prepareDeviceRevoke(button.dataset.deviceId);return;}
@@ -462,7 +517,7 @@
   }
   async function restore(){
     if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
-    if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
+    if(sendBusy||releaseBusy||deviceBusy||reserveBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
     const file=document.createElement('input');file.type='file';file.accept='.json,application/json';
     file.onchange=async()=>{
       const attempt=++restoreAttempt;
@@ -473,7 +528,7 @@
         if(data.kind!=='pachi-player-identity'||!/^[A-Za-z0-9_-]{43}$/.test(data.token))throw new Error('プレイヤー情報の形式が違います。');
         const me=await request('/me',{token:data.token,guardIdentity:false});
         if(attempt!==restoreAttempt)throw staleIdentity();
-        if(sendBusy||releaseBusy||deviceBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
+        if(sendBusy||releaseBusy||deviceBusy||reserveBusy)throw new Error('操作の確認が終わってから、プレイヤー情報を復元してください。');
         if(LT.Trade?.isLocked?.()||LT.tradeActive)throw new Error('交換の完了またはキャンセルを確認してから、プレイヤー情報を復元してください。');
         adoptIdentity({token:data.token,id:me.player.id,name:me.player.name},me.player,me.adminExists,me.adminRecoveryAvailable);
         await sync({fresh:true});
@@ -498,6 +553,7 @@
   new MutationObserver(mountSettings).observe(document.getElementById('modal-content'),{childList:true});
   for(const name of ['pachi-game-ready','pachi-admin-bridge-ready'])document.addEventListener(name,()=>{void sync({fresh:true});});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync();});
+  document.addEventListener('pachi-party-changed',renderAdminReserveTeam);
   window.addEventListener?.('storage',event=>{
     if(event.key!==KEY&&event.key!==null||event.storageArea&&event.storageArea!==localStorage)return;
     let raw;try{raw=localStorage.getItem(KEY);}catch(_){return;}
@@ -512,7 +568,7 @@
     }
     identityEpoch++;restoreAttempt++;
     identity=next;player=null;status=null;pending=0;registration=null;pendingGrant=null;
-    adminRegistration=null;releaseReview=null;revision=0;savedConfig=null;lastError='';clearDeviceState();
+    adminRegistration=null;releaseReview=null;revision=0;savedConfig=null;lastError='';clearDeviceState();clearReserveState();
     if(consoleDialog?.open)consoleDialog.close();
     refreshSettings();LT.adminBridge?.refresh?.();
     // Do not echo a storage event back to disk. Registration/profile reads use
@@ -533,7 +589,7 @@
         const role=data.self.isAdmin===true?(Object.hasOwn(adminRoleLabels,data.self.adminRole)?data.self.adminRole:data.self.adminRole===undefined?'main':null):null;
         if(player.isAdmin!==!!role||player.adminRole!==role){
           player={...player,isAdmin:!!role,adminRole:role};
-          clearDeviceState();refreshSettings();if(consoleDialog?.open)renderAdminDevices();LT.adminBridge?.refresh?.();
+          clearDeviceState();clearReserveState();refreshSettings();if(consoleDialog?.open){renderAdminDevices();renderAdminReserveTeam();}LT.adminBridge?.refresh?.();
         }
       }
       return data;
