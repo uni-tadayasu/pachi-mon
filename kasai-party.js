@@ -37,8 +37,8 @@
             // A save made during this upload gets the next serial request, so an
             // older response can never overwrite the most recent saved party.
             if(latest.fingerprint!==next.fingerprint)this.queued=true;
-            result={ok:true,updatedAt:response.updatedAt??this.syncedAt,message:'現在の手持ちを、カサイに挑戦するプレイヤーとの対戦に反映しました。'};
-          }catch(error){this.error=error?.message||'カサイの手持ちを同期できませんでした。';result={ok:false,message:this.error};}
+            result={ok:true,updatedAt:response.updatedAt??this.syncedAt,message:'現在の手持ちを、あなたに挑戦するプレイヤーとの対戦に反映しました。'};
+          }catch(error){this.error=error?.message||'運営の手持ちを同期できませんでした。';result={ok:false,message:this.error};}
         }
         return result;
       })();

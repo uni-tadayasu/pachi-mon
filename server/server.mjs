@@ -21,7 +21,12 @@ class ApiError extends Error {
 const fail = (status, code, message) => { throw new ApiError(status, code, message); };
 const integer = (v, min, max) => Number.isSafeInteger(v) && v >= min && v <= max;
 const tokenValid = token => typeof token === 'string' && /^(?:[A-Za-z0-9_-]{43}|[a-fA-F0-9]{64})$/.test(token);
-const playerView = row => ({id:row.id, name:row.name, isAdmin:!!row.is_admin});
+const adminRole = seat => seat === 3 ? 'sub-sub' : seat === 2 ? 'sub' : seat ? 'main' : null;
+const ADMIN_DISPLAY_NAMES = Object.freeze({main:'謎のトレーナー カサイ',sub:'サカイ','sub-sub':'イサカ'});
+const adminDisplayName = (name, seat) => ADMIN_DISPLAY_NAMES[adminRole(seat)] || name;
+// Keep the registered name separate from a role's character name. Appointing,
+// renaming or dismissing an administrator never overwrites their ordinary identity.
+const playerView = row => ({id:row.id, name:row.name, displayName:adminDisplayName(row.name,row.is_admin), isAdmin:!!row.is_admin, adminRole:adminRole(row.is_admin)});
 const safeName = value => {
   if (typeof value !== 'string') fail(400, 'INVALID_NAME', 'プレイヤー名を入力してください。');
   const name = value.normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim();
@@ -69,8 +74,7 @@ async function verifyPass(env, body) {
       return {grantId:data.grantId,species:'floravelle',...MYTHICAL_CONFIG,sessionId:data.sessionId,side:data.side,expiresAt:data.expiresAt};
     }
     if(data.v===2){
-      const owner=await ownerRecord(env);
-      if(data.species!=='floravelle'||typeof data.playerId!=='string'||owner?.player_id!==data.playerId||data.grantId!==`admin-mythical:${data.playerId}`)throw new Error('No current owner entitlement');
+      if(data.species!=='floravelle'||typeof data.playerId!=='string'||!await adminRecord(env,data.playerId)||data.grantId!==`admin-mythical:${data.playerId}`)throw new Error('No current administrator entitlement');
       return {grantId:data.grantId,species:'floravelle',...MYTHICAL_CONFIG,sessionId:data.sessionId,side:data.side,expiresAt:data.expiresAt};
     }
     return {grantId:data.grantId, species:'futo', ...validateConfig(data.config), sessionId:data.sessionId, side:data.side, expiresAt:data.expiresAt};
@@ -132,13 +136,34 @@ async function consumeLimit(env, request, action, max, milliseconds, global = fa
   // Bounded cleanup of expired counters; no migration-owned table creation here.
   await env.DB.prepare('DELETE FROM rate_limits WHERE key IN (SELECT key FROM rate_limits WHERE expires_at < ? LIMIT 20)').bind(now - 86400000).run();
 }
-async function ownerRecord(env) { return env.DB.prepare('SELECT player_id, claimed_at FROM admin_owner WHERE singleton = 1').first(); }
+async function ownerRecord(env) { return env.DB.prepare('SELECT singleton, player_id, claimed_at FROM admin_members ORDER BY singleton LIMIT 1').first(); }
+async function adminRecord(env, playerId) { return env.DB.prepare('SELECT singleton, player_id, claimed_at FROM admin_members WHERE player_id = ?').bind(playerId).first(); }
+const adminTable = record => record.singleton === 3 ? 'third_admin_owner' : record.singleton === 2 ? 'sub_admin_owner' : 'admin_owner';
+function nextAdminRegistration(env, now, guard = '1', values = [], operationId = crypto.randomUUID()) {
+  // The clock survives release. A second registration of the same player is
+  // distinguishable even when two operations share a millisecond timestamp.
+  return env.DB.prepare(`INSERT INTO admin_registration_clock (singleton, claimed_at, operation_id)
+    SELECT 1, MAX(?, COALESCE((SELECT MAX(claimed_at) + 1 FROM admin_members), 0)), ? WHERE ${guard}
+    ON CONFLICT(singleton) DO UPDATE SET claimed_at = MAX(admin_registration_clock.claimed_at + 1, excluded.claimed_at), operation_id = excluded.operation_id`)
+    .bind(now, operationId, ...values);
+}
+async function adminDevices(env, playerId) {
+  const result = await env.DB.prepare('SELECT a.singleton, a.player_id, a.claimed_at, p.name FROM admin_members a JOIN players p ON p.id = a.player_id ORDER BY a.singleton').all();
+  return {devices:result.results.map(row => ({playerId:row.player_id, name:row.name, displayName:adminDisplayName(row.name,row.singleton), role:adminRole(row.singleton), claimedAt:row.claimed_at})), capacity:3,
+    canManageDevices:result.results.some(row => row.singleton === 1 && row.player_id === playerId)};
+}
+function adminPlayerId(value) {
+  if (typeof value !== 'string' || !/^P[0-9a-f]{16}$/.test(value)) fail(400, 'INVALID_PLAYER_ID', 'プレイヤーIDを確認してください。');
+  return value;
+}
+async function recoveryOwner(env) {
+  return typeof env.ADMIN_RECOVERY_OWNER_ID === 'string' && /^P[0-9a-f]{16}$/.test(env.ADMIN_RECOVERY_OWNER_ID) ? adminRecord(env, env.ADMIN_RECOVERY_OWNER_ID) : null;
+}
 async function initialCompanions(env, playerId) {
-  // This is an owner entitlement, not a distributable grant. Keeping its stable
+  // This is a current administrator entitlement, not a distributable grant. Keeping its stable
   // receipt separate from Futo deliveries lets existing administrators receive
   // their initial companion without adding records or replaying gift batches.
-  const owner = await ownerRecord(env);
-  return owner?.player_id === playerId ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}, {grantId:`admin-mythical:${playerId}`,species:'floravelle',level:70}] : [];
+  return await adminRecord(env, playerId) ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}, {grantId:`admin-mythical:${playerId}`,species:'floravelle',level:70}] : [];
 }
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
@@ -149,12 +174,12 @@ function recoveryAllowed(env, request, owner) {
     request.headers.get('Origin') === env.ADMIN_RECOVERY_ORIGIN;
 }
 async function adminState(env, request) {
-  const owner = await ownerRecord(env);
-  return {adminExists:!!owner, adminRecoveryAvailable:recoveryAllowed(env, request, owner)};
+  const owner = await ownerRecord(env), recoverable = await recoveryOwner(env);
+  return {adminExists:!!owner, adminRecoveryAvailable:recoveryAllowed(env, request, recoverable)};
 }
 async function playerByToken(env, token) {
   if (!tokenValid(token)) fail(401, 'UNAUTHORIZED', 'プレイヤー登録をやり直してください。');
-  const row = await env.DB.prepare('SELECT p.id, p.name, p.row_id, p.created_at, EXISTS (SELECT 1 FROM admin_owner a WHERE a.player_id = p.id) AS is_admin FROM players p WHERE p.token_hash = ?').bind(await digest(token)).first();
+  const row = await env.DB.prepare('SELECT p.id, p.name, p.row_id, p.created_at, (SELECT a.singleton FROM admin_members a WHERE a.player_id=p.id) AS is_admin FROM players p WHERE p.token_hash = ?').bind(await digest(token)).first();
   if (!row) fail(401, 'UNAUTHORIZED', 'プレイヤー登録をやり直してください。');
   return row;
 }
@@ -163,7 +188,12 @@ async function authenticate(env, request) {
   return playerByToken(env, match?.[1]);
 }
 async function requireAdmin(env, player) {
-  if (!player.is_admin || (await ownerRecord(env))?.player_id !== player.id) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。');
+  const registration = await adminRecord(env, player.id);
+  if (!player.is_admin || !registration) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。');
+  return registration;
+}
+function requireMainAdmin(registration) {
+  if (registration.singleton !== 1) fail(403, 'MAIN_ADMIN_REQUIRED', 'サブ運営・サブサブ運営の追加・解雇はメイン運営だけが操作できます。');
 }
 async function configRecord(env) {
   const row = await env.DB.prepare('SELECT config_json, revision FROM futo_config WHERE singleton = 1').first();
@@ -207,7 +237,10 @@ export function validateTradeMonster(input) {
 function tradeCode(){return Array.from(crypto.getRandomValues(new Uint8Array(6)),value=>TRADE_CODE[value&31]).join('');}
 function tradeRevision(value){if(!integer(value,0,1000000000))fail(400,'INVALID_TRADE_REVISION','交換内容を再確認してください。');return value;}
 async function tradeRow(env,id){
-  return env.DB.prepare('SELECT t.*, h.name AS host_name, g.name AS guest_name FROM trades t JOIN players h ON h.id=t.host_id LEFT JOIN players g ON g.id=t.guest_id WHERE t.id=?').bind(id).first();
+  return env.DB.prepare(`SELECT t.*, h.name AS host_name, g.name AS guest_name,
+    (SELECT a.singleton FROM admin_members a WHERE a.player_id=t.host_id) AS host_admin,
+    (SELECT a.singleton FROM admin_members a WHERE a.player_id=t.guest_id) AS guest_admin
+    FROM trades t JOIN players h ON h.id=t.host_id LEFT JOIN players g ON g.id=t.guest_id WHERE t.id=?`).bind(id).first();
 }
 async function expireTrade(env,id){
   await env.DB.batch([
@@ -232,8 +265,8 @@ function tradeView(row,playerId){
     receipt={id:'trade:'+row.id,outgoingUid:outgoing.uid,outgoing,incoming:{...incoming,uid:'tr-'+row.id+(side==='host'?'-h':'-g')},revision:row.revision};
   }
   return {id:row.id,code:row.code,state:row.state,revision:row.revision,expiresAt:row.expires_at,you:side,
-    host:{id:row.host_id,name:row.host_name,monster:hostMonster,confirmed:row.host_confirm===row.revision},
-    guest:row.guest_id?{id:row.guest_id,name:row.guest_name,monster:guestMonster,confirmed:row.guest_confirm===row.revision}:null,
+    host:{id:row.host_id,name:adminDisplayName(row.host_name,row.host_admin),monster:hostMonster,confirmed:row.host_confirm===row.revision},
+    guest:row.guest_id?{id:row.guest_id,name:adminDisplayName(row.guest_name,row.guest_admin),monster:guestMonster,confirmed:row.guest_confirm===row.revision}:null,
     receipt,acknowledged:!!row[side+'_ack']};
 }
 async function requireTrade(env,id,playerId){
@@ -355,8 +388,9 @@ function worldName(value) {
   return [...String(value || '旅人').normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim()].slice(0,32).join('') || '旅人';
 }
 function worldProfile(id,name,admin,avatar) {
-  const isAdmin=!!admin;
-  return {id,name:isAdmin?'謎のトレーナー カサイ':worldName(name),isAdmin,avatar:isAdmin?'kasai':avatar==='female'?'female':'male'};
+  const role=adminRole(admin),isAdmin=!!role;
+  return {id,name:adminDisplayName(worldName(name),admin),isAdmin,adminRole:role,
+    avatar:role==='main'?'kasai':role==='sub'?'sub-admin':role==='sub-sub'?'sub-sub-admin':avatar==='female'?'female':'male'};
 }
 function worldActor(row) {
   return {...worldProfile(row.player_id,row.name,row.is_admin,row.avatar),map:row.map_id,x:row.x,y:row.y,facing:row.facing,status:row.status,updatedAt:row.updated_at};
@@ -433,7 +467,7 @@ export function validateRoomDecorations(input,kind='secret') {
     ids.add(value.id);return {id:value.id,itemId:value.itemId,x:value.x,y:value.y,rotation:value.rotation};
   });
 }
-const ROOM_SELECT=`SELECT r.*,p.name AS owner_name,EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=r.owner_id) AS is_admin
+const ROOM_SELECT=`SELECT r.*,p.name AS owner_name,(SELECT a.singleton FROM admin_members a WHERE a.player_id=r.owner_id) AS is_admin
   FROM world_rooms r JOIN players p ON p.id=r.owner_id`;
 async function roomRow(env,id) {return env.DB.prepare(ROOM_SELECT+' WHERE r.owner_id=?').bind(id).first();}
 function roomView(row) {
@@ -448,8 +482,9 @@ function roomView(row) {
     entrance:{map:row.map_id,x:row.entrance_x,y:row.entrance_y,facing:row.facing,returnX:row.entrance_x-direction[0],returnY:row.entrance_y-direction[1]},
     ...layout,decorations,revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at};
 }
-async function currentKasaiRoom(env) {
-  return env.DB.prepare(ROOM_SELECT+' WHERE EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=r.owner_id)').first();
+async function currentKasaiRoom(env, playerId = null) {
+  const sql = ROOM_SELECT+' JOIN admin_members a ON a.player_id=r.owner_id';
+  return playerId ? env.DB.prepare(sql+' WHERE a.player_id=?').bind(playerId).first() : env.DB.prepare(sql+' ORDER BY a.singleton LIMIT 1').first();
 }
 async function requireRoomEntrancePresence(env,playerId,entrance,now) {
   const direction=ROOM_DIRECTIONS[entrance.facing],presence=await env.DB.prepare('SELECT map_id,x,y,facing,updated_at FROM world_presence WHERE player_id=?').bind(playerId).first();
@@ -463,10 +498,16 @@ async function roomsRoute(request,env,path,method,player) {
     if(!map||!Object.hasOwn(WORLD_MAP_BOUNDS,map))fail(400,'INVALID_ROOM_MAP','部屋を作るフィールドを指定してください。');
     return {walls:worldRoomWalls(map),serverTime:now};
   }
-  if(path==='/api/world/rooms/kasai'&&method==='GET')return {room:roomView(await currentKasaiRoom(env)),serverTime:now};
+  if(path==='/api/world/rooms/kasai'&&method==='GET'){
+    const target=url.searchParams.has('playerId')?adminPlayerId(url.searchParams.get('playerId')):player.is_admin?player.id:null;
+    return {room:roomView(await currentKasaiRoom(env,target)),serverTime:now};
+  }
   if(path==='/api/world/rooms/mine'&&method==='GET')return {room:roomView(await roomRow(env,player.id)),serverTime:now};
   if(path==='/api/world/rooms'&&method==='GET'){
-    if(url.searchParams.get('kind')==='kasai'){const room=roomView(await currentKasaiRoom(env));return {rooms:room?[room]:[],serverTime:now};}
+    if(url.searchParams.get('kind')==='kasai'){
+      const rows=await env.DB.prepare(ROOM_SELECT+' JOIN admin_members a ON a.player_id=r.owner_id ORDER BY a.singleton').all();
+      return {rooms:rows.results.map(roomView),serverTime:now};
+    }
     const map=url.searchParams.get('map');
     if(!map||!Object.hasOwn(WORLD_MAP_BOUNDS,map))fail(400,'INVALID_ROOM_MAP','出入口を確認するフィールドを指定してください。');
     const rows=await env.DB.prepare(ROOM_SELECT+' WHERE r.map_id=? ORDER BY r.created_at,r.owner_id LIMIT 400').bind(map).all();
@@ -476,7 +517,7 @@ async function roomsRoute(request,env,path,method,player) {
     await requireNoLiveSession(env,player.id,now);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>!['map','x','y','facing','name'].includes(key)))fail(400,'INVALID_ROOM_ENTRANCE','部屋の入口の指定が正しくありません。');
-    const entrance=roomEntrance(body),name=roomName(body.name===undefined?(player.is_admin?'カサイのひみつ部屋':'ひみつの部屋'):body.name),existing=await roomRow(env,player.id);
+    const entrance=roomEntrance(body),name=roomName(body.name===undefined?(player.is_admin?`${player.is_admin===1?'カサイ':adminDisplayName(player.name,player.is_admin)}のひみつ部屋`:'ひみつの部屋'):body.name),existing=await roomRow(env,player.id);
     if(existing){
       if(existing.map_id!==entrance.map||existing.entrance_x!==entrance.x||existing.entrance_y!==entrance.y||existing.facing!==entrance.facing)fail(409,'ROOM_ALREADY_EXISTS','ひみつの部屋はひとり一つです。別の壁へ移すときは移転してください。');
       return {room:roomView(existing),serverTime:now};
@@ -505,7 +546,7 @@ async function roomsRoute(request,env,path,method,player) {
     const changed=await env.DB.prepare(`UPDATE world_rooms SET map_id=?,entrance_x=?,entrance_y=?,facing=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
       AND NOT EXISTS(SELECT 1 FROM world_rooms other WHERE other.map_id=? AND other.entrance_x=? AND other.entrance_y=? AND other.owner_id<>?)
       AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=?)
-      AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id)=?)
+      AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=p.id)=?)
       RETURNING owner_id`).bind(entrance.map,entrance.x,entrance.y,entrance.facing,now,player.id,body.revision,entrance.map,entrance.x,entrance.y,player.id,player.id,player.id,row.is_admin?1:0).first();
     if(!changed){
       await requireNoLiveSession(env,player.id,now);
@@ -524,7 +565,7 @@ async function roomsRoute(request,env,path,method,player) {
   await consumeLimit(env,request,`world-room-edit:${player.id}`,60,60000,true);
   const changed=await env.DB.prepare(`UPDATE world_rooms SET name=?,decorations_json=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
     AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=world_rooms.owner_id)
-    AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id)=?) RETURNING owner_id`)
+    AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=p.id)=?) RETURNING owner_id`)
     .bind(name,JSON.stringify(decorations),now,player.id,body.revision,player.id,row.is_admin?1:0).first();
   if(!changed)fail(409,'ROOM_CHANGED','部屋が変更されました。最新の模様替えを読み込み直してください。');
   return {room:roomView(await roomRow(env,player.id)),serverTime:now};
@@ -536,10 +577,11 @@ function kasaiReceipt(row) {
 }
 async function kasaiReward(env,playerId) {return env.DB.prepare('SELECT r.*,COALESCE(c.room_owner_id,l.kasai_id) AS challenge_room_owner_id FROM kasai_rewards r LEFT JOIN kasai_challenges c ON c.id=r.challenge_id LEFT JOIN kasai_live_sessions l ON l.id=r.live_session_id WHERE r.player_id=?').bind(playerId).first();}
 async function requireKasaiChallenger(env,player,roomOwnerId=null) {
-  if(player.is_admin||roomOwnerId===player.id||(await ownerRecord(env))?.player_id===player.id)fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
+  if(player.is_admin||roomOwnerId===player.id||await adminRecord(env,player.id))fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
 }
-async function currentKasaiParty(env) {
-  return env.DB.prepare('SELECT k.* FROM kasai_parties k JOIN admin_owner a ON a.player_id=k.player_id WHERE a.singleton=1').first();
+async function currentKasaiParty(env, playerId = null) {
+  const sql='SELECT k.* FROM kasai_parties k JOIN admin_members a ON a.player_id=k.player_id';
+  return playerId ? env.DB.prepare(sql+' WHERE a.player_id=?').bind(playerId).first() : env.DB.prepare(sql+' ORDER BY a.singleton LIMIT 1').first();
 }
 function kasaiOpponents(row) {
   return row.opponents_json?JSON.parse(row.opponents_json):row.rules_version===KASAI_LEGACY_RULES_VERSION?KASAI_TEAM:null;
@@ -572,7 +614,7 @@ async function kasaiOwnedParty(env,party,player) {
       const receipt=await kasaiReward(env,player.id);
       if(!receipt||receipt.gender!==mon.gender)fail(403,'KASAI_PARTY_NOT_OWNED','キラシードの受け取り記録を確認できません。');
     }else if(player.is_admin&&['arvelion','floravelle'].includes(mon.species)&&mon.grantId===`admin-${mon.species==='arvelion'?'legendary':'mythical'}:${player.id}`){
-      if((await ownerRecord(env))?.player_id!==player.id)fail(403,'KASAI_PARTY_NOT_OWNED','運営の初期メンバーの受け取り記録を確認できません。');
+      if(!await adminRecord(env,player.id))fail(403,'KASAI_PARTY_NOT_OWNED','運営の初期メンバーの受け取り記録を確認できません。');
     }else fail(403,'KASAI_PARTY_NOT_OWNED','挑戦する仲間の受け取り記録を確認できません。');
   }
 }
@@ -580,11 +622,12 @@ async function kasaiRoute(request,env,path,method,player) {
   if(path==='/api/world/kasai/live'||path.startsWith('/api/world/kasai/live/'))return kasaiLiveRoute(request,env,path,method,player);
   const now=Date.now();
   if(path==='/api/world/kasai/party'&&method==='GET'){
-    const row=await currentKasaiParty(env);
+    const url=new URL(request.url),target=url.searchParams.has('playerId')?adminPlayerId(url.searchParams.get('playerId')):player.is_admin?player.id:null;
+    const row=await currentKasaiParty(env,target);
     return {party:row?JSON.parse(row.party_json):null,playerId:row?.player_id||null,updatedAt:row?.updated_at||null,serverTime:now};
   }
   if(path==='/api/world/kasai/party'&&method==='POST'){
-    await requireAdmin(env,player);
+    const registration=await requireAdmin(env,player);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>key!=='party'))fail(400,'INVALID_KASAI_PARTY','運営の手持ちの情報を確認してください。');
     let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','運営の手持ちは1〜6体で設定してください。');}
@@ -592,10 +635,11 @@ async function kasaiRoute(request,env,path,method,player) {
     const partyJSON=JSON.stringify(party);
     await consumeLimit(env,request,`world-kasai-party:${player.id}`,120,60000,true);
     const saved=await env.DB.prepare(`INSERT INTO kasai_parties (player_id,party_json,updated_at)
-      SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+      SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM admin_members WHERE player_id=? AND claimed_at=?)
       ON CONFLICT(player_id) DO UPDATE SET party_json=excluded.party_json,updated_at=CASE WHEN kasai_parties.party_json=excluded.party_json THEN kasai_parties.updated_at ELSE excluded.updated_at END
-      RETURNING player_id,party_json,updated_at`).bind(player.id,partyJSON,now,player.id).first();
-    await requireAdmin(env,player);
+      RETURNING player_id,party_json,updated_at`).bind(player.id,partyJSON,now,player.id,registration.claimed_at).first();
+    const current=await requireAdmin(env,player);
+    if(current.claimed_at!==registration.claimed_at)fail(403,'ADMIN_REQUIRED','運営登録が変更されました。最新の状態で操作してください。');
     if(!saved)fail(409,'KASAI_PARTY_CHANGED','運営の手持ちが変更されました。もう一度同期してください。');
     return {party:JSON.parse(saved.party_json),playerId:saved.player_id,updatedAt:saved.updated_at,serverTime:now};
   }
@@ -611,7 +655,7 @@ async function kasaiRoute(request,env,path,method,player) {
     const body=await bodyJSON(request),expected=`kasai-reward:${player.id}`;
     if(Object.keys(body).some(key=>key!=='receiptId')||body.receiptId!==expected)fail(400,'INVALID_KASAI_RECEIPT','カサイの報酬の受取記録を確認してください。');
     const result=await env.DB.prepare(`UPDATE kasai_rewards SET acked_at=COALESCE(acked_at,?) WHERE player_id=? AND receipt_id=?
-      AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+      AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)
       AND (EXISTS(SELECT 1 FROM kasai_challenges c WHERE c.id=kasai_rewards.challenge_id AND c.room_owner_id<>c.player_id) OR EXISTS(SELECT 1 FROM kasai_live_sessions l WHERE l.id=kasai_rewards.live_session_id AND l.challenger_id=kasai_rewards.player_id AND l.kasai_id<>l.challenger_id AND json_extract(l.battle_json,'$.winner')=0))
       RETURNING player_id`).bind(now,player.id,expected,player.id).first();
     await requireKasaiChallenger(env,player,reward?.challenge_room_owner_id);
@@ -656,11 +700,11 @@ async function kasaiRoute(request,env,path,method,player) {
   let replay;try{replay=replayChallenge(JSON.parse(row.party_json),row.seed,body.actions,row.opponents_json?JSON.parse(row.opponents_json):null,row.rules_version);}catch(_){fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を再現できませんでした。');}
   if(!replay.ok||!['won','lost'].includes(replay.result))fail(400,'INVALID_KASAI_TRANSCRIPT','操作記録から終了したバトルを確認できませんでした。');
   if(replay.won&&storageCount>=192)fail(409,'KASAI_STORAGE_FULL','ひかえが192体で満員です。空きを作り、期限内に自分で受け取りを再試行してください。');
-  const operations=[env.DB.prepare("UPDATE kasai_challenges SET state=?,result_hash=?,completed_at=? WHERE id=? AND player_id=? AND state='pending' AND expires_at>? AND room_owner_id<>player_id AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?) RETURNING id").bind(replay.won?'won':'lost',resultHash,now,id,player.id,now,player.id)];
+  const operations=[env.DB.prepare("UPDATE kasai_challenges SET state=?,result_hash=?,completed_at=? WHERE id=? AND player_id=? AND state='pending' AND expires_at>? AND room_owner_id<>player_id AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?) RETURNING id").bind(replay.won?'won':'lost',resultHash,now,id,player.id,now,player.id)];
   if(replay.won){
     const gender=(crypto.getRandomValues(new Uint8Array(1))[0]&1)?'male':'female';
     operations.push(env.DB.prepare(`INSERT OR IGNORE INTO kasai_rewards (player_id,receipt_id,challenge_id,gender,created_at)
-      SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_challenges WHERE id=? AND player_id=? AND state='won' AND result_hash=? AND room_owner_id<>player_id) AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`)
+      SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_challenges WHERE id=? AND player_id=? AND state='won' AND result_hash=? AND room_owner_id<>player_id) AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)`)
       .bind(player.id,`kasai-reward:${player.id}`,id,gender,now,id,player.id,resultHash,player.id));
   }
   await env.DB.batch(operations);
@@ -670,8 +714,8 @@ async function kasaiRoute(request,env,path,method,player) {
   return {won:replay.won,result:replay.result,turns:replay.turns,receipt:replay.won?kasaiReceipt(await kasaiReward(env,player.id)):null,serverTime:now};
 }
 const WORLD_INVITE_SELECT=`SELECT i.*, s.name AS sender_name, t.name AS target_name,
-  EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=i.sender_id) AS sender_admin,
-  EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=i.target_id) AS target_admin,
+  (SELECT a.singleton FROM admin_members a WHERE a.player_id=i.sender_id) AS sender_admin,
+  (SELECT a.singleton FROM admin_members a WHERE a.player_id=i.target_id) AS target_admin,
   sp.avatar AS sender_avatar, tp.avatar AS target_avatar
   FROM world_invitations i JOIN players s ON s.id=i.sender_id JOIN players t ON t.id=i.target_id
   LEFT JOIN world_presence sp ON sp.player_id=i.sender_id LEFT JOIN world_presence tp ON tp.player_id=i.target_id`;
@@ -687,7 +731,7 @@ async function worldInviteRow(env,id,playerId) {
   return row;
 }
 async function worldSnapshot(env,player,map,now) {
-  const actors=await env.DB.prepare(`SELECT w.*,p.name,EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=w.player_id) AS is_admin
+  const actors=await env.DB.prepare(`SELECT w.*,p.name,(SELECT a.singleton FROM admin_members a WHERE a.player_id=w.player_id) AS is_admin
     FROM world_presence w JOIN players p ON p.id=w.player_id
     WHERE w.map_id=? AND w.updated_at>? AND w.player_id<>? ORDER BY ABS(w.x-?)+ABS(w.y-?),w.updated_at DESC,w.player_id LIMIT 80`).bind(map.map,now-WORLD_TTL,player.id,map.x,map.y).all();
   const invitations=await env.DB.prepare(WORLD_INVITE_SELECT+" WHERE (i.sender_id=? OR i.target_id=?) AND i.expires_at>? ORDER BY i.updated_at DESC,i.id LIMIT 20").bind(player.id,player.id,now-WORLD_INVITE_RETENTION).all();
@@ -701,8 +745,8 @@ async function worldNearby(env,senderId,targetId,now) {
   return {sender,target};
 }
 const KASAI_LIVE_TALK_TTL=60000,KASAI_LIVE_HEARTBEAT_TTL=30000;
-const KASAI_LIVE_SELECT=`SELECT s.*,c.name AS challenger_name,k.name AS kasai_name FROM kasai_live_sessions s
-  JOIN players c ON c.id=s.challenger_id JOIN players k ON k.id=s.kasai_id`;
+const KASAI_LIVE_SELECT=`SELECT s.*,c.name AS challenger_name,k.name AS kasai_name,kw.avatar AS kasai_avatar FROM kasai_live_sessions s
+  JOIN players c ON c.id=s.challenger_id JOIN players k ON k.id=s.kasai_id LEFT JOIN world_presence kw ON kw.player_id=s.kasai_id`;
 const liveSide=(row,playerId)=>row.challenger_id===playerId?0:row.kasai_id===playerId?1:-1;
 async function liveRow(env,id){return env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.id=?').bind(id).first();}
 async function activeLiveRow(env,playerId){return env.DB.prepare(KASAI_LIVE_SELECT+" JOIN kasai_live_members m ON m.session_id=s.id WHERE m.player_id=? AND s.state<>'closed'").bind(playerId).first();}
@@ -711,7 +755,7 @@ async function closeLiveSession(env,row,reason,now){
   const token=crypto.randomUUID(),positions=[JSON.parse(row.challenger_return_json),JSON.parse(row.kasai_return_json)],ids=[row.challenger_id,row.kasai_id];
   const guard=reason==='talk-timeout'?{sql:"state='staging' AND deadline_at<=?",values:[now]}:
     reason==='disconnected'?{sql:'(challenger_seen<=? OR kasai_seen<=?)',values:[now-KASAI_LIVE_HEARTBEAT_TTL,now-KASAI_LIVE_HEARTBEAT_TTL]}:
-    reason==='kasai-changed'?{sql:'NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)',values:[]}:
+    reason==='kasai-changed'?{sql:'NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id)',values:[]}:
     reason==='declined'?{sql:"state IN ('staging','permission')",values:[]}:
     reason==='battle-error'?{sql:"state='battle' AND round=? AND revision=?",values:[row.round,row.revision]}:{sql:'1',values:[]};
   await env.DB.batch([
@@ -723,9 +767,10 @@ async function closeLiveSession(env,row,reason,now){
   return liveRow(env,row.id);
 }
 async function sweepLiveSessions(env,now){
-  const active=await env.DB.prepare(KASAI_LIVE_SELECT+" WHERE s.state<>'closed'").all(),owner=(await ownerRecord(env))?.player_id;
+  const active=await env.DB.prepare(KASAI_LIVE_SELECT+" WHERE s.state<>'closed'").all(),members=await env.DB.prepare('SELECT player_id FROM admin_members').all();
+  const admins=new Set(members.results.map(member=>member.player_id));
   for(const row of active.results){
-    const reason=row.kasai_id!==owner?'kasai-changed':row.state==='staging'&&row.deadline_at<=now?'talk-timeout':
+    const reason=!admins.has(row.kasai_id)?'kasai-changed':row.state==='staging'&&row.deadline_at<=now?'talk-timeout':
       row.challenger_seen<=now-KASAI_LIVE_HEARTBEAT_TTL||row.kasai_seen<=now-KASAI_LIVE_HEARTBEAT_TTL?'disconnected':null;
     if(reason)await closeLiveSession(env,row,reason,now);
   }
@@ -734,13 +779,14 @@ async function liveView(env,row,playerId,now){
   if(!row)return null;
   const side=liveSide(row,playerId);if(side<0)fail(403,'KASAI_LIVE_PARTICIPANT_REQUIRED','この対戦の参加者ではありません。');
   const battle=row.battle_json?JSON.parse(row.battle_json):null,orders=await env.DB.prepare('SELECT side FROM kasai_live_orders WHERE session_id=? AND round=?').bind(row.id,row.round).all();
-  const reward=await kasaiReward(env,row.challenger_id),currentOwner=(await ownerRecord(env))?.player_id;
+  const reward=await kasaiReward(env,row.challenger_id),currentAdmin=await adminRecord(env,playerId);
+  const challengerAdmin=side===0?currentAdmin:await adminRecord(env,row.challenger_id),hostAdmin=side===1?currentAdmin:await adminRecord(env,row.kasai_id);
   return {id:row.id,role:side===0?'challenger':'kasai',state:row.state,roomId:row.room_id,
-    challenger:worldProfile(row.challenger_id,row.challenger_name,false,row.challenger_avatar),kasai:worldProfile(row.kasai_id,row.kasai_name,true,'kasai'),
+    challenger:worldProfile(row.challenger_id,row.challenger_name,challengerAdmin?.singleton,row.challenger_avatar),kasai:worldProfile(row.kasai_id,row.kasai_name,hostAdmin?.singleton,row.kasai_avatar),
     deadlineAt:row.deadline_at,reason:row.reason,returnPosition:JSON.parse(side===0?row.challenger_return_json:row.kasai_return_json),
     stagePosition:side===0?{map:'room:'+row.room_id,x:12,y:16,facing:'up'}:{map:'room:'+row.room_id,x:12,y:4,facing:'down'},
     arrived:[!!row.challenger_arrived,!!row.kasai_arrived],battle,round:row.round,submitted:[0,1].map(index=>orders.results.some(order=>order.side===index)),
-    rewardEligible:side===0&&['result','closed'].includes(row.state)&&battle?.winner===0&&currentOwner!==playerId,
+    rewardEligible:side===0&&['result','closed'].includes(row.state)&&battle?.winner===0&&!currentAdmin,
     rewardClaimed:!!reward,rewardDelivered:reward?.acked_at!=null,revision:row.revision,serverTime:now};
 }
 async function heartbeatLive(env,row,playerId,now){
@@ -779,7 +825,7 @@ async function resolveLiveSession(env,id,now){
     await closeLiveSession(env,row,'battle-error',now);fail(409,'KASAI_LIVE_BATTLE_FAILED','対戦の状態を確認できなかったため、元のフィールドへ戻ります。');
   }
   await env.DB.prepare(`UPDATE kasai_live_sessions SET battle_json=?,round=?,state=?,updated_at=?,revision=revision+1
-    WHERE id=? AND state='battle' AND round=? AND revision=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
+    WHERE id=? AND state='battle' AND round=? AND revision=? AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id)`)
     .bind(JSON.stringify(next),next.round,next.winner===null?'battle':'result',now,id,row.round,row.revision).run();
   return liveRow(env,id);
 }
@@ -805,22 +851,24 @@ async function kasaiLiveRoute(request,env,path,method,player){
       if(prior.challenger_party_json!==partyJSON||body.roomId&&body.roomId!==prior.room_id)fail(409,'KASAI_LIVE_REQUEST_REUSED','同じ対戦の識別情報で別のお誘いは送れません。');
       return {session:await liveView(env,prior,player.id,now),serverTime:now};
     }
-    const owner=await ownerRecord(env);if(!owner)fail(409,'KASAI_LIVE_OFFLINE','カサイがフィールドにいません。');
+    const owner=body.roomId?await adminRecord(env,body.roomId):await ownerRecord(env);
+    if(!owner)fail(409,body.roomId?'KASAI_ROOM_UNAVAILABLE':'KASAI_LIVE_OFFLINE','現在のカサイに話しかけてください。');
     if(owner.player_id===player.id)fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
     if(body.roomId&&body.roomId!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','現在のカサイに話しかけてください。');
     if(await activeLiveRow(env,player.id)||await activeLiveRow(env,owner.player_id))fail(409,'KASAI_LIVE_BUSY','カサイは現在ほかの挑戦者と過ごしています。');
     let positions;try{positions=await worldNearby(env,player.id,owner.player_id,now);}catch(error){if(error instanceof ApiError)fail(409,error.code==='WORLD_PLAYER_OFFLINE'?'KASAI_LIVE_OFFLINE':'KASAI_LIVE_NOT_NEARBY','同じフィールドで、実際のカサイの近くから話しかけてください。');throw error;}
     if(!Object.hasOwn(WORLD_MAP_BOUNDS,positions.sender.map_id))fail(409,'KASAI_LIVE_NOT_NEARBY','外のフィールドでカサイに話しかけてください。');
     if(positions.sender.status!=='idle'||positions.target.status!=='idle')fail(409,'KASAI_LIVE_BUSY','どちらかが別の操作中です。冒険に戻ってから話しかけてください。');
-    const room=await currentKasaiRoom(env);if(room?.owner_id!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','カサイの部屋はまだ作られていません。運営が壁を向いてAで部屋を作成してから、もう一度誘ってください。');
+    const room=await currentKasaiRoom(env,owner.player_id);if(!room)fail(409,'KASAI_ROOM_UNAVAILABLE','カサイの部屋はまだ作られていません。運営が壁を向いてAで部屋を作成してから、もう一度誘ってください。');
     await consumeLimit(env,request,`world-kasai-live-start:${player.id}`,12,60000,true);
     const id=crypto.randomUUID(),seed=crypto.getRandomValues(new Uint32Array(1))[0],returns=[positions.sender,positions.target].map(p=>JSON.stringify({map:p.map_id,x:p.x,y:p.y,facing:p.facing}));
     await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO kasai_live_sessions (id,request_id,challenger_id,kasai_id,room_id,challenger_return_json,kasai_return_json,challenger_party_json,challenger_avatar,challenger_seen,kasai_seen,deadline_at,seed,created_at,updated_at)
-        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)
+        AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)
         AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id IN (?,?))
         AND EXISTS(SELECT 1 FROM world_presence c JOIN world_presence k ON k.player_id=? WHERE c.player_id=? AND c.map_id=k.map_id AND c.map_id=? AND c.updated_at>? AND k.updated_at>? AND c.status='idle' AND k.status='idle' AND ABS(c.x-k.x)+ABS(c.y-k.y)<=?)`)
-        .bind(id,requestId,player.id,owner.player_id,room.owner_id,returns[0],returns[1],partyJSON,positions.sender.avatar,now,now,now+KASAI_LIVE_TALK_TTL,seed,now,now,owner.player_id,player.id,owner.player_id,owner.player_id,player.id,positions.sender.map_id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS),
+        .bind(id,requestId,player.id,owner.player_id,room.owner_id,returns[0],returns[1],partyJSON,positions.sender.avatar,now,now,now+KASAI_LIVE_TALK_TTL,seed,now,now,owner.player_id,player.id,player.id,owner.player_id,owner.player_id,player.id,positions.sender.map_id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS),
       ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare('INSERT INTO kasai_live_members (player_id,session_id,side) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=?)').bind(member,id,side,id)),
       ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare(`UPDATE world_presence SET map_id=?,x=12,y=?,facing=?,status='busy' WHERE player_id=? AND EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=? AND session_id=?)`)
         .bind('room:'+room.owner_id,side===0?16:4,side===0?'up':'down',member,member,id))
@@ -858,7 +906,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     const gender=(crypto.getRandomValues(new Uint8Array(1))[0]&1)?'male':'female';
     await env.DB.prepare(`INSERT OR IGNORE INTO kasai_rewards (player_id,receipt_id,live_session_id,gender,created_at)
       SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND challenger_id=? AND kasai_id<>challenger_id AND state IN ('result','closed') AND json_extract(battle_json,'$.winner')=0)
-      AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`).bind(player.id,'kasai-reward:'+player.id,row.id,gender,now,row.id,player.id,player.id).run();
+      AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)`).bind(player.id,'kasai-reward:'+player.id,row.id,gender,now,row.id,player.id,player.id).run();
     await requireKasaiChallenger(env,player,row.kasai_id);
     return {...await reply(),receipt:kasaiReceipt(await kasaiReward(env,player.id))};
   }
@@ -871,7 +919,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     if(body.party!==undefined){let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','対戦する手持ちは1〜6体です。');}await kasaiOwnedParty(env,party,player);partyJSON=JSON.stringify(party);}
     if(row[flag]){if(partyJSON!==row[column])fail(409,'KASAI_PARTY_CHANGED','入場時の手持ちは対戦が終わるまで変更できません。');return reply();}
     if(row.state!=='staging')fail(409,'KASAI_LIVE_PHASE_CHANGED','対戦の準備状況が変わりました。');
-    await env.DB.prepare(`UPDATE kasai_live_sessions SET ${flag}=1,${column}=?,updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND ${flag}=0 AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
+    await env.DB.prepare(`UPDATE kasai_live_sessions SET ${flag}=1,${column}=?,updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND ${flag}=0 AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id)`)
       .bind(partyJSON,now,row.id).run();return reply();
   }
   if(operation==='talk'){
@@ -880,7 +928,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     if(row.state!=='staging'||!row.challenger_arrived||!row.kasai_arrived)fail(409,'KASAI_LIVE_NOT_READY','二人が部屋に入るまでお待ちください。');
     const presence=await env.DB.prepare('SELECT map_id,x,y FROM world_presence WHERE player_id=?').bind(player.id).first();
     if(presence?.map_id!=='room:'+row.room_id||Math.abs(presence.x-12)+Math.abs(presence.y-4)>3)fail(409,'KASAI_NOT_NEARBY','向かいのカサイの近くに行って話しかけてください。');
-    await env.DB.prepare("UPDATE kasai_live_sessions SET state='permission',updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND deadline_at>? AND challenger_arrived=1 AND kasai_arrived=1 AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)").bind(now,row.id,now).run();return reply();
+    await env.DB.prepare("UPDATE kasai_live_sessions SET state='permission',updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND deadline_at>? AND challenger_arrived=1 AND kasai_arrived=1 AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id)").bind(now,row.id,now).run();return reply();
   }
   if(operation==='answer'){
     if(side!==1)fail(403,'ADMIN_REQUIRED','カサイ本人が対戦の許可を選んでください。');
@@ -888,11 +936,11 @@ async function kasaiLiveRoute(request,env,path,method,player){
     if(!body.accept){if(['staging','permission'].includes(row.state))await closeLiveSession(env,row,'declined',now);return reply();}
     if(['battle','result'].includes(row.state))return reply();
     if(row.state!=='permission'||!row.challenger_arrived||!row.kasai_arrived||!row.kasai_party_json)fail(409,'KASAI_LIVE_NOT_READY','挑戦者が話しかけてから対戦を許可してください。');
-    await requireAdmin(env,player);
-    const battle=createLiveBattle(JSON.parse(row.challenger_party_json),JSON.parse(row.kasai_party_json),row.seed,[row.challenger_name,'謎のトレーナー カサイ']);
+    const registration=await requireAdmin(env,player);
+    const battle=createLiveBattle(JSON.parse(row.challenger_party_json),JSON.parse(row.kasai_party_json),row.seed,[row.challenger_name,worldProfile(player.id,player.name,registration.singleton,'male').name]);
     await env.DB.prepare(`UPDATE kasai_live_sessions SET state='battle',battle_json=?,round=?,updated_at=?,revision=revision+1
-      WHERE id=? AND state='permission' AND revision=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
-      .bind(JSON.stringify(battle),battle.round,now,row.id,row.revision).run();return reply();
+      WHERE id=? AND state='permission' AND revision=? AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id AND claimed_at=?)`)
+      .bind(JSON.stringify(battle),battle.round,now,row.id,row.revision,registration.claimed_at).run();return reply();
   }
   if(operation==='actions'){
     if(!integer(body.round,1,1000)||typeof body.requestId!=='string'||!UUID.test(body.requestId)||!Array.isArray(body.orders))fail(400,'INVALID_KASAI_LIVE_ORDERS','対戦の行動情報を確認してください。');
@@ -901,7 +949,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     if(row.state!=='battle'||body.round!==row.round)fail(409,'KASAI_LIVE_ROUND_CHANGED','ターンが進みました。最新の対戦状態を確認してください。');
     const valid=validateLiveOrders(JSON.parse(row.battle_json),side,body.orders);if(!valid.ok)fail(400,'INVALID_KASAI_LIVE_ORDERS',valid.error||'この行動は選べません。');
     await env.DB.prepare(`INSERT OR IGNORE INTO kasai_live_orders (session_id,side,round,request_id,orders_json,created_at)
-      SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND state='battle' AND round=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id))`)
+      SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND state='battle' AND round=? AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=kasai_live_sessions.kasai_id))`)
       .bind(row.id,side,body.round,requestId,ordersJSON,now,row.id,body.round).run();
     const stored=await env.DB.prepare('SELECT request_id,orders_json FROM kasai_live_orders WHERE session_id=? AND side=? AND round=?').bind(row.id,side,body.round).first();
     if(!stored||stored.request_id!==requestId||stored.orders_json!==ordersJSON)fail(409,'KASAI_LIVE_ALREADY_SUBMITTED','このターンの行動は既に確定しています。');
@@ -916,7 +964,7 @@ async function worldPopulation(env,now) {
   // The persisted room join excludes deleted/invalid dynamic maps without
   // creating rooms or refreshing presence as a side effect of this read.
   const result=await env.DB.prepare(`SELECT w.map_id AS map,COUNT(*) AS count,r.name AS room_name,r.owner_id AS room_owner,
-    EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=r.owner_id) AS room_admin
+    EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=r.owner_id) AS room_admin
     FROM world_presence w JOIN players p ON p.id=w.player_id
     LEFT JOIN world_rooms r ON w.map_id='room:'||r.owner_id
     LEFT JOIN players owner ON owner.id=r.owner_id
@@ -940,7 +988,7 @@ async function worldRoute(request,env,path,method,player) {
     if(!verify) {
       const presence=await env.DB.prepare('SELECT avatar FROM world_presence WHERE player_id=?').bind(player.id).first();
       const profile=worldProfile(player.id,player.name,player.is_admin,presence?.avatar);
-      const data={v:1,kind:'trainer',playerId:player.id,name:profile.name,isAdmin:profile.isAdmin,avatar:profile.avatar,sessionId:battleSession,side,expiresAt:now+600000};
+      const data={v:1,kind:'trainer',playerId:player.id,name:profile.name,isAdmin:profile.isAdmin,adminRole:profile.adminRole,avatar:profile.avatar,sessionId:battleSession,side,expiresAt:now+600000};
       const payload=encoder.encode(JSON.stringify(data)),signature=new Uint8Array(await crypto.subtle.sign('HMAC',key,payload));
       return {pass:encodeURL(payload)+'.'+encodeURL(signature)};
     }
@@ -953,7 +1001,7 @@ async function worldRoute(request,env,path,method,player) {
       if(data.v!==1||data.kind!=='trainer'||typeof data.playerId!=='string'||!WORLD_PLAYER_ID.test(data.playerId)||data.sessionId!==battleSession||data.side!==side||!integer(data.expiresAt,now+1,now+600001))throw new Error('Invalid payload');
       // Re-read the current role and name, rather than letting an old signed
       // administrator profile survive an ownership transfer or release.
-      const row=await env.DB.prepare(`SELECT p.id,p.name,w.avatar,EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id) AS is_admin
+      const row=await env.DB.prepare(`SELECT p.id,p.name,w.avatar,(SELECT a.singleton FROM admin_members a WHERE a.player_id=p.id) AS is_admin
         FROM players p LEFT JOIN world_presence w ON w.player_id=p.id WHERE p.id=?`).bind(data.playerId).first();
       if(!row)throw new Error('Player missing');
       return {trainer:worldProfile(row.id,row.name,row.is_admin,row.avatar)};
@@ -975,7 +1023,7 @@ async function worldRoute(request,env,path,method,player) {
     const accepted=await env.DB.prepare(`INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at,input_at)
       SELECT ?,?,?,?,?,?,?,?,? WHERE (? IS NULL AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=?))
         OR EXISTS(SELECT 1 FROM kasai_live_members m JOIN kasai_live_sessions s ON s.id=m.session_id
-          WHERE m.player_id=? AND m.session_id=? AND s.state<>'closed' AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=s.kasai_id))
+          WHERE m.player_id=? AND m.session_id=? AND s.state<>'closed' AND EXISTS(SELECT 1 FROM admin_members WHERE player_id=s.kasai_id))
       ON CONFLICT(player_id) DO UPDATE SET map_id=excluded.map_id,x=excluded.x,y=excluded.y,facing=excluded.facing,avatar=excluded.avatar,status=excluded.status,updated_at=excluded.updated_at,input_at=excluded.input_at
       WHERE world_presence.input_at<=? RETURNING player_id`)
       .bind(player.id,body.map,body.x,body.y,body.facing,body.avatar,body.status,now,now,live?.id||null,player.id,player.id,live?.id||null,now-250).first();
@@ -1100,7 +1148,7 @@ async function route(request, env, url) {
     const name = safeName((await bodyJSON(request)).name);
     await consumeLimit(env, request, `rename:${player.id}`, 30, 60000, true);
     await env.DB.prepare('UPDATE players SET name = ?, updated_at = ? WHERE id = ?').bind(name, Date.now(), player.id).run();
-    return {player:{...playerView(player), name}, ...await adminState(env, request)};
+    return {player:playerView({...player,name}), ...await adminState(env, request)};
   }
   if (path === '/api/duel-pass' && method === 'POST') {
     const body = await bodyJSON(request), session = sessionId(body.sessionId), side = sideId(body.side);
@@ -1113,8 +1161,7 @@ async function route(request, env, url) {
       return {pass:`${encodeURL(payload)}.${encodeURL(signature)}`,expiresAt};
     }
     if(body.grantId.startsWith('admin-mythical:')){
-      const owner=await ownerRecord(env);
-      if(owner?.player_id!==player.id||body.grantId!==`admin-mythical:${player.id}`)fail(403,'GRANT_NOT_OWNED','この幻パチモンは現在の運営だけが使用できます。');
+      if(!await adminRecord(env,player.id)||body.grantId!==`admin-mythical:${player.id}`)fail(403,'GRANT_NOT_OWNED','この幻パチモンは現在の運営だけが使用できます。');
       const expiresAt=Date.now()+600000;
       const payload=encoder.encode(JSON.stringify({v:2,species:'floravelle',playerId:player.id,grantId:body.grantId,sessionId:session,side,expiresAt}));
       const signature=new Uint8Array(await crypto.subtle.sign('HMAC',await signingKey(env),payload));
@@ -1128,8 +1175,10 @@ async function route(request, env, url) {
     return {pass:`${encodeURL(payload)}.${encodeURL(signature)}`, expiresAt};
   }
   if (path === '/api/admin/claim' && method === 'POST') {
-    const previousOwner = await ownerRecord(env), configured = recoveryAllowed(env, request, previousOwner);
-    if (previousOwner?.player_id === player.id) return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
+    const current = await adminRecord(env, player.id);
+    if (current) return {player:playerView({...player, is_admin:current.singleton}), ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
+    const firstOwner = await ownerRecord(env), configuredOwner = await recoveryOwner(env), configured = recoveryAllowed(env, request, configuredOwner);
+    const previousOwner = configured ? configuredOwner : firstOwner;
     // Explicit recovery requests retain the existing operator-key recovery API.
     // The recovery request works with or without ADMIN_RECOVERY_* settings: the operator key,
     // player authentication and the rate limits below still decide. Ordinary claims still stop
@@ -1145,24 +1194,99 @@ async function route(request, env, url) {
     const now = Date.now(), config = JSON.stringify((await configRecord(env)).config);
     const batchId = recovering ? `admin-recovery:${previousOwner.player_id}:${player.id}` : `admin-initial:${player.id}`;
     const payloadHash = await digest(config);
+    const claimGuard = recovering ? 'EXISTS (SELECT 1 FROM admin_members WHERE singleton = ? AND player_id = ? AND claimed_at = ?)' : 'NOT EXISTS (SELECT 1 FROM admin_members)';
+    const claimValues = recovering ? [previousOwner.singleton, previousOwner.player_id, previousOwner.claimed_at] : [];
     const claimOwner = recovering ?
-      env.DB.prepare('UPDATE admin_owner SET player_id = ?, claimed_at = ? WHERE singleton = 1 AND player_id = ?').bind(player.id, now, previousOwner.player_id) :
-      env.DB.prepare('INSERT OR IGNORE INTO admin_owner (singleton, player_id, claimed_at) VALUES (1, ?, ?)').bind(player.id, now);
+      env.DB.prepare(`UPDATE ${adminTable(previousOwner)} SET player_id = ?, claimed_at = (SELECT claimed_at FROM admin_registration_clock WHERE singleton = 1)
+        WHERE singleton = 1 AND player_id = ? AND claimed_at = ? AND NOT EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)`)
+        .bind(player.id, previousOwner.player_id, previousOwner.claimed_at, player.id) :
+      env.DB.prepare('INSERT OR IGNORE INTO admin_owner (singleton, player_id, claimed_at) SELECT 1, ?, claimed_at FROM admin_registration_clock WHERE singleton = 1 AND NOT EXISTS (SELECT 1 FROM admin_members)').bind(player.id);
     await env.DB.batch([
+      nextAdminRegistration(env, now, claimGuard, claimValues),
       claimOwner,
-      env.DB.prepare('INSERT OR IGNORE INTO futo_config (singleton, config_json, revision, updated_at) SELECT 1, ?, 1, ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(config, now, player.id),
-      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, player.id, payloadHash, player.row_id, now, player.id),
-      env.DB.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?) ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json').bind(`admin-initial:${player.id}`, batchId, player.id, now, player.id)
+      env.DB.prepare('INSERT OR IGNORE INTO futo_config (singleton, config_json, revision, updated_at) SELECT 1, ?, 1, ? WHERE EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)').bind(config, now, player.id),
+      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)').bind(batchId, player.id, player.id, payloadHash, player.row_id, now, player.id),
+      env.DB.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?) ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json').bind(`admin-initial:${player.id}`, batchId, player.id, now, player.id)
     ]);
-    const owner = await ownerRecord(env);
-    if (owner?.player_id !== player.id) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
-    return {player:{...playerView(player), isAdmin:true}, ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
+    const claimed = await adminRecord(env, player.id);
+    if (!claimed) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
+    return {player:playerView({...player, is_admin:claimed.singleton}), ...await adminState(env, request), ...await playerGrants(env, player.id, 0, 100), initialCompanions:await initialCompanions(env, player.id)};
   }
-  await requireAdmin(env, player);
+  const registration = await requireAdmin(env, player);
+  if (path === '/api/admin/devices' && method === 'GET') {
+    let candidate;
+    if (url.searchParams.has('playerId')) {
+      const id = adminPlayerId(url.searchParams.get('playerId'));
+      const row = await env.DB.prepare('SELECT p.id, p.name, a.singleton, a.claimed_at FROM players p LEFT JOIN admin_members a ON a.player_id = p.id WHERE p.id = ?').bind(id).first();
+      if (!row) fail(404, 'PLAYER_NOT_FOUND', 'プレイヤーが見つかりません。');
+      candidate = {playerId:row.id, name:row.name, displayName:adminDisplayName(row.name,row.singleton), isAdmin:!!row.singleton, ...(row.singleton ? {role:adminRole(row.singleton), claimedAt:row.claimed_at} : {})};
+    }
+    const result = await adminDevices(env, player.id);
+    await requireAdmin(env, player);
+    return {...result, ...(candidate ? {candidate} : {})};
+  }
+  if (path === '/api/admin/devices' && method === 'POST') {
+    requireMainAdmin(registration);
+    const body = await bodyJSON(request), id = adminPlayerId(body.playerId);
+    if (body.confirmed !== true) fail(400, 'ADMIN_CONFIRMATION_REQUIRED', '追加するプレイヤーを確認してから操作してください。');
+    if (body.role !== undefined && !['sub','sub-sub'].includes(body.role)) fail(400, 'INVALID_ADMIN_ROLE', 'サブ運営またはサブサブ運営を選んでください。');
+    if (id === player.id) fail(400, 'ADMIN_SELF_TARGET', '自分以外のプレイヤーIDを指定してください。');
+    const target = await env.DB.prepare('SELECT id, row_id FROM players WHERE id = ?').bind(id).first();
+    if (!target) fail(404, 'PLAYER_NOT_FOUND', 'プレイヤーが見つかりません。');
+    const existing = await adminRecord(env, id);
+    if (existing) {
+      requireMainAdmin(await requireAdmin(env, player));
+      if (body.role !== undefined && body.role !== adminRole(existing.singleton)) fail(409, 'ADMIN_ROLE_CHANGED', 'このプレイヤーは別の運営役職で登録されています。最新の一覧を確認してください。');
+      return {...await adminDevices(env, player.id), added:false};
+    }
+    const now = Date.now(), config = JSON.stringify((await configRecord(env)).config), payloadHash = await digest(config), batchId = `admin-initial:${id}`;
+    const authority = 'EXISTS (SELECT 1 FROM admin_members WHERE singleton = 1 AND player_id = ? AND claimed_at = ?)';
+    const authorityValues = [player.id, registration.claimed_at];
+    const seats = body.role === undefined ? [2,3] : [body.role === 'sub' ? 2 : 3];
+    const vacancy = '('+seats.map(seat => `NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton = ${seat})`).join(' OR ')+')';
+    const granted = `EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND singleton IN (${seats.join(',')}))`;
+    const results = await env.DB.batch([
+      nextAdminRegistration(env, now, `${authority} AND ${vacancy} AND NOT EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)`, [...authorityValues, id]),
+      ...seats.map(seat => env.DB.prepare(`INSERT OR IGNORE INTO ${adminTable({singleton:seat})} (singleton, player_id, claimed_at)
+        SELECT 1, ?, claimed_at FROM admin_registration_clock WHERE singleton = 1 AND ${authority}
+        AND NOT EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)`).bind(id, ...authorityValues, id)),
+      env.DB.prepare(`INSERT OR IGNORE INTO futo_config (singleton, config_json, revision, updated_at) SELECT 1, ?, 1, ?
+        WHERE ${authority} AND ${granted}`).bind(config, now, ...authorityValues, id),
+      env.DB.prepare(`INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at)
+        SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND ${authority}
+        AND ${granted}`).bind(batchId, player.id, id, payloadHash, target.row_id, now, ...authorityValues, id),
+      env.DB.prepare(`INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at)
+        SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND ${authority} AND ${granted}
+        ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json`).bind(`admin-initial:${id}`, batchId, id, now, ...authorityValues, id)
+    ]);
+    const current = await requireAdmin(env, player);
+    if (current.claimed_at !== registration.claimed_at) fail(403, 'ADMIN_REQUIRED', '運営登録が変更されました。最新の状態で操作してください。');
+    const assigned = await adminRecord(env, id);
+    if (!assigned) {
+      if (body.role !== undefined) fail(409, 'ADMIN_ROLE_OCCUPIED', '選んだ運営役職は登録済みです。最新の一覧を確認してください。');
+      fail(409, 'ADMIN_CAPACITY_REACHED', '運営として登録できる端末は3台までです。');
+    }
+    if (!seats.includes(assigned.singleton)) fail(409, 'ADMIN_ROLE_CHANGED', 'このプレイヤーは別の運営役職で登録されています。最新の一覧を確認してください。');
+    return {...await adminDevices(env, player.id), added:results.slice(1, 1 + seats.length).some(result => result.meta?.changes > 0)};
+  }
+  if (path === '/api/admin/devices/revoke' && method === 'POST') {
+    requireMainAdmin(registration);
+    const body = await bodyJSON(request), id = adminPlayerId(body.playerId);
+    if (body.confirmed !== true || !Number.isSafeInteger(body.claimedAt) || body.claimedAt < 0) fail(400, 'ADMIN_CONFIRMATION_REQUIRED', '解除する運営登録を確認してから操作してください。');
+    if (id === player.id) fail(400, 'ADMIN_SELF_TARGET', '自分の登録は「この端末の運営登録を解除」から解除してください。');
+    const target = await adminRecord(env, id);
+    if (!target || target.claimed_at !== body.claimedAt) fail(409, 'ADMIN_REGISTRATION_CHANGED', '運営登録が変更されています。最新の状態を確認してください。');
+    if (target.singleton === 1) fail(403, 'MAIN_ADMIN_PROTECTED', 'メイン運営の登録はサブ運営の解雇では解除できません。');
+    const removed = await env.DB.prepare(`DELETE FROM ${adminTable(target)} WHERE singleton = 1 AND player_id = ? AND claimed_at = ?
+      AND EXISTS (SELECT 1 FROM admin_members WHERE singleton = 1 AND player_id = ? AND claimed_at = ?) RETURNING player_id`).bind(id, body.claimedAt, player.id, registration.claimed_at).first();
+    const current = await requireAdmin(env, player);
+    if (current.claimed_at !== registration.claimed_at) fail(403, 'ADMIN_REQUIRED', '運営登録が変更されました。最新の状態で操作してください。');
+    if (!removed) fail(409, 'ADMIN_REGISTRATION_CHANGED', '運営登録が変更されています。最新の状態を確認してください。');
+    return {...await adminDevices(env, player.id), revoked:true};
+  }
   if (path === '/api/admin/config' && method === 'GET') {
-    const owner = await ownerRecord(env);
-    if (owner?.player_id !== player.id) fail(403, 'ADMIN_REQUIRED', '運営専用の操作です。');
-    return {...await configRecord(env), adminRegistration:{playerId:owner.player_id, claimedAt:owner.claimed_at}};
+    const own = await requireAdmin(env, player);
+    return {...await configRecord(env), adminRegistration:{playerId:own.player_id, claimedAt:own.claimed_at}};
   }
   if (path === '/api/admin/release' && method === 'POST') {
     const body = await bodyJSON(request), expected = body.expectedRegistration;
@@ -1171,18 +1295,34 @@ async function route(request, env, url) {
     }
     // Delete only the exact registration reviewed by the current owner. A
     // delayed request must never release a replacement administrator.
-    const removed = await env.DB.prepare('DELETE FROM admin_owner WHERE singleton = 1 AND player_id = ? AND claimed_at = ? RETURNING player_id').bind(player.id, expected.claimedAt).first();
+    let removed;
+    if (registration.singleton === 1) {
+      const successor = await env.DB.prepare('SELECT singleton, player_id, claimed_at FROM admin_members WHERE singleton > 1 ORDER BY singleton LIMIT 1').first(), operationId = crypto.randomUUID();
+      const successorGuard = successor ? 'EXISTS (SELECT 1 FROM admin_members WHERE singleton = ? AND player_id = ? AND claimed_at = ?) AND NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton > 1 AND singleton < ?)' : 'NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton > 1)';
+      const results = await env.DB.batch([
+        nextAdminRegistration(env, Date.now(), `EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ? AND claimed_at = ?) AND ${successorGuard}`,
+          [player.id, expected.claimedAt, ...(successor ? [successor.singleton, successor.player_id, successor.claimed_at, successor.singleton] : [])], operationId),
+        env.DB.prepare('DELETE FROM admin_owner WHERE singleton = 1 AND player_id = ? AND claimed_at = ? AND EXISTS (SELECT 1 FROM admin_registration_clock WHERE operation_id = ?) RETURNING player_id').bind(player.id, expected.claimedAt, operationId),
+        ...(successor ? [
+          env.DB.prepare(`DELETE FROM ${adminTable(successor)} WHERE singleton = 1 AND player_id = ? AND claimed_at = ? AND EXISTS (SELECT 1 FROM admin_registration_clock WHERE operation_id = ?)`).bind(successor.player_id, successor.claimed_at, operationId),
+          env.DB.prepare('INSERT INTO admin_owner (singleton, player_id, claimed_at) SELECT 1, ?, claimed_at FROM admin_registration_clock WHERE singleton = 1 AND operation_id = ?').bind(successor.player_id, operationId)
+        ] : [])
+      ]);
+      removed = results[1]?.results?.[0];
+    } else {
+      removed = await env.DB.prepare(`DELETE FROM ${adminTable(registration)} WHERE singleton = 1 AND player_id = ? AND claimed_at = ? RETURNING player_id`).bind(player.id, expected.claimedAt).first();
+    }
     if (!removed) fail(409, 'ADMIN_REGISTRATION_CHANGED', '運営登録が変更されています。最新の状態を確認してください。');
     // Keep player identities, configuration and delivered gifts intact.
-    const currentOwner = await ownerRecord(env);
-    return {released:true, player:{...playerView(player), isAdmin:currentOwner?.player_id === player.id}, adminExists:!!currentOwner, adminRecoveryAvailable:recoveryAllowed(env, request, currentOwner)};
+    const remaining = await adminRecord(env, player.id);
+    return {released:true, player:playerView({...player, is_admin:remaining?.singleton}), ...await adminState(env, request)};
   }
   if (path === '/api/admin/config' && method === 'PUT') {
     const body = await bodyJSON(request), config = validateConfig(body.config), current = await configRecord(env);
     if (body.expectedRevision !== undefined && body.expectedRevision !== current.revision) fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。');
     const results = await env.DB.batch([
-      env.DB.prepare('UPDATE futo_config SET config_json = ?, revision = revision + 1, updated_at = ? WHERE singleton = 1 AND revision = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?) RETURNING revision').bind(JSON.stringify(config), Date.now(), current.revision, player.id),
-      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = ? AND player_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(`admin-initial:${player.id}`, player.id, player.id)
+      env.DB.prepare('UPDATE futo_config SET config_json = ?, revision = revision + 1, updated_at = ? WHERE singleton = 1 AND revision = ? AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?) RETURNING revision').bind(JSON.stringify(config), Date.now(), current.revision, player.id, registration.claimed_at),
+      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = 'admin-initial:' || player_id AND EXISTS (SELECT 1 FROM admin_members a WHERE a.player_id = grants.player_id) AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?)").bind(player.id, registration.claimed_at)
     ]);
     const result = results[0]?.results?.[0];
     if (!result) { await requireAdmin(env, player); fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。'); }
@@ -1190,7 +1330,7 @@ async function route(request, env, url) {
   }
   if (path === '/api/admin/players' && method === 'GET') {
     const {cursor, limit} = paging(url);
-    const result = await env.DB.prepare('SELECT p.row_id, p.id, p.name, p.created_at, EXISTS (SELECT 1 FROM admin_owner a WHERE a.player_id = p.id) AS is_admin FROM players p WHERE p.row_id > ? ORDER BY p.row_id LIMIT ?').bind(cursor, limit + 1).all();
+    const result = await env.DB.prepare('SELECT p.row_id, p.id, p.name, p.created_at, (SELECT a.singleton FROM admin_members a WHERE a.player_id=p.id) AS is_admin FROM players p WHERE p.row_id > ? ORDER BY p.row_id LIMIT ?').bind(cursor, limit + 1).all();
     const rows = result.results || [];
     return {players:rows.slice(0, limit).map(row => ({...playerView(row), createdAt:row.created_at})), nextCursor:rows.length > limit ? rows[limit - 1].row_id : null};
   }
@@ -1214,8 +1354,8 @@ async function route(request, env, url) {
     const storedHash = existing?.payload_hash || payloadHash;
     if (!existing) await consumeLimit(env, request, 'grant-global', 60, 60000, true);
     await env.DB.batch([
-      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ? WHERE EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now(), player.id),
-      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ? AND EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ?)").bind(batchId, storedHash, player.id, player.id)
+      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(row_id), 0) FROM players), ? WHERE EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?)').bind(batchId, player.id, target, payloadHash, configJSON, Date.now(), player.id, registration.claimed_at),
+      env.DB.prepare("INSERT OR IGNORE INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT b.id || ':' || p.id, b.id, p.id, b.config_json, b.created_at FROM grant_batches b JOIN players p ON p.row_id <= b.max_player_row AND (b.target = 'all' OR b.target = p.id) WHERE b.id = ? AND b.payload_hash = ? AND b.creator_id = ? AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?)").bind(batchId, storedHash, player.id, player.id, registration.claimed_at)
     ]);
     await requireAdmin(env, player);
     const actual = await env.DB.prepare('SELECT payload_hash, creator_id, target, config_json FROM grant_batches WHERE id = ?').bind(batchId).first();

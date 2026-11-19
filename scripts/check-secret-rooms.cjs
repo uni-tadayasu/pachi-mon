@@ -234,7 +234,7 @@ test('Kasai owner has a direct decoration action outside the stage and saves wit
   assert.equal(h.dialog().children.filter(node=>node.dataset.roomAction==='visit'&&node.dataset.roomOwner===KASAI).length,1);
   h.click('edit-own');await settle();assert(h.action('place'));assert.match(h.dialog().innerHTML,/中央の対戦ステージと通路の両側/);
   assert.equal(h.dialog().querySelector('#room-editor-canvas').width,24*28);
-  h.place('plant',20,10);h.place('lamp',11,10);assert.match(h.dialog().querySelector('[data-room-message]').textContent,/入口・通路・カサイのステージ/);
+  h.place('plant',20,10);h.place('lamp',11,10);assert.match(h.dialog().querySelector('[data-room-message]').textContent,/入口・通路・対戦ステージ/);
   h.input('room-edit-name','カサイの星見の間');h.click('save');await settle();
   assert.equal(h.store.get(KASAI).decorations.length,1);assert.equal(h.store.get(KASAI).decorations[0].x,20);
   assert.equal(h.store.get(KASAI).name,'カサイの星見の間');assert.equal(h.store.get(KASAI).kind,'kasai');
@@ -259,6 +259,21 @@ test('visitors may enter the Kasai room freely but cannot launch a ghost NPC bat
   assert(await h.LT.Rooms.open());assert.equal(h.action('edit'),undefined);assert.equal(h.action('edit-own'),undefined);
   assert.equal(await h.LT.Rooms.decorateMine(),false);assert.equal(h.action('place'),undefined);
   assert(!h.calls.some(call=>call.method==='PATCH'));
+});
+
+test('visiting the secondary administrator enters that exact room instead of the primary room',async()=>{
+  const h=runtime(),secondary=makeRoom(PEER,'kasai');
+  secondary.owner={id:PEER,name:'謎のトレーナー カサイ',isAdmin:true};
+  secondary.name='サブ運営の部屋';h.store.set(PEER,secondary);
+  assert(await h.LT.Rooms.enterKasai(PEER));
+  assert.equal(h.engine.state.map,'room:'+PEER);
+  assert.equal(h.LT.Rooms.current().owner.id,PEER);
+  assert(h.calls.some(call=>call.path==='/world/rooms/'+PEER));
+  assert(!h.calls.some(call=>call.path==='/world/rooms/kasai'));
+  assert(await h.LT.Rooms.open());assert.equal(h.action('edit'),undefined);
+  h.LT.Rooms.leave();h.store.set(PEER,makeRoom(PEER,'secret'));
+  assert.equal(await h.LT.Rooms.enterKasai(PEER),false,'A revoked administrator no longer has a Kasai room');
+  assert.equal(h.engine.state.map,'village');
 });
 
 test('authorized live staging uses the bridge, talks only through live eligibility and delegates exit',async()=>{

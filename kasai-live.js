@@ -3,7 +3,8 @@
   'use strict';
   const root=globalThis,LT=root.LT=root.LT||{},PLAYER=/^P[0-9a-f]{16}$/,ACTIVE=new Set(['staging','permission','battle','result']);
   const copy=value=>JSON.parse(JSON.stringify(value)),failure=message=>({ok:false,message});
-  const reasonText=reason=>({talk_timeout:'60秒以内に話しかけられなかったため、フィールドへ戻りました。',declined:'カサイが今回の対戦を見送りました。フィールドへ戻りました。',challenger_left:'挑戦者が退出したため、フィールドへ戻りました。',disconnected:'接続が切れたため、対戦を終了してフィールドへ戻りました。',connection_lost:'接続を確認できないため、フィールドへ戻りました。',kasai_changed:'運営が切り替わったため、フィールドへ戻りました。',role_changed:'運営が切り替わったため、フィールドへ戻りました。',battle_error:'対戦の状態を確認できなかったため、フィールドへ戻りました。',unavailable:'現在は対戦を始められません。フィールドへ戻りました。'}[String(reason||'').replaceAll('-','_')]||'カサイのステージを退出しました。');
+  const hostName=s=>s?.kasai?.adminRole==='sub'?'サカイ':s?.kasai?.adminRole==='sub-sub'?'イサカ':'カサイ';
+  const reasonText=reason=>({talk_timeout:'60秒以内に話しかけられなかったため、フィールドへ戻りました。',declined:'運営が今回の対戦を見送りました。フィールドへ戻りました。',challenger_left:'挑戦者が退出したため、フィールドへ戻りました。',disconnected:'接続が切れたため、対戦を終了してフィールドへ戻りました。',connection_lost:'接続を確認できないため、フィールドへ戻りました。',kasai_changed:'運営が切り替わったため、フィールドへ戻りました。',role_changed:'運営が切り替わったため、フィールドへ戻りました。',battle_error:'対戦の状態を確認できなかったため、フィールドへ戻りました。',unavailable:'現在は対戦を始められません。フィールドへ戻りました。'}[String(reason||'').replaceAll('-','_')]||'運営のステージを退出しました。');
   class KasaiLiveController {
     constructor({request,identify,getEngine,getParty,canEnter,stage,restore,enforce=()=>{},refreshPresence=async()=>{},claimReward=async()=>({ok:true}),rules=LT.KasaiLiveRules,enabled=()=>true,uuid=()=>crypto.randomUUID(),clock=()=>Date.now(),changed=()=>{},notify=()=>{}}){
       Object.assign(this,{request,identify,getEngine,getParty,canEnter,stage,restore,enforce,refreshPresence,claimReward,rules,enabled,uuid,clock,changed,notify});
@@ -34,14 +35,14 @@
     }
     async requestChallenge(peerId){this.requesting=true;try{return await this.run(async()=>{
       const player=await this.identity(true);
-      if(player.isAdmin||peerId===player.id)throw Error('運営カサイは自分自身と対戦できません。');
-      if(!PLAYER.test(peerId||''))throw Error('フィールドの運営カサイに話しかけてください。');
+      if(player.isAdmin||peerId===player.id)throw Error('運営は自分自身と対戦できません。');
+      if(!PLAYER.test(peerId||''))throw Error('フィールドの運営トレーナーに話しかけてください。');
       if(this.active())throw Error('現在のステージを退出してから挑戦してください。');
-      if(!this.canEnter())throw Error('現在の操作を終えてから、カサイに話しかけてください。');
+      if(!this.canEnter())throw Error('現在の操作を終えてから、運営トレーナーに話しかけてください。');
       const party=this.getParty();if(!Array.isArray(party)||!party.length)throw Error('手持ちを保存してから挑戦してください。');
       const engine=this.getEngine(),map=engine?.state.map,epoch=this.epoch,owner=player.id;
       await this.refreshPresence();
-      if(!this.valid(epoch,owner)||this.getEngine()!==engine||engine?.state.map!==map)throw Error('現在地が変わりました。もう一度カサイに話しかけてください。');
+      if(!this.valid(epoch,owner)||this.getEngine()!==engine||engine?.state.map!==map)throw Error('現在地が変わりました。もう一度相手に話しかけてください。');
       const serialized=JSON.stringify(party);
       if(!this.pendingCreate||this.pendingCreate.peerId!==peerId||this.pendingCreate.partyKey!==serialized)this.pendingCreate={peerId,partyKey:serialized,requestId:this.uuid()};
       const stamp=++this.ticket,response=await this.request('/world/kasai/live',{method:'POST',body:{requestId:this.pendingCreate.requestId,roomId:peerId,party:copy(party),storageCount:Math.min(192,engine.state.storage.length)}});
@@ -98,7 +99,7 @@
         const arrived=await this.request('/world/kasai/live/'+encodeURIComponent(next.id)+'/arrive',{method:'POST',body});
         if(this.valid(epoch,owner))await this.apply(arrived,++this.ticket,epoch,owner);
       }
-      if(previous?.id!==next.id)this.notify(next.role==='kasai'?'挑戦者とカサイのステージへ移動しました。挑戦者の声かけをお待ちください。':'60秒以内に、奥にいるカサイへ話しかけてください。');
+      if(previous?.id!==next.id)this.notify(next.role==='kasai'?`挑戦者と${hostName(next)}のステージへ移動しました。挑戦者の声かけをお待ちください。`:`60秒以内に、奥にいる${hostName(next)}へ話しかけてください。`);
       return true;
     }
     async declineUnavailable(session,epoch,owner){
@@ -132,7 +133,7 @@
       if(!this.valid(epoch,owner)||this.live?.id!==session.id)return {ok:false,stale:true};
       await this.apply(response,stamp,epoch,owner);return {ok:true,response};
     }
-    talk(){return this.run(async()=>{if(!this.canTalk())throw Error('奥のカサイの隣まで進んで、話しかけてください。');await this.refreshPresence();return this.mutate('talk');});}
+    talk(){return this.run(async()=>{if(!this.canTalk())throw Error(`奥の${hostName(this.live)}の隣まで進んで、話しかけてください。`);await this.refreshPresence();return this.mutate('talk');});}
     answer(accept){return this.run(async()=>{await this.identity(true);if(this.live?.role!=='kasai'||this.live.state!=='permission')throw Error('対戦の申し込みを確認してください。');return this.mutate('answer',{accept:accept===true});});}
     submit(orders){return this.run(async()=>{
       const session=this.live;if(session?.state!=='battle'||session.submitted?.[this.side()])throw Error('相手の行動を待っています。');
@@ -142,7 +143,7 @@
       this.actionIntent??={sessionId:session.id,round:session.round,ordersKey:key,orders:copy(orders),requestId:this.uuid()};
       return this.mutate('actions',{round:session.round,orders:copy(this.actionIntent.orders),requestId:this.actionIntent.requestId});
     });}
-    leave(){return this.run(async()=>{if(!this.active())return {ok:true};if(this.live.role==='kasai')throw Error('挑戦者が退出するまで、カサイは席で待機します。');return this.mutate('leave');});}
+    leave(){return this.run(async()=>{if(!this.active())return {ok:true};if(this.live.role==='kasai')throw Error(`挑戦者が退出するまで、${hostName(this.live)}は席で待機します。`);return this.mutate('leave');});}
     claim(){return this.run(async()=>{
       if(!this.live?.rewardEligible||this.live.role!=='challenger')throw Error('勝利した挑戦者が報酬を受け取れます。');
       if(this.live.rewardDelivered)return {ok:true,alreadyReceived:true};
@@ -170,15 +171,15 @@
   });
   const name=mon=>LT.displayName?.(mon)||mon?.nickname||LT.DATA?.species?.[mon?.species]?.name||'パチモン';
   function mount(){
-    if(!banner){const stage=document.querySelector('.game-stage');if(stage){banner=document.createElement('section');banner.id='kasai-live-banner';banner.className='kasai-live-banner';banner.hidden=true;banner.setAttribute('aria-label','カサイのステージ');stage.before(banner);banner.addEventListener('click',click);}}
+    if(!banner){const stage=document.querySelector('.game-stage');if(stage){banner=document.createElement('section');banner.id='kasai-live-banner';banner.className='kasai-live-banner';banner.hidden=true;banner.setAttribute('aria-label','運営の対戦ステージ');stage.before(banner);banner.addEventListener('click',click);}}
     if(dialog)return;dialog=document.createElement('dialog');dialog.id='kasai-live-dialog';dialog.className='kasai-live-dialog';dialog.setAttribute('aria-labelledby','kasai-live-title');document.body.append(dialog);
     dialog.addEventListener('click',click);dialog.addEventListener('cancel',event=>{event.preventDefault();closeDialog();});
   }
-  function hint(){const s=controller.live;if(!controller.active())return null;if(s.role==='kasai')return s.state==='permission'?'挑戦者からの対戦申込を確認してください':'挑戦者が退出するまで、カサイは席で待機';if(s.state==='staging')return controller.canTalk()?'カサイ · A / E で対戦を申し込む':`奥のカサイに話しかけよう · あと${controller.state().remaining}秒`;if(s.state==='permission')return 'カサイの返事を待っています';if(s.state==='result')return '対戦終了 · 退出するまでステージを探索できます';return 'カサイとリアルタイム対戦中';}
+  function hint(){const s=controller.live;if(!controller.active())return null;if(s.role==='kasai')return s.state==='permission'?'挑戦者からの対戦申込を確認してください':`挑戦者が退出するまで、${hostName(s)}は席で待機`;if(s.state==='staging')return controller.canTalk()?`${hostName(s)} · A / E で対戦を申し込む`:`奥の${hostName(s)}に話しかけよう · あと${controller.state().remaining}秒`;if(s.state==='permission')return `${hostName(s)}の返事を待っています`;if(s.state==='result')return '対戦終了 · 退出するまでステージを探索できます';return `${hostName(s)}とリアルタイム対戦中`;}
   function renderBanner(){
     if(!banner)return;const s=controller.live;banner.hidden=!controller.active()||!bridge().isPlaying?.();if(banner.hidden)return;
     const busy=controller.busy||controller.joining,detail=controller.error||hint();
-    banner.innerHTML=`<div><strong>${s.role==='kasai'?esc(s.challenger.name)+' の挑戦':'謎のトレーナー カサイ'}</strong><span data-kasai-countdown role="status">${esc(detail)}</span></div><div class="kasai-live-banner-actions">${s.state==='result'?'<button type="button" data-kasai-live="result">対戦結果</button>':''}${s.role==='challenger'?`<button type="button" data-kasai-live="leave" ${busy?'disabled':''}>退出する</button>`:''}</div>`;
+    banner.innerHTML=`<div><strong>${s.role==='kasai'?esc(s.challenger.name)+' の挑戦':esc(hostName(s))}</strong><span data-kasai-countdown role="status">${esc(detail)}</span></div><div class="kasai-live-banner-actions">${s.state==='result'?'<button type="button" data-kasai-live="result">対戦結果</button>':''}${s.role==='challenger'?`<button type="button" data-kasai-live="leave" ${busy?'disabled':''}>退出する</button>`:''}</div>`;
   }
   function hpCard(mon,which,side,index){const ratio=Math.max(0,Math.min(100,mon.hp/mon.maxHp*100));return `<article class="kasai-live-health ${which}" data-kasai-health="${side}:${index}"><div><span>${which==='foe'?'相手':'自分'} · Lv.${mon.level}</span><strong>${esc(name(mon))}${mon.gender==='male'?' ♂':mon.gender==='female'?' ♀':''}${mon.shiny?' ★':''}</strong></div><div class="kasai-live-hp"><i style="width:${ratio}%"></i></div><small data-kasai-hp>${mon.hp} / ${mon.maxHp}</small></article>`;}
   function stock(team){return team.monsters.map(mon=>`<span class="${mon.hp>0?'':'fainted'}" title="${esc(name(mon))}"></span>`).join('');}
@@ -192,9 +193,9 @@
     const selectedName=selected?.type==='move'?choices[selected.move]?.name:selected?.type==='switch'?`${name(me.monsters[selected.index])}に交代`:selected?.type==='struggle'?'踏ん張り打ち':null;
     const ready=selected?duel.validate(side,[selected]).ok:replacement&&!needReplacement;
     let panel;
-    if(finished)panel=`<section class="kasai-live-result"><h3>${verdict}</h3><p>双方が選んだ行動で勝敗が決まりました。冒険の仲間や持ち物は減りません。</p>${s.role==='challenger'&&s.rewardEligible?`<div class="kasai-live-reward"><strong>勝利報酬 · キラシード Lv.70</strong><p>${s.rewardDelivered?'このプレイヤーは受け取り済みです。':'各プレイヤー1体だけ。性別は♂・♀からランダム。ひかえが満員のときは受け取れません。'}</p>${!s.rewardDelivered?`<button type="button" class="btn btn-primary" data-kasai-live="claim" ${controller.busy?'disabled':''}>キラシードを受け取る</button>`:''}</div>`:''}<button type="button" class="btn btn-primary" data-kasai-live="dismiss">ステージに戻る</button><p>${s.role==='kasai'?'挑戦者が退出するまで席で待機します。':'退出すると、カサイもフィールドへ戻ります。'}</p></section>`;
+    if(finished)panel=`<section class="kasai-live-result"><h3>${verdict}</h3><p>双方が選んだ行動で勝敗が決まりました。冒険の仲間や持ち物は減りません。</p>${s.role==='challenger'&&s.rewardEligible?`<div class="kasai-live-reward"><strong>勝利報酬 · キラシード Lv.70</strong><p>${s.rewardDelivered?'このプレイヤーは受け取り済みです。':'各プレイヤー1体だけ。性別は♂・♀からランダム。ひかえが満員のときは受け取れません。'}</p>${!s.rewardDelivered?`<button type="button" class="btn btn-primary" data-kasai-live="claim" ${controller.busy?'disabled':''}>キラシードを受け取る</button>`:''}</div>`:''}<button type="button" class="btn btn-primary" data-kasai-live="dismiss">ステージに戻る</button><p>${s.role==='kasai'?'挑戦者が退出するまで席で待機します。':`退出すると、${hostName(s)}もフィールドへ戻ります。`}</p></section>`;
     else panel=`<section class="kasai-live-command"><h3>${replacement?'次の仲間を選ぶ':'このターンの行動'}</h3>${replacement&&!needReplacement?'<p>相手が次に出す仲間を選んでいます。</p>':commands}<div class="kasai-live-selection">${selectedName?esc(selectedName)+' を選択中':replacement&&!needReplacement?'相手の交代を確認してください。':'技か交代先を選んでください。'}</div>${controller.actionIntent&&!wait?`<button type="button" class="btn btn-primary" data-kasai-live="retry" ${controller.busy?'disabled':''}>同じ行動で再確認</button>`:`<button type="button" class="btn btn-primary" data-kasai-live="submit" ${locked||!ready?'disabled':''}>${playback?'エフェクトを再生中…':wait?'相手の行動を待っています':replacement?'交代を確定':'この行動を確定'}</button>`}<p class="kasai-live-note">${s.submitted?.[1-side]?'相手は行動を確定しています。':'相手の選択は、双方の確定後に公開されます。'}</p></section>`;
-    return `<header><div><p>LIVE KASAI BATTLE</p><h2 id="kasai-live-title">${finished?verdict:`TURN ${b.turn} · カサイと対戦`}</h2></div>${finished?'<button type="button" class="btn" data-kasai-live="dismiss">閉じる</button>':s.role==='challenger'?'<button type="button" class="btn" data-kasai-live="leave">退出</button>':''}</header><div class="kasai-live-body"><div class="kasai-live-versus"><div>${esc(me.name)}<small>${stock(me)}</small></div><b>VS</b><div>${esc(foe.name)}<small>${stock(foe)}</small></div></div><div class="kasai-live-layout"><section class="kasai-live-arena">${hpCard(enemy,'foe',1-side,foe.active[0])}<canvas id="kasai-live-canvas" width="768" height="400" aria-label="カサイとの対戦画面"></canvas>${hpCard(mon,'ally',side,me.active[0])}</section>${panel}</div><div class="kasai-live-log" role="log">${(b.log||[]).slice(-4).map(line=>`<p>${esc(line)}</p>`).join('')}</div><p class="kasai-live-error" role="status">${esc(controller.error)}</p>${leaveReview?'<section class="kasai-live-leave"><p>ステージを退出して対戦を終了しますか？</p><div><button type="button" class="btn" data-kasai-live="stay">対戦を続ける</button><button type="button" class="btn" data-kasai-live="confirm-leave">退出する</button></div></section>':''}</div>`;
+    return `<header><div><p>LIVE KASAI BATTLE</p><h2 id="kasai-live-title">${finished?verdict:`TURN ${b.turn} · ${esc(s.role==='kasai'?s.challenger.name:hostName(s))}と対戦`}</h2></div>${finished?'<button type="button" class="btn" data-kasai-live="dismiss">閉じる</button>':s.role==='challenger'?'<button type="button" class="btn" data-kasai-live="leave">退出</button>':''}</header><div class="kasai-live-body"><div class="kasai-live-versus"><div>${esc(me.name)}<small>${stock(me)}</small></div><b>VS</b><div>${esc(foe.name)}<small>${stock(foe)}</small></div></div><div class="kasai-live-layout"><section class="kasai-live-arena">${hpCard(enemy,'foe',1-side,foe.active[0])}<canvas id="kasai-live-canvas" width="768" height="400" aria-label="${hostName(s)}との対戦画面"></canvas>${hpCard(mon,'ally',side,me.active[0])}</section>${panel}</div><div class="kasai-live-log" role="log">${(b.log||[]).slice(-4).map(line=>`<p>${esc(line)}</p>`).join('')}</div><p class="kasai-live-error" role="status">${esc(controller.error)}</p>${leaveReview?'<section class="kasai-live-leave"><p>ステージを退出して対戦を終了しますか？</p><div><button type="button" class="btn" data-kasai-live="stay">対戦を続ける</button><button type="button" class="btn" data-kasai-live="confirm-leave">退出する</button></div></section>':''}</div>`;
   }
   function scene(snapshot){const key=snapshot?JSON.stringify([controller.live?.id,snapshot.round,snapshot.phase,snapshot.winner]):'';if(key===lastScene)return;lastScene=key;bridge().setKasaiLiveBattle?.(snapshot);}
   function render(){
@@ -202,7 +203,7 @@
     if(!s||!controller.active()){dialog?.close();scene(null);paintKey='';cancelAnimationFrame(frame);return;}
     if(controller.joining||controller.stagedId!==s.id){dialog.close();scene(null);paintKey='';return;}
     if(s.state==='permission'&&s.role==='kasai'){
-      scene(null);const key=JSON.stringify(['permission',s.id,controller.busy,controller.error]);if(paintKey!==key){paintKey=key;dialog.innerHTML=`<header><div><p>CHALLENGE REQUEST</p><h2 id="kasai-live-title">${esc(s.challenger.name)}から対戦の申し込み</h2></div></header><div class="kasai-live-body kasai-live-consent"><p>挑戦者がカサイに話しかけました。現在の手持ちで対戦を始めますか？</p><p>あなた自身が技と交代を選び、挑戦者とリアルタイムで戦います。</p><div><button type="button" class="btn" data-kasai-live="decline" ${controller.busy?'disabled':''}>今回は見送る</button><button type="button" class="btn btn-primary" data-kasai-live="accept" ${controller.busy?'disabled':''}>対戦を始める</button></div><p role="status">${esc(controller.error)}</p></div>`;}if(!dialog.open)dialog.showModal();return;
+      scene(null);const key=JSON.stringify(['permission',s.id,controller.busy,controller.error]);if(paintKey!==key){paintKey=key;dialog.innerHTML=`<header><div><p>CHALLENGE REQUEST</p><h2 id="kasai-live-title">${esc(s.challenger.name)}から対戦の申し込み</h2></div></header><div class="kasai-live-body kasai-live-consent"><p>挑戦者が${hostName(s)}に話しかけました。現在の手持ちで対戦を始めますか？</p><p>あなた自身が技と交代を選び、挑戦者とリアルタイムで戦います。</p><div><button type="button" class="btn" data-kasai-live="decline" ${controller.busy?'disabled':''}>今回は見送る</button><button type="button" class="btn btn-primary" data-kasai-live="accept" ${controller.busy?'disabled':''}>対戦を始める</button></div><p role="status">${esc(controller.error)}</p></div>`;}if(!dialog.open)dialog.showModal();return;
     }
     if(s.battle&&(s.state==='battle'||s.state==='result'&&resultDismissed!==s.id)){
       playback=!!LT.BattleVFX?.onlineBusy?.(s.battle,performance.now());

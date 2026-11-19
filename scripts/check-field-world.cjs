@@ -52,6 +52,42 @@ test('presence caps rendering at eighty actors and nearby eligibility uses serve
  assert.equal(p.actors('village')[0].x,7);assert.equal(p.nearby({map:'village',x:0,y:0,facing:'right'},2).length,1,'A freshly arrived actor uses its server tile for invitation range');
 });
 
+test('authoritative roles select distinct admin appearances and sub names without trusting avatar text',()=>{
+ const p=new WorldPresence({clock:()=>0});
+ p.ingest(packet([
+  actor({isAdmin:true,adminRole:'main',name:'登録名',avatar:'female'}),
+  actor({id:OTHER,isAdmin:true,adminRole:'sub',name:'紫の旅人',avatar:'kasai'}),
+  actor({id:'P0000000000000004',isAdmin:false,adminRole:'sub',avatar:'sub-admin'}),
+  actor({id:'P0000000000000005',isAdmin:true,adminRole:'invalid',avatar:'female'}),
+  actor({id:'P0000000000000006',isAdmin:true,avatar:'kasai'}),
+  actor({id:'P0000000000000007',isAdmin:true,adminRole:'sub-sub',name:'金の旅人',avatar:'sub-admin'}),
+  actor({id:'P0000000000000008',isAdmin:false,adminRole:'sub-sub',avatar:'sub-sub-admin'})
+ ]),'village');
+ const [main,sub,ordinary,invalid,legacy,third,forgedThird]=p.actors('village');
+ assert.equal(main.avatar,'kasai');assert.equal(main.name,'謎のトレーナー カサイ');assert.equal(main.adminRole,'main');
+ assert.equal(sub.avatar,'sub-admin');assert.equal(sub.name,'サカイ');assert.equal(sub.adminRole,'sub');assert.equal(sub.isAdmin,true);
+ assert.equal(ordinary.avatar,'male');assert.equal(ordinary.adminRole,null);assert.equal(ordinary.isAdmin,false);
+ assert.equal(invalid.avatar,'female');assert.equal(invalid.adminRole,null);assert.equal(invalid.isAdmin,false);
+ assert.equal(legacy.avatar,'kasai');assert.equal(legacy.adminRole,'main');
+ assert.equal(third.avatar,'sub-sub-admin');assert.equal(third.name,'イサカ');assert.equal(third.adminRole,'sub-sub');assert.equal(third.isAdmin,true);
+ assert.equal(forgedThird.avatar,'male');assert.equal(forgedThird.adminRole,null);assert.equal(forgedThird.isAdmin,false);
+});
+
+test('stationary snapshots refresh role, name and avatar together and stale snapshots cannot restore a revoked role',()=>{
+ let now=0;const p=new WorldPresence({clock:()=>now});p.ingest(packet([actor()]),'village');
+ const receive=(patch,time)=>{now+=100;p.ingest(packet([actor({...patch,updatedAt:time})],{serverTime:time}),'village');return p.actors('village')[0];};
+ let peer=receive({isAdmin:true,adminRole:'sub',avatar:'sub-admin',name:'紫の旅人'},1100);
+ assert.equal(peer.adminRole,'sub');assert.equal(peer.avatar,'sub-admin');assert.equal(peer.name,'サカイ');assert.equal(peer.moving,false);
+ peer=receive({isAdmin:true,adminRole:'sub-sub',avatar:'sub-sub-admin',name:'金の旅人'},1150);
+ assert.equal(peer.adminRole,'sub-sub');assert.equal(peer.avatar,'sub-sub-admin');assert.equal(peer.name,'イサカ');assert.equal(peer.moving,false);
+ peer=receive({isAdmin:true,adminRole:'main',avatar:'kasai',name:'紫の旅人'},1200);
+ assert.equal(peer.adminRole,'main');assert.equal(peer.avatar,'kasai');assert.equal(peer.name,'謎のトレーナー カサイ');
+ peer=receive({isAdmin:false,adminRole:null,avatar:'female',name:'紫の旅人'},1300);
+ assert.equal(peer.isAdmin,false);assert.equal(peer.adminRole,null);assert.equal(peer.avatar,'female');assert.equal(peer.name,'紫の旅人');
+ now+=100;p.ingest(packet([actor({isAdmin:true,adminRole:'sub-sub',avatar:'sub-sub-admin',updatedAt:1250})],{serverTime:1400}),'village');
+ assert.equal(p.actors('village')[0].isAdmin,false);assert.equal(p.actors('village')[0].avatar,'female');
+});
+
 test('population accepts only exact positive server aggregates with unique valid stage IDs',()=>{
  const packet={rows:[{map:'village',count:91},{map:'room:'+PEER,count:3,name:'星の私室',kind:'secret'}],total:94,serverTime:1000,ttlMs:15000};
  assert.equal(populationData(packet).total,94);assert.equal(populationData(packet).rows[0].count,91,'Population must not inherit the nearby rendering cap');
@@ -61,8 +97,8 @@ test('population accepts only exact positive server aggregates with unique valid
 
 // Runtime tests use the real client, a small DOM and controlled promises. They
 // never contact the service or create invitations for real player identities.
-function runtime({handle,stored=[]}={}){
- let now=100000,nextTimer=0,requestId=0;const timers=new Map(),memory=new Map(stored),calls=[],messages=[],notices=[],opens=[],events={},globalEvents={};
+function runtime({handle,stored=[],realAdmin=false}={}){
+ let now=100000,nextTimer=0,requestId=0;const timers=new Map(),memory=new Map(stored),calls=[],messages=[],notices=[],opens=[],portraits=[],events={},globalEvents={};
  const state={started:true,map:'village',x:1,y:1,facing:'right',avatar:'female'},engine={state,battle:null};
  const doc={hidden:false,nodes:[],addEventListener(name,fn){(events[name]||=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);return true;},body:{append(node){doc.nodes.push(node);}},querySelector(selector){if(selector==='.game-stage')return stage;if(selector==='dialog[open]')return doc.nodes.find(node=>node.tag==='dialog'&&node.open)||null;return null;}};
  class Element{
@@ -96,25 +132,45 @@ function runtime({handle,stored=[]}={}){
    if(path==='/world/population')return h.populationPacket();
    if(path==='/world/invitations')return {invitation:{id:'offer-'+requestId,state:'pending',expiresAt:now+60000,roomCode:options.body.roomCode}};
    return {ok:true};
-  }},adminBridge:{getEngine:()=>engine,isPlaying:()=>h.playing,isBusy:()=>false,refresh(){h.refreshes++;},toast:message=>messages.push(message)},Art:{traveller(){}},
+  }},adminBridge:{getEngine:()=>engine,isPlaying:()=>h.playing,isBusy:()=>false,refresh(){h.refreshes++;},toast:message=>messages.push(message)},Art:{traveller(canvas,options){portraits.push(copy(options));}},
   Trade:{isLocked:()=>trade.active,worldState:()=>({...trade}),setWorldNotice:message=>notices.push(message),async cancelWorldWait(){trade.cancels++;if(trade.failCleanup)return false;trade.active=false;trade.state='cancelled';context.LT.tradeActive=false;doc.dispatchEvent({type:'pachi-trade-state'});return true;},async open(options){
    opens.push(options);trade.active=true;trade.connected=false;trade.state='open';context.LT.tradeActive=true;
    try{if(options.autoHost)await options.onRoomReady('ABC234');return true;}catch(_){return false;}
   }}
  }});
- const h={context,doc,stage,screen,state,engine,trade,calls,messages,notices,opens,playing:true,refreshes:0,serverOffset:0,players:[actor()],invitations:[],populationRows:[{map:'village',count:2}],
+ const h={context,doc,stage,screen,state,engine,trade,calls,messages,notices,opens,portraits,playing:true,refreshes:0,serverOffset:0,selfProfile:null,players:[actor()],invitations:[],populationRows:[{map:'village',count:2}],
   populationPacket(){return {rows:copy(this.populationRows),total:this.populationRows.reduce((sum,row)=>sum+row.count,0),serverTime:now+this.serverOffset,ttlMs:15000};},
   bar(){return screen.children.find(node=>node.className==='world-network-bar');},
   populationSummary(){return this.dialog()?.querySelector('[data-world-population-summary]')?.textContent;},
   populationList(){return this.dialog()?.querySelector('[data-world-population-list]')?.innerHTML;},
   searchPopulation(value){const input=this.dialog().querySelector('#world-population-search');input.value=value;input.emit('input',{target:input});},
-  snapshot(map=state.map){return packet(this.players.map(person=>({...person,map:person.map,updatedAt:now+this.serverOffset})),{self:actor({id:SELF,map,x:state.x,y:state.y}),serverTime:now+this.serverOffset,invitations:copy(this.invitations)});},
+  snapshot(map=state.map){return packet(this.players.map(person=>({...person,map:person.map,updatedAt:now+this.serverOffset})),{self:actor({id:SELF,...(this.selfProfile||context.LT.Admin.player),map,x:state.x,y:state.y}),serverTime:now+this.serverOffset,invitations:copy(this.invitations)});},
   async step(ms=0){now+=ms;for(let i=0;i<100;i++){const due=[...timers.entries()].filter(([,timer])=>timer.at<=now).sort((a,b)=>a[1].at-b[1].at)[0];if(!due)break;timers.delete(due[0]);due[1].fn();await settle();if(i===99)assert.fail('Runtime timer loop did not settle');}await settle();},
   event(type,values={}){doc.dispatchEvent({type,...values});},globalEvent(type,values={}){for(const fn of globalEvents[type]||[])fn({type,...values});},
   dialog(){return doc.nodes.find(node=>node.id==='world-player-dialog');},
   click(action){const dialog=this.dialog(),button=dialog?.children.find(node=>node.dataset.worldAction===action);assert(button,'Missing world action '+action);dialog.emit('click',{target:button});},
   async approachTrade(){assert(context.LT.World.interact(),'Nearby player should be interactable');this.click('trade');await this.step(300);},now:()=>now
  };
+ if(realAdmin){
+  // Exercise the real authentication/profile adapter as well as field-world:
+  // replacing this adapter with a mock used to conceal stale role propagation.
+  Object.assign(context,{AbortController,URL,Blob,btoa,crypto:require('node:crypto').webcrypto,
+   CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},
+   MutationObserver:class{observe(){}},setInterval:()=>0});
+  context.window=context;doc.getElementById=()=>null;
+  context.localStorage.removeItem=key=>memory.delete(key);
+  context.fetch=async(url,options)=>{
+   const path=new URL(url).pathname.replace('/api',''),request={method:options.method,...(options.body?{body:JSON.parse(options.body)}:{})};
+   calls.push({path,...copy(request),at:now});
+   const supplied=handle?handle(path,request,h):undefined;
+   const data=supplied!==undefined?await supplied:path==='/world/presence'?h.snapshot(request.body.map):path==='/me'?{player:h.meProfile||copy(context.LT.Admin.player),adminExists:true,grants:[],nextCursor:null}:path==='/status'?{adminExists:true}:{};
+   return {ok:true,status:200,json:async()=>({ok:true,...data})};
+  };
+  const adminSource=fs.readFileSync(require.resolve('../admin-console.js'),'utf8').replace('mountSettings();void sync();','globalThis.__adoptAdmin=adoptIdentity;');
+  vm.runInContext(adminSource,context,{filename:'admin-console.js'});
+  h.adopt=profile=>context.__adoptAdmin({id:profile.id,token:'A'.repeat(43),name:profile.name},profile,true);
+  h.adopt({id:SELF,name:'自分',isAdmin:false,adminRole:null});
+ }
  vm.runInContext(SOURCE,context);return h;
 }
 
@@ -124,6 +180,125 @@ test('runtime heartbeat publishes canonical position, retains offline solo play 
  assert.equal(h.context.LT.World.status().connected,true);assert.equal(h.context.LT.World.actors('village').length,1);
  h.context.navigator.onLine=false;h.globalEvent('offline');await settle();assert.equal(h.context.LT.World.actors('village').length,0);assert.equal(h.state.started,true);assert.equal(h.state.map,'village');
  assert(h.calls.some(call=>call.method==='DELETE'));await h.step(1500);assert.equal(h.calls.filter(call=>call.method==='POST').length,1);
+});
+
+test('both local deputies use fixed operator names without changing saved avatars or registered names',async()=>{
+ for(const [role,avatar,name,displayName] of [['sub','sub-admin','紫の旅人','サカイ'],['sub-sub','sub-sub-admin','金の旅人','イサカ']]){
+ const h=runtime();h.context.LT.Admin.player={id:SELF,name,isAdmin:true,adminRole:role};
+ assert.equal(h.context.LT.World.localKind('female'),avatar);assert.equal(h.context.LT.World.displayName(),displayName);
+ await h.step(800);assert.equal(h.context.LT.World.localKind('female'),avatar);assert.equal(h.context.LT.World.status().displayName,displayName);assert.equal(h.context.LT.Admin.player.name,name);
+ assert.equal(h.state.avatar,'female');const post=h.calls.find(call=>call.path==='/world/presence'&&call.method==='POST');assert.equal(post.body.avatar,'female');assert(!Object.hasOwn(post.body,'isAdmin'));assert(!Object.hasOwn(post.body,'adminRole'));
+ h.context.LT.Admin.player={id:SELF,name:'登録名',isAdmin:true};assert.equal(h.context.LT.World.localKind('female'),'kasai');assert.equal(h.context.LT.World.displayName(),'謎のトレーナー カサイ');
+ }
+});
+
+test('new authoritative heartbeat roles override a cached profile and revocation restores the saved ordinary appearance',async()=>{
+ const h=runtime();h.context.LT.Admin.player={id:SELF,name:'紫の旅人',isAdmin:true,adminRole:'sub'};await h.step(800);
+ assert.equal(h.context.LT.World.localKind('female'),'sub-admin');
+ h.selfProfile={id:SELF,name:'紫の旅人',isAdmin:false,adminRole:null,avatar:'female'};await h.step(500);
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.localKind('male'),'hero');assert.equal(h.context.LT.World.displayName(),null);
+ const refreshed=h.refreshes;h.selfProfile={id:SELF,name:'紫の旅人',isAdmin:true,adminRole:'sub',avatar:'sub-admin'};await h.step(500);
+ assert.equal(h.context.LT.World.localKind('female'),'sub-admin');assert.equal(h.context.LT.World.displayName(),'サカイ');assert(h.refreshes>refreshed);
+ h.selfProfile={id:SELF,name:'金の旅人',isAdmin:true,adminRole:'sub-sub',avatar:'sub-sub-admin'};await h.step(500);
+ assert.equal(h.context.LT.World.localKind('female'),'sub-sub-admin');assert.equal(h.context.LT.World.displayName(),'イサカ');
+ h.selfProfile={id:SELF,name:'紫の旅人',isAdmin:true,adminRole:'main',avatar:'kasai'};await h.step(500);
+ assert.equal(h.context.LT.World.localKind('female'),'kasai');assert.equal(h.context.LT.World.displayName(),'謎のトレーナー カサイ');
+});
+
+test('a fresh profile revocation is not undone by an older in-flight admin presence response',async()=>{
+ const pending=deferred();const h=runtime({handle:(path,options)=>path==='/world/presence'&&options.method==='POST'?pending.promise:undefined});
+ h.context.LT.Admin.player={id:SELF,name:'金の旅人',isAdmin:true,adminRole:'sub-sub'};await h.step(800);const old=h.snapshot();
+ h.context.LT.Admin.player={id:SELF,name:'紫の旅人',isAdmin:false,adminRole:null};
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');pending.resolve(old);await settle();
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.displayName(),null);
+ h.context.LT.Admin.player={id:SELF,name:'新しい名前',isAdmin:true,adminRole:'sub'};
+ assert.equal(h.context.LT.World.localKind('female'),'sub-admin');assert.equal(h.context.LT.World.displayName(),'サカイ');
+});
+
+test('real admin adapter applies deputy appointments, promotion and revocation on the next heartbeat',async()=>{
+ const h=runtime({realAdmin:true});await h.step(800);
+ for(const [role,kind] of [['sub','sub-admin'],['sub-sub','sub-sub-admin'],['main','kasai'],[null,'hero-female']]){
+  h.selfProfile={id:SELF,name:'自分',isAdmin:role!==null,adminRole:role,avatar:kind};
+  await h.step(500);
+  assert.equal(h.context.LT.Admin.player.adminRole,role);
+  assert.equal(h.context.LT.Admin.player.isAdmin,role!==null);
+  assert.equal(h.context.LT.World.localKind('female'),kind);
+  assert.equal(h.context.LT.World.displayName(),role==='main'?'謎のトレーナー カサイ':role==='sub'?'サカイ':role==='sub-sub'?'イサカ':null);
+ }
+ assert.equal(h.state.avatar,'female');assert(!h.calls.some(call=>call.path==='/me'),'Role updates must not wait for the periodic profile read');
+});
+
+test('real admin adapter cannot overwrite a newer profile with a delayed presence role',async()=>{
+ const old=deferred();let hold=false;
+ const h=runtime({realAdmin:true,handle:(path,options)=>hold&&path==='/world/presence'&&options.method==='POST'?old.promise:undefined});
+ h.adopt({id:SELF,name:'自分',isAdmin:true,adminRole:'sub-sub'});await h.step(800);
+ const snapshot=h.snapshot();hold=true;await h.step(500);
+ h.meProfile={id:SELF,name:'自分',isAdmin:false,adminRole:null};
+ await h.context.LT.Admin.tradeIdentity({fresh:true});
+ old.resolve(snapshot);await settle();
+ assert.equal(h.context.LT.Admin.player.isAdmin,false);assert.equal(h.context.LT.Admin.player.adminRole,null);
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.displayName(),null);
+});
+
+test('a delayed profile read cannot undo a revocation received by the next heartbeat',async()=>{
+ const old=deferred();let holding=false;
+ const h=runtime({realAdmin:true,handle:(path)=>holding&&path==='/me'?old.promise:undefined});
+ h.adopt({id:SELF,name:'登録名',isAdmin:true,adminRole:'sub-sub'});await h.step(800);
+ holding=true;const refresh=h.context.LT.Admin.tradeIdentity({fresh:true});await settle();
+ h.selfProfile={id:SELF,name:'登録名',isAdmin:false,adminRole:null,avatar:'female'};await h.step(500);
+ old.resolve({ok:true,player:{id:SELF,name:'登録名',isAdmin:true,adminRole:'sub-sub'},adminExists:true});await refresh;
+ assert.equal(h.context.LT.Admin.player.isAdmin,false);assert.equal(h.context.LT.Admin.player.adminRole,null);
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.displayName(),null);
+});
+
+test('a previous identity presence response and stored role claims cannot give the current player an admin appearance',async()=>{
+ const pending=deferred(),stored=[['pachi-player-identity-v1',JSON.stringify({id:SELF,isAdmin:true,adminRole:'sub-sub',avatar:'sub-sub-admin'})]];
+ const h=runtime({stored,handle:(path,options)=>path==='/world/presence'&&options.method==='POST'?pending.promise:undefined});
+ assert.equal(h.context.LT.World.localKind('sub-admin'),'hero');assert.equal(h.context.LT.World.localKind('sub-sub-admin'),'hero');assert.equal(h.context.LT.World.displayName(),null);
+ h.context.LT.Admin.player={id:SELF,name:'紫の旅人',isAdmin:true,adminRole:'sub'};await h.step(800);const old=h.snapshot();
+ h.context.LT.Admin.player={id:OTHER,name:'別の人',isAdmin:false,adminRole:null};pending.resolve(old);await settle();
+ assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.displayName(),null);assert.deepEqual(copy(h.context.LT.World.actors('village')),[]);
+ for(const profile of [{isAdmin:false,adminRole:'sub',avatar:'sub-admin'},{isAdmin:false,adminRole:'sub-sub',avatar:'sub-sub-admin'},{isAdmin:'true',adminRole:'sub',avatar:'sub-admin'},{isAdmin:true,adminRole:null,avatar:'kasai'},{isAdmin:true,adminRole:'invalid',avatar:'sub-admin'}]){
+  h.context.LT.Admin.player={id:OTHER,name:'別の人',...profile};assert.equal(h.context.LT.World.localKind('female'),'hero-female');assert.equal(h.context.LT.World.displayName(),null);
+ }
+});
+
+test('both deputy encounter portraits and live challenge labels use their fixed operator names',async()=>{
+ for(const [role,avatar,label,displayName] of [['sub','sub-admin','SUB ADMIN','サカイ'],['sub-sub','sub-sub-admin','SUB SUB ADMIN','イサカ']]){
+ const h=runtime(),requests=[];h.players=[actor({name:'旅人 <月>',isAdmin:true,adminRole:role,avatar})];
+ h.context.LT.KasaiLive={request:async id=>{requests.push(id);return {ok:true};},locked:()=>false,isWorking:()=>false};
+ await h.step(800);assert(h.context.LT.World.interact());assert.equal(h.portraits.at(-1).kind,avatar);
+ assert(h.dialog().innerHTML.includes(displayName));assert(h.dialog().innerHTML.includes(label));assert.doesNotMatch(h.dialog().innerHTML,/カサイ|旅人|<月>/);
+ h.click('battle');await h.step(300);assert.deepEqual(requests,[PEER]);assert(!h.calls.some(call=>call.path==='/world/invitations'));
+ }
+});
+
+test('stationary role revocation updates an open encounter portrait and removes the admin battle label',async()=>{
+ const h=runtime();h.players=[actor({name:'紫の旅人',isAdmin:true,adminRole:'sub',avatar:'sub-admin'})];
+ await h.step(800);assert(h.context.LT.World.interact());assert.equal(h.portraits.at(-1).kind,'sub-admin');
+ h.players=[actor({name:'金の旅人',isAdmin:true,adminRole:'sub-sub',avatar:'sub-sub-admin'})];await h.step(500);
+ assert.equal(h.portraits.at(-1).kind,'sub-sub-admin');assert.match(h.dialog().innerHTML,/イサカ/);
+ h.players=[actor({name:'旅人 <月>',isAdmin:false,adminRole:null,avatar:'female'})];await h.step(1800);
+ assert.equal(h.portraits.at(-1).kind,'hero-female');assert.match(h.dialog().innerHTML,/対戦を申し込む/);assert.match(h.dialog().innerHTML,/旅人 &lt;月&gt;/);assert.doesNotMatch(h.dialog().innerHTML,/SUB ADMIN|専用ステージ|イサカ|<月>/);
+ const peer=h.context.LT.World.actors('village')[0];assert.equal(peer.adminRole,null);assert.equal(peer.avatar,'female');
+});
+
+test('both deputy trade encounters retain authoritative role metadata for the trainer confirmation flow',async()=>{
+ for(const [role,avatar] of [['sub','sub-admin'],['sub-sub','sub-sub-admin']]){
+ const h=runtime();h.players=[actor({name:'旅人',isAdmin:true,adminRole:role,avatar})];
+ await h.step(800);await h.approachTrade();
+ assert.deepEqual(copy(h.opens[0].encounter),{id:PEER,name:role==='sub'?'サカイ':'イサカ',isAdmin:true,adminRole:role,avatar});
+ const invitation=h.calls.find(call=>call.path==='/world/invitations');assert.equal(invitation.body.targetId,PEER);assert(!Object.hasOwn(invitation.body,'adminRole'));
+ }
+});
+
+test('incoming deputy portraits refresh when the service revokes either sender role',async()=>{
+ for(const [role,avatar] of [['sub','sub-admin'],['sub-sub','sub-sub-admin']]){
+ const h=runtime();h.invitations=[{id:'incoming-sub',from:actor({name:'旅人',isAdmin:true,adminRole:role,avatar}),to:{id:SELF},kind:'trade',state:'pending',expiresAt:h.now()+60000}];
+ await h.step(800);assert.equal(h.portraits.at(-1).kind,avatar);assert(h.dialog().innerHTML.includes(role==='sub'?'サカイ':'イサカ'));assert.doesNotMatch(h.dialog().innerHTML,/カサイ/);
+ h.invitations[0].from={...h.invitations[0].from,isAdmin:false,adminRole:null,avatar:'female'};await h.step(500);
+ assert.equal(h.portraits.at(-1).kind,'hero-female');assert.match(h.dialog().innerHTML,/旅人/);
+ }
 });
 
 test('an old stored OFF preference cannot disable the always-on solo field',async()=>{

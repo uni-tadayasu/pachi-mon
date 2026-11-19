@@ -1,5 +1,5 @@
 {
- "version": "2026-11-19",
+ "version": "20261119-v62",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -282,6 +282,18 @@
    "bytes": 1304652
   },
   {
+   "url": "assets/sub-admin-overworld-v62.json",
+   "bytes": 2554
+  },
+  {
+   "url": "assets/sub-admin-overworld-v62.png",
+   "bytes": 1268145
+  },
+  {
+   "url": "assets/sub-sub-admin-overworld-v62.png",
+   "bytes": 1525114
+  },
+  {
    "url": "assets/traveller-female-v33.png",
    "bytes": 1645687
   },
@@ -318,11 +330,14 @@
   "assets/offdex-v54-06.png",
   "assets/offdex-v54-07.png",
   "assets/offdex-v54-08.png",
+  "assets/sub-admin-overworld-v62.json",
+  "assets/sub-admin-overworld-v62.png",
+  "assets/sub-sub-admin-overworld-v62.png",
   "assets/traveller-female-v33.png",
   "assets/traveller-hero-v33.png",
   "assets/traveller-npcs-v33.png",
   "assets/zeroveil-v46.png"
  ],
- "totalBytes": 74766810,
- "coreBytes": 34364636
+ "totalBytes": 77562623,
+ "coreBytes": 37160449
 }

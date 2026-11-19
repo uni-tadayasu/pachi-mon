@@ -1,0 +1,138 @@
+{
+  "image": "sub-sub-admin-overworld-v62.png",
+  "imageWidth": 1086,
+  "imageHeight": 1448,
+  "description": "ImageGen reference-based transparent third-operator walking atlas; original PNG bytes unmodified.",
+  "sourceSha256": "315f9bd6be4ceeacdae95002fef9b354e6d9681d9b1070609b7edb0711c09109",
+  "frames": [
+    {
+      "direction": "down",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 10,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 97,
+      "anchorY": 343
+    },
+    {
+      "direction": "down",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 10,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 100,
+      "anchorY": 343
+    },
+    {
+      "direction": "down",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 10,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 102,
+      "anchorY": 343
+    },
+    {
+      "direction": "left",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 374,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 98,
+      "anchorY": 331
+    },
+    {
+      "direction": "left",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 374,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 100,
+      "anchorY": 331
+    },
+    {
+      "direction": "left",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 374,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 105,
+      "anchorY": 331
+    },
+    {
+      "direction": "right",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 730,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 99,
+      "anchorY": 328
+    },
+    {
+      "direction": "right",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 730,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 100,
+      "anchorY": 327
+    },
+    {
+      "direction": "right",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 730,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 106,
+      "anchorY": 326
+    },
+    {
+      "direction": "up",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 1081,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 102,
+      "anchorY": 343
+    },
+    {
+      "direction": "up",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 1081,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 104,
+      "anchorY": 343
+    },
+    {
+      "direction": "up",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 1081,
+      "sw": 220,
+      "sh": 350,
+      "anchorX": 103,
+      "anchorY": 344
+    }
+  ],
+  "renderSize": [
+    96,
+    128
+  ],
+  "renderFeetY": 122,
+  "fitExtent": {
+    "width": 180,
+    "height": 336
+  }
+}

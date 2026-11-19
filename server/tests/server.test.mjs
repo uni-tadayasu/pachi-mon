@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import worker, {DEFAULT_CONFIG, MYTHICAL_CONFIG, validateConfig} from '../server.mjs';
 
 class LocalD1 {
-  constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON;'); this.sqlite.exec(readFileSync(new URL('../drizzle/0000_admin.sql', import.meta.url), 'utf8')); }
+  constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON;'); for (const file of ['0000_admin.sql','0006_sub_admin.sql','0007_third_admin.sql']) this.sqlite.exec(readFileSync(new URL('../drizzle/'+file, import.meta.url), 'utf8')); }
   prepare(sql) {
     const database = this;
     return {
@@ -627,13 +627,12 @@ test('owner release opens registration without deleting identities, settings or 
 test('a queued release cannot delete a replacement administrator', async()=>{
   const {call,admin,register,env}=setup(),owner=await admin(),replacement=await register();
   const expectedRegistration=(await call('/api/admin/config',{token:owner.token})).adminRegistration;
-  const originalPrepare=env.DB.prepare.bind(env.DB);
+  const originalBatch=env.DB.batch.bind(env.DB);
   let resume,started;
   const gate=new Promise(resolve=>{resume=resolve;}),atGate=new Promise(resolve=>{started=resolve;});
-  env.DB.prepare=sql=>{
-    const statement=originalPrepare(sql);
-    if(sql.startsWith('DELETE FROM admin_owner')){const first=statement.first.bind(statement);statement.first=async(...args)=>{started();await gate;return first(...args);};}
-    return statement;
+  env.DB.batch=async statements=>{
+    if(statements[1]?.sql.startsWith('DELETE FROM admin_owner')){started();await gate;}
+    return originalBatch(statements);
   };
   const pending=call('/api/admin/release',{method:'POST',token:owner.token,body:{confirmed:true,expectedRegistration}});
   await atGate;
@@ -661,4 +660,297 @@ for(const operation of ['config','grants'])test(`a queued ${operation} mutation 
   assert.equal((await call('/api/status')).adminExists,false);
   assert.equal(JSON.parse(env.DB.sqlite.prepare('SELECT config_json FROM futo_config').get().config_json).stats.hp,DEFAULT_CONFIG.stats.hp);
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grant_batches WHERE id = ?').get(requestId).n,0);
+});
+
+test('the additive second-admin migration preserves existing records and enforces two distinct fixed seats',()=>{
+  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
+  db.exec(readFileSync(new URL('../drizzle/0000_admin.sql',import.meta.url),'utf8'));
+  const ids=['P0000000000000001','P0000000000000002','P0000000000000003'];
+  for(const [index,id] of ids.entries())db.prepare('INSERT INTO players (id,token_hash,name,created_at,updated_at) VALUES (?,?,?,?,?)').run(id,'hash'+index,'既存'+index,100,100);
+  db.prepare('INSERT INTO admin_owner VALUES (1,?,1234)').run(ids[0]);
+  db.prepare('INSERT INTO futo_config VALUES (1,?,7,100)').run(JSON.stringify(legacyConfig()));
+  db.prepare('INSERT INTO grant_batches VALUES (?,?,?,?,?,?,?)').run('old-batch',ids[0],ids[1],'old-hash',JSON.stringify(DEFAULT_CONFIG),3,100);
+  db.prepare('INSERT INTO grants (grant_id,batch_id,player_id,config_json,created_at) VALUES (?,?,?,?,?)').run('old-gift','old-batch',ids[1],JSON.stringify(DEFAULT_CONFIG),100);
+  const before=Object.fromEntries(['players','admin_owner','futo_config','grant_batches','grants'].map(table=>[table,db.prepare('SELECT * FROM '+table).all()]));
+  const schema=db.prepare("SELECT sql FROM sqlite_schema WHERE name='admin_owner'").get().sql;
+  db.exec(readFileSync(new URL('../drizzle/0006_sub_admin.sql',import.meta.url),'utf8'));
+  for(const [table,rows] of Object.entries(before))assert.deepEqual(db.prepare('SELECT * FROM '+table).all(),rows,table);
+  assert.equal(db.prepare("SELECT sql FROM sqlite_schema WHERE name='admin_owner'").get().sql,schema);
+  assert.deepEqual(db.prepare('SELECT * FROM admin_members').all().map(row=>({...row})),[{singleton:1,player_id:ids[0],claimed_at:1234}]);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM admin_registration_clock').get().n,0,'Migration does not seed runtime state');
+  assert.throws(()=>db.prepare('INSERT INTO sub_admin_owner VALUES (1,?,2000)').run(ids[0]),/another seat/);
+  db.prepare('INSERT INTO sub_admin_owner VALUES (1,?,2000)').run(ids[1]);
+  assert.throws(()=>db.prepare('UPDATE sub_admin_owner SET player_id=?').run(ids[0]),/another seat/);
+  assert.throws(()=>db.prepare('UPDATE admin_owner SET player_id=?').run(ids[1]),/another seat/);
+  assert.throws(()=>db.prepare('INSERT OR IGNORE INTO admin_owner VALUES (1,?,3000)').run(ids[1]),/another seat/);
+  for(const table of ['admin_owner','sub_admin_owner'])assert.throws(()=>db.prepare('INSERT INTO '+table+' VALUES (2,?,3000)').run(ids[2]),/CHECK/);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM admin_members').get().n,2);
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);db.close();
+});
+
+test('admin device lookup and grant require current authority, exact existing player ID and confirmation',async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),target=await register('サブ候補');
+  for(const path of ['/api/admin/devices','/api/admin/devices?playerId='+target.id]){
+    assert.equal((await call(path)).status,401);
+    assert.equal((await call(path,{token:target.token})).error.code,'ADMIN_REQUIRED');
+  }
+  const request={method:'POST',body:{playerId:target.id,confirmed:true}};
+  assert.equal((await call('/api/admin/devices',request)).status,401);
+  assert.equal((await call('/api/admin/devices',{...request,token:target.token,body:{...request.body,isAdmin:true,role:'main'}})).status,403);
+  const lookup=await call('/api/admin/devices?playerId='+target.id,{token:owner.token});
+  assert.deepEqual(lookup.candidate,{playerId:target.id,name:'サブ候補',displayName:'サブ候補',isAdmin:false});
+  assert.equal(lookup.capacity,3);assert.equal(lookup.devices.length,1);assert.equal(lookup.devices[0].role,'main');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_members').get().n,1,'Lookup never promotes');
+  for(const body of [{playerId:target.id},{playerId:target.id,confirmed:false}])assert.equal((await call('/api/admin/devices',{method:'POST',token:owner.token,body})).error.code,'ADMIN_CONFIRMATION_REQUIRED');
+  assert.equal((await call('/api/admin/devices',{...request,token:owner.token,body:{playerId:owner.id,confirmed:true}})).error.code,'ADMIN_SELF_TARGET');
+  for(const id of ['bad-id','Pffffffffffffffff']){
+    const expected=id==='bad-id'?'INVALID_PLAYER_ID':'PLAYER_NOT_FOUND';
+    assert.equal((await call('/api/admin/devices?playerId='+id,{token:owner.token})).error.code,expected);
+    assert.equal((await call('/api/admin/devices',{...request,token:owner.token,body:{playerId:id,confirmed:true}})).error.code,expected);
+  }
+  assert.equal((await call('/api/admin/devices',{...request,token:owner.token,body:{...request.body,role:'main'}})).error.code,'INVALID_ADMIN_ROLE');
+  const granted=await call('/api/admin/devices',{...request,token:owner.token,body:{...request.body,role:'sub'}});
+  assert.equal(granted.status,200);assert.equal(granted.added,true);assert.equal(granted.devices[1].playerId,target.id);assert.equal(granted.devices[1].role,'sub');
+  const registered=await call('/api/admin/devices?playerId='+target.id,{token:owner.token});
+  assert.deepEqual(registered.candidate,{...granted.devices[1],isAdmin:true});
+  assert.equal(JSON.stringify(registered).includes('token_hash'),false);
+  const me=await call('/api/me',{token:target.token});assert.equal(me.player.isAdmin,true);assert.deepEqual(me.initialCompanions,legendaryEntitlement(target));
+  assert.equal(me.grants.filter(grant=>grant.grantId==='admin-initial:'+target.id).length,1);
+});
+
+test('concurrent device grants fill exactly two deputy seats and duplicate retries are idempotent',async()=>{
+  const {call,admin,register,env}=setup(),owner=await admin(),candidates=await Promise.all(Array.from({length:6},(_,i)=>register('候補'+i)));
+  const grant=target=>call('/api/admin/devices',{method:'POST',token:owner.token,body:{playerId:target.id,confirmed:true}});
+  const results=await Promise.all(candidates.map(grant)),winnerIndex=results.findIndex(result=>result.status===200),winner=candidates[winnerIndex];
+  assert.equal(results.filter(result=>result.status===200).length,2);
+  for(const [index,result] of results.entries())if(result.status!==200){assert.equal(result.status,409);assert.equal(result.error.code,'ADMIN_CAPACITY_REACHED');assert.equal((await call('/api/me',{token:candidates[index].token})).grants.length,0);}
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_members').get().n,3);
+  assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id,owner.id);
+  const before=env.DB.sqlite.prepare('SELECT * FROM grant_batches').all();
+  const repeated=await Promise.all([grant(winner),grant(winner)]);assert(repeated.every(result=>result.status===200&&result.added===false));
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grant_batches').all(),before);
+  const h=setup(),main=await h.admin(),sub=await h.register();
+  const request={method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}};
+  const simultaneous=await Promise.all([h.call('/api/admin/devices',request),h.call('/api/admin/devices',request)]);
+  assert(simultaneous.every(result=>result.status===200));assert.equal(simultaneous.filter(result=>result.added).length,1);
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(sub.id).n,1);
+});
+
+test('secondary admin has equal config and distribution powers while each config response identifies its own registration',async()=>{
+  const {call,admin,register}=setup(),main=await admin(),sub=await register('サブ運営'),visitor=await register();
+  await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}});
+  const delivered=await call('/api/admin/grants',{method:'POST',token:sub.token,body:{requestId:crypto.randomUUID(),target:visitor.id}});assert.equal(delivered.status,200);
+  const oldGift=(await call('/api/me',{token:visitor.token})).grants[0];
+  const updated=await call('/api/admin/config',{method:'PUT',token:sub.token,body:{config:changedConfig()}});assert.equal(updated.status,200);
+  for(const actor of [main,sub]){
+    const config=await call('/api/admin/config',{token:actor.token});assert.equal(config.adminRegistration.playerId,actor.id);assert.deepEqual(config.config,changedConfig());
+    const initial=(await call('/api/me',{token:actor.token})).grants.find(grant=>grant.grantId==='admin-initial:'+actor.id);assert.deepEqual(initial.stats,changedConfig().stats);
+    assert.equal((await call('/api/admin/players',{token:actor.token})).players.filter(player=>player.isAdmin).length,2);
+  }
+  assert.deepEqual((await call('/api/me',{token:visitor.token})).grants[0],oldGift,'Previously delivered gifts stay snapshots');
+  const all=await call('/api/admin/grants',{method:'POST',token:sub.token,body:{requestId:crypto.randomUUID(),target:'all'}});assert.equal(all.status,200);assert.equal(all.recipientCount,3);
+});
+
+test('self release preserves the other admin and keeps ordinary key registration hidden until both leave',async()=>{
+  const {call,admin,register}=setup(),main=await admin(),sub=await register(),visitor=await register();
+  await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}});
+  const expectedRegistration=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const released=await call('/api/admin/release',{method:'POST',token:main.token,body:{confirmed:true,expectedRegistration}});assert.equal(released.status,200);assert.equal(released.adminExists,true);assert.equal(released.player.isAdmin,false);
+  assert.equal((await call('/api/status')).adminExists,true);assert.equal((await call('/api/me',{token:sub.token})).player.isAdmin,true);
+  const promoted=await call('/api/admin/devices',{token:sub.token});assert.equal(promoted.devices[0].role,'main');assert.equal(promoted.canManageDevices,true);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:visitor.token,body:{key:SECRET}})).error.code,'ADMIN_ALREADY_EXISTS','The public key cannot add an admin while the successor remains');
+  const own=(await call('/api/admin/config',{token:sub.token})).adminRegistration;
+  const invalid=await call('/api/admin/release',{method:'POST',token:sub.token,body:{confirmed:true,expectedRegistration}});assert.equal(invalid.error.code,'RELEASE_CONFIRMATION_REQUIRED');
+  assert.equal((await call('/api/admin/release',{method:'POST',token:sub.token,body:{confirmed:true,expectedRegistration:own}})).adminExists,false);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:visitor.token,body:{key:SECRET}})).status,200);
+});
+
+test('main can revoke sub, sub cannot remove main, and stale review cannot revoke a same-millisecond replacement',async t=>{
+  t.mock.method(Date,'now',()=>1800000000000);
+  const {call,admin,register}=setup(),main=await admin(),sub=await register(),visitor=await register();
+  const add=()=>call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}});
+  const first=await add(),old=first.devices.find(device=>device.playerId===sub.id);
+  const body={playerId:sub.id,claimedAt:old.claimedAt,confirmed:true};
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',body})).status,401);
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:visitor.token,body})).status,403);
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:sub.token,body})).error.code,'MAIN_ADMIN_REQUIRED');
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:main.token,body:{...body,confirmed:false}})).error.code,'ADMIN_CONFIRMATION_REQUIRED');
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:main.token,body})).revoked,true);
+  const second=await add(),current=second.devices.find(device=>device.playerId===sub.id);assert(current.claimedAt>old.claimedAt);
+  const stale=await call('/api/admin/devices/revoke',{method:'POST',token:main.token,body});assert.equal(stale.error.code,'ADMIN_REGISTRATION_CHANGED');
+  assert.equal((await call('/api/admin/config',{token:sub.token})).status,200);
+  const primary=second.devices.find(device=>device.playerId===main.id);
+  const forbidden=await call('/api/admin/devices/revoke',{method:'POST',token:sub.token,body:{playerId:main.id,claimedAt:primary.claimedAt,confirmed:true}});assert.equal(forbidden.status,403);assert.equal(forbidden.error.code,'MAIN_ADMIN_REQUIRED');
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:sub.token,body:{playerId:visitor.id,confirmed:true}})).error.code,'MAIN_ADMIN_REQUIRED');
+  assert.equal((await call('/api/admin/devices',{token:sub.token})).canManageDevices,false);
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:main.token,body:{playerId:main.id,claimedAt:primary.claimedAt,confirmed:true}})).error.code,'ADMIN_SELF_TARGET');
+  const released=await call('/api/admin/release',{method:'POST',token:main.token,body:{confirmed:true,expectedRegistration:{playerId:main.id,claimedAt:primary.claimedAt}}});assert.equal(released.status,200);
+  assert.equal((await call('/api/admin/config',{token:main.token})).status,403);
+  const promoted=await call('/api/admin/devices',{token:sub.token});assert.equal(promoted.devices[0].playerId,sub.id);assert.equal(promoted.devices[0].role,'main');assert.equal(promoted.canManageDevices,true);assert(promoted.devices[0].claimedAt>current.claimedAt);
+  const staleRelease=await call('/api/admin/release',{method:'POST',token:sub.token,body:{confirmed:true,expectedRegistration:{playerId:sub.id,claimedAt:current.claimedAt}}});assert.equal(staleRelease.error.code,'ADMIN_REGISTRATION_CHANGED');
+  const restored=await call('/api/admin/devices',{method:'POST',token:sub.token,body:{playerId:main.id,confirmed:true}});assert.equal(restored.status,200);assert.equal(restored.devices.find(device=>device.playerId===main.id).role,'sub');
+});
+
+for(const replace of [false,true])test(`queued device grant rechecks ${replace?'replaced':'revoked'} actor membership atomically`,async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register(),target=await register();
+  await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}});
+  const own=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const subOwn=(await call('/api/admin/config',{token:sub.token})).adminRegistration;
+  await call('/api/admin/release',{method:'POST',token:sub.token,body:{confirmed:true,expectedRegistration:subOwn}});
+  const original=env.DB.batch.bind(env.DB);let resume,started,paused=false;
+  const gate=new Promise(resolve=>resume=resolve),atGate=new Promise(resolve=>started=resolve);
+  env.DB.batch=async statements=>{if(!paused&&statements[0].sql.startsWith('INSERT INTO admin_registration_clock')){paused=true;started();await gate;}return original(statements);};
+  const pending=call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:target.id,confirmed:true}});await atGate;
+  assert.equal((await call('/api/admin/release',{method:'POST',token:main.token,body:{confirmed:true,expectedRegistration:own}})).status,200);
+  if(replace)assert.equal((await call('/api/admin/claim',{method:'POST',token:main.token,body:{key:SECRET}})).status,200);
+  resume();assert.equal((await pending).status,403);
+  assert.equal((await call('/api/me',{token:target.token})).player.isAdmin,false);assert.equal((await call('/api/me',{token:target.token})).grants.length,0);
+});
+
+test('queued revoke rechecks actor authority before deleting the reviewed target',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register();
+  const added=await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}}),target=added.devices.find(device=>device.playerId===sub.id);
+  const own=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const original=env.DB.prepare.bind(env.DB);let resume,started,paused=false;
+  const gate=new Promise(resolve=>resume=resolve),atGate=new Promise(resolve=>started=resolve);
+  env.DB.prepare=sql=>{const statement=original(sql);if(!paused&&sql.startsWith('DELETE FROM sub_admin_owner')){const first=statement.first.bind(statement);statement.first=async(...args)=>{paused=true;started();await gate;return first(...args);};}return statement;};
+  const pending=call('/api/admin/devices/revoke',{method:'POST',token:main.token,body:{playerId:sub.id,claimedAt:target.claimedAt,confirmed:true}});await atGate;
+  assert.equal((await call('/api/admin/release',{method:'POST',token:main.token,body:{confirmed:true,expectedRegistration:own}})).status,200);
+  resume();assert.equal((await pending).status,403);assert.equal((await call('/api/admin/config',{token:sub.token})).status,200);
+});
+
+for(const seat of ['main','sub'])test(`key recovery replaces only the ${seat} seat and preserves the other administrator`,async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register(),replacement=await register();
+  const added=await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}});
+  const target=seat==='main'?main:sub,other=seat==='main'?sub:main,before=added.devices.find(device=>device.playerId===other.id);
+  if(seat==='sub')enableRecovery(env,sub);
+  const request={method:'POST',token:replacement.token,body:{key:SECRET,recover:true},...(seat==='sub'?{origin:RECOVERY_ORIGIN}:{})};
+  assert.equal((await call('/api/admin/claim',request)).status,200);
+  const devices=await call('/api/admin/devices',{token:replacement.token});assert.equal(devices.devices.length,2);
+  assert.deepEqual(devices.devices.find(device=>device.playerId===other.id),before);assert.equal(devices.devices.find(device=>device.playerId===replacement.id).role,seat);
+  assert.equal((await call('/api/me',{token:target.token})).player.isAdmin,false);assert.equal((await call('/api/me',{token:other.token})).player.isAdmin,true);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:other.token,body:{key:SECRET,recover:true}})).status,200,'Existing secondary claim is idempotent and does not seize the primary seat');
+  assert.equal((await call('/api/status',{...(seat==='sub'?{origin:RECOVERY_ORIGIN}:{})})).adminRecoveryAvailable,false);
+});
+
+test('queued revoke cannot remove a secondary registration replaced after review',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register();
+  const add=()=>call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}}),first=await add(),old=first.devices.find(device=>device.playerId===sub.id);
+  const body={playerId:sub.id,claimedAt:old.claimedAt,confirmed:true},request={method:'POST',token:main.token,body};
+  const original=env.DB.prepare.bind(env.DB);let resume,started,paused=false;
+  const gate=new Promise(resolve=>resume=resolve),atGate=new Promise(resolve=>started=resolve);
+  env.DB.prepare=sql=>{const statement=original(sql);if(!paused&&sql.startsWith('DELETE FROM sub_admin_owner')){const first=statement.first.bind(statement);statement.first=async(...args)=>{paused=true;started();await gate;return first(...args);};}return statement;};
+  const pending=call('/api/admin/devices/revoke',request);await atGate;
+  assert.equal((await call('/api/admin/devices/revoke',request)).status,200);
+  const replacement=await add(),current=replacement.devices.find(device=>device.playerId===sub.id);assert(current.claimedAt>old.claimedAt);
+  resume();assert.equal((await pending).error.code,'ADMIN_REGISTRATION_CHANGED');
+  assert.equal((await call('/api/admin/config',{token:sub.token})).adminRegistration.claimedAt,current.claimedAt);
+});
+
+test('main self-release never promotes a different secondary than its atomic snapshot',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),oldSub=await register(),newSub=await register();
+  const added=await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:oldSub.id,confirmed:true}}),old=added.devices.find(device=>device.playerId===oldSub.id);
+  const expectedRegistration=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const original=env.DB.batch.bind(env.DB);let resume,started,paused=false;
+  const gate=new Promise(resolve=>resume=resolve),atGate=new Promise(resolve=>started=resolve);
+  env.DB.batch=async statements=>{if(!paused&&statements[1]?.sql.startsWith('DELETE FROM admin_owner')){paused=true;started();await gate;}return original(statements);};
+  const request={method:'POST',token:main.token,body:{confirmed:true,expectedRegistration}},pending=call('/api/admin/release',request);await atGate;
+  assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:main.token,body:{playerId:oldSub.id,claimedAt:old.claimedAt,confirmed:true}})).status,200);
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:newSub.id,confirmed:true}})).status,200);
+  resume();assert.equal((await pending).error.code,'ADMIN_REGISTRATION_CHANGED');
+  const unchanged=await call('/api/admin/devices',{token:main.token});assert.equal(unchanged.devices.find(device=>device.role==='main').playerId,main.id);assert.equal(unchanged.devices.find(device=>device.role==='sub').playerId,newSub.id);
+  assert.equal((await call('/api/admin/release',request)).status,200);
+  const promoted=await call('/api/admin/devices',{token:newSub.token});assert.equal(promoted.devices.length,1);assert.equal(promoted.devices[0].role,'main');assert.equal(promoted.canManageDevices,true);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM sub_admin_owner').get().n,0);
+});
+
+test('third-seat migration preserves deployed two-seat records and rejects every cross-seat duplicate',()=>{
+  const secondMigration=readFileSync(new URL('../drizzle/0006_sub_admin.sql',import.meta.url));
+  assert.equal(createHash('sha256').update(secondMigration).digest('hex'),'274076a7a2c7a9ce474dafbb240ca478c44ca4171cf1e3380baafab58833f99d','Deployed migration 0006 is immutable');
+  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
+  db.exec(readFileSync(new URL('../drizzle/0000_admin.sql',import.meta.url),'utf8'));db.exec(secondMigration.toString());
+  const ids=['P0000000000000001','P0000000000000002','P0000000000000003','P0000000000000004'];
+  for(const [index,id] of ids.entries())db.prepare('INSERT INTO players (id,token_hash,name,created_at,updated_at) VALUES (?,?,?,?,?)').run(id,'hash'+index,'既存'+index,100,100);
+  db.prepare('INSERT INTO admin_owner VALUES (1,?,1234)').run(ids[0]);db.prepare('INSERT INTO sub_admin_owner VALUES (1,?,2345)').run(ids[1]);
+  db.prepare('INSERT INTO admin_registration_clock VALUES (1,2345,?)').run('existing-operation');
+  db.prepare('INSERT INTO futo_config VALUES (1,?,7,100)').run(JSON.stringify(legacyConfig()));
+  db.prepare('INSERT INTO grant_batches VALUES (?,?,?,?,?,?,?)').run('old-batch',ids[0],ids[1],'old-hash',JSON.stringify(DEFAULT_CONFIG),4,100);
+  db.prepare('INSERT INTO grants (grant_id,batch_id,player_id,config_json,created_at) VALUES (?,?,?,?,?)').run('old-gift','old-batch',ids[1],JSON.stringify(DEFAULT_CONFIG),100);
+  const before=Object.fromEntries(['players','admin_owner','sub_admin_owner','admin_registration_clock','futo_config','grant_batches','grants'].map(table=>[table,db.prepare('SELECT * FROM '+table).all()]));
+  db.exec(readFileSync(new URL('../drizzle/0007_third_admin.sql',import.meta.url),'utf8'));
+  for(const [table,rows] of Object.entries(before))assert.deepEqual(db.prepare('SELECT * FROM '+table).all(),rows,table);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM third_admin_owner').get().n,0);
+  db.prepare('INSERT INTO third_admin_owner VALUES (1,?,3456)').run(ids[2]);
+  assert.deepEqual(db.prepare('SELECT singleton,player_id FROM admin_members ORDER BY singleton').all().map(row=>({...row})),ids.slice(0,3).map((id,index)=>({singleton:index+1,player_id:id})));
+  for(const [seat,table] of ['admin_owner','sub_admin_owner','third_admin_owner'].entries()){
+    for(const [other,id] of ids.slice(0,3).entries())if(other!==seat){
+      assert.throws(()=>db.prepare('INSERT OR IGNORE INTO '+table+' VALUES (1,?,4000)').run(id),/another seat/);
+      assert.throws(()=>db.prepare('UPDATE '+table+' SET player_id=?').run(id),/another seat/);
+    }
+    assert.throws(()=>db.prepare('INSERT INTO '+table+' VALUES (2,?,4000)').run(ids[3]),/CHECK/);
+  }
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM admin_members').get().n,3);assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);db.close();
+});
+
+test('main chooses either deputy role, retries preserve it, and legacy requests choose the first vacant role',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),third=await register('サブサブ候補'),sub=await register('サブ候補'),other=await register();
+  const grant=(target,role)=>call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:target.id,confirmed:true,...(role===undefined?{}:{role})}});
+  for(const role of ['main','admin',null,3])assert.equal((await grant(third,role)).error.code,'INVALID_ADMIN_ROLE');
+  const first=await grant(third,'sub-sub');assert.equal(first.status,200);assert.equal(first.capacity,3);
+  const registered=first.devices.find(device=>device.playerId===third.id);assert.equal(registered.role,'sub-sub');
+  assert.equal((await call('/api/admin/devices?playerId='+third.id,{token:main.token})).candidate.role,'sub-sub');
+  assert.equal((await grant(third,'sub-sub')).added,false);assert.equal((await grant(third)).added,false);
+  assert.equal((await grant(third,'sub')).error.code,'ADMIN_ROLE_CHANGED');
+  assert.equal(env.DB.sqlite.prepare('SELECT claimed_at FROM third_admin_owner').get().claimed_at,registered.claimedAt);
+  const second=await grant(sub);assert.equal(second.status,200);assert.equal(second.devices.find(device=>device.playerId===sub.id).role,'sub');
+  for(const role of ['sub','sub-sub'])assert.equal((await grant(other,role)).error.code,'ADMIN_ROLE_OCCUPIED');
+  assert.equal((await grant(other)).error.code,'ADMIN_CAPACITY_REACHED');
+  for(const deputy of [sub,third]){
+    assert.equal((await call('/api/admin/devices',{token:deputy.token})).canManageDevices,false);
+    assert.equal((await call('/api/admin/devices',{method:'POST',token:deputy.token,body:{playerId:other.id,role:'sub',confirmed:true}})).error.code,'MAIN_ADMIN_REQUIRED');
+    assert.equal((await call('/api/admin/devices/revoke',{method:'POST',token:deputy.token,body:{playerId:main.id,claimedAt:second.devices[0].claimedAt,confirmed:true}})).error.code,'MAIN_ADMIN_REQUIRED');
+  }
+  const own=(await call('/api/admin/config',{token:third.token})).adminRegistration;
+  assert.equal((await call('/api/admin/release',{method:'POST',token:third.token,body:{confirmed:true,expectedRegistration:own}})).adminExists,true);
+  const surviving=await call('/api/admin/devices',{token:main.token});assert.deepEqual(surviving.devices.map(device=>device.role),['main','sub']);
+  assert.equal((await grant(other)).devices.find(device=>device.playerId===other.id).role,'sub-sub');
+});
+
+test('racing explicit appointments never silently move a player or occupy an unrequested role',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),first=await register(),second=await register();
+  const grant=(target,role)=>call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:target.id,role,confirmed:true}});
+  const sameSeat=await Promise.all([grant(first,'sub'),grant(second,'sub')]);
+  assert.equal(sameSeat.filter(result=>result.status===200).length,1);assert.equal(sameSeat.find(result=>result.status!==200).error.code,'ADMIN_ROLE_OCCUPIED');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM third_admin_owner').get().n,0,'Explicit sub request never falls through to sub-sub');
+  const h=setup(),owner=await h.admin(),target=await h.register();
+  const results=await Promise.all(['sub','sub-sub'].map(role=>h.call('/api/admin/devices',{method:'POST',token:owner.token,body:{playerId:target.id,role,confirmed:true}})));
+  assert.equal(results.filter(result=>result.status===200).length,1);assert.equal(results.find(result=>result.status!==200).error.code,'ADMIN_ROLE_CHANGED');
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_members WHERE player_id=?').get(target.id).n,1);
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(target.id).n,1);
+});
+
+for(const role of ['main','sub','sub-sub'])test(`three-seat recovery replaces only ${role} while preserving both other registrations`,async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register(),third=await register(),replacement=await register();
+  for(const [actor,role] of [[sub,'sub'],[third,'sub-sub']])assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:actor.id,role,confirmed:true}})).status,200);
+  const before=(await call('/api/admin/devices',{token:main.token})).devices,target={main,sub,'sub-sub':third}[role];enableRecovery(env,target);
+  assert.equal((await call('/api/admin/claim',{method:'POST',token:replacement.token,origin:RECOVERY_ORIGIN,body:{key:SECRET}})).status,200);
+  const after=(await call('/api/admin/devices',{token:replacement.token})).devices;assert.equal(after.length,3);
+  for(const registration of before)if(registration.playerId!==target.id)assert.deepEqual(after.find(device=>device.playerId===registration.playerId),registration);
+  assert.equal(after.find(device=>device.playerId===replacement.id).role,role);assert.equal((await call('/api/me',{token:replacement.token})).player.adminRole,role);
+  assert.equal((await call('/api/me',{token:target.token})).player.isAdmin,false);assert.equal((await call('/api/status',{origin:RECOVERY_ORIGIN})).adminRecoveryAvailable,false);
+});
+
+test('a queued main release rechecks successor priority if sub is appointed ahead of sub-sub',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),third=await register(),sub=await register();
+  const added=await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:third.id,role:'sub-sub',confirmed:true}}),thirdBefore=added.devices.find(device=>device.playerId===third.id);
+  const expectedRegistration=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const original=env.DB.batch.bind(env.DB);let resume,started,paused=false;
+  const gate=new Promise(resolve=>resume=resolve),atGate=new Promise(resolve=>started=resolve);
+  env.DB.batch=async statements=>{if(!paused&&statements[1]?.sql.startsWith('DELETE FROM admin_owner')){paused=true;started();await gate;}return original(statements);};
+  const request={method:'POST',token:main.token,body:{confirmed:true,expectedRegistration}},pending=call('/api/admin/release',request);await atGate;
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,role:'sub',confirmed:true}})).status,200);
+  resume();assert.equal((await pending).error.code,'ADMIN_REGISTRATION_CHANGED');
+  assert.equal((await call('/api/admin/config',{token:main.token})).status,200);
+  assert.equal((await call('/api/admin/release',request)).status,200);
+  const after=(await call('/api/admin/devices',{token:sub.token})).devices;assert.equal(after.find(device=>device.role==='main').playerId,sub.id);assert.deepEqual(after.find(device=>device.playerId===third.id),thirdBefore);
 });
