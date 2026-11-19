@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 'use strict';
-/* キラシード (id floravelle, formerly フロラヴェール) — the operator's mythical, after the owner's
+/* Historical v30 キラシード (id floravelle, formerly フロラヴェール) drawing generator.
+ * This preserves the old procedural design; current game art comes from ImageGen.
+ * Never use this script to regenerate or overwrite assets/floravelle.png.
+ * The operator's mythical, after the owner's
  * design: a sturdy leaf-green creature with long drooping leaf ears and a leaf-shaped tuft on its
  * head. On its back a seed husk has split into two halves; leaves grow from the hollows, and two
  * stems carry cup-shaped apricot flowers, each holding a golden seed. Its paws are brown with a
@@ -14,7 +17,8 @@
  *
  *   CANVAS_MODULE=<path>/node_modules/@napi-rs/canvas node scripts/art/draw-floravelle.cjs [out.png] [--preview dir]
  *
- * Writes assets/floravelle.png (front | back, 2400x1200). © 2026 KASAI SOLUTIONS INC. */
+ * Defaults to assets/floravelle-legacy-v30.png (front | back, 2400x1200).
+ * © 2026 KASAI SOLUTIONS INC. */
 const fs = require('node:fs'), path = require('node:path');
 let canvasModule = null;
 for (const name of [process.env.CANVAS_MODULE, '@napi-rs/canvas'].filter(Boolean)) { try { canvasModule = require(name); break; } catch (_) {} }
@@ -448,7 +452,7 @@ function pixelate(src) {
 
 async function main() {
   const args = process.argv.slice(2), previewAt = args.indexOf('--preview'), preview = previewAt >= 0 ? args[previewAt + 1] : null;
-  const outFile = args.find((a, i) => !a.startsWith('--') && (previewAt < 0 || i !== previewAt + 1)) || path.join(ROOT, 'assets', 'floravelle.png');
+  const outFile = args.find((a, i) => !a.startsWith('--') && (previewAt < 0 || i !== previewAt + 1)) || path.join(ROOT, 'assets', 'floravelle-legacy-v30.png');
   const views = [front, back].map(draw => { const cv = createCanvas(S, S), c = cv.getContext('2d'); draw(c); return cv; });
   const sheet = createCanvas(S * 2, S), shc = sheet.getContext('2d');
   views.map(pixelate).forEach((v, i) => shc.drawImage(v, i * S, 0));

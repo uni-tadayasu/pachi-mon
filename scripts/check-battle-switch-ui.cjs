@@ -11,7 +11,8 @@ function extract(start,end){const from=html.indexOf(start),to=html.indexOf(end,f
 function soloGame(){const e=new Engine();e.newGame(D.starters[0]);e.state.party.push(e.makeMonster(D.starters[1],20),e.makeMonster(D.starters[2],20));assert(e.startBattle('komori',1));e.rng=()=>.5;return e;}
 const nodes=new Map();
 const c=vm.createContext({console,DATA:D,engine:soloGame(),busy:false,activePane:'',endingActive:false,pressedDirection:null,playing:true,
-  escape:esc,nameOf:model.LT.displayName,portrait:()=>'<canvas></canvas>',$:id=>nodes.get(id),sound:{preview(){}},updateScene(){},
+  escape:esc,nameOf:model.LT.displayName,portrait:()=>'<canvas></canvas>',conditionChip:()=>'',
+  $:id=>nodes.get(id),sound:{preview(){}},updateScene(){},
   document:{querySelector(selector){return {focus(){c.returnFocus=selector;}};}},
   toast(message){c.message=message;},battleActions(view){c.returnView=view;},
   doBattle(action){c.actions++;c.engine.action(action);},chooseBattleReplacement(index){c.actions++;c.engine.chooseReplacement(index);},
@@ -47,6 +48,18 @@ assert.equal(c.engine.battle.activeIndex,2);assert.equal(c.engine.battle.turn,tu
 soloReset();c.engine.battle.enemyTeam=[c.engine.battle.enemy,c.engine.makeMonster('komori',1)];c.engine.battle.enemyIndex=0;c.engine.battle.enemy.hp=0;
 c.engine.battle.pendingReplacement={enemyIndex:1,allyRequired:false};c.confirmBattleSwitch(1,true);assert.equal(c.actions,0);
 nodes.get('battle-switch-confirm').onclick();assert.equal(c.engine.battle.activeIndex,1);assert.equal(c.engine.battle.turn,0);assert.equal(c.engine.battle.enemyIndex,1);
+// A successful large attack may defeat a trainer member before its recharge.
+// Render the real replacement menu: only continuing with that actor is enabled.
+{
+ soloReset();const e=c.engine,actor=e.state.party[0],box={innerHTML:''};
+ actor.rechargeTurns=1;e.battle.enemyTeam=[e.battle.enemy,e.makeMonster('komori',1)];e.battle.enemyIndex=0;e.battle.enemy.hp=0;e.battle.pendingReplacement={enemyIndex:1,allyRequired:false};
+ const before=soloSnapshot(),pp=copy(actor.pp),menu=vm.createContext({engine:e,DATA:D,escape:esc,nameOf:model.LT.displayName,portrait:()=>'<canvas></canvas>',paintPortraits(){},$:id=>{assert.equal(id,'battle-actions');return box;}});
+ vm.runInContext(extract('  function battleActions(','  function captureBattleView('),menu);menu.battleActions();
+ const buttons=[...box.innerHTML.matchAll(/<button\b([^>]*)>/g)].map(match=>({index:Number(/data-replacement="(\d+)"/.exec(match[1])?.[1]),disabled:/\bdisabled\b/.test(match[1])}));
+ assert.deepEqual(buttons,[{index:0,disabled:false},{index:1,disabled:true},{index:2,disabled:true}]);
+ assert(box.innerHTML.includes('技の反動が残っている'));assert(box.innerHTML.includes('次の1ターンを休みます'));assert.equal(soloSnapshot(),before,'Rendering the recharge restriction does not alter the battle');
+ c.confirmBattleSwitch(0,true);assert.equal(c.actions,1);assert.equal(e.battle.activeIndex,0);assert.equal(e.battle.enemyIndex,1);assert.equal(e.battle.turn,0);assert.equal(actor.rechargeTurns,1);assert.deepEqual(copy(actor.pp),pp);
+}
 // Invalid targets and stale confirmations never act on a new occupant/round.
 for(const invalid of [-1,99,1.5,NaN,'1',0]){soloReset();c.confirmBattleSwitch(invalid);assert.equal(c.modal,null);assert.equal(c.actions,0);}
 for(const changed of ['hp','uid','turn','active','pending','engine','battle','busy']){
@@ -68,7 +81,7 @@ const online=vm.createContext({console,D,performance:{now:()=>1},LT:{BattleVFX:{
   body:{set innerHTML(markup){online.markup=markup;onlineNodes.clear();for(const match of markup.matchAll(/id="([^"]+)"/g))onlineNodes.set(match[1],{hidden:false,focus(){online.focused=match[1];}});}},
   failure(message){online.error=message?.message||message;online.render();},render(){online.renderBattle();},close(){online.closed=true;}
 });
-vm.runInContext(extract('  function hp(mon){','  function draw(){const canvas='),online);
+vm.runInContext(extract('  function linkConditions(mon){','  function draw(){const canvas='),online);
 vm.runInContext(extract('  function requestClose(){','  function setupSession(role){'),online);
 const ids=Object.keys(D.species).filter(id=>!D.species[id].specialOnly);
 function onlineReset(mode='single',replacing=false){
@@ -111,5 +124,5 @@ function onlineReset(mode='single',replacing=false){
   }
   // Moves without a switch retain the existing one-click submit behavior.
   onlineReset();await online.requestSubmitOrders();assert.equal(online.calls.length,1);assert.equal(online.switchConfirmation,null);
-  console.log('Battle switch UI checks passed: normal/free/forced solo confirmation, cancellation and focus, escaped names, stale/double-click guards, single/double online summaries, unchanged orders on cancel/remote commit, replacement turns, duplicate reserves, disconnect/round/session/playback guards and normal move submission.');
+  console.log('Battle switch UI checks passed: normal/free/forced solo confirmation, recharge disables optional swaps while keeping continue enabled, cancellation and focus, escaped names, stale/double-click guards, single/double online summaries, unchanged orders on cancel/remote commit, replacement turns, duplicate reserves, disconnect/round/session/playback guards and normal move submission.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

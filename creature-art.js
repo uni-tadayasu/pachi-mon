@@ -223,30 +223,35 @@
   }
   // A small dedicated silhouette remains available offline; it does not borrow
   // another species or use the front as a rear. The full atlas replaces it on load.
-  // Without its sheet, キラシード still reads as itself: a leaf-green creature with drooping
-  // leaf ears, a split seed husk on its back with two apricot flowers holding golden seeds,
-  // brown paws and a curled brown tail (front faces left; the rear view hides the face).
+  // Without its sheet, キラシード keeps a thick green frog-slime body with soft
+  // folds, golden eyes and a chest seed, without flowers or leaves.
+  // The front faces left; the rear view hides the face.
   function floravelleFallback(back){
     const key=`floravelle:${back?1:0}:fallback`;if(cache.has(key))return cache.get(key);
-    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d'),ink='#4d3326',coat='#8fae58',far='#78974a',pale='#e7edc6',paw='#c2815f',husk='#ddb069';
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d'),ink='#234632',coat='#638b4d',far='#3c6743',pale='#8faa5a',gold='#ecc16a';
     const ellipse=(x,y,rx,ry,color,line=true,rot=0)=>{c.fillStyle=color;c.beginPath();c.ellipse(x,y,rx,ry,rot,0,Math.PI*2);c.fill();if(line){c.strokeStyle=ink;c.lineWidth=3;c.stroke();}};
-    const leaf=(x,y,w,h,angle,color)=>{c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();c.moveTo(0,0);c.quadraticCurveTo(w,h*.45,0,h);c.quadraticCurveTo(-w,h*.45,0,0);c.fill();c.strokeStyle=ink;c.lineWidth=2.5;c.stroke();c.restore();};
-    const flower=(x,y,r,color,seed)=>{for(let i=0;i<5;i++){const a=-Math.PI*.95+i*Math.PI*.95/4;ellipse(x+Math.cos(a)*r*.55,y+Math.sin(a)*r*.4,r*.5,r*.36,color,true,a);}if(seed)ellipse(x,y-r*.05,r*.2,r*.25,'#fbd874');ellipse(x,y+r*.2,r*.6,r*.28,color);};
-    const shell=(x,y,rot)=>{c.save();c.translate(x,y);c.rotate(rot);c.fillStyle=husk;c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(-40,-4);c.bezierCurveTo(-32,34,32,34,40,-4);c.quadraticCurveTo(0,10,-40,-4);c.fill();c.stroke();c.fillStyle='#5a3b25';c.beginPath();c.moveTo(-40,-4);c.quadraticCurveTo(0,-16,40,-4);c.quadraticCurveTo(0,10,-40,-4);c.fill();c.stroke();c.restore();};
     if(back){c.translate(SIZE,0);c.scale(-1,1);}
-    // Tail, then legs with brown paws.
-    c.strokeStyle=ink;c.lineWidth=20;c.lineCap='round';c.beginPath();c.moveTo(250,196);c.quadraticCurveTo(284,170,268,140);c.stroke();c.strokeStyle=paw;c.lineWidth=13;c.stroke();
-    for(const [x,isFar] of [[136,true],[208,true],[96,false],[244,false]]){const top=206,bottom=isFar?286:294;c.fillStyle=isFar?far:coat;c.strokeStyle=ink;c.lineWidth=3;c.fillRect(x-14,top,28,bottom-top-14);c.strokeRect(x-14,top,28,bottom-top-14);c.fillStyle=paw;c.fillRect(x-14,bottom-36,28,22);ellipse(x,bottom-8,19,10,paw);}
-    // Body with a pale belly, the split husk, stems and flowers.
-    ellipse(172,202,94,46,coat);c.save();c.beginPath();c.ellipse(172,202,94,46,0,0,Math.PI*2);c.clip();c.fillStyle=pale;c.fillRect(80,222,190,40);c.restore();
-    c.strokeStyle='#577d39';c.lineWidth=6;c.beginPath();c.moveTo(146,160);c.quadraticCurveTo(140,120,112,96);c.moveTo(204,166);c.quadraticCurveTo(214,130,236,110);c.stroke();
-    shell(150,166,.45);shell(206,170,-.45);
-    flower(112,86,30,back?'#f1aa6c':'#f8c896',!back);flower(238,104,26,back?'#f1aa6c':'#f8c896',!back);
-    // Head with drooping leaf ears.
-    leaf(back?92:58,150,14,64,back?-.25:.3,back?'#89b354':'#a9cc6c');
-    ellipse(80,160,40,36,coat);
-    if(!back){ellipse(62,176,22,14,pale,false);ellipse(70,152,6,9,'#2a1508');ellipse(92,156,7,10,'#2a1508');ellipse(68,149,2,3,'#ffffff',false);ellipse(90,152,2.5,3.5,'#ffffff',false);ellipse(48,170,5,4,paw,false);}
-    leaf(back?58:96,148,16,70,back?.3:-.3,'#89b354');
+    // Wide feet, a rounded body and a heavy head create the soft, squat silhouette.
+    ellipse(68,280,44,22,far,true,-.27);ellipse(251,280,43,22,coat,true,.24);
+    ellipse(165,210,109,85,coat);ellipse(168,283,64,19,pale);
+    ellipse(134,126,77,63,coat);ellipse(134,179,83,30,far);
+    // Rounded skin folds remain part of the body rather than pointed foliage.
+    c.fillStyle=pale;c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(62,187);c.bezierCurveTo(102,224,186,232,241,192);c.bezierCurveTo(265,209,254,229,234,237);c.bezierCurveTo(168,261,84,230,62,208);c.quadraticCurveTo(55,196,62,187);c.fill();c.stroke();
+    ellipse(72,230,25,43,coat,true,.32);ellipse(242,231,27,44,coat,true,-.4);
+    c.strokeStyle=far;c.lineWidth=4;c.lineCap='round';c.beginPath();c.moveTo(80,95);c.quadraticCurveTo(123,67,170,92);c.moveTo(82,178);c.quadraticCurveTo(126,196,178,175);c.stroke();
+    if(back){
+      // Rear folds and the absent face/chest marking make this a distinct rear view.
+      c.strokeStyle=far;c.lineWidth=6;c.beginPath();c.moveTo(80,143);c.bezierCurveTo(116,170,165,153,198,177);c.moveTo(99,250);c.quadraticCurveTo(159,271,211,250);c.stroke();
+    }else{
+      ellipse(101,122,13,8,gold,true,-.12);ellipse(153,121,16,9,gold,true,-.18);
+      ellipse(101,121,3,6,ink,false);ellipse(153,120,3,7,ink,false);
+      ellipse(98,118,2,2,'#fff2bc',false);ellipse(149,117,2.5,2.5,'#fff2bc',false);
+      c.strokeStyle=far;c.lineWidth=8;c.beginPath();c.moveTo(83,111);c.quadraticCurveTo(101,117,115,115);c.moveTo(134,111);c.quadraticCurveTo(153,108,174,106);c.stroke();
+      c.strokeStyle=ink;c.lineWidth=3.5;c.beginPath();c.moveTo(76,151);c.quadraticCurveTo(118,168,177,149);c.stroke();
+      ellipse(117,139,2.5,2,ink,false);ellipse(128,137,2.5,2,ink,false);
+      c.fillStyle=gold;c.strokeStyle='#987c39';c.lineWidth=2;c.beginPath();c.moveTo(166,207);c.bezierCurveTo(161,218,151,221,155,230);c.bezierCurveTo(165,238,177,222,166,207);c.fill();c.stroke();
+    }
+    c.strokeStyle=far;c.lineWidth=3;c.beginPath();for(const x of [58,69,80]){c.moveTo(x,248);c.quadraticCurveTo(x+2,257,x+1,264);}for(const x of [232,243,254]){c.moveTo(x,251);c.quadraticCurveTo(x-2,260,x-1,267);}c.stroke();
     cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);return cv;
   }
   function uniqueSprite(id,back){
@@ -403,7 +408,7 @@
     const key=`${location.group}:${stage}:${back?1:0}`;
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261118-kiraseed-pixel-v31',root).href)]);
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261119-kiraseed-v50',root).href)]);
   LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,

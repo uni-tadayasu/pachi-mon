@@ -1955,15 +1955,15 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
   const D=globalThis.LT.DATA;
   D.mythical=Object.freeze({species:'floravelle',adminLevel:70});
   Object.assign(D.moves,{
-    verdant_lance:{id:'verdant_lance',name:'翠天の槍',element:'leaf',kind:'attack',category:'special',effect:'pierce',power:64,accuracy:95,pp:8,description:'花の金の種に翠の光を集め、一本の槍にして放つ。相手の防御技による半減を貫く。芽・特殊・威力64・命中95・PP8。'},
-    forest_crown:{id:'forest_crown',name:'万緑の冠',element:'leaf',kind:'boost',category:'status',effect:'allStatsGuard',power:0,accuracy:100,pp:2,description:'背中の2輪の花を輝かせ、体力以外の7能力を1段階上げる（各最大6段階）。葉の結界で次に受ける一撃を半減する（貫通技を除く）。交代・戦闘不能・戦闘終了で解除。芽・PP2。'},
-    genesis_bloom:{id:'genesis_bloom',name:'創生の花',element:'leaf',kind:'heal',category:'status',power:45,accuracy:100,pp:5,description:'背中の花を大きく開き、最大体力の45%（端数切り上げ）を回復する。最大体力が上限。芽・PP5。'},
-    root_drain:{id:'root_drain',name:'命樹の抱擁',element:'leaf',kind:'attack',category:'special',effect:'drain',power:58,accuracy:100,pp:8,description:'割れた種の殻から光の蔓を伸ばして相手を包み、与えたダメージの25%を吸収する。芽・特殊・威力58・命中100・PP8。'}
+    verdant_lance:{id:'verdant_lance',name:'若葉の刃',element:'leaf',kind:'attack',category:'physical',power:50,accuracy:100,pp:8,description:'鋭い若葉を何枚も飛ばして切りつける物理攻撃。自分の攻撃と相手の防御でダメージを決める。芽・物理・威力50・命中100・PP8。'},
+    forest_crown:{id:'forest_crown',name:'花毒の舞',element:'leaf',kind:'attack',category:'status',effect:'inflictBloom',alwaysHits:true,power:0,accuracy:100,pp:2,description:'花毒を宿す花粉を広げ、命中・回避に関係なく、有効な相手を必ず花毒にする。直接ダメージはない。芽・無属性、花毒を防ぐ持ち物、すでに通常の状態異常がある相手には効かない。芽・必中・PP2。'},
+    genesis_bloom:{id:'genesis_bloom',name:'大樹の逆鱗',element:'leaf',kind:'attack',category:'physical',effect:'attackRecharge',power:90,accuracy:90,pp:5,description:'地面から巨大な根と蔓を突き上げる物理の大技。命中すると反動で次の1ターンは動けず、交代もできない。外れた場合は反動なし。芽・物理・威力90・命中90・PP5。'},
+    root_drain:{id:'root_drain',name:'陽だまりの再生',element:'leaf',kind:'heal',category:'status',power:50,accuracy:100,pp:8,description:'体に太陽の光を集め、最大体力の半分（端数切り上げ）を回復する。最大体力を超えず、状態異常や呪縛は治さない。芽・PP8。'}
   });
   D.species.floravelle={id:'floravelle',name:'キラシード',element:'leaf',shape:'sprout',specialOnly:true,adminOnly:true,
-    rarity:'mythical',atlasNumber:262,color:'#8fae58',accent:'#f1aa6c',
-    description:'若葉色の体に垂れた長い葉の耳をもつ幻のパチモン。背中で割れた種の殻から2本の茎が伸び、杏色の花の中心に金の種を光らせる。運営だけが初期メンバーとしてLv.70で迎えられる。通常の野生出現・一般配布はなく、進化せずLv.100まで成長する。',
-    base:{hp:66,atk:30,def:36,spAtk:38,spDef:36,speed:26,accuracy:103,evasion:102},
+    rarity:'mythical',atlasNumber:262,color:'#638b4d',accent:'#ecc16a',
+    description:'厚みのある緑の体に金色の目をもつ、カエルスライムのような幻のパチモン。柔らかなひだと太い腕に大きな力を蓄え、胸には金の種が輝く。体力と両方の耐久が高く、物理攻撃が得意だが、素早さは低い。運営だけが初期メンバーとしてLv.70で迎えられる。通常の野生出現・一般配布はなく、進化せずLv.100まで成長する。',
+    base:{hp:76,atk:42,def:42,spAtk:22,spDef:42,speed:10,accuracy:103,evasion:102},
     moves:['verdant_lance','forest_crown','genesis_bloom','root_drain']};
   D.content.specialSpecies=Object.values(D.species).filter(species=>species.specialOnly).length;
   D.content.totalSpecies=Object.keys(D.species).length;D.content.moves=Object.keys(D.moves).length;
@@ -3355,7 +3355,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(pending.enemyIndex!==null && (!b.enemyTeam || !finiteInt(pending.enemyIndex,b.enemyIndex+1,b.enemyTeam.length-1)))return fail('次の相手を確認できません。');
       const events=[];
       if(next!==b.activeIndex){
-        if(this.state.party[b.activeIndex].hp>0&&this.state.party[b.activeIndex].rechargeTurns>0)return fail('回復の反動で、次のターンが終わるまで交代できません。');
+        if(this.state.party[b.activeIndex].hp>0&&this.state.party[b.activeIndex].rechargeTurns>0)return fail('技の反動で、次のターンが終わるまで交代できません。');
         this.clearBattleEffects(this.state.party[b.activeIndex]);
         b.activeIndex=next;b.allyGuard=false;b.healCooldown.ally=0;this.resetBattleStages('ally');
         this.event(events,`${displayName(this.state.party[next])}が前に出た。`,'switch',{side:'ally',slot:0,index:next,forced:pending.allyRequired});
@@ -3529,7 +3529,13 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       b.healCooldown[side]=0;
       const atk=this.battleStats(attacker),def=this.battleStats(defender);
       const hitChance=Math.min(100,Math.max(20,move.accuracy*atk.accuracy/Math.max(1,def.evasion)));
-      if(this.rng()*100>=hitChance){this.event(events,`${name}の「${move.name}」は、すれ違った。`,'miss',{side,element:move.element,moveId:move.id});return;}
+      if(move.alwaysHits!==true&&this.rng()*100>=hitChance){this.event(events,`${name}の「${move.name}」は、すれ違った。`,'miss',{side,element:move.element,moveId:move.id});return;}
+      if(move.effect==='inflictBloom'){
+        this.event(events,`${name}の「${move.name}」。花毒を宿す花粉が舞い広がる！`,'attack',{side,element:move.element,moveId:move.id,category:'status'});
+        if(this.inflictCondition(defender,opp,move,events,true))this.heldReact(defender,opp,events);
+        else this.event(events,`${displayName(defender)}には花毒が効かなかった。`,'info',{side,moveId:move.id,element:move.element});
+        return;
+      }
       if(move.effect==='curse'){
         if(clearImmuneCondition(defender)||defender.curse){this.event(events,`${name}の「${move.name}」。${displayName(defender)}には呪縛が効かなかった。`,'info',{side,moveId:move.id,element:move.element});return;}
         const cost=Math.min(attacker.hp,Math.max(1,Math.floor(this.stats(attacker).hp/4)));
@@ -3561,8 +3567,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const band=holds(defender,'endure'),endured=!!band&&defender.hp>=this.stats(defender).hp&&damage>=defender.hp&&defender.hp>1;
       if(endured)damage=defender.hp-1;
       defender.hp=Math.max(0,defender.hp-damage);
+      if(move.effect==='attackRecharge')attacker.rechargeTurns=1;
       const extra=effect>1?' 強く響いた！':effect<1?' 響きは控えめだ。':'';
-      this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}`,'damage',{side,element:move.element,moveId:move.id,category:special?'special':'physical',effectiveness:effect,critical,guarded:!!guarded,amount:damage});
+      this.event(events,`${name}の「${move.name}」。${damage}のダメージ。${critical?' 鮮やかな一撃！':''}${extra}${move.effect==='attackRecharge'?' 次のターンは反動で動けない。':''}`,'damage',{side,element:move.element,moveId:move.id,category:special?'special':'physical',effectiveness:effect,critical,guarded:!!guarded,amount:damage});
       if(endured){delete defender.heldItem;this.event(events,`${displayName(defender)}は${band.name}で踏みとどまった！`,'item',{side:opp,item:band.id});}
       if(move.effect==='drain' && attacker.hp>0){const amount=Math.min(this.stats(attacker).hp-attacker.hp,Math.max(1,Math.floor(damage*.25)));attacker.hp+=amount;if(amount>0)this.event(events,`${name}は灯を分けてもらい、体力が${amount}戻った。`,'heal',{side,element:move.element,moveId:move.id});}
       const bell=holds(attacker,'drain');
@@ -3590,7 +3597,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     rechargeBlocks(mon,side,events){
       if(!(mon.rechargeTurns>0))return false;
       delete mon.rechargeTurns;
-      this.event(events,`${displayName(mon)}は「零への回帰」の反動で、このターンは動けない。`,'recharge',{side,element:'void'});return true;
+      this.event(events,`${displayName(mon)}は技の反動で、このターンは動けない。`,'recharge',{side,element:D.species[mon.species]?.element});return true;
     }
     faint(mon,side,events){
       this.cureCondition(mon);this.clearBattleEffects(mon);this.resetBattleStages(side);
@@ -4288,7 +4295,8 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
 })();
 
 </script>
-<script src="creature-art.js?v=20261119-null-beast-v46"></script>
+<script src="monster-pixels.js?v=20261119-all-monsters-v50"></script>
+<script src="creature-art.js?v=20261119-kiraseed-v50"></script>
 <script src="assets/creatures-individual-catalog.js?v=20261117-256"></script>
 <script src="individual-creature-art.js?v=20261117-shiny-coats"></script>
 <script src="traveller-art.js?v=20261118-world-audio-ui-v33"></script>
@@ -4489,7 +4497,7 @@ function creature(target,id,options={}){
  const isCanvas=typeof target.getContext==='function',c=isCanvas?target.getContext('2d'):target;
  const size=Math.max(1,Math.round(options.size||Math.min(c.canvas.width,c.canvas.height))),x=Math.round(options.x??(c.canvas.width-size)/2),y=Math.round(options.y??(c.canvas.height-size)/2);
  if(isCanvas)c.clearRect(0,0,c.canvas.width,c.canvas.height);
- const cv=makeSprite(id,!!options.back,!!options.shiny),time=Number.isFinite(options.time)?options.time:0;
+ const source=makeSprite(id,!!options.back,!!options.shiny),cv=LT.MonsterPixels?.get?.(source)||source,time=Number.isFinite(options.time)?options.time:0;
  const facing=options.facing==='left'||options.facing==='right'?battleFacing(id,!!options.back,options.facing):null,flip=facing?facing.flip:!!options.flip;
  const animate=!!time&&!reduceMotion(options),profile=motionProfile(id),phase=time*.0027+(seed(id)%29)*.31;
  let dx=0,dy=0,rotation=0,sx=1,sy=1,opacity=1;
@@ -4622,7 +4630,7 @@ creature(c,mon.species,{x:Math.round(x-size/2),y:Math.round(y-size/2)+(back?0:bo
 if(double){const dotX=Math.round(x-size*.27),dotY=Math.round(y+size*.43);c.fillStyle=back?'#73c3b3':'#edaa83';const scale=w/768;c.fillRect(dotX,dotY,Math.round(11*scale),Math.round(9*scale));c.fillStyle='#263044';if(slot===0)c.fillRect(Math.round(dotX+5*scale),Math.round(dotY+2*scale),Math.max(1,Math.round(scale)),Math.round(5*scale));else{c.fillRect(Math.round(dotX+3*scale),Math.round(dotY+2*scale),Math.max(1,Math.round(scale)),Math.round(5*scale));c.fillRect(Math.round(dotX+7*scale),Math.round(dotY+2*scale),Math.max(1,Math.round(scale)),Math.round(5*scale));}}
 });}
 group(enemy,false);group(ally,true);if(cv===canvas)return;const out=canvas.getContext('2d');out.setTransform(1,0,0,1,0,0);out.imageSmoothingEnabled=false;out.clearRect(0,0,canvas.width,canvas.height);out.drawImage(cv,0,0,canvas.width,canvas.height);}
-LT.PixelSprites={creature,battle,duel,motionProfile,battlePose,battleFacing,ready:Promise.resolve(),clearCache(){cache.clear();stages.clear();frames.clear();},spriteSize:N};
+LT.PixelSprites={creature,battle,duel,motionProfile,battlePose,battleFacing,ready:Promise.resolve(),clearCache(){cache.clear();stages.clear();frames.clear();LT.MonsterPixels?.clearCache?.();},spriteSize:N};
 })();
 
 </script><script>
@@ -5871,6 +5879,69 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       }
       return kind;
     }
+    kiraseedMove(move,event,clock) {
+      if(!['verdant_lance','forest_crown','genesis_bloom','root_drain'].includes(move.id))return false;
+      if(!this.enabled||!this.ctx||this.ctx.state!=='running')return true;
+      // A full-HP recovery has no healing motif in fromEvent, so it also has no
+      // success chime here. Spending PP is handled only by the battle engine.
+      if(move.id==='root_drain'&&event.kind==='heal'&&(event.amount===0||/効果がなかった|満タン|満ちている/.test(event.text||'')))return true;
+      const {now,duration,release,impact,pan,miss}=clock,ctx=this.ctx;
+      this.duckMusic(now,Math.min(1.5,duration*.78),.64);
+      // Five authored layers at most for an attack, plus up to three reserved
+      // affinity voices. Every layer's envelope follows the VFX clock all the
+      // way to silence, including fast-forward and reduced-motion playback.
+      const layer=(kind,at,length,from,to,volume,position=pan,band='lowpass')=>{
+        if(this.voices.size>=this.maxVoices)return;
+        const end=Math.min(now+duration,at+length),span=end-at;if(span<=.002)return;
+        const noise=kind==='noise',source=noise?ctx.createBufferSource():ctx.createOscillator(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+        const voice={group:null,sources:[source],nodes:[source,filter,gain],end};this.voices.add(voice);
+        if(noise){source.buffer=this.noise;filter.type=band;filter.frequency.setValueAtTime(from,at);filter.frequency.exponentialRampToValueAtTime(to,end);filter.Q.value=band==='bandpass'?.8:.55;}
+        else{
+          source.type='sine';if(this.waves[kind]&&typeof source.setPeriodicWave==='function')source.setPeriodicWave(this.waves[kind]);
+          source.frequency.setValueAtTime(from,at);source.frequency.exponentialRampToValueAtTime(to,end);
+          filter.type='lowpass';filter.frequency.value=kind==='bass'?1000:3600;filter.Q.value=.5;
+        }
+        gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(volume,at+span*(noise?.16:.065));
+        gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume*.28),at+span*.56);gain.gain.exponentialRampToValueAtTime(.0001,end);
+        source.connect(filter);filter.connect(gain);
+        if(typeof ctx.createStereoPanner==='function'){const p=ctx.createStereoPanner();p.pan.setValueAtTime(-position*.4,at);p.pan.linearRampToValueAtTime(position,end);gain.connect(p);p.connect(this.fxBus);voice.nodes.push(p);}else gain.connect(this.fxBus);
+        source.start(at);source.stop(end);source.onended=()=>this.disposeVoice(voice);
+      };
+      if(miss){
+        layer('noise',release,duration*.27,2800,650,.055,pan,'bandpass');
+        layer('flute',release,duration*.22,440,220,.025,-pan);
+        return true;
+      }
+      if(move.id==='verdant_lance'||move.id==='genesis_bloom')this.damageImpact(event,impact,pan);
+      if(move.id==='verdant_lance'){
+        // Three close leaf cuts cross the target at the VFX impact, followed
+        // by the dry, high pluck of the final blade rather than a heavy crash.
+        [release,(release+impact)/2,impact].forEach((at,i)=>layer('noise',at,duration*.14,6200-i*600,1500,.060+i*.012,pan*(i%2?1:-1),'bandpass'));
+        layer('harp',release,duration*.15,midiHz(79),midiHz(76),.055,-pan);
+        layer('harp',impact,duration*.18,midiHz(86),midiHz(79),.070,pan);
+      }else if(move.id==='forest_crown'){
+        // The pollen breath opens into a sparse, slightly unsettled sparkle.
+        // Bloom's own status sound belongs to the following condition beat.
+        layer('noise',release,duration*.50,1000,3400,.042,pan,'bandpass');
+        [79,85,88].forEach((note,i)=>{const at=release+(impact-release)*i/2;layer('sine',at,duration*.30,midiHz(note),midiHz(note)*.993,.040-i*.006,pan*(i%2?1:-1));});
+        layer('flute',impact,duration*.34,midiHz(54),midiHz(53),.018,0);
+      }else if(move.id==='genesis_bloom'){
+        // Earth first, then the roots' weight: a growing rumble and rising
+        // wooden creak resolve into a low strike, crack and smaller aftershock.
+        layer('noise',now,duration*.46,160,520,.070,0);
+        layer('bass',release,Math.max(duration*.1,impact-release),92,260,.042,-pan);
+        layer('sine',impact,duration*.30,152,43,.17,0);
+        layer('noise',impact,duration*.19,2200,270,.105,pan);
+        layer('bass',impact+duration*.075,duration*.23,102,46,.064,-pan);
+      }else{
+        // Sunlight gathers into a warm major arpeggio, with a clear upper
+        // fifth at the recovery beat. Six single-source voices fit on mobile.
+        layer('noise',now,Math.max(duration*.2,impact-now),430,2100,.025,0,'bandpass');
+        [60,64,67,72].forEach((note,i)=>{const at=release+(impact-release)*i/3;layer('harp',at,duration*.34,midiHz(note),midiHz(note),.070-i*.006,pan*(i%2?1:-1));});
+        layer('sine',impact+duration*.03,duration*.42,midiHz(79),midiHz(79),.045,0);
+      }
+      return true;
+    }
     move(move,event={},effect={}) {
       if(!move||!this.enabled||!this.ctx||this.ctx.state!=='running')return;
       const now=this.ctx.currentTime+.008,id=String(move.id||move.name||'move');
@@ -5880,6 +5951,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       let hash=0;for(const char of id)hash=(hash*31+char.charCodeAt(0))>>>0;
       const root=56+hash%7,power=clamp(Number(move.power)||40,1,180),strength=.72+power/240;
       const pan=event.side==='enemy'?-.3:.3,miss=event.kind==='miss';
+      if(this.kiraseedMove(move,event,{now,duration,release,impact,pan,miss}))return;
       const notes=(values,kind,time,gap=.055,length=.25,gain=.10)=>values.forEach((n,i)=>this.instrument(null,kind,root+n,time+i*gap,length,gain,pan*(i%2?1:-1)));
       this.duckMusic(now,Math.min(1.5,duration*.78),move.id?.startsWith('arvelion_')?.48:move.id?.startsWith('futo_')?.52:.64);
       if(move.kind==='heal') {
@@ -6700,10 +6772,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if (b.result) { box.innerHTML = '<button class="btn btn-primary battle-continue" data-battle="continue">冒険へ戻る <span>→</span></button>'; return; }
     const mon = engine.state.party[b.activeIndex];
     if(b.pendingReplacement){
-      const pending=b.pendingReplacement,next=pending.enemyIndex===null?null:b.enemyTeam?.[pending.enemyIndex];
-      box.innerHTML=`<p class="battle-replacement-prompt">${pending.allyRequired?'次に出すパチモンを選んでください。':`${next?escape(nameOf(next))+'が次に登場します。':''}交代しますか？`}</p>`+
+      const pending=b.pendingReplacement,next=pending.enemyIndex===null?null:b.enemyTeam?.[pending.enemyIndex],recharging=mon.hp>0&&mon.rechargeTurns>0;
+      box.innerHTML=`<p class="battle-replacement-prompt">${pending.allyRequired?'次に出すパチモンを選んでください。':`${next?escape(nameOf(next))+'が次に登場します。':''}${recharging?'技の反動が残っているため、この仲間で続けて次の1ターンを休みます。':'交代しますか？'}`}</p>`+
         (!pending.allyRequired?`<button class="btn btn-primary" data-replacement="${b.activeIndex}">${escape(nameOf(mon))}で続ける</button>`:'')+
-        engine.state.party.map((m,i)=>i!==b.activeIndex?`<button class="btn replacement-choice" data-replacement="${i}" ${m.hp<=0?'disabled':''}>${portrait(m,42)}<span>${escape(nameOf(m))}<small>Lv.${m.level} · 体力 ${m.hp}/${engine.stats(m).hp}${m.hp<=0?' · ひんし':''}</small></span></button>`:'').join('');
+        engine.state.party.map((m,i)=>i!==b.activeIndex?`<button class="btn replacement-choice" data-replacement="${i}" ${m.hp<=0||recharging?'disabled':''}>${portrait(m,42)}<span>${escape(nameOf(m))}<small>Lv.${m.level} · 体力 ${m.hp}/${engine.stats(m).hp}${m.hp<=0?' · ひんし':''}</small></span></button>`:'').join('');
       paintPortraits(box);return;
     }
     const restricted=!!(b.guardian || b.rival || b.towerFloor || b.elite || b.champion);
@@ -8312,6 +8384,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   const RULES = Object.freeze({ version: 8, level: 50, maxTurns: 100, single: 3, double: 4, replacement: 'player-choice-between-turns', tiebreak: 'sum-of-remaining-HP-ratios', stages: 'seven-stats-reset-on-switch-or-faint',
     items: 'one-held-item-each-at-most-once-per-team-consumed-only-in-the-duel', conditions: 'adventure-conditions-kept-on-switch-cleared-on-faint-shown-every-turn-void-immune-v41', nullMoves: 'full-heal-then-one-recharge-turn-permanent-quarter-hp-curse-stacks-immune-only-cure-active-living-tick-forced-scorch-v49', special: 'arvelion-floravelle-futo-at-standard-lv50-stats-and-species-moves',
     moveOrder: 'selected-owned-individual-four-slot-permutation-v48',
+    kiraseedMoves: 'bulky-slow-physical-sure-bloom-hit-recharge-half-heal-v50',
     curse: 'selected-owned-individual-permanent-curse-no-adventure-writeback-v49',
     allocation: Object.freeze({ budget: ALLOC.capPerStat * ALLOC_KEYS.length, cap: ALLOC.capPerStat, hpPerPoint: ALLOC.hpPerPoint, keys: ALLOC_KEYS, source: 'selected-owned-individual-full-allocation' }) });
   function stable(value) {
@@ -8411,7 +8484,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     static rulesFingerprint() {
       return checksum({ rules: RULES, elements: D.elements,
         species: Object.keys(D.species).sort().map(id => ({ id, element: D.species[id].element, base: D.species[id].base, moves: D.species[id].moves })),
-        moves: Object.keys(D.moves).sort().map(id => { const m = D.moves[id]; return { id, kind: m.kind, power: m.power, accuracy: m.accuracy, pp: maxPP(m), category: m.category || null, effect: m.effect || null, element: m.element || null }; }),
+        moves: Object.keys(D.moves).sort().map(id => { const m = D.moves[id]; return { id, kind: m.kind, power: m.power, accuracy: m.accuracy, alwaysHits: m.alwaysHits === true, pp: maxPP(m), category: m.category || null, effect: m.effect || null, element: m.element || null }; }),
         heldItems: Object.keys(HELD).sort().map(id => ({ id, kind: HELD[id].kind, params: HELD[id].params })),
         conditions: Object.keys(STATUS).sort().map(id => ({ id, element: STATUS[id].element, chance: STATUS[id].chance })) });
     }
@@ -8621,7 +8694,13 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       }
       const actorStats = this.effectiveStats(mon), targetStats = this.effectiveStats(target);
       const hitChance = Math.min(100, Math.max(20, move.accuracy * actorStats.accuracy / Math.max(1, targetStats.evasion)));
-      if (this._random() * 100 >= hitChance) { this._event(`${name}の「${move.name}」は外れた。`, 'miss', { ...meta, target: targetSlot }); return; }
+      if (move.alwaysHits !== true && this._random() * 100 >= hitChance) { this._event(`${name}の「${move.name}」は外れた。`, 'miss', { ...meta, target: targetSlot }); return; }
+      if (move.effect === 'inflictBloom') {
+        this._event(`${name}の「${move.name}」。花毒を宿す花粉が舞い広がる！`, 'attack', { ...meta, target: targetSlot, category: 'status' });
+        if (this._inflict(1 - side, targetSlot, target, move, true)) this._react(1 - side, targetSlot, target);
+        else this._event(`${this._name(1 - side, target)}には花毒が効かなかった。`, 'info', { ...meta, target: targetSlot, failed: true });
+        return;
+      }
       // These techniques inflict a condition without dealing attack damage or
       // consuming the target's guard. Their own HP cost is paid only on success.
       if (move.effect === 'curse') {
@@ -8654,7 +8733,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const band = holds(target, 'endure'), endured = !!band && target.hp >= target.maxHp && damage >= target.hp && target.hp > 1;
       if (endured) damage = target.hp - 1;
       const dealt = Math.min(target.hp, damage); target.guard = false; target.hp -= dealt;
-      this._event(`${name}の「${move.name}」。${D.species[target.species].name}に${dealt}ダメージ。${critical ? ' 急所に命中！' : ''}${effect > 1 ? ' 属性が有利！' : effect < 1 ? ' 属性が不利。' : ''}`, 'damage', { ...meta, target: targetSlot, amount: dealt, critical, effectiveness: effect, guarded, category: special ? 'special' : 'physical' });
+      if (move.effect === 'attackRecharge') mon.rechargeTurns = 1;
+      this._event(`${name}の「${move.name}」。${D.species[target.species].name}に${dealt}ダメージ。${critical ? ' 急所に命中！' : ''}${effect > 1 ? ' 属性が有利！' : effect < 1 ? ' 属性が不利。' : ''}${move.effect === 'attackRecharge' ? ' 次のターンは反動で動けない。' : ''}`, 'damage', { ...meta, target: targetSlot, amount: dealt, critical, effectiveness: effect, guarded, category: special ? 'special' : 'physical' });
       if (endured) { delete target.item; this._event(`${this._name(1 - side, target)}は${band.name}で踏みとどまった！`, 'item', { side: 1 - side, slot: targetSlot, item: band.id }); }
       if (move.effect === 'drain') {
         const amount = Math.min(mon.maxHp - mon.hp, Math.max(1, Math.floor(dealt * .25))); mon.hp += amount;
@@ -8686,7 +8766,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     _recharge(side, slot, mon) {
       if (!(mon.rechargeTurns > 0)) return false;
       mon.rechargeTurns--; if (mon.rechargeTurns <= 0) delete mon.rechargeTurns;
-      this._event(`${this._name(side, mon)}は全回復の反動で動けない。`, 'recharge', { side, slot, blocked: true, recharge: true });
+      this._event(`${this._name(side, mon)}は技の反動で動けない。`, 'recharge', { side, slot, blocked: true, recharge: true });
       return true;
     }
     _faint(side, slot, mon) { this._cure(mon); this._clearVolatile(mon); this.resetStages(mon); this._event(`${this._name(side, mon)}は戦闘不能。`, 'faint', { side, slot }); }
@@ -9417,7 +9497,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
-<script src="battle-vfx.js?v=20261119-curse-health-v49"></script>
+<script src="battle-vfx.js?v=20261119-kiraseed-moves-v50"></script>
 <script src="admin-console.js?v=20261119-null-moves-v42"></script>
 <script src="online-futo.js?v=20261119-curse-health-v49"></script>
 <script src="secret-encounter.js?v=20261119-secret-gender-v44"></script>

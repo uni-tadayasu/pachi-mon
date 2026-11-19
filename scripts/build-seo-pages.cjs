@@ -14,7 +14,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const ROOT = path.resolve(__dirname, '..');
 const SITE = 'https://www.kasai-solutions-inc.com';
 const DATE = process.env.SEO_DATE || new Date().toISOString().slice(0, 10);
-const dexSprite = id => `assets/dex/${id}.webp${id === 'floravelle' ? '?v=20261118-kiraseed-pixel-v31' : ''}`;
+const dexSprite = id => `assets/dex/${id}.webp?v=20261119-all-monsters-v50`;
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const context = vm.createContext({ console });
@@ -31,7 +31,9 @@ const publicMoveCount = Object.values(D.moves).filter(move=>!move.hiddenDex).len
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const typeName = el => el ? (D.elements[el]?.name || el) + 'タイプ' : '無属性';
 const typeChip = el => `<span class="chip t-${esc(el || 'none')}">${esc(el ? D.elements[el].name : '無')}</span>`;
-const kindLabel = m => m.kind === 'heal' ? '回復' : m.kind === 'guard' ? '防御' : m.kind === 'boost' ? '強化' : (m.category || (m.element ? 'special' : 'physical')) === 'special' ? '特殊' : '物理';
+const kindLabel = m => m.kind === 'heal' ? '回復' : m.kind === 'guard' ? '防御' : m.kind === 'boost' ? '強化' : m.category === 'status' ? '変化' : (m.category || (m.element ? 'special' : 'physical')) === 'special' ? '特殊' : '物理';
+const movePower = m => m.kind === 'attack' && m.category !== 'status' ? m.power : '—';
+const moveAccuracy = m => m.kind === 'attack' ? m.alwaysHits === true ? '必中' : Math.round(m.accuracy) : '—';
 
 const preOf = {};
 for (const s of Object.values(D.species)) if (s.evolvesTo) preOf[s.evolvesTo] = { from: s.id, level: s.evolveLevel };
@@ -142,7 +144,7 @@ for (const [index, id] of ids.entries()) {
   <table class="stats"><tbody>${STAT_ORDER.map(key => `<tr><th>${esc(D.statLabels[key])}</th><td>${stats[key]}</td><td class="bar"><span style="width:${Math.min(100, Math.round(stats[key] / statMax[key] * 100))}%"></span></td></tr>`).join('')}</tbody></table>
   <p class="note">上の数値は、振り分けポイントと持ち物の補正を含まないLv.50の基礎能力です。冒険中の能力値はレベルに応じて上がります。通信対戦は基礎能力をLv.50にそろえ、選んだ個体の振り分けポイントはすべて加算します。</p>
   <h2>覚える技</h2>
-  <div class="table-wrap"><table class="moves"><thead><tr><th>技</th><th>タイプ</th><th>分類</th><th>威力</th><th>命中</th><th>PP</th><th>効果</th></tr></thead><tbody>${moves.map(m => `<tr><th><a href="../moves/#${esc(m.id)}">${esc(m.name)}</a></th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${m.kind === 'attack' ? m.power : '—'}</td><td>${m.kind === 'attack' ? Math.round(m.accuracy) : '—'}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="table-wrap"><table class="moves"><thead><tr><th>技</th><th>タイプ</th><th>分類</th><th>威力</th><th>命中</th><th>PP</th><th>効果</th></tr></thead><tbody>${moves.map(m => `<tr><th><a href="../moves/#${esc(m.id)}">${esc(m.name)}</a></th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${movePower(m)}</td><td>${moveAccuracy(m)}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td></tr>`).join('')}</tbody></table></div>
   ${chainHtml}
   <h2>タイプ相性</h2>
   <p>${esc(typeName(s.element))}の技は${strong ? `${esc(strong)}タイプに強く（1.5倍）` : '相性の影響を受けにくく'}、${weakTo.length ? `${esc(weakTo.join('・'))}タイプの技を受けると効果が大きくなります` : '弱点の少ないタイプです'}。同じタイプの技を使うと威力が1.15倍になります。</p>
@@ -253,7 +255,7 @@ const learners = {};
 for (const id of ids) for (const mid of D.species[id].moves) (learners[mid] ||= []).push(id);
 const moveGroups = [...['leaf', 'tide', 'ember', 'wind', 'crystal'].map(el => [typeName(el), m => m.element === el && !['special', 'signature'].includes(m.role)]),
   ['無属性', m => !m.element && !['special', 'signature'].includes(m.role)], ['特別な技', m => ['special', 'signature'].includes(m.role)]];
-const moveRow = m => `<tr id="${esc(m.id)}"><th>${esc(m.name)}</th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${m.kind === 'attack' ? m.power : '—'}</td><td>${m.kind === 'attack' ? Math.round(m.accuracy) : '—'}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td><td>${(learners[m.id] || []).slice(0, 8).map(id => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>`).join('、')}${(learners[m.id] || []).length > 8 ? ` ほか${learners[m.id].length - 8}種` : ''}</td></tr>`;
+const moveRow = m => `<tr id="${esc(m.id)}"><th>${esc(m.name)}</th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${movePower(m)}</td><td>${moveAccuracy(m)}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td><td>${(learners[m.id] || []).slice(0, 8).map(id => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>`).join('、')}${(learners[m.id] || []).length > 8 ? ` ほか${learners[m.id].length - 8}種` : ''}</td></tr>`;
 const allMoves = Object.values(D.moves).filter(move=>!move.hiddenDex);
 const movesBody = `${crumbNav([['トップ', '../'], ['技一覧', '']], 1)}
 <article class="window">

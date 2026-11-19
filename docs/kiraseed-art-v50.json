@@ -1,0 +1,17 @@
+{
+  "version": "20261119-kiraseed-v50",
+  "method": "built-in imagegen",
+  "species": "floravelle",
+  "name": "キラシード",
+  "file": "assets/floravelle.png",
+  "width": 1774,
+  "height": 887,
+  "bytes": 889974,
+  "sha256": "d233f06c5b6c12ce6c7f4a30f8d2e3480f03fd4d11362ed8cd8fd17f2cb09e88",
+  "background": "Transparent RGBA; original final generated PNG bytes retained.",
+  "layout": "Two independently drawn poses: left square is front three-quarter facing screen left; right square is rear three-quarter facing screen right.",
+  "reference": "The user's latest green frog-slime creature reference, followed by removal of every flower and leaf, then a stronger pixel-art pass. The reference card is not distributed in this repository.",
+  "design": "Massive green frog-slime with soft thick folds, broad arms, three low rooting lobes, amber eyes, subtle closed-mouth grin and a small golden chest seed. No flower or leaf appendages.",
+  "rendering": "A shared 80×80 nearest-neighbor display grid covers all 259 creatures. Public dex thumbnails use an 80px grid enlarged to 96px; gameplay data and other source art remain intact.",
+  "prompt": "Use case: style-transfer.\nEdit target: this exact transparent two-view green frog-slime character atlas. The user has accepted the creature shape and now explicitly asks for MUCH STRONGER PIXEL-ART LOOK for implementation in a 16-bit RPG.\nKeep the character design, front/back poses, heavy green folded body, amber eyes, subtle grin, three bottom lobes and small golden seed in the chest exactly recognizable. Keep NO flowers and NO leaves. Do not redesign or add anything.\nRe-render the illustration as authentic visibly LOW-RESOLUTION, hand-placed 16-bit sprite art: each full creature should look authored on about a 96x96 to 112x112 pixel grid and then enlarged with NEAREST-NEIGHBOR so the square blocks are clearly visible at this output size. Use a consistent coarse pixel grid, stepped diagonal contours, chunky clusters, a crisp dark 1-2 native-pixel outline, 3-4 discrete shades per material, limited ~20-24 color palette, small clean block highlights. Simplify tiny surface detail into deliberate pixel clusters while preserving facial expression and thick folds. NO smooth gradients, NO antialiasing, NO soft painting, NO blurry resizing, NO grain/noisy dither, NO vector curves. Make it visibly more pixelated and retro than the input. It must be a polished finished game sprite, not a smooth illustration with a subtle texture filter.\nProduction layout unchanged: wide 2:1 transparent RGBA atlas, two equal square cells. LEFT front 3/4 facing left, RIGHT genuine rear 3/4 facing right. Same scale, common baseline, generous transparent margins and center gutter, entire silhouette inside each cell. Maintain actual alpha transparency around each sprite; no checkerboard painted into image, no floor/shadow/background, text, label, watermark or border.\nOutput only the final two-view pixel-art atlas."
+}
