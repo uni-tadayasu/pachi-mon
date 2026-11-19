@@ -86,6 +86,8 @@
  * v62: first-play volume starts at 10%; three primary-managed operator seats,
  *   Sakai/Isaka identities, revocation, purple/blond walking art and exact-owner room
  *   visits refresh together without changing saved audio preferences.
+ * v63: the common battle recording loops the supplied track's first 125 seconds;
+ *   the versioned audio URL refreshes old full-length offline downloads.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

@@ -9,9 +9,11 @@ Copyright (c) 2026 KASAI SOLUTIONS INC.
 制作物について
 --------------
 ゲーム用のキャラクター描画、地形、UI、合成BGMは本プロジェクトで制作。
-v52の戦闘BGM（assets/music/battle-custom.mp3）は、依頼者が提供した
-音源を使用しています。音声を再エンコードせず、付属の画像とメタデータを
-除いてゲームに組み込んでいます。
+v63の通常戦闘BGM（assets/music/battle-custom.mp3）は、依頼者が提供した
+「CIGNA shorts short shortsvideo shortvideo (1)(2).mp3」の冒頭125秒を
+切り出し、48kHzステレオのMP3として再エンコードしています。
+ループ境界のクリック音を抑えるため、両端の5ミリ秒だけをフェードし、
+付属の画像とメタデータは除いています。
 v52のフィールドBGM（assets/music/field-custom.mp3）は、依頼者が提供した
 「正義の心我らに shorts short shortsvideo shortvideo (1).mp3」を
 再エンコードや編集をせず、そのまま使用しています。

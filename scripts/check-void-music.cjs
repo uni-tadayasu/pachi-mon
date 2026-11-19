@@ -9,7 +9,7 @@ const source=scripts.find(m=>m[2].includes('class LuminaAudio'))[2];
 const dataContext=vm.createContext({console});
 for(const [,attributes,code] of scripts){if(/\bsrc=|application\/ld\+json/.test(attributes))continue;vm.runInContext(code,dataContext);if(dataContext.LT?.Engine)break;}
 const D=dataContext.LT.DATA,copy=value=>JSON.parse(JSON.stringify(value));
-const BATTLE_URL='assets/music/battle-custom.mp3?v=20261119-battle-v52';
+const BATTLE_URL='assets/music/battle-custom.mp3?v=20261119-battle-loop-v63';
 const FIELD_URL='assets/music/field-custom.mp3?v=20261119-field-v52';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
