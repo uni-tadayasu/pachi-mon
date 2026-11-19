@@ -5443,7 +5443,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   const TITLE_RECORDING=Object.freeze({id:'title',url:'assets/music/title-16bit.mp3?v=20261117-aishiteirukara',seconds:222,bpm:139.5,bars:129});
   // Compressed MP3/media elements serve field and battle music. Kasai's trainer
   // theme has explicit priority and shares the same bounded playback lifecycle.
-  const BATTLE_RECORDING=Object.freeze({id:'battle-custom',url:'assets/music/battle-custom.mp3?v=20261119-battle-v52',seconds:374.904});
+  // The battle file contains exactly the supplied recording's first 125 seconds.
+  // Native media looping returns to 0:00 without timer-dependent seeking.
+  const BATTLE_RECORDING=Object.freeze({id:'battle-custom',url:'assets/music/battle-custom.mp3?v=20261119-battle-loop-v63',seconds:125});
   const FIELD_RECORDING=Object.freeze({id:'field-custom',url:'assets/music/field-custom.mp3?v=20261119-field-v52',seconds:139.632});
   const KASAI_RECORDING=Object.freeze({id:'kasai-one-light',url:'assets/music/kasai-one-light-v55.mp3',seconds:186.432});
   const BATTLE_SCENES=new Set(['battle','battle2','rival','rival2','guardian','guardian2','tower','elite','finale','champion','legend','zenith','glitchbattle']);
@@ -5478,9 +5480,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }else if(recording===BATTLE_RECORDING||recording===FIELD_RECORDING){
       const field=recording===FIELD_RECORDING;
       data.name=(s.name.match(/^\d+\s+/)?.[0]||'')+(field?'フィールドBGM / 正義の心我らに':'戦闘BGM / 提供音源');
-      data.description=field?'町・道・森・洞窟など、フィールド探索中の共通BGM。提供されたMP3を原音のまま全編ループ再生し、マップ移動や昼夜の変化でも曲を続けます。':'野生・トレーナー・ボス・オンライン／ローカル対戦の共通BGM。提供されたMP3を、原音のまま全編ループ再生します。';
-      data.duration=Math.round(recording.seconds);data.bpm=null;data.meter=null;data.bars=null;data.form='提供音源（原音・全編）';data.edition=field?'field-recording-v52':'battle-recording-v52';
-      data.recording={seconds:recording.seconds,form:'提供音源（原音・全編）'};
+      data.description=field?'町・道・森・洞窟など、フィールド探索中の共通BGM。提供されたMP3を原音のまま全編ループ再生し、マップ移動や昼夜の変化でも曲を続けます。':'野生・トレーナー・ボス・オンライン／ローカル対戦の共通BGM。提供音源の0:00〜2:05を繰り返し再生します。';
+      data.duration=Math.round(recording.seconds);data.bpm=null;data.meter=null;data.bars=null;data.form=field?'提供音源（原音・全編）':'提供音源（0:00〜2:05ループ）';data.edition=field?'field-recording-v52':'battle-recording-v63';
+      data.recording={seconds:recording.seconds,form:data.form};
     }else if(recording)data.recording={seconds:recording.seconds,bpm:recording.bpm,bars:recording.bars,form:'16ビットアレンジ（全編）'};
     return data;
   }
@@ -10231,7 +10233,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261119-world-v55-live"></script>
 <link rel="prefetch" href="assets/music/title-16bit.mp3?v=20261117-aishiteirukara">
-<link rel="prefetch" href="assets/music/battle-custom.mp3?v=20261119-battle-v52">
+<link rel="prefetch" href="assets/music/battle-custom.mp3?v=20261119-battle-loop-v63">
 <link rel="prefetch" href="assets/music/field-custom.mp3?v=20261119-field-v52">
 <link rel="prefetch" href="vendor/qrcode-generator.js?v=1.4.4">
 <link rel="prefetch" href="vendor/jsQR.js?v=1.4.0">

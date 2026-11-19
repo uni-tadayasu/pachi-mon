@@ -6,7 +6,7 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),test=require('node:test');
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const source=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].find(m=>m[1].includes('class LuminaAudio'))[1];
-const URL_BATTLE='assets/music/battle-custom.mp3?v=20261119-battle-v52';
+const URL_BATTLE='assets/music/battle-custom.mp3?v=20261119-battle-loop-v63';
 const URL_FIELD='assets/music/field-custom.mp3?v=20261119-field-v52';
 const URL_KASAI='assets/music/kasai-one-light-v55.mp3';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
@@ -57,12 +57,12 @@ function gameData(){
  return context.LT.DATA;
 }
 
-test('the supplied file retains the full 374.904-second 48 kHz stereo MP3',()=>{
- const mp3=fs.readFileSync(path.join(root,'assets/music/battle-custom.mp3'));assert(mp3.length>6e6&&mp3.length<8e6);
+test('the supplied battle recording contains the first 125 seconds as a 48 kHz stereo MP3',()=>{
+ const mp3=fs.readFileSync(path.join(root,'assets/music/battle-custom.mp3'));assert(mp3.length>1e6&&mp3.length<4e6);
  let at=0;while(at<mp3.length-4&&!(mp3[at]===255&&(mp3[at+1]&224)===224))at++;
  const header=mp3.readUInt32BE(at);assert.equal((header>>19)&3,3);assert.equal((header>>17)&3,1);assert.equal((header>>10)&3,1);assert.notEqual((header>>6)&3,3);
  const tag=Math.max(mp3.indexOf('Xing',at),mp3.indexOf('Info',at));assert(tag>at&&tag<at+64);assert(mp3.readUInt32BE(tag+4)&1);
- assert(Math.abs(mp3.readUInt32BE(tag+8)*1152/48000-374.904)<.1);assert(!mp3.subarray(0,at).includes(Buffer.from('APIC')),'The embedded JPEG is excluded');
+ assert(Math.abs(mp3.readUInt32BE(tag+8)*1152/48000-125)<.1);assert(!mp3.subarray(0,at).includes(Buffer.from('APIC')),'The embedded JPEG is excluded');
 });
 
 test('the field file is the exact supplied 139.632-second 48 kHz stereo MP3',()=>{
@@ -80,14 +80,14 @@ test('the field file is the exact supplied 139.632-second 48 kHz stereo MP3',()=
 
 test('all battle variants use one looped recording without restarting when opponents or scenes change',async()=>{
  const w=world(),a=w.audio;a.setScene(solo());await a.setEnabled(true);await settle();const rec=a.group.recording,group=a.group;
- assert.equal(rec.id,'battle-custom');assert(rec.ready&&rec.audio.loop&&!rec.audio.paused);rec.audio.currentTime=127.25;const starts=rec.audio.plays;
+ assert.equal(rec.id,'battle-custom');assert(rec.ready&&rec.audio.loop&&!rec.audio.paused);rec.audio.currentTime=47.25;const starts=rec.audio.plays;
  const cases=[['battle',solo()],['battle2',solo({},'east')],['rival',solo({rival:true})],['rival2',solo({rival:true},'east')],
   ['guardian',solo({guardian:'mio'})],['guardian2',solo({guardian:'mio'},'east')],['tower',solo({towerFloor:2})],['elite',solo({elite:'one'})],
   ['finale',solo({guardian:'mio'},'observatory')],['champion',solo({champion:true})],['legend',solo({enemy:{species:'arvelion',hp:1}})],
   ['zenith',solo({champion:'zenith-boss'})],['glitchbattle',solo({rival:'glitch-keeper'})]];
- for(const [id,scene]of cases){a.setScene(scene);assert.equal(a.currentId,id);assert.equal(a.group,group);assert.equal(a.group.recording,rec);assert.equal(rec.audio.currentTime,127.25);assert.equal(rec.audio.plays,starts);assert.equal(a.getCurrentTrack().recording.seconds,374.904);assert.equal(a.getCurrentTrack().id,'battle');}
+ for(const [id,scene]of cases){a.setScene(scene);assert.equal(a.currentId,id);assert.equal(a.group,group);assert.equal(a.group.recording,rec);assert.equal(rec.audio.currentTime,47.25);assert.equal(rec.audio.plays,starts);assert.equal(a.getCurrentTrack().recording.seconds,125);assert.equal(a.getCurrentTrack().id,'battle');}
  for(const transport of ['internet','local'])for(const mode of ['single','double']){
-  a.setScene({theme:'meadow',battle:{rival:true,mode,transport,teams:[{active:[0],monsters:[{species:'nullmie',hp:1}]},{active:[0],monsters:[{species:'zeroveil',hp:1}]}]}});assert.equal(a.group.recording,rec);assert.equal(rec.audio.currentTime,127.25);
+  a.setScene({theme:'meadow',battle:{rival:true,mode,transport,teams:[{active:[0],monsters:[{species:'nullmie',hp:1}]},{active:[0],monsters:[{species:'zeroveil',hp:1}]}]}});assert.equal(a.group.recording,rec);assert.equal(rec.audio.currentTime,47.25);
  }
  assert.deepEqual(w.log.fetches,[URL_BATTLE,URL_FIELD]);assert.equal(w.log.audios.length,2);assert.equal(w.log.sources.length,2);
  assert(w.audio.recordings.get('field-custom').audio.paused,'Preloaded field audio stays silent throughout battles');
@@ -159,7 +159,7 @@ test('download, codec and media failures restore the appropriate composed score 
 });
 
 test('music room previews supplied field and battle recordings at entries 15 and 22 and retains other previews',async()=>{
- const w=world(),a=w.audio,tracks=a.getTracks();assert.equal(tracks.length,64);assert.equal(tracks[21].id,'battle');assert.equal(tracks[21].recording.seconds,374.904);assert.match(tracks[21].description,/原音/);
+ const w=world(),a=w.audio,tracks=a.getTracks();assert.equal(tracks.length,64);assert.equal(tracks[21].id,'battle');assert.equal(tracks[21].recording.seconds,125);assert.match(tracks[21].description,/0:00〜2:05/);
  assert.equal(tracks[14].id,'expedition');assert.equal(tracks[14].recording.seconds,139.632);assert.match(tracks[14].name,/正義の心我らに/);assert.match(tracks[14].description,/原音/);
  assert.equal(tracks[60].id,'glitchbattle');assert.equal(tracks[60].recording,undefined);a.setScene(solo({rival:'glitch-keeper'}));a.preview('glitchbattle');await a.setEnabled(true);await settle();assert(!a.group.recorded);
  a.preview('battle');await settle();assert(a.group.recorded);a.preview(null);assert.equal(a.currentId,'glitchbattle');assert(a.group.recorded);
