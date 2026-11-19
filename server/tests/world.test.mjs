@@ -258,10 +258,16 @@ test('population counts all real active participants beyond the eighty-person ne
 test('population labels persisted rooms using current roles and excludes detached or unknown maps',async t=>{
   const {env,call,register,presence}=setup(t),viewer=await register('閲覧者'),owner=await register('運営'),resident=await register('部屋の持ち主'),unknown=await register('無効マップ');
   assert.equal((await call('/admin/claim',{token:owner.token,method:'POST',body:{key:SECRET}})).status,200);
+  assert.equal((await call('/world/rooms/kasai',{token:viewer.token})).room,null);
+  assert.equal((await call('/world/population',{token:viewer.token})).total,0);assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,0);
+  const directions={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]},ownerWall=(await call('/world/rooms/walls?map=coast',{token:owner.token})).walls[0],ownerFacing=ownerWall.facings[0],[ox,oy]=directions[ownerFacing];
+  await presence(owner,{map:'coast',x:ownerWall.x-ox,y:ownerWall.y-oy,facing:ownerFacing});
+  assert.equal((await call('/world/rooms',{token:owner.token,method:'POST',body:{map:'coast',x:ownerWall.x,y:ownerWall.y,facing:ownerFacing}})).status,200);
   const kasai=(await call('/world/rooms/kasai',{token:viewer.token})).room;
-  const walls=(await call('/world/rooms/walls?map=village',{token:resident.token})).walls,wall=walls.find(cell=>!(cell.y===7&&[6,14,32].includes(cell.x)));
+  const walls=(await call('/world/rooms/walls?map=village',{token:resident.token})).walls,wall=walls[0],[rx,ry]=directions[wall.facings[0]];
+  await presence(resident,{map:'village',x:wall.x-rx,y:wall.y-ry,facing:wall.facings[0]});
   const created=await call('/world/rooms',{token:resident.token,method:'POST',body:{map:'village',x:wall.x,y:wall.y,facing:wall.facings[0],name:'星空の部屋'}});assert.equal(created.status,200);
-  await presence(viewer,{map:'harbor'},0);await presence(owner,{map:kasai.mapId,x:12,y:5},0);await presence(resident,{map:created.room.mapId,x:9,y:12},0);
+  await presence(viewer,{map:'harbor'},0);await presence(owner,{map:kasai.mapId,x:12,y:5});await presence(resident,{map:created.room.mapId,x:9,y:12});
   env.DB.sqlite.prepare("INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at) VALUES (?,'test-hidden-dead-map',1,1,'down','male','idle',?)").run(unknown.id,Date.now());
   let result=await call('/world/population',{token:viewer.token});assert.equal(result.total,3);assert.equal(result.total,result.rows.reduce((sum,row)=>sum+row.count,0));
   assert.deepEqual(result.rows.find(row=>row.map===kasai.mapId),{map:kasai.mapId,count:1,name:kasai.name,kind:'kasai'});

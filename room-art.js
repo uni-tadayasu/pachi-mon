@@ -364,20 +364,28 @@
   }
   function drawDoor(c,room,options={}) {
     const e=room?.entrance;if(!e||!integer(e.x)||!integer(e.y))return false;
-    const t=Number.isFinite(options.tileSize)&&options.tileSize>0?options.tileSize:TILE,kasai=room.kind==='kasai'||room.roomKind==='kasai';
+    const t=Number.isFinite(options.tileSize)&&options.tileSize>0?options.tileSize:TILE,kasai=room.kind==='kasai'||room.roomKind==='kasai',active=options.active===true;
+    const trim=kasai?P.gold2:P.mint,light=active?P.white:trim;
     c.save();c.translate(e.x*t,e.y*t);c.scale(t/32,t/32);c.imageSmoothingEnabled=false;
-    r(c,1,0,30,32,kasai?'#f3d99a20':'#a7d3b825');r(c,3,1,26,31,P.ink);
-    frame(c,5,2,22,29,kasai?'#596750':P.teal,P.ink,kasai?P.gold2:P.mint);
-    r(c,8,5,16,25,P.deep);r(c,10,6,12,23,'#1f4c57');r(c,15,8,1,21,kasai?P.gold:P.teal2);
-    for(const x of[5,25]){r(c,x,4,2,24,kasai?P.gold:P.mint);r(c,x+1,5,1,21,kasai?P.gold2:P.cream);}
-    r(c,8,3,16,2,kasai?P.gold2:P.mint);diamond(c,16,10,4,kasai?P.gold2:P.mint);diamond(c,16,10,2,P.deep);
-    r(c,20,20,2,3,P.gold2);r(c,3,29,26,2,kasai?P.gold:P.mint);r(c,2,31,28,1,P.ink);c.restore();
+    // A bright, outlined doorway stays recognizable against trees, masonry,
+    // and building art. Everything fits inside the occupied wall tile.
+    r(c,1,0,30,32,P.ink);frame(c,3,1,26,29,kasai?'#596750':P.teal,P.ink,light);
+    r(c,5,3,22,25,trim);r(c,7,5,18,23,P.deep);r(c,9,7,14,21,'#1f4c57');
+    r(c,15,9,1,19,kasai?P.gold:P.teal2);r(c,7,4,18,2,light);
+    for(const x of[3,27]){r(c,x,6,2,20,light);r(c,x,7,1,17,P.cream);}
+    // The inset entrance pictogram is intentionally simpler than the door:
+    // a roof, an open doorway and a light square on the far side.
+    polygon(c,[[10,13],[16,7],[22,13]],P.ink);polygon(c,[[11,13],[16,8],[21,13]],light);
+    r(c,11,13,10,9,light);r(c,14,15,4,7,P.deep);r(c,15,16,2,5,kasai?P.gold:P.teal2);
+    r(c,21,23,2,3,P.gold2);r(c,3,28,26,2,trim);r(c,1,30,30,2,P.ink);r(c,5,30,22,1,light);
+    if(active){for(const [x,y] of [[0,0],[28,0],[0,28],[28,28]]){r(c,x,y,4,1,P.white);r(c,x,y,1,4,P.white);}}
+    c.restore();
     if(options.label!==false) {
       const raw=kasai?'カサイの部屋':`${String(room.owner?.name||'旅人').slice(0,10)}の部屋`;
-      const label=typeof options.label==='string'?options.label:raw;
+      const label=typeof options.label==='string'?options.label:active?'A / E で入室':raw;
       c.save();c.font='bold 13px sans-serif';c.textAlign='center';c.textBaseline='middle';
       const w=Math.min(174,Math.ceil(c.measureText(label).width)+14),x=e.x*t+t/2,y=e.y*t-11;
-      r(c,Math.floor(x-w/2),y-10,w,20,'#1b3545ee');r(c,Math.floor(x-w/2),y+9,w,1,kasai?P.gold:P.mint);
+      r(c,Math.floor(x-w/2),y-10,w,20,'#1b3545ee');r(c,Math.floor(x-w/2),y+9,w,1,light);
       c.fillStyle=kasai?P.gold2:P.cream;c.fillText(label,x,y,w-10);c.restore();
     }
     return true;

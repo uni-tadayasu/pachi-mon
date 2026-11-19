@@ -75,6 +75,9 @@
  * v57: Kasai cannot challenge himself; operator room decoration and the actual
  *   operator party sync with immutable opponent snapshots for each challenge.
  *   Live stage populations open in a dialog; social controls sit outside the canvas.
+ * v58: the actual Kasai joins a shared live stage; both humans choose each turn.
+ * v59: A-button wall creation and relocation, visible entrance marks, and
+ *   player-chosen Kasai room locations update with the versioned room client.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

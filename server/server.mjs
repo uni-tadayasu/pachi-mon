@@ -392,7 +392,6 @@ export const ROOM_CATALOG=Object.freeze([
 ]);
 const ROOM_ITEMS=new Map(ROOM_CATALOG.map(item=>[item.id,item]));
 const ROOM_WALL_CACHE=new Map();
-const ROOM_RESERVED_DOORS=Object.freeze([{x:32,y:7,facing:'up'},{x:14,y:7,facing:'up'},{x:6,y:7,facing:'up'}]);
 function roomWallCells(map) {
   if(!Object.hasOwn(ROOM_WALL_MAP,map))return null;
   const group=ROOM_WALL_MAP[map];
@@ -449,20 +448,12 @@ function roomView(row) {
     entrance:{map:row.map_id,x:row.entrance_x,y:row.entrance_y,facing:row.facing,returnX:row.entrance_x-direction[0],returnY:row.entrance_y-direction[1]},
     ...layout,decorations,revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at};
 }
-async function ensureKasaiRoom(env,now) {
-  for(let attempt=0;attempt<3;attempt++){
-    const owner=await ownerRecord(env);if(!owner)return null;
-    const existing=await roomRow(env,owner.player_id);if(existing?.is_admin)return existing;
-    const used=new Set((await env.DB.prepare("SELECT entrance_x,entrance_y FROM world_rooms WHERE map_id='village'").all()).results.map(row=>row.entrance_x+','+row.entrance_y));
-    const candidates=[...ROOM_RESERVED_DOORS,...worldRoomWalls('village').flatMap(cell=>cell.facings.map(facing=>({x:cell.x,y:cell.y,facing})))];
-    const entrance=candidates.find(cell=>!used.has(cell.x+','+cell.y));
-    if(!entrance)fail(409,'ROOM_ENTRANCE_UNAVAILABLE','はじまりの里の壁が埋まっています。運営が別の場所に部屋を作成してください。');
-    await env.DB.prepare(`INSERT OR IGNORE INTO world_rooms (owner_id,map_id,entrance_x,entrance_y,facing,name,created_at,updated_at)
-      SELECT ?,'village',?,?,?,'カサイのひみつ部屋',?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`)
-      .bind(owner.player_id,entrance.x,entrance.y,entrance.facing,now,now,owner.player_id).run();
-    const created=await roomRow(env,owner.player_id);if(created?.is_admin)return created;
-  }
-  fail(409,'ROOM_OWNER_CHANGED','運営が変更されました。もう一度部屋を開いてください。');
+async function currentKasaiRoom(env) {
+  return env.DB.prepare(ROOM_SELECT+' WHERE EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=r.owner_id)').first();
+}
+async function requireRoomEntrancePresence(env,playerId,entrance,now) {
+  const direction=ROOM_DIRECTIONS[entrance.facing],presence=await env.DB.prepare('SELECT map_id,x,y,facing,updated_at FROM world_presence WHERE player_id=?').bind(playerId).first();
+  if(!presence||presence.updated_at<=now-WORLD_TTL||presence.map_id!==entrance.map||presence.x!==entrance.x-direction[0]||presence.y!==entrance.y-direction[1]||presence.facing!==entrance.facing)fail(409,'ROOM_NOT_NEARBY','部屋の入口にしたい壁の前に立ち、その壁を向いてください。');
 }
 async function roomsRoute(request,env,path,method,player) {
   const now=Date.now(),url=new URL(request.url);
@@ -472,13 +463,12 @@ async function roomsRoute(request,env,path,method,player) {
     if(!map||!Object.hasOwn(WORLD_MAP_BOUNDS,map))fail(400,'INVALID_ROOM_MAP','部屋を作るフィールドを指定してください。');
     return {walls:worldRoomWalls(map),serverTime:now};
   }
-  if(path==='/api/world/rooms/kasai'&&method==='GET')return {room:roomView(await ensureKasaiRoom(env,now)),serverTime:now};
-  if(path==='/api/world/rooms/mine'&&method==='GET')return {room:roomView(player.is_admin?await ensureKasaiRoom(env,now):await roomRow(env,player.id)),serverTime:now};
+  if(path==='/api/world/rooms/kasai'&&method==='GET')return {room:roomView(await currentKasaiRoom(env)),serverTime:now};
+  if(path==='/api/world/rooms/mine'&&method==='GET')return {room:roomView(await roomRow(env,player.id)),serverTime:now};
   if(path==='/api/world/rooms'&&method==='GET'){
-    if(url.searchParams.get('kind')==='kasai'){const room=roomView(await ensureKasaiRoom(env,now));return {rooms:room?[room]:[],serverTime:now};}
+    if(url.searchParams.get('kind')==='kasai'){const room=roomView(await currentKasaiRoom(env));return {rooms:room?[room]:[],serverTime:now};}
     const map=url.searchParams.get('map');
     if(!map||!Object.hasOwn(WORLD_MAP_BOUNDS,map))fail(400,'INVALID_ROOM_MAP','出入口を確認するフィールドを指定してください。');
-    if(map==='village')await ensureKasaiRoom(env,now);
     const rows=await env.DB.prepare(ROOM_SELECT+' WHERE r.map_id=? ORDER BY r.created_at,r.owner_id LIMIT 400').bind(map).all();
     return {rooms:rows.results.map(roomView),serverTime:now};
   }
@@ -486,12 +476,12 @@ async function roomsRoute(request,env,path,method,player) {
     await requireNoLiveSession(env,player.id,now);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>!['map','x','y','facing','name'].includes(key)))fail(400,'INVALID_ROOM_ENTRANCE','部屋の入口の指定が正しくありません。');
-    const entrance=roomEntrance(body),name=roomName(body.name===undefined?'ひみつの部屋':body.name),existing=await roomRow(env,player.id);
+    const entrance=roomEntrance(body),name=roomName(body.name===undefined?(player.is_admin?'カサイのひみつ部屋':'ひみつの部屋'):body.name),existing=await roomRow(env,player.id);
     if(existing){
-      if(existing.map_id!==entrance.map||existing.entrance_x!==entrance.x||existing.entrance_y!==entrance.y||existing.facing!==entrance.facing)fail(409,'ROOM_ALREADY_EXISTS','ひみつの部屋はひとり一つです。自分の部屋の模様替えを楽しんでください。');
+      if(existing.map_id!==entrance.map||existing.entrance_x!==entrance.x||existing.entrance_y!==entrance.y||existing.facing!==entrance.facing)fail(409,'ROOM_ALREADY_EXISTS','ひみつの部屋はひとり一つです。別の壁へ移すときは移転してください。');
       return {room:roomView(existing),serverTime:now};
     }
-    if(!player.is_admin&&entrance.map==='village'&&ROOM_RESERVED_DOORS.some(cell=>cell.x===entrance.x&&cell.y===entrance.y))fail(409,'ROOM_ENTRANCE_RESERVED','この壁はカサイの部屋の入口です。別の壁を選んでください。');
+    await requireRoomEntrancePresence(env,player.id,entrance,now);
     await consumeLimit(env,request,`world-room-create:${player.id}`,10,60000,true);
     await env.DB.prepare('INSERT OR IGNORE INTO world_rooms (owner_id,map_id,entrance_x,entrance_y,facing,name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)')
       .bind(player.id,entrance.map,entrance.x,entrance.y,entrance.facing,name,now,now).run();
@@ -510,10 +500,8 @@ async function roomsRoute(request,env,path,method,player) {
     await requireNoLiveSession(env,player.id,now);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>!['revision','map','x','y','facing'].includes(key))||!integer(body.revision,1,1000000000))fail(400,'INVALID_ROOM_UPDATE','移転先と部屋の版番号を確認してください。');
-    const entrance=roomEntrance(body),direction=ROOM_DIRECTIONS[entrance.facing],returnX=entrance.x-direction[0],returnY=entrance.y-direction[1];
-    if(!row.is_admin&&entrance.map==='village'&&ROOM_RESERVED_DOORS.some(cell=>cell.x===entrance.x&&cell.y===entrance.y))fail(409,'ROOM_ENTRANCE_RESERVED','この壁はカサイの部屋用です。別の壁を選んでください。');
-    const presence=await env.DB.prepare('SELECT map_id,x,y,facing,updated_at FROM world_presence WHERE player_id=?').bind(player.id).first();
-    if(!presence||presence.updated_at<=now-WORLD_TTL||presence.map_id!==entrance.map||presence.x!==returnX||presence.y!==returnY||presence.facing!==entrance.facing)fail(409,'ROOM_NOT_NEARBY','移転したい壁の前に立ち、その壁を向いてください。');
+    const entrance=roomEntrance(body);
+    await requireRoomEntrancePresence(env,player.id,entrance,now);
     const changed=await env.DB.prepare(`UPDATE world_rooms SET map_id=?,entrance_x=?,entrance_y=?,facing=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
       AND NOT EXISTS(SELECT 1 FROM world_rooms other WHERE other.map_id=? AND other.entrance_x=? AND other.entrance_y=? AND other.owner_id<>?)
       AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=?)
@@ -824,7 +812,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     let positions;try{positions=await worldNearby(env,player.id,owner.player_id,now);}catch(error){if(error instanceof ApiError)fail(409,error.code==='WORLD_PLAYER_OFFLINE'?'KASAI_LIVE_OFFLINE':'KASAI_LIVE_NOT_NEARBY','同じフィールドで、実際のカサイの近くから話しかけてください。');throw error;}
     if(!Object.hasOwn(WORLD_MAP_BOUNDS,positions.sender.map_id))fail(409,'KASAI_LIVE_NOT_NEARBY','外のフィールドでカサイに話しかけてください。');
     if(positions.sender.status!=='idle'||positions.target.status!=='idle')fail(409,'KASAI_LIVE_BUSY','どちらかが別の操作中です。冒険に戻ってから話しかけてください。');
-    const room=await ensureKasaiRoom(env,now);if(room?.owner_id!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','カサイの部屋を確認できません。');
+    const room=await currentKasaiRoom(env);if(room?.owner_id!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','カサイの部屋はまだ作られていません。運営が壁を向いてAで部屋を作成してから、もう一度誘ってください。');
     await consumeLimit(env,request,`world-kasai-live-start:${player.id}`,12,60000,true);
     const id=crypto.randomUUID(),seed=crypto.getRandomValues(new Uint32Array(1))[0],returns=[positions.sender,positions.target].map(p=>JSON.stringify({map:p.map_id,x:p.x,y:p.y,facing:p.facing}));
     await env.DB.batch([

@@ -39,7 +39,7 @@ test('thirty-two decorations prevent additions but allow moving existing furnitu
 // Network calls are recorded in memory; these checks never touch real rooms.
 function runtime({handle,own=false,others=true}={}) {
   let now=1000,timerId=0,uid=0;const timers=new Map(),events={},globalEvents={},calls=[],messages=[],entered=[],refreshed=[],store=new Map();
-  if(own)store.set(SELF,makeRoom());if(others){store.set(PEER,makeRoom(PEER));store.set(KASAI,makeRoom(KASAI));}
+  if(own)store.set(SELF,makeRoom());if(others)for(const [id,x] of [[PEER,7],[KASAI,9]]){const room=makeRoom(id);room.entrance.x=room.entrance.returnX=x;store.set(id,room);}
   const decode=v=>v.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
   const dataKey=key=>key.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
   class Element {
@@ -72,7 +72,7 @@ function runtime({handle,own=false,others=true}={}) {
   }
   const doc={hidden:false,nodes:[],createElement:tag=>new Element(tag),body:{append(node){doc.nodes.push(node);}},
     addEventListener(type,fn){(events[type]||=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);}};
-  const outdoor={id:'village',name:'はじまりの里',width:12,height:10,tiles:Array.from({length:10},(_,y)=>Array.from({length:12},(_,x)=>x===0||y===0||x===11||y===9||x===4&&y===2?'#':'_').join('')),npcs:[],exits:[],level:[1,4]};
+  const outdoor={id:'village',name:'はじまりの里',width:12,height:10,tiles:Array.from({length:10},(_,y)=>Array.from({length:12},(_,x)=>x===0||y===0||x===11||y===9||[4,7,9].includes(x)&&y===2?'#':'_').join('')),npcs:[],exits:[],level:[1,4]};
   const LT={DATA:{maps:{village:outdoor,forest:{...outdoor,id:'forest'}}},Admin:{player:{id:SELF,name:'みどり',isAdmin:false}},Trade:{isLocked:()=>false}};
   const newEngine=()=>({state:{started:true,map:'village',x:4,y:4,facing:'down'},battle:null,get map(){return LT.DATA.maps[this.state.map];},nearbyNPC(){return null;}});
   const h={LT,doc,store,calls,messages,entered,refreshed,engine:newEngine(),playing:true,bridgeBusy:false,presenceRefreshes:0,freshPresence:true,liveStages:[],
@@ -88,6 +88,7 @@ function runtime({handle,own=false,others=true}={}) {
     async step(ms=0){now+=ms;for(let i=0;i<40;i++){const next=[...timers].filter(([,t])=>t.at<=now).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;timers.delete(next[0]);next[1].fn();await settle();}await settle();},
     async editOwn(){assert(await LT.Rooms.enter(SELF));assert(await LT.Rooms.open());this.click('edit');await settle();assert(this.action('place'));},
     place(itemId,x,y){this.click('item',{roomItem:itemId});this.input('room-x',x);this.input('room-y',y);this.click('place');},
+    marks(){const output=[],original=LT.RoomArt;LT.RoomArt={...original,drawDoor:(ctx,room,options)=>output.push({id:room.id,entrance:copy(room.entrance),active:options.active})};try{LT.Rooms.drawEntrances({},this.engine.map);}finally{LT.RoomArt=original;}return output;},
   };
   LT.Admin.worldRequest=async(url,options={})=>{
     calls.push({path:url,...copy(options)});const supplied=handle?.(url,options,h);if(supplied!==undefined)return supplied;
@@ -96,7 +97,9 @@ function runtime({handle,own=false,others=true}={}) {
     if(url==='/world/rooms/kasai')return {room:copy(store.get(KASAI)||null)};
     if(url.startsWith('/world/rooms?map='))return {rooms:copy([...store.values()].filter(room=>room.entrance.map===decodeURIComponent(url.split('=')[1])))};
     if(url==='/world/rooms'&&options.method==='POST') {
-      const room=makeRoom(LT.Admin.player.id),b=options.body;room.name=b.name;room.entrance={map:b.map,x:b.x,y:b.y,facing:b.facing,returnX:h.engine.state.x,returnY:h.engine.state.y};store.set(room.id,room);return {room:copy(room)};
+      const b=options.body;if(store.has(LT.Admin.player.id))throw Error('部屋は一人一つです。');
+      if([...store.values()].some(room=>room.entrance.map===b.map&&room.entrance.x===b.x&&room.entrance.y===b.y))throw Error('この壁には部屋があります。');
+      const room=makeRoom(LT.Admin.player.id,LT.Admin.player.isAdmin?'kasai':'secret');room.name=b.name;room.entrance={map:b.map,x:b.x,y:b.y,facing:b.facing,returnX:h.engine.state.x,returnY:h.engine.state.y};store.set(room.id,room);return {room:copy(room)};
     }
     if(url.endsWith('/relocate')&&options.method==='POST'){const id=url.split('/').at(-2),room=store.get(id),b=options.body;assert.equal(id,LT.Admin.player.id);if(b.revision!==room.revision)throw Error('別の画面で更新されました。');const updated={...room,entrance:{map:b.map,x:b.x,y:b.y,facing:b.facing,returnX:h.engine.state.x,returnY:h.engine.state.y},revision:room.revision+1};store.set(id,updated);return {room:copy(updated)};}
     const id=url.split('/').at(-1),room=store.get(id);
@@ -126,6 +129,95 @@ test('manager retains the disabled create control off a wall and restores contro
   h.LT.Rooms.closeDialog();h.faceWall();assert(await h.LT.Rooms.open());assert.equal(h.action('create').disabled,false);
   h.input('room-new-name','星と本の部屋');h.click('create');await settle();assert.equal(h.entered.length,1);assert.equal(h.entered[0].roomOwner,SELF);
   assert.equal(h.entered[0].name,'星と本の部屋');assert.equal(h.LT.Rooms.isWorking(),false);assert.equal(h.LT.Rooms.isDialogOpen(),false);
+});
+
+test('A at an empty wall prepares the first room for either player role and sends fresh presence before creation',async()=>{
+  for(const isAdmin of [false,true]){
+    const h=runtime({others:false});if(isAdmin){h.identity(KASAI);h.LT.Admin.player.isAdmin=true;}h.faceWall();
+    assert.match(h.LT.Rooms.hint(),/作成・移転/);assert.equal(h.LT.Rooms.interact(),true);await settle();
+    assert.match(h.dialog().innerHTML,/この壁に部屋を作りますか/);assert(h.dialog().querySelector('#room-entrance-preview'));
+    assert.equal(h.dialog().querySelector('#room-new-name').value,isAdmin?'カサイのひみつ部屋':'みどりの秘密部屋');
+    assert(!h.calls.some(call=>call.method==='POST'),'A first presents the destination and name for review');
+    const presence=deferred();h.LT.World.refreshPresence=async()=>{h.presenceRefreshes++;return presence.promise;};h.click('create');await settle();
+    assert.equal(h.presenceRefreshes,1);assert(!h.calls.some(call=>call.method==='POST'),'Creation must wait until the current wall position is published');
+    presence.resolve(true);await settle();assert.equal(h.store.size,1);assert.equal(h.entered.length,1);assert.equal(h.entered[0].roomKindTag,isAdmin?'kasai':'secret');
+    const saved=h.store.get(isAdmin?KASAI:SELF);assert.deepEqual(saved.entrance,{map:'village',x:4,y:2,facing:'up',returnX:4,returnY:3});
+    h.LT.Rooms.leave();h.faceWall();assert.deepEqual(h.marks().map(mark=>[mark.id,mark.entrance.x,mark.entrance.y,mark.active]),[[saved.id,4,2,true]]);
+  }
+});
+
+test('A on an occupied wall visits its current room even before any area list is loaded',async()=>{
+  for(const id of [SELF,PEER,KASAI]){
+    const h=runtime({others:false}),room=makeRoom(id);h.store.set(id,room);h.faceWall();
+    assert.equal(h.LT.Rooms.interact(),true);await settle();assert.equal(h.entered.length,1);assert.equal(h.entered[0].roomOwner,id);
+    assert(h.calls.some(call=>call.path==='/world/rooms?map=village'));assert.equal(h.action('create'),undefined);assert.equal(h.action('confirm-relocate'),undefined);
+    assert(!h.calls.some(call=>call.method==='POST'),'Existing entrance visits cannot create or replace a room');
+  }
+});
+
+test('a cached empty wall is rechecked before A can offer creation or relocation',async()=>{
+  for(const own of [false,true]){
+    const h=runtime({own,others:false});h.faceMoveWall();await h.LT.Rooms.open();h.LT.Rooms.closeDialog();
+    const visitor=makeRoom(PEER);visitor.entrance={map:'village',x:0,y:5,facing:'left',returnX:1,returnY:5};h.store.set(PEER,visitor);
+    assert.equal(h.LT.Rooms.interact(),true);await settle();assert.equal(h.entered.at(-1).roomOwner,PEER);assert.equal(h.action('confirm-relocate'),undefined);assert.equal(h.action('create'),undefined);
+    assert(!h.calls.some(call=>call.method==='POST'));
+  }
+});
+
+test('A at another empty wall reviews relocation of the existing room and keeps its name and furniture',async()=>{
+  for(const id of [SELF,KASAI]){
+    const h=runtime({others:false}),room=makeRoom(id);room.decorations=[item('plant',2,3,0,'kept')];h.store.set(id,room);h.identity(id);h.LT.Admin.player.isAdmin=id===KASAI;h.faceMoveWall();
+    assert.equal(h.LT.Rooms.interact(),true);await settle();assert(h.action('confirm-relocate'));assert.equal(h.action('create'),undefined);assert.match(h.dialog().innerHTML,/家具と部屋の名前/);
+    h.click('confirm-relocate');await settle();assert.equal(h.store.size,1);assert.equal(h.store.get(id).id,id);assert.equal(h.store.get(id).name,room.name);assert.deepEqual(h.store.get(id).decorations,room.decorations);
+    assert.deepEqual(h.marks().map(mark=>[mark.id,mark.entrance.x,mark.entrance.y]),[[id,0,5]]);assert.equal(h.engine.state.map,'village');assert.equal(h.presenceRefreshes,1);
+    assert(!h.calls.some(call=>call.path==='/world/rooms'&&call.method==='POST'));
+  }
+});
+
+test('wall interaction leaves ordinary tiles, NPCs, doors and shared-room walls to the normal game interaction',async()=>{
+  for(const kind of ['floor','npc','exit','shared-room']){
+    const h=runtime({others:false});if(kind!=='floor')h.faceWall();
+    if(kind==='npc')h.engine.map.npcs=[{x:4,y:2}];if(kind==='exit')h.engine.map.exits=[{x:4,y:2}];if(kind==='shared-room')h.engine.map.sharedRoom=true;
+    assert.equal(h.LT.Rooms.interact(),false,kind);assert.equal(h.LT.Rooms.hint(),null,kind);assert.equal(h.calls.length,0,kind);
+  }
+});
+
+test('failed or stale wall lookups never turn an unknown entrance into a creation form',async()=>{
+  for(const mode of ['failure','wall','identity','game']){
+    const pending=deferred(),h=runtime({others:false,handle:url=>url.startsWith('/world/rooms?map=')?pending.promise:undefined});h.faceWall();assert.equal(h.LT.Rooms.interact(),true);await settle();
+    if(mode==='wall')h.faceMoveWall();if(mode==='identity')h.identity(PEER);if(mode==='game')h.replaceGame();
+    if(mode==='failure')pending.reject(Error('入口の接続を確認してください。'));else pending.resolve({rooms:[]});await settle();
+    assert.equal(h.action('create'),undefined,mode);assert.equal(h.action('confirm-relocate'),undefined,mode);assert.equal(h.entered.length,0,mode);assert.equal(h.LT.Rooms.isWorking(),false,mode);assert(!h.calls.some(call=>call.method==='POST'));
+  }
+});
+
+test('creation and relocation cannot publish a stale wall after presence synchronization changes position or identity',async()=>{
+  for(const move of [false,true])for(const change of ['position','facing','identity','no-presence']){
+    const h=runtime({own:move,others:false});move?h.faceMoveWall():h.faceWall();assert.equal(h.LT.Rooms.interact(),true);await settle();
+    const before=copy([...h.store.values()]),presence=deferred();h.LT.World.refreshPresence=()=>presence.promise;h.click(move?'confirm-relocate':'create');await settle();
+    if(change==='position')move?h.faceWall():h.faceMoveWall();if(change==='facing')h.engine.state.facing='down';if(change==='identity')h.identity(PEER);
+    presence.resolve(change!=='no-presence');await settle();
+    assert(!h.calls.some(call=>call.method==='POST'),`${move?'Relocate':'Create'} continued after ${change}`);assert.deepEqual([...h.store.values()],before);assert.equal(h.entered.length,0);assert.equal(h.LT.Rooms.isWorking(),false);
+  }
+});
+
+test('a saved wall response cannot teleport or replace entrance markers after the player moves to another cell',async()=>{
+  for(const move of [false,true]){
+    const response=deferred(),h=runtime({own:move,others:false,handle:(url,options)=>options.method==='POST'&&(url==='/world/rooms'||url.endsWith('/relocate'))?response.promise:undefined});
+    move?h.faceMoveWall():h.faceWall();assert.equal(h.LT.Rooms.interact(),true);await settle();h.click(move?'confirm-relocate':'create');await settle();
+    assert.equal(h.calls.filter(call=>call.method==='POST').length,1);const saved=makeRoom();if(move){saved.revision=2;saved.entrance={map:'village',x:0,y:5,facing:'left',returnX:1,returnY:5};}
+    move?h.faceWall():h.faceMoveWall();response.resolve({room:saved});await settle();
+    assert.equal(h.entered.length,0);assert.equal(h.engine.state.map,'village');assert.equal(h.LT.Rooms.current(),null);assert.equal(h.LT.Rooms.isWorking(),false);
+    assert.deepEqual(h.marks().map(mark=>[mark.entrance.x,mark.entrance.y]),move?[[4,2]]:[],'A late response changed the doorway shown for the reviewed wall');
+  }
+});
+
+test('an older area poll cannot redraw the previous entrance after a successful relocation',async()=>{
+  const pending=deferred();let delayNext=false;
+  const h=runtime({own:true,others:false,handle:url=>{if(delayNext&&url.startsWith('/world/rooms?map=')){delayNext=false;return pending.promise;}}});
+  h.faceMoveWall();await h.LT.Rooms.open();const oldRoom=copy(h.store.get(SELF));delayNext=true;await h.step(1200);h.click('relocate');h.click('confirm-relocate');await settle();
+  assert.deepEqual(h.marks().map(mark=>[mark.entrance.x,mark.entrance.y]),[[0,5]]);pending.resolve({rooms:[oldRoom]});await settle();
+  assert.deepEqual(h.marks().map(mark=>[mark.entrance.x,mark.entrance.y]),[[0,5]],'The old entrance reappeared when a stale area response completed');
 });
 
 test('any visitor can enter public rooms, while only the owner sees furniture editing',async()=>{

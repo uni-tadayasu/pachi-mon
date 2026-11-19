@@ -172,6 +172,19 @@ test('door overlays distinguish ordinary and Kasai rooms without changing the ou
   assert.equal(bounds(blank).opaque,0,'Room rendering intercepted an ordinary field asset');
 });
 
+test('entrance pictograms keep a sharp bright outline within one wall tile and visibly highlight the facing door',()=>{
+  for(const kind of ['secret','kasai']){
+    const input=record(kind);input.entrance.x=input.entrance.y=0;const before=JSON.stringify(input),views=[];
+    for(const active of [false,true]){
+      const view=canvas.createCanvas(96,96);assert(art.drawDoor(view.getContext('2d'),input,{label:false,active}));assertTwoPixelGrid(view);
+      const pixels=bounds(view);assert(pixels.left>=0&&pixels.top>=0&&pixels.right<64&&pixels.bottom<64,'A doorway covered the adjacent player tile');
+      let bright=0,dark=0;for(let i=0;i<pixels.data.length;i+=4){const [r,g,b,a]=pixels.data.subarray(i,i+4);if(a!==255)continue;if(Math.min(r,g,b)>=140&&Math.max(r,g,b)>=200)bright++;if(Math.max(r,g,b)<110)dark++;}
+      assert(bright>=500&&dark>=500,'The doorway lost its contrasting outline and dark opening against the wall');views.push(view);
+    }
+    assert.notDeepEqual(views[0].toBuffer('image/png'),views[1].toBuffer('image/png'),'Facing an entrance did not highlight the doorway');assert.equal(JSON.stringify(input),before);
+  }
+});
+
 test('shipped world renderer uses room artwork, live revision refresh, and both Kasai participants',async()=>{
   const {runtime}=require('./check-art.cjs'),{LT,engine:liveEngine,imageErrors}=await runtime();assert.equal(imageErrors.length,0);
   if(!LT.RoomArt)attachArt(LT);
