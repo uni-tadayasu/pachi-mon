@@ -20,7 +20,9 @@ const tracks = audio.LT.AUDIO_MANIFEST;
 // ── The ladder.
 const stages = D.regionIds.map(id => D.maps[id]);
 assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length, 256, '256 species in the public dex');
-assert.equal(Object.values(D.species).filter(s=>s.hiddenDex).length, 3, 'three glitch-only companions live outside the dex');
+assert.equal(Object.values(D.species).filter(s=>s.hiddenDex).length, 11, 'eleven special companions live outside the dex');
+assert.equal(D.glitchLine.ids.length, 3, 'the original Void lineage still has three stages');
+assert.equal(D.offDexLines.ids.length, 8, 'the three added families contain exactly eight forms');
 assert.equal(stages.length, 128, '128 stages');
 assert.equal(tracks.length, 64, '64 BGM tracks');
 assert.equal(new Set(tracks.map(t => t.id)).size, 64);

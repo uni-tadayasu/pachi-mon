@@ -10,8 +10,8 @@ for(const script of fs.readFileSync(require.resolve('../index.html'),'utf8').mat
  if(/\bsrc=|application\/ld\+json/.test(script[1]))continue;
  vm.runInContext(script[2],typeRuntime);if(typeRuntime.LT?.Engine)break;
 }
-function harness(){
- const memory=new Map(),calls=[],timers=[],doc={hidden:false,activeElement:null,addEventListener(){},body:{append(node){doc.dialog=node;}}};
+function harness({handle}={}){
+ const memory=new Map(),calls=[],timers=[],events=[],messages=[],doc={hidden:false,activeElement:null,addEventListener(){},dispatchEvent(event){events.push(event);return true;},body:{append(node){doc.dialog=node;}}};
  class Element{
   constructor(tag,attrs=''){this.tag=tag;this.listeners={};this.dataset={};this.open=false;this.disabled=/\sdisabled(?:\s|$)/.test(attrs);this.children=[];this.scrollTop=0;this.value='';this.id='';this.textContent='';for(const m of attrs.matchAll(/([\w-]+)="([^"]*)"/g)){const [_,name,value]=m;if(name.startsWith('data-'))this.dataset[name.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=value;else this[name==='class'?'className':name]=value;}}
   setAttribute(name,value){this[name]=value;}
@@ -26,12 +26,12 @@ function harness(){
   get innerHTML(){return this.html||'';}
  }
  doc.createElement=tag=>new Element(tag);
- const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}},ctx={console,crypto:webcrypto,document:doc,
+ const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}},ctx={console,crypto:webcrypto,document:doc,CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},
   localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},addEventListener(){},
   LT:{DATA:typeRuntime.LT.DATA,TypeSystem:typeRuntime.LT.TypeSystem,Abilities:typeRuntime.LT.Abilities,Art:{creature(){}},
-   Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,checkTrade:()=>({ok:true}),commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
+   Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(handle)return handle(path,options,ctx);if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,toast:message=>messages.push(message),checkTrade:()=>({ok:true}),commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
  let source=fs.readFileSync(require.resolve('../trade-client.js'),'utf8');source=source.replace('\n  if(controller.isLocked())void resume();','\n  globalThis.__tradeController=controller;');vm.createContext(ctx);vm.runInContext(source,ctx);
- return{ctx,doc,memory,calls,engine,timers,async click(action){const button=doc.dialog.children.find(x=>x.dataset.trade===action);assert(button,'Missing action '+action);await doc.dialog.listeners.click({target:button});},blur(){doc.activeElement=null;doc.dialog.listeners.focusout();for(const timer of timers.filter(t=>t.delay===0))timer.fn();}};
+ return{ctx,doc,memory,calls,engine,timers,events,messages,async click(action){const button=doc.dialog.children.find(x=>x.dataset.trade===action);assert(button,'Missing action '+action);await doc.dialog.listeners.click({target:button});},blur(){doc.activeElement=null;doc.dialog.listeners.focusout();for(const timer of timers.filter(t=>t.delay===0))timer.fn();}};
 }
 
 test('exchange dialog is accessible, labels both offers and escapes player content',async()=>{
@@ -77,4 +77,103 @@ test('public game guard sees another tab pending record before a storage event',
 test('completed screen appears only after durable save and acknowledgement',async()=>{
  const h=harness();h.ctx.serverTrade={...room(),state:'committed',receipt:{id:'trade:'+ID}};h.ctx.saveOk=false;await h.ctx.LT.Trade.open();assert(h.ctx.LT.Trade.isLocked());assert(!h.calls.some(x=>x.path.endsWith('/ack')));assert.match(h.doc.dialog.innerHTML,/受け取りを確認中/);
  h.ctx.saveOk=true;await h.click('refresh');assert(!h.ctx.LT.Trade.isLocked());assert(h.calls.some(x=>x.path.endsWith('/ack')));assert.match(h.doc.dialog.innerHTML,/交換が完了しました/);
+});
+
+const encounter={id:'Pb123456789012345',name:'<カサイ & 旅人>',isAdmin:true,avatar:'kasai'};
+const waitingRoom=()=>({...room(),revision:0,guest:null,host:{...owner,monster:null,confirmed:false}});
+function fieldService(path,options,ctx){
+ if(path==='/trades')ctx.serverTrade=waitingRoom();
+ if(path==='/trades/join')ctx.serverTrade={...room(),you:'guest',host:{id:encounter.id,name:encounter.name,monster:null,confirmed:false},guest:{...owner,monster:null,confirmed:false}};
+ if(path.endsWith('/cancel')){
+  if(options.body.waitingOnly&&ctx.serverTrade.guest)return{trade:copy(ctx.serverTrade)};
+  ctx.serverTrade.state='cancelled';
+ }
+ return{trade:copy(ctx.serverTrade)};
+}
+
+test('field host creates once, calls room callback once, escapes counterpart and emits lifecycle state',async()=>{
+ const h=harness({handle:fieldService}),codes=[];
+ assert.equal(await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async code=>codes.push(code)}),true);
+ assert.deepEqual(codes,['ABC234']);assert.equal(h.calls.filter(call=>call.path==='/trades').length,1);
+ assert.equal(h.calls.filter(call=>call.path.endsWith('/confirm')).length,0);
+ assert.deepEqual(copy(h.ctx.LT.Trade.worldState()),{active:true,connected:false,state:'open'});
+ assert.match(h.doc.dialog.innerHTML,/&lt;カサイ &amp; 旅人&gt;とのフィールド交換/);
+ assert.match(h.doc.dialog.querySelector('.trade-world-notice').textContent,/返事を待っています/);
+ assert(h.events.some(event=>event.type==='pachi-trade-state'&&event.detail.active));
+ h.ctx.LT.Trade.setWorldNotice('<返事> & 待機中');assert.equal(h.doc.dialog.querySelector('.trade-world-notice').textContent,'<返事> & 待機中');
+ assert(!h.doc.dialog.innerHTML.includes('<返事>'));
+});
+
+test('URL invitation only fills code; explicit field acceptance autojoins without confirming an exchange',async()=>{
+ let h=harness({handle:fieldService});
+ assert.equal(await h.ctx.LT.Trade.open({joinCode:'ABC234'}),true);
+ assert.equal(h.doc.dialog.querySelector('#trade-code-input').value,'ABC234');assert(!h.calls.some(call=>call.path==='/trades/join'));
+ h=harness({handle:fieldService});
+ assert.equal(await h.ctx.LT.Trade.open({autoJoin:true,joinCode:'ABC234',encounter}),true);
+ assert.equal(h.calls.filter(call=>call.path==='/trades/join').length,1);
+ assert(!h.calls.some(call=>call.path.endsWith('/offer')||call.path.endsWith('/confirm')));
+ assert.deepEqual(copy(h.ctx.LT.Trade.worldState()),{active:true,connected:true,state:'open'});
+});
+
+test('field automatic actions respect local and server-only recovery instead of inviting to a previous room',async()=>{
+ for(const local of [false,true])for(const autoHost of [false,true]){
+  const h=harness({handle:fieldService});h.ctx.serverTrade=room();
+  if(local)h.memory.set(key,JSON.stringify({version:1,ownerId:owner.id,roomId:ID,code:'ABC234'}));
+  let callbacks=0;
+  assert.equal(await h.ctx.LT.Trade.open({...(autoHost?{autoHost:true}:{autoJoin:true,joinCode:'ABC234'}),encounter,onRoomReady:async()=>callbacks++}),false);
+  assert.equal(callbacks,0);assert(!h.calls.some(call=>call.path==='/trades'||call.path==='/trades/join'));
+  assert(h.ctx.LT.Trade.isLocked());assert(h.doc.dialog.open);
+ }
+});
+
+test('field host does not publish a room recovered during the second active-room check',async()=>{
+ let checks=0,callbacks=0;
+ const h=harness({handle:(path,options,ctx)=>{if(path==='/trades/active'&&++checks===2)ctx.serverTrade=waitingRoom();return fieldService(path,options,ctx);}});
+ assert.equal(await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async()=>callbacks++}),false);
+ assert.equal(callbacks,0);assert(!h.calls.some(call=>call.path==='/trades'));assert(h.ctx.LT.Trade.isLocked());
+});
+
+test('failed field invite cancels only its own empty room and returns to field',async()=>{
+ const h=harness({handle:fieldService});
+ assert.equal(await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async()=>{throw Error('相手は移動しました');}}),false);
+ const cancel=h.calls.find(call=>call.path.endsWith('/cancel'));
+ assert.deepEqual(copy(cancel.body),{waitingOnly:true,expectedRevision:0});
+ assert(!h.ctx.LT.Trade.isLocked());assert(!h.doc.dialog.open);assert(!h.ctx.LT.tradeActive);
+ assert(h.messages.includes('相手は移動しました'));assert.equal(h.events.at(-1).detail.active,false);
+});
+
+test('field waiting cleanup preserves a room if a guest joins concurrently',async()=>{
+ const h=harness({handle:(path,options,ctx)=>{
+  if(path.endsWith('/cancel')){ctx.serverTrade.guest=room().guest;ctx.serverTrade.revision++;}
+  return fieldService(path,options,ctx);
+ }});
+ await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async()=>{}});
+ assert.equal(await h.ctx.LT.Trade.cancelWorldWait('期限切れ'),false);
+ assert.equal(h.ctx.__tradeController.trade.state,'open');assert(h.ctx.LT.Trade.isLocked());assert(h.doc.dialog.open);
+ assert.equal(h.ctx.LT.Trade.worldState().connected,true);
+});
+
+test('field waiting cleanup does not cancel manually opened, joined, or committed rooms',async()=>{
+ let h=harness({handle:fieldService});h.ctx.serverTrade=waitingRoom();await h.ctx.LT.Trade.open();
+ assert.equal(await h.ctx.LT.Trade.cancelWorldWait(),false);assert(!h.calls.some(call=>call.path.endsWith('/cancel')));
+ h=harness({handle:fieldService});await h.ctx.LT.Trade.open({autoJoin:true,joinCode:'ABC234',encounter});
+ assert.equal(await h.ctx.LT.Trade.cancelWorldWait(),false);assert(!h.calls.some(call=>call.path.endsWith('/cancel')));
+ h=harness({handle:fieldService});await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async()=>{}});
+ h.ctx.serverTrade={...room(),state:'committed',receipt:{id:'trade:'+ID}};
+ assert.equal(await h.ctx.LT.Trade.cancelWorldWait(),false);assert(!h.calls.some(call=>call.path.endsWith('/cancel')));
+ assert(h.calls.some(call=>call.path.endsWith('/ack')));assert(h.doc.dialog.open);assert.match(h.doc.dialog.innerHTML,/交換が完了しました/);
+});
+
+test('field notices update without replacing a focused offer selector',async()=>{
+ const h=harness({handle:fieldService});await h.ctx.LT.Trade.open({autoHost:true,encounter,onRoomReady:async()=>{}});
+ const select=h.doc.dialog.querySelector('#trade-monster');select.focus();
+ h.ctx.LT.Trade.setWorldNotice('相手が参加しました');
+ assert.equal(h.doc.dialog.querySelector('#trade-monster'),select);assert.equal(h.doc.activeElement,select);
+ assert.equal(h.doc.dialog.querySelector('.trade-world-notice').textContent,'相手が参加しました');
+});
+
+test('invalid automatic mode combinations cannot create or join a room',async()=>{
+ for(const options of [{autoHost:true,autoJoin:true,joinCode:'ABC234'},{autoHost:true,joinCode:'ABC234'},{autoJoin:true}]){
+  const h=harness({handle:fieldService});assert.equal(await h.ctx.LT.Trade.open(options),false);assert.equal(h.calls.length,0);assert.equal(h.doc.dialog,undefined);
+ }
 });

@@ -59,6 +59,18 @@
     nullva:{file:'assets/nullva-v46.png',stage:1},
     zeroveil:{file:'assets/zeroveil-v46.png',stage:2}
   });
+  // The numbered references are separate species, including their own rear
+  // views. These stay out of the public individual-art/dex catalogue.
+  const offDexArt=Object.freeze({
+    pearlmi:{file:'assets/offdex-v54-01.png',stage:0},
+    pearlgoa:{file:'assets/offdex-v54-02.png',stage:1},
+    pearlseria:{file:'assets/offdex-v54-03.png',stage:2},
+    shimomaru:{file:'assets/offdex-v54-04.png',stage:0},
+    shimorei:{file:'assets/offdex-v54-05.png',stage:1},
+    hyogald:{file:'assets/offdex-v54-06.png',stage:2},
+    rurikoro:{file:'assets/offdex-v54-07.png',stage:0},
+    rurigorm:{file:'assets/offdex-v54-08.png',stage:1}
+  });
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
   function lineage(id) {
@@ -92,12 +104,17 @@
     if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(glitchArt[id].file,root).href,true);
     return uniqueSheets.get(id);
   }
+  function requestOffDex(id){
+    if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(offDexArt[id].file,root).href,true);
+    return uniqueSheets.get(id);
+  }
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
       if(id==='futo'){for(const rear of back==='both'?[false,true]:[!!back])requests.push(futoRecords[rear?'back':'front'].promise);continue;}
       if(id==='arvelion'||id==='floravelle'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
       if(glitchArt[id]&&LT.DATA?.species?.[id]){requests.push(requestGlitch(id).promise);continue;}
+      if(offDexArt[id]&&LT.DATA?.species?.[id]){requests.push(requestOffDex(id).promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
@@ -280,6 +297,7 @@
     if(id==='futo')return futoSprite(back);
     if(id==='arvelion'||id==='floravelle')return uniqueSprite(id,back);
     if(glitchArt[id]){requestGlitch(id);return uniqueSprite(id,back);}
+    if(offDexArt[id]){requestOffDex(id);return uniqueSprite(id,back);}
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -400,6 +418,9 @@
     if(glitchArt[id])return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'glitch-authored',authoredBack:!!back,stage:glitchArt[id].stage}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:glitchArt[id].stage};
+    if(offDexArt[id])return uniqueSheets.get(id)?.loaded
+      ? {direction:back?1:-1,source:'offdex-authored',authoredBack:!!back,stage:offDexArt[id].stage}
+      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:offDexArt[id].stage};
     const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
     const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
     let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
@@ -414,6 +435,7 @@
     forms:groups.map(row=>row.slice()),
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       glitchRequested:Object.keys(glitchArt).filter(id=>uniqueSheets.has(id)).length,glitchLoaded:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.loaded).length,glitchFailed:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.failed).length,
+      offDexRequested:Object.keys(offDexArt).filter(id=>uniqueSheets.has(id)).length,offDexLoaded:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.loaded).length,offDexFailed:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.failed).length,
       futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
       futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };

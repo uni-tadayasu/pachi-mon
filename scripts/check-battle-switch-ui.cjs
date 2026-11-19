@@ -75,12 +75,13 @@ for(const changed of ['hp','uid','turn','active','pending','engine','battle','bu
   before=soloSnapshot();callback();assert.equal(c.actions,0,changed+' invalidates confirmation');assert.equal(soloSnapshot(),before,changed+' preserves the current state');
 }
 const onlineNodes=new Map();
-const online=vm.createContext({console,D,performance:{now:()=>1},LT:{BattleVFX:{onlineBusy:()=>false}},peer:{role:0,connected:true,state:'open'},
+const online=vm.createContext({console,D,performance:{now:()=>1},LT:{BattleVFX:{onlineBusy:()=>false},TypeSystem:model.LT.TypeSystem,Abilities:model.LT.Abilities},peer:{role:0,connected:true,state:'open'},
   view:null,session:null,orders:[],orderTurn:0,submitting:false,switchConfirmation:null,playbackLocked:false,lastShown:-1,mode:'single',room:'TEST',error:'',
   esc,monLabel:mon=>mon.nickname||D.species[mon.species].name,modeName:()=>online.mode==='single'?'シングルバトル':'ダブルバトル',portrait:()=>'<canvas></canvas>',$:id=>onlineNodes.get(id),
   body:{set innerHTML(markup){online.markup=markup;onlineNodes.clear();for(const match of markup.matchAll(/id="([^"]+)"/g))onlineNodes.set(match[1],{hidden:false,focus(){online.focused=match[1];}});}},
   failure(message){online.error=message?.message||message;online.render();},render(){online.renderBattle();},close(){online.closed=true;}
 });
+vm.runInContext(extract('  function linkAbility(value,disclosure=false){','  const monLabel='),online);
 vm.runInContext(extract('  function linkConditions(mon){','  function draw(){const canvas='),online);
 vm.runInContext(extract('  function requestClose(){','  function setupSession(role){'),online);
 const ids=Object.keys(D.species).filter(id=>!D.species[id].specialOnly);

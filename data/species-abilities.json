@@ -526,6 +526,14 @@
     "floravelle": "patient_force",
     "nullmie": "shadow_reader",
     "nullva": "shadow_reader",
-    "zeroveil": "shadow_reader"
+    "zeroveil": "shadow_reader",
+    "pearlmi": "layered_shell",
+    "pearlgoa": "layered_shell",
+    "pearlseria": "layered_shell",
+    "shimomaru": "powerful_limbs",
+    "shimorei": "powerful_limbs",
+    "hyogald": "powerful_limbs",
+    "rurikoro": "steady_core",
+    "rurigorm": "steady_core"
   }
 }

@@ -24,6 +24,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   source=source.replace('mountSettings();void sync();',hooks);
   const ctx={console,crypto:webcrypto,AbortController,URL,Blob,btoa,atob,
     setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,
+    addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     MutationObserver:class{observe(){}},
     document:{getElementById:element,addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},hidden:false},
@@ -46,7 +47,9 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   ctx.window=ctx;vm.createContext(ctx);vm.runInContext(source,ctx,{filename:'admin-console.js'});
   // Clicks on the service panel's buttons, as the page delivers them.
   const press=action=>{const button={dataset:{adminAction:action},disabled:false,isConnected:true};for(const fn of listeners.click||[])fn({target:{closest:()=>button}});return button;};
-  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField,press,clock};
+  const emitStorage=event=>{for(const fn of listeners.storage||[])fn({storageArea:ctx.localStorage,...event});};
+  const changeIdentity=raw=>{const key='pachi-player-identity-v1',oldValue=storage.get(key)||null;if(raw===null)storage.delete(key);else storage.set(key,raw);emitStorage({key,newValue:raw,oldValue});};
+  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField,press,clock,emitStorage,changeIdentity};
 }
 function adopt(h,token=TOKEN_A,player=PLAYER_A){h.api.adoptIdentity({token,id:player.id,name:player.name},player,true);}
 
@@ -84,6 +87,66 @@ test('stale registration cannot overwrite a restored player',async()=>{
   await assert.rejects(first,error=>error.staleIdentity===true);
   assert.equal(h.ctx.LT.Admin.player.id,PLAYER_B.id);
   assert.equal(JSON.parse(storage.get('pachi-player-identity-v1')).token,TOKEN_B);
+});
+
+test('cross-tab identity changes use the new token and reject old world responses without trusting cached roles',async()=>{
+  const old=deferred();
+  const h=harness({handle:c=>c.path==='/world/presence'?(c.token===TOKEN_A?old.promise:response({self:{id:PLAYER_B.id,isAdmin:false}})):null});
+  adopt(h);
+  const request=h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+  await until(()=>h.calls.some(c=>c.path==='/world/presence'));
+  let closed=0;const dialog={open:true,close(){closed++;this.open=false;}};h.api.attachConsole(dialog,{playerId:PLAYER_A.id,claimedAt:1});
+  const raw=JSON.stringify({token:TOKEN_B,id:PLAYER_A.id,name:'fake cached name',isAdmin:true});
+  h.changeIdentity(raw);
+  assert.equal(h.ctx.LT.Admin.player,null);assert.equal(closed,1);
+  assert.equal(h.storage.get('pachi-player-identity-v1'),raw,'The storage event must not echo old identity data back to disk');
+  await h.api.ensureIdentity();await until(()=>h.ctx.LT.Admin.player?.id===PLAYER_B.id);
+  old.resolve(response({self:{id:PLAYER_A.id,isAdmin:true}}));
+  await assert.rejects(request,error=>error.staleIdentity===true);
+  await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+  assert.equal(h.calls.filter(c=>c.path==='/world/presence').at(-1).token,TOKEN_B);
+  assert.equal(h.ctx.LT.Admin.player.isAdmin,false);assert.equal(h.ctx.LT.Admin.player.name,PLAYER_B.name);
+  assert.equal(JSON.parse(h.storage.get('pachi-player-identity-v1')).token,TOKEN_B);
+});
+
+test('cross-tab switch discards old pagination and registration writes',async()=>{
+  const oldPage=deferred(),h=harness({handle:c=>c.path==='/me'&&c.token===TOKEN_A?oldPage.promise:null});
+  adopt(h);const first=h.api.sync();await until(()=>h.calls.some(c=>c.path==='/me'));
+  h.changeIdentity(JSON.stringify({token:TOKEN_B,name:'B'}));
+  oldPage.resolve(response({player:PLAYER_A,adminExists:true,grants:[{grantId:'old-player-gift'}],initialCompanions:[{grantId:'admin-legendary:'+PLAYER_A.id,species:'arvelion',level:70}],nextCursor:42}));
+  await first;await until(()=>h.ctx.LT.Admin.player?.id===PLAYER_B.id);
+  assert.equal(h.applied.length,0);assert.equal(h.initial.length,0);
+  assert(!h.calls.some(c=>c.path==='/me'&&c.token===TOKEN_A&&c.search.includes('cursor=')));
+
+  const oldRegister=deferred(),storage=new Map([['pachi-player-identity-v1',JSON.stringify({token:TOKEN_A,name:'A'})]]);
+  const second=harness({storage,handle:c=>c.path==='/register'&&c.body.token===TOKEN_A?oldRegister.promise:null});
+  const pending=second.api.ensureIdentity();await until(()=>second.calls.some(c=>c.path==='/register'));
+  second.changeIdentity(JSON.stringify({token:TOKEN_B,name:'B'}));
+  await second.api.ensureIdentity();oldRegister.resolve(response({player:PLAYER_A,adminExists:true}));
+  await assert.rejects(pending,error=>error.staleIdentity===true);
+  assert.equal(second.ctx.LT.Admin.player.id,PLAYER_B.id);assert.equal(JSON.parse(storage.get('pachi-player-identity-v1')).token,TOKEN_B);
+});
+
+test('cross-tab metadata refresh is server-authoritative and malformed or superseded events are ignored',async()=>{
+  const h=harness();adopt(h);
+  for(const raw of ['not JSON',JSON.stringify({token:[TOKEN_B],isAdmin:true}),JSON.stringify({token:'weak'}),JSON.stringify([TOKEN_B])]){
+    h.changeIdentity(raw);assert.equal(h.ctx.LT.Admin.player.id,PLAYER_A.id);assert.equal(h.storage.get('pachi-player-identity-v1'),raw);assert.equal(h.calls.length,0);
+  }
+  const metadata=JSON.stringify({token:TOKEN_A,id:PLAYER_B.id,name:'Forged',isAdmin:false});
+  h.changeIdentity(metadata);await h.api.sync({fresh:true});
+  assert.equal(h.ctx.LT.Admin.player.id,PLAYER_A.id);assert.equal(h.ctx.LT.Admin.player.name,PLAYER_A.name);assert.equal(h.ctx.LT.Admin.player.isAdmin,true);
+  assert.equal(h.storage.get('pachi-player-identity-v1'),metadata);assert(!h.calls.some(c=>c.path==='/register'));
+  const count=h.calls.length;h.storage.set('pachi-player-identity-v1',metadata);
+  h.emitStorage({key:'pachi-player-identity-v1',newValue:JSON.stringify({token:TOKEN_B,name:'B'})});
+  assert.equal(h.calls.length,count);assert.equal(h.ctx.LT.Admin.player.id,PLAYER_A.id);
+});
+
+test('removing identity in another tab retires its token without writing a replacement',async()=>{
+  const old=deferred(),h=harness({handle:c=>c.path==='/world/presence'?old.promise:null});adopt(h);
+  const pending=h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});await until(()=>h.calls.length===1);
+  h.changeIdentity(null);assert.equal(h.ctx.LT.Admin.player,null);assert.equal(h.storage.has('pachi-player-identity-v1'),false);assert.equal(h.calls.length,1);
+  old.resolve(response({self:{id:PLAYER_A.id,isAdmin:true}}));await assert.rejects(pending,error=>error.staleIdentity===true);
+  assert.equal(h.ctx.LT.Admin.player,null);assert.equal(h.storage.has('pachi-player-identity-v1'),false);
 });
 
 test('fresh sync waits for a new config read after the running pass',async()=>{

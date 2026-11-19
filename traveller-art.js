@@ -3,6 +3,7 @@
  * traveller (teal coat, ochre cap, rust scarf), four NPC professions, four views.
  * Revision 33 sheets preserve fine material details and transparent silhouettes.
  * Revision 52 samples the original artwork on a finer 48×64 display grid.
+ * Revision 55 adds Kasai's reference-based, four-direction walking sheet.
  * Image atlases are authored for this project. Runtime extraction retains the
  * transparent silhouettes and a shared feet baseline for world depth sorting.
  */
@@ -10,7 +11,7 @@
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
   const directions = ['down', 'left', 'right', 'up'];
-  const atlas = { hero: null, female: null, npcs: null };
+  const atlas = { hero: null, female: null, npcs: null, kasai: null };
   const dimensions = {};
   const cache = new Map();
   const MAX_CACHE = 160;
@@ -57,7 +58,22 @@
     return result;
   }
 
-  function load(name, file, rows) {
+  // Kasai's authored sheet has directions in rows and walking poses in columns.
+  // Fixed measured crops and foot anchors avoid column-margin drift; metadata
+  // is also supplied in assets/kasai-overworld-v55.json for asset tooling.
+  function splitKasai(img) {
+    const width = img.naturalWidth || img.width, height = img.naturalHeight || img.height;
+    if (width !== 1086 || height !== 1448) throw new Error('Unexpected Kasai sheet dimensions');
+    const columnX = [110, 442, 774], rowY = [13, 369, 725, 1083];
+    const feetY = [339, 336, 336, 338], result = [];
+    for (let pose = 0; pose < 3; pose++) for (let direction = 0; direction < 4; direction++) {
+      result.push({ cv: img, x: columnX[pose], y: rowY[direction], w: 202, h: 350,
+        anchorX: 101, anchorY: feetY[direction], fitWidth: 160, fitHeight: 330 });
+    }
+    return result;
+  }
+
+  function load(name, file, rows, splitter = split) {
     return new Promise(resolve => {
       const img = new Image();
       let settled = false, done = false;
@@ -75,10 +91,10 @@
       img.onload = () => {
         if (done) return;
         try {
-          const cells = split(img, rows);
+          const cells = splitter(img, rows);
           if (cells.some(cell => !cell)) throw new Error('An authored traveller view is empty');
           atlas[name] = cells;
-          dimensions[name] = { width: Math.max(...cells.map(cell => cell.w)), height: Math.max(...cells.map(cell => cell.h)) };
+          dimensions[name] = { width: Math.max(...cells.map(cell => cell.fitWidth || cell.w)), height: Math.max(...cells.map(cell => cell.fitHeight || cell.h)) };
           // A late or replacement atlas must not keep an older extracted pose.
           cache.clear(); stats.loaded++; finish(true);
         }
@@ -113,7 +129,7 @@
 
   function get(kind = 'hero', facing = 'down', frame = 0, id = 0, resolution = 1) {
     const density = resolution >= 2 ? 2 : 1;
-    const female = kind === 'hero-female', hero = kind === 'hero' || female, atlasName = hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
+    const female = kind === 'hero-female', kasai = kind === 'kasai', hero = kind === 'hero' || female || kasai, atlasName = kasai ? 'kasai' : hero ? (female ? 'female' : 'hero') : 'npcs', cells = atlas[atlasName];
     if (!cells) return null;
     const direction = Math.max(0, directions.indexOf(facing));
     const pose = Math.max(0, Math.min(2, Number.isFinite(frame) ? Math.trunc(frame) : 0));
@@ -131,7 +147,8 @@
     const extent = dimensions[atlasName];
     const scale = Math.min(112 / extent.height, 88 / extent.width) * density;
     const w = Math.max(1, Math.round(source.w * scale)), h = Math.max(1, Math.round(source.h * scale));
-    const x = Math.round((cv.width - w) / 2), y = 122 * density - h;
+    const x = source.anchorX === undefined ? Math.round((cv.width - w) / 2) : Math.round(48 * density - source.anchorX * scale);
+    const y = source.anchorY === undefined ? 122 * density - h : Math.round(122 * density - source.anchorY * scale);
     ctx.fillStyle = '#253f4938';
     // Hard-edged scanlines keep the contact shadow on the same pixel grid.
     for (let row = -3; row <= 3; row++) {
@@ -150,8 +167,8 @@
   }
 
   LT.TravellerArt = {
-    ready: Promise.all([load('hero', 'traveller-hero-v33.png', 3), load('female', 'traveller-female-v33.png', 3), load('npcs', 'traveller-npcs-v33.png', 4)]),
+    ready: Promise.all([load('hero', 'traveller-hero-v33.png', 3), load('female', 'traveller-female-v33.png', 3), load('npcs', 'traveller-npcs-v33.png', 4), load('kasai', 'kasai-overworld-v55.png', 4, splitKasai)]),
     get, stats, status() { return { loaded: stats.loaded, failed: stats.failed, cached: cache.size, maximum: MAX_CACHE, portraitSize: [192, 256] }; }, clearCache() { cache.clear(); },
-    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
+    atlasLayout: { columns: directions.slice(), heroRows: ['idle', 'leftStride', 'rightStride'], avatars: ['male','female'], specialAvatars: ['kasai'], npcRows: ['rest', 'shop', 'guardian', 'dialogue'] }
   };
 })();

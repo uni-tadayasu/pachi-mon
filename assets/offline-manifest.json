@@ -1,5 +1,5 @@
 {
- "version": "20261119-abilities-v53",
+ "version": "2026-11-19",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -234,12 +234,52 @@
    "bytes": 554441
   },
   {
+   "url": "assets/kasai-overworld-v55.json",
+   "bytes": 2452
+  },
+  {
+   "url": "assets/kasai-overworld-v55.png",
+   "bytes": 1204302
+  },
+  {
    "url": "assets/nullmie-v46.png",
    "bytes": 532138
   },
   {
    "url": "assets/nullva-v46.png",
    "bytes": 684990
+  },
+  {
+   "url": "assets/offdex-v54-01.png",
+   "bytes": 1597000
+  },
+  {
+   "url": "assets/offdex-v54-02.png",
+   "bytes": 1841124
+  },
+  {
+   "url": "assets/offdex-v54-03.png",
+   "bytes": 2080972
+  },
+  {
+   "url": "assets/offdex-v54-04.png",
+   "bytes": 900212
+  },
+  {
+   "url": "assets/offdex-v54-05.png",
+   "bytes": 803200
+  },
+  {
+   "url": "assets/offdex-v54-06.png",
+   "bytes": 1429806
+  },
+  {
+   "url": "assets/offdex-v54-07.png",
+   "bytes": 942610
+  },
+  {
+   "url": "assets/offdex-v54-08.png",
+   "bytes": 1304652
   },
   {
    "url": "assets/traveller-female-v33.png",
@@ -266,13 +306,23 @@
   "assets/environment-props-v33.png",
   "assets/environment-terrain-v33.png",
   "assets/environment-trees-v33.png",
+  "assets/kasai-overworld-v55.json",
+  "assets/kasai-overworld-v55.png",
   "assets/nullmie-v46.png",
   "assets/nullva-v46.png",
+  "assets/offdex-v54-01.png",
+  "assets/offdex-v54-02.png",
+  "assets/offdex-v54-03.png",
+  "assets/offdex-v54-04.png",
+  "assets/offdex-v54-05.png",
+  "assets/offdex-v54-06.png",
+  "assets/offdex-v54-07.png",
+  "assets/offdex-v54-08.png",
   "assets/traveller-female-v33.png",
   "assets/traveller-hero-v33.png",
   "assets/traveller-npcs-v33.png",
   "assets/zeroveil-v46.png"
  ],
- "totalBytes": 62660480,
- "coreBytes": 22258306
+ "totalBytes": 74766810,
+ "coreBytes": 34364636
 }

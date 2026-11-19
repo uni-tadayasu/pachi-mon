@@ -113,7 +113,7 @@
     resume(){return this.run(()=>this.recover());}
     create(){return this.start('create');}
     join(code){return this.start('join',String(code||'').normalize('NFKC').replace(/[\s-]/g,'').toUpperCase());}
-    start(action,code){return this.run(async()=>{
+    start(action,code){let initiated=false;return this.run(async()=>{
       this.refreshPending();
       if(this.isLocked()){await this.recover();return;}
       if(action==='join'&&!/^[A-Z0-9]{6}$/.test(code))throw Error('相手の6文字の交換コードを入力してください。');
@@ -122,8 +122,9 @@
       if(active.trade){await this.accept(active.trade,owner);return;}
       this.completed=false;this.trade=null;
       this.persist({version:1,ownerId:owner.id,action,requestId:action==='create'?this.uuid():undefined,code:code||undefined});
+      initiated=true;
       await this.recover();
-    });}
+    }).then(result=>({...result,initiated:result.ok&&initiated}));}
     offer(uid){return this.run(async()=>{
       const trade=this.trade;if(!trade||trade.state!=='open')throw Error('交換相手との接続を確認してください。');
       const mon=this.inventory().find(item=>item.uid===uid);
@@ -160,10 +161,11 @@
       const result=await this.request('/trades/'+trade.id+'/confirm',{method:'POST',body:{revision:trade.revision}});
       await this.accept(result.trade,owner);
     });}
-    cancel(){return this.run(async()=>{
+    cancel({waitingOnly=false}={}){return this.run(async()=>{
       await this.recover();if(!this.pending)return;
       const trade=this.trade;if(!trade||trade.state!=='open')throw Error('交換結果を確認してから操作してください。');
-      const owner=await this.identity(),result=await this.request('/trades/'+trade.id+'/cancel',{method:'POST',body:{}});
+      if(waitingOnly&&(trade.you!=='host'||trade.guest))return;
+      const owner=await this.identity(),result=await this.request('/trades/'+trade.id+'/cancel',{method:'POST',body:waitingOnly?{waitingOnly:true,expectedRevision:trade.revision}:{}});
       await this.accept(result.trade,owner);
     });}
   }
@@ -173,9 +175,13 @@
   if(!globalThis.document?.createElement||!LT.DATA)return;
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let dialog=null,poll=null,selected='',renderKey='',renderedRevision=null,deferredRender=false,joinDraft='',replaceJoinDraft=false;
+  let worldEncounter=null,worldNotice='',worldRoomId=null,autoOpening=false;
   const controller=new TradeController({storage:localStorage,request:(path,options)=>LT.Admin.tradeRequest(path,options),identify:()=>LT.Admin.tradeIdentity(),
-    getEngine:()=>LT.adminBridge?.getEngine?.(),commit:receipt=>LT.adminBridge?.commitTrade?.(receipt),check:receipt=>LT.adminBridge?.checkTrade?.(receipt),changed:()=>{LT.tradeActive=controller.isLocked()||dialog?.open===true;render();schedule();}});
+    getEngine:()=>LT.adminBridge?.getEngine?.(),commit:receipt=>LT.adminBridge?.commitTrade?.(receipt),check:receipt=>LT.adminBridge?.checkTrade?.(receipt),changed:()=>{LT.tradeActive=controller.isLocked()||dialog?.open===true;render();schedule();notifyWorldState();}});
   LT.tradeActive=controller.isLocked();
+  function worldState(){return {active:controller.isLocked()||dialog?.open===true,connected:!!controller.trade?.guest,state:controller.trade?.state||null};}
+  function notifyWorldState(){if(typeof globalThis.CustomEvent==='function')document.dispatchEvent?.(new CustomEvent('pachi-trade-state',{detail:worldState()}));}
+  function setWorldNotice(message){worldNotice=String(message||'').slice(0,500);render();}
   function monName(mon){return mon?.nickname||LT.DATA.species[mon?.species]?.name||'未選択';}
   function card(person,label){
     const mon=person?.monster,species=LT.DATA.species[mon?.species],types=LT.TypeSystem.of(mon).map(type=>LT.DATA.elements[type].name).join('・'),ability=mon?LT.Abilities.get(mon):null;
@@ -185,7 +191,7 @@
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.id='pachi-trade-dialog';dialog.className='pachi-trade';dialog.setAttribute('aria-labelledby','trade-title');document.body.append(dialog);
     dialog.addEventListener('cancel',event=>{if(controller.isLocked()||controller.busy){event.preventDefault();controller.error='交換を終えるには「交換をキャンセル」を選んでください。';render();}});
-    dialog.addEventListener('close',()=>{if(controller.isLocked()){dialog.showModal();return;}LT.tradeActive=false;clearTimeout(poll);poll=null;joinDraft='';replaceJoinDraft=true;renderKey='';deferredRender=false;});
+    dialog.addEventListener('close',()=>{if(controller.isLocked()){dialog.showModal();return;}LT.tradeActive=false;clearTimeout(poll);poll=null;joinDraft='';replaceJoinDraft=true;renderKey='';deferredRender=false;worldEncounter=null;worldNotice='';worldRoomId=null;notifyWorldState();});
     dialog.addEventListener('change',event=>{if(event.target.id==='trade-monster')selected=event.target.value;});
     dialog.addEventListener('focusout',()=>{if(deferredRender)setTimeout(render,0);});
     dialog.addEventListener('click',async event=>{
@@ -222,11 +228,12 @@
     // A focused monster selector may defer the preview, but an occupied room
     // must stop offering its invitation immediately.
     if(!(trade?.state==='open'&&trade.you==='host'&&!trade.guest))dialog.querySelector('.online-invite-share')?.remove?.();
-    const nextKey=String(locked)+body,editing=['trade-monster','trade-code-input'].includes(focusId);
+    const worldMarkup=`<div class="trade-world" ${worldEncounter||worldNotice?'':'hidden'}><p class="trade-note trade-world-name">${worldEncounter?escape(worldEncounter.name)+'とのフィールド交換':''}</p><p class="trade-note trade-world-notice" role="status" aria-live="polite">${escape(worldNotice)}</p></div>`;
+    const nextKey=String(locked)+worldMarkup+body,editing=['trade-monster','trade-code-input'].includes(focusId);
     if(nextKey!==renderKey&&editing&&trade?.state==='open'){deferredRender=true;}
     else if(nextKey!==renderKey){
       const scrollTop=dialog.querySelector('.trade-body')?.scrollTop||0;
-      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。呪縛中の個体・運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
+      dialog.innerHTML=`<header><div><p class="trade-eyebrow">PACHI MONSTERS</p><h2 id="trade-title">オンライン交換</h2></div><button type="button" class="btn btn-small" data-trade="close" ${locked?'disabled':''}>閉じる</button></header><div class="trade-body">${worldMarkup}${body}<p class="trade-status" role="status" aria-live="polite"></p><p class="trade-note">持ち物を持たせた個体は、先に持ち物を外してください。呪縛中の個体・運営専用の幻・フート・配布受取情報のある個体は交換できません。</p></div>`;
       renderKey=nextKey;renderedRevision=trade?.revision??null;deferredRender=false;
       if(dialog.querySelector('#trade-code-input'))dialog.querySelector('#trade-code-input').value=joinDraft;
       replaceJoinDraft=false;
@@ -236,6 +243,9 @@
       for(const canvas of dialog.querySelectorAll('canvas[data-trade-portrait]'))LT.Art?.creature?.(canvas,canvas.dataset.tradePortrait,{shiny:canvas.dataset.tradeShiny==='true',time:0});
     }
     const status=dialog.querySelector('.trade-status');if(status)status.textContent=controller.error||(busy?'確認しています…':'');
+    // Presence notices may change while a focused monster selector defers the
+    // offer preview. Update only this text node, preserving focus and revision.
+    const worldStatus=dialog.querySelector('.trade-world-notice');if(worldStatus)worldStatus.textContent=worldNotice;
     for(const button of dialog.querySelectorAll('button'))button.disabled=busy||button._tradeUnavailable===true;
   }
   function schedule(){
@@ -244,7 +254,10 @@
     poll=setTimeout(()=>{void controller.resume();},4000);
   }
   async function open(options={}){
+    if(autoOpening)return false;
+    const autoHost=options.autoHost===true,autoJoin=options.autoJoin===true,automatic=autoHost||autoJoin;
     const invited=options?.joinCode!==undefined;
+    if((autoHost&&autoJoin)||(autoHost&&invited)||(autoJoin&&!invited)){LT.adminBridge?.toast?.('フィールドの相手を選び直してから交換してください。');return false;}
     let inviteCode='';
     if(invited){
       try{
@@ -256,22 +269,58 @@
     if(controller.busy)return false;
     const hadPending=controller.isLocked();
     if(LT.onlineActive||LT.localTradeActive||(!hadPending&&(!LT.adminBridge?.isPlaying?.()||controller.getEngine()?.battle||(!dialog?.open&&LT.adminBridge?.isBusy?.())))){LT.adminBridge?.toast?.('冒険中の移動できるときに交換できます。');return false;}
-    if(!hadPending){controller.trade=null;controller.completed=false;controller.error='';}
-    ensureDialog();if(!dialog.open)dialog.showModal();LT.tradeActive=true;render();await controller.resume();
-    if(invited){
-      // Recovery takes priority, including a room discovered on the server.
-      // The link itself never joins, saves, or confirms an exchange.
-      if(hadPending||controller.isLocked()||controller.trade||!dialog.open)return false;
-      joinDraft=inviteCode;replaceJoinDraft=true;renderKey='';render();
-    }
-    return true;
+    if(!hadPending){controller.trade=null;controller.completed=false;controller.error='';worldEncounter=null;worldNotice='';worldRoomId=null;}
+    autoOpening=automatic;
+    try{
+      ensureDialog();if(!dialog.open)dialog.showModal();LT.tradeActive=true;render();notifyWorldState();const recovered=await controller.resume();
+      if(invited||automatic){
+        // A new field invitation must never take over a stored or server-only
+        // exchange, including a committed receipt recovered by this request.
+        if(hadPending||!recovered.ok||controller.isLocked()||controller.trade||!dialog.open)return false;
+        if(invited){joinDraft=inviteCode;replaceJoinDraft=true;renderKey='';render();}
+      }
+      // Merely opening a URL still only fills in the code. These flags are
+      // supplied by explicit field conversation buttons, never by URL parsing.
+      if(!automatic)return true;
+      const encounter=options.encounter;
+      if(encounter&&typeof encounter.id==='string')worldEncounter={id:encounter.id,name:String(encounter.name||'旅人').slice(0,80),isAdmin:encounter.isAdmin===true,avatar:encounter.avatar};
+      worldNotice=autoHost?'相手を招待する準備をしています…':'相手の交換の部屋へ参加しています…';render();
+      const result=autoHost?await controller.create():await controller.join(inviteCode);
+      const trade=controller.trade;
+      if(!result.ok||!result.initiated||!trade||trade.state!=='open')return false;
+      if(autoJoin){worldRoomId=trade.id;setWorldNotice('お互いが渡すパチモンを選び、内容を確認してください。');return true;}
+      if(trade.you!=='host'||trade.guest)return false;
+      worldRoomId=trade.id;
+      if(typeof options.onRoomReady==='function'){
+        try{
+          const sent=await options.onRoomReady(trade.code);
+          if(sent===false||sent?.ok===false)throw Error(sent?.message||'交換の申し込みを送れませんでした。');
+        }catch(error){
+          const message=error?.message||'交換の申し込みを送れませんでした。';
+          const closed=await cancelWorldWait(message);
+          if(!closed){controller.error=message;render();}
+          return false;
+        }
+      }
+      if(dialog.open&&worldNotice==='相手を招待する準備をしています…')setWorldNotice('交換を申し込みました。相手の返事を待っています。');
+      return dialog.open;
+    }finally{autoOpening=false;notifyWorldState();}
+  }
+  async function cancelWorldWait(message='交換の申し込みを終了しました。'){
+    const trade=controller.trade;
+    if(!worldRoomId||trade?.id!==worldRoomId||controller.busy||trade.state!=='open'||trade.you!=='host'||trade.guest)return false;
+    const result=await controller.cancel({waitingOnly:true});
+    // A guest may join during cancellation; the server's waitingOnly compare
+    // protects that room. Keep its exchange UI and durable recovery intact.
+    if(!result.ok||controller.isLocked()||!['cancelled','expired'].includes(controller.trade?.state))return false;
+    dialog?.close();LT.adminBridge?.toast?.(String(message||'交換の申し込みを終了しました。'));return true;
   }
   async function resume(){
     controller.refreshPending();
     if(!controller.isLocked())return;
     ensureDialog();if(!dialog.open)dialog.showModal();LT.tradeActive=true;render();await controller.resume();
   }
-  LT.Trade={open,resume,isLocked:()=>controller.busy||controller.isLocked()||controller.hasStoredPending(),close(){if(dialog?.open&&!controller.isLocked()&&!controller.busy)dialog.close();}};
+  LT.Trade={open,resume,worldState,setWorldNotice,cancelWorldWait,isLocked:()=>controller.busy||controller.isLocked()||controller.hasStoredPending(),close(){if(dialog?.open&&!controller.isLocked()&&!controller.busy)dialog.close();}};
   for(const name of ['pachi-game-ready','pachi-admin-bridge-ready'])document.addEventListener(name,()=>{void resume();});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(controller.isLocked())void resume();else schedule();}});
   globalThis.addEventListener?.('storage',event=>{

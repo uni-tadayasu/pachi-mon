@@ -275,6 +275,11 @@ async function tradeRoute(request,env,path,method,player){
     if(row.host_id===player.id||row.guest_id===player.id)return {trade:tradeView(row,player.id)};
     openTrade(row);
     if(row.guest_id)fail(409,'TRADE_FULL','交換ルームは満員です。');
+    if(row.world_guest_id) {
+      if(row.world_guest_id!==player.id)fail(403,'TRADE_RESERVED','この交換ルームは、フィールドで誘われたプレイヤー専用です。');
+      const invitation=await env.DB.prepare("SELECT id FROM world_invitations WHERE kind='trade' AND room_code=? AND sender_id=? AND target_id=? AND state='accepted'").bind(code,row.host_id,player.id).first();
+      if(!invitation)fail(409,'WORLD_INVITATION_REQUIRED','フィールドのお誘いで「参加する」を選んでください。');
+    }
     if(await activeTrade(env,player.id))fail(409,'ACTIVE_TRADE','進行中の交換を先に確認してください。');
     await env.DB.batch([
       env.DB.prepare("UPDATE trades SET guest_id=?,revision=revision+1,host_confirm=NULL,guest_confirm=NULL WHERE id=? AND state='open' AND guest_id IS NULL AND expires_at>? AND NOT EXISTS (SELECT 1 FROM trade_active WHERE player_id=?)").bind(player.id,row.id,Date.now(),player.id),
@@ -297,8 +302,11 @@ async function tradeRoute(request,env,path,method,player){
       env.DB.prepare("DELETE FROM trade_active WHERE player_id=? AND trade_id=? AND EXISTS (SELECT 1 FROM trades WHERE id=? AND state<>'open')").bind(player.id,id,id)
     ]);
   }else if(operation==='cancel'){
+    const waitingOnly=body.waitingOnly===true;
+    if(waitingOnly&&side!=='host')fail(403,'TRADE_HOST_REQUIRED','待機中のルームを閉じられるのは作成した人だけです。');
+    const expectedRevision=waitingOnly?tradeRevision(body.expectedRevision):null;
     await env.DB.batch([
-      env.DB.prepare("UPDATE trades SET state='cancelled',host_confirm=NULL,guest_confirm=NULL WHERE id=? AND state='open'").bind(id),
+      env.DB.prepare("UPDATE trades SET state='cancelled',host_confirm=NULL,guest_confirm=NULL WHERE id=? AND state='open'"+(waitingOnly?' AND host_id=? AND guest_id IS NULL AND revision=?':'')).bind(id,...(waitingOnly?[player.id,expectedRevision]:[])),
       env.DB.prepare("DELETE FROM trade_active WHERE trade_id=? AND EXISTS (SELECT 1 FROM trades WHERE id=? AND state IN ('cancelled','expired'))").bind(id,id)
     ]);
   }else if(operation==='offer'){
@@ -323,6 +331,186 @@ async function tradeRoute(request,env,path,method,player){
   return {trade:tradeView(await tradeRow(env,id),player.id)};
 }
 
+// Shared-world presence is stored in D1 so different Worker isolates see the
+// same players. Coordinates are game tiles, never device/location information.
+export const WORLD_MAP_BOUNDS = Object.freeze({"village":[44,30],"meadow":[44,30],"pollenwood":[44,30],"grotto":[44,30],"harbor":[44,30],"coast":[44,30],"glassreef":[44,30],"bellcavern":[44,30],"orchard":[44,30],"reedroad":[44,30],"forest":[44,30],"mistmarsh":[44,30],"moonvillage":[44,30],"runepass":[44,30],"ruins":[44,30],"deepwood":[44,30],"dunehamlet":[44,30],"desert":[44,30],"tower":[44,30],"silkgully":[44,30],"frosttown":[44,30],"glacier":[44,30],"mirrorlake":[44,30],"auroraisle":[44,30],"emberforge":[44,30],"ashgarden":[44,30],"volcano":[44,30],"basaltgate":[44,30],"observatory":[44,30],"astralpass":[44,30],"prismarchive":[44,30],"tidevault":[44,30],"astrumcity":[44,30],"windviaduct":[44,30],"cinderopera":[44,30],"raincistern":[44,30],"cloudstation":[44,30],"cirrusgarden":[44,30],"mossbasilica":[44,30],"thornlabyrinth":[44,30],"saltmarket":[44,30],"coralisle":[44,30],"dawnisle":[44,30],"glassisle":[44,30],"opalcity":[44,30],"tempestisle":[44,30],"orchidisle":[44,30],"obsidiancrypt":[44,30],"ferrumworks":[44,30],"cinderisle":[44,30],"sunforge":[44,30],"abysslift":[44,30],"saffronterrace":[44,30],"cedarcanopy":[44,30],"fernstation":[44,30],"vermilliongate":[44,30],"fulgurpass":[44,30],"zephyrcauseway":[44,30],"aurorafjord":[44,30],"pelagicspire":[44,30],"coralobservatory":[44,30],"shelltown":[44,30],"lunettecity":[44,30],"meridianleague":[44,30],"shinonomeport":[44,30],"dawnshoal":[44,30],"mistlighthouse":[44,30],"tidecaves":[44,30],"asanagicity":[44,30],"mirrorpaddy":[44,30],"whaleshrine":[44,30],"kelpdeep":[44,30],"wakamoevillage":[44,30],"sproutdowns":[44,30],"giantstump":[44,30],"rootmaze":[44,30],"shinkiroasis":[44,30],"dunesea":[44,30],"sunziggurat":[44,30],"sandtomb":[44,30],"hakuchucity":[44,30],"saltflats":[44,30],"prismgarden":[44,30],"geodecave":[44,30],"haehighland":[44,30],"windmillroad":[44,30],"kitecliff":[44,30],"galecanyon":[44,30],"shuutown":[44,30],"rainforestpath":[44,30],"thunderfalls":[44,30],"floodcistern":[44,30],"treetopvillage":[44,30],"mossroad":[44,30],"spiritcedar":[44,30],"jukaideep":[44,30],"akaneforge":[44,30],"mapleslope":[44,30],"lavaterrace":[44,30],"magmavault":[44,30],"haricity":[44,30],"glassdunes":[44,30],"mirrorhall":[44,30],"crystalmine":[44,30],"yuunagiport":[44,30],"sunsetcape":[44,30],"skybridge":[44,30],"windtunnel":[44,30],"tasogarevillage":[44,30],"goldfield":[44,30],"scarecrowhill":[44,30],"harvestvault":[44,30],"yoiharbor":[44,30],"fireflyriver":[44,30],"tidetemple":[44,30],"abyssreef":[44,30],"stardusttown":[44,30],"meteorfield":[44,30],"cometforge":[44,30],"craterdepths":[44,30],"geppakucity":[44,30],"moonsnow":[44,30],"auroragate":[44,30],"icepalace":[44,30],"zenithgate":[44,30],"starstair":[44,30],"twinmeridian":[44,30],"zenithcrossing":[44,30],"interior-village-1":[18,16],"interior-village-2":[18,16],"interior-village-3":[18,16],"interior-harbor-1":[18,16],"interior-harbor-2":[18,16],"interior-harbor-3":[18,16],"interior-orchard-1":[18,16],"interior-orchard-2":[18,16],"interior-orchard-3":[18,16],"interior-moonvillage-1":[18,16],"interior-moonvillage-2":[18,16],"interior-moonvillage-3":[18,16],"interior-dunehamlet-1":[18,16],"interior-dunehamlet-2":[18,16],"interior-dunehamlet-3":[18,16],"interior-frosttown-1":[18,16],"interior-frosttown-2":[18,16],"interior-frosttown-3":[18,16],"interior-emberforge-1":[18,16],"interior-emberforge-2":[18,16],"interior-emberforge-3":[18,16],"interior-observatory-1":[18,16],"interior-observatory-2":[18,16],"interior-observatory-3":[18,16],"interior-astrumcity-1":[18,16],"interior-astrumcity-2":[18,16],"interior-astrumcity-3":[18,16],"interior-cloudstation-1":[18,16],"interior-cloudstation-2":[18,16],"interior-cloudstation-3":[18,16],"interior-saltmarket-1":[18,16],"interior-saltmarket-2":[18,16],"interior-saltmarket-3":[18,16],"interior-opalcity-1":[18,16],"interior-opalcity-2":[18,16],"interior-opalcity-3":[18,16],"interior-ferrumworks-1":[18,16],"interior-ferrumworks-2":[18,16],"interior-ferrumworks-3":[18,16],"interior-saffronterrace-1":[18,16],"interior-saffronterrace-2":[18,16],"interior-saffronterrace-3":[18,16],"interior-fulgurpass-1":[18,16],"interior-fulgurpass-2":[18,16],"interior-fulgurpass-3":[18,16],"interior-coralobservatory-1":[18,16],"interior-coralobservatory-2":[18,16],"interior-coralobservatory-3":[18,16],"interior-shinonomeport-1":[18,16],"interior-shinonomeport-2":[18,16],"interior-shinonomeport-3":[18,16],"interior-asanagicity-1":[18,16],"interior-asanagicity-2":[18,16],"interior-asanagicity-3":[18,16],"interior-mirrorpaddy-1":[18,16],"interior-mirrorpaddy-2":[18,16],"interior-wakamoevillage-1":[18,16],"interior-wakamoevillage-2":[18,16],"interior-wakamoevillage-3":[18,16],"interior-shinkiroasis-1":[18,16],"interior-shinkiroasis-2":[18,16],"interior-shinkiroasis-3":[18,16],"interior-hakuchucity-1":[18,16],"interior-hakuchucity-2":[18,16],"interior-hakuchucity-3":[18,16],"interior-haehighland-1":[18,16],"interior-haehighland-2":[18,16],"interior-haehighland-3":[18,16],"interior-shuutown-1":[18,16],"interior-shuutown-2":[18,16],"interior-shuutown-3":[18,16],"interior-treetopvillage-1":[18,16],"interior-treetopvillage-2":[18,16],"interior-treetopvillage-3":[18,16],"interior-akaneforge-1":[18,16],"interior-akaneforge-2":[18,16],"interior-akaneforge-3":[18,16],"interior-lavaterrace-1":[18,16],"interior-lavaterrace-2":[18,16],"interior-haricity-1":[18,16],"interior-haricity-2":[18,16],"interior-haricity-3":[18,16],"interior-yuunagiport-1":[18,16],"interior-yuunagiport-2":[18,16],"interior-yuunagiport-3":[18,16],"interior-tasogarevillage-1":[18,16],"interior-tasogarevillage-2":[18,16],"interior-tasogarevillage-3":[18,16],"interior-yoiharbor-1":[18,16],"interior-yoiharbor-2":[18,16],"interior-yoiharbor-3":[18,16],"interior-stardusttown-1":[18,16],"interior-stardusttown-2":[18,16],"interior-stardusttown-3":[18,16],"interior-cometforge-1":[18,16],"interior-cometforge-2":[18,16],"interior-geppakucity-1":[18,16],"interior-geppakucity-2":[18,16],"interior-geppakucity-3":[18,16],"interior-zenithgate-1":[18,16],"interior-zenithgate-2":[18,16],"interior-zenithgate-3":[18,16],"interior-zenith-library":[18,16],"interior-glitch":[18,16]});
+export const WORLD_TTL = 15000;
+const WORLD_INVITE_TTL = 60000;
+const WORLD_INVITE_RETENTION = 120000;
+const WORLD_RADIUS = 3;
+const WORLD_PLAYER_ID = /^P[0-9a-f]{16}$/;
+const WORLD_FIELDS = new Set(['map','x','y','facing','avatar','status']);
+const WORLD_INVITE_FIELDS = new Set(['targetId','kind','roomCode','requestId']);
+function worldName(value) {
+  return [...String(value || '旅人').normalize('NFKC').replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim()].slice(0,32).join('') || '旅人';
+}
+function worldProfile(id,name,admin,avatar) {
+  const isAdmin=!!admin;
+  return {id,name:isAdmin?'謎のトレーナー カサイ':worldName(name),isAdmin,avatar:isAdmin?'kasai':avatar==='female'?'female':'male'};
+}
+function worldActor(row) {
+  return {...worldProfile(row.player_id,row.name,row.is_admin,row.avatar),map:row.map_id,x:row.x,y:row.y,facing:row.facing,status:row.status,updatedAt:row.updated_at};
+}
+function validateWorldPresence(body) {
+  const bounds=typeof body.map==='string'&&Object.hasOwn(WORLD_MAP_BOUNDS,body.map)?WORLD_MAP_BOUNDS[body.map]:null;
+  if(Object.keys(body).some(key=>!WORLD_FIELDS.has(key))||!bounds||!integer(body.x,0,bounds[0]-1)||!integer(body.y,0,bounds[1]-1)||!['down','left','right','up'].includes(body.facing)||!['male','female'].includes(body.avatar)||!['idle','busy'].includes(body.status))fail(400,'INVALID_WORLD_PRESENCE','フィールドの位置・向き・状態が正しくありません。');
+  return body;
+}
+const WORLD_INVITE_SELECT=`SELECT i.*, s.name AS sender_name, t.name AS target_name,
+  EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=i.sender_id) AS sender_admin,
+  EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=i.target_id) AS target_admin,
+  sp.avatar AS sender_avatar, tp.avatar AS target_avatar
+  FROM world_invitations i JOIN players s ON s.id=i.sender_id JOIN players t ON t.id=i.target_id
+  LEFT JOIN world_presence sp ON sp.player_id=i.sender_id LEFT JOIN world_presence tp ON tp.player_id=i.target_id`;
+function worldInviteView(row,now=Date.now()) {
+  return {id:row.id,requestId:row.request_id,kind:row.kind,roomCode:row.room_code,state:row.state==='pending'&&row.expires_at<=now?'expired':row.state,
+    from:worldProfile(row.sender_id,row.sender_name,row.sender_admin,row.sender_avatar),to:worldProfile(row.target_id,row.target_name,row.target_admin,row.target_avatar),
+    createdAt:row.created_at,expiresAt:row.expires_at,updatedAt:row.updated_at};
+}
+async function worldInviteRow(env,id,playerId) {
+  const row=UUID.test(id)?await env.DB.prepare(WORLD_INVITE_SELECT+' WHERE i.id=?').bind(id).first():null;
+  if(!row)fail(404,'WORLD_INVITATION_NOT_FOUND','このお誘いは見つかりません。');
+  if(row.sender_id!==playerId&&row.target_id!==playerId)fail(403,'WORLD_PARTICIPANT_REQUIRED','このお誘いの参加者ではありません。');
+  return row;
+}
+async function worldSnapshot(env,player,map,now) {
+  const actors=await env.DB.prepare(`SELECT w.*,p.name,EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=w.player_id) AS is_admin
+    FROM world_presence w JOIN players p ON p.id=w.player_id
+    WHERE w.map_id=? AND w.updated_at>? AND w.player_id<>? ORDER BY ABS(w.x-?)+ABS(w.y-?),w.updated_at DESC,w.player_id LIMIT 80`).bind(map.map,now-WORLD_TTL,player.id,map.x,map.y).all();
+  const invitations=await env.DB.prepare(WORLD_INVITE_SELECT+" WHERE (i.sender_id=? OR i.target_id=?) AND i.expires_at>? ORDER BY i.updated_at DESC,i.id LIMIT 20").bind(player.id,player.id,now-WORLD_INVITE_RETENTION).all();
+  return {self:worldActor({player_id:player.id,name:player.name,is_admin:player.is_admin,map_id:map.map,...map,updated_at:now}),players:actors.results.map(worldActor),invitations:invitations.results.map(row=>worldInviteView(row,now)),serverTime:now,ttlMs:WORLD_TTL,pollAfterMs:500};
+}
+async function worldNearby(env,senderId,targetId,now) {
+  const result=await env.DB.prepare('SELECT * FROM world_presence WHERE player_id IN (?,?) AND updated_at>?').bind(senderId,targetId,now-WORLD_TTL).all();
+  const sender=result.results.find(row=>row.player_id===senderId),target=result.results.find(row=>row.player_id===targetId);
+  if(!sender||!target)fail(409,'WORLD_PLAYER_OFFLINE','相手がフィールドを離れました。もう一度近くで話しかけてください。');
+  if(sender.map_id!==target.map_id||Math.abs(sender.x-target.x)+Math.abs(sender.y-target.y)>WORLD_RADIUS)fail(409,'WORLD_TOO_FAR','同じフィールドで相手の近くに移動してください。');
+  return {sender,target};
+}
+async function worldRoute(request,env,path,method,player) {
+  const now=Date.now();
+  if((path==='/api/world/trainer-pass'||path==='/api/world/trainer-pass/verify')&&method==='POST') {
+    if(typeof env.DUEL_SIGNING_KEY!=='string'||env.DUEL_SIGNING_KEY.length<32)fail(503,'TRAINER_NOT_CONFIGURED','トレーナーの認証を準備中です。通常の対戦は続けられます。');
+    const body=await bodyJSON(request),battleSession=sessionId(body.sessionId),side=sideId(body.side),verify=path.endsWith('/verify');
+    if(Object.keys(body).some(key=>!['sessionId','side',...(verify?['pass']:[])].includes(key)))fail(400,'INVALID_TRAINER_PASS','トレーナーの認証情報を確認してください。');
+    await consumeLimit(env,request,`world-trainer-pass:${player.id}`,60,60000,true);
+    const key=await signingKey(env);
+    if(!verify) {
+      const presence=await env.DB.prepare('SELECT avatar FROM world_presence WHERE player_id=?').bind(player.id).first();
+      const profile=worldProfile(player.id,player.name,player.is_admin,presence?.avatar);
+      const data={v:1,kind:'trainer',playerId:player.id,name:profile.name,isAdmin:profile.isAdmin,avatar:profile.avatar,sessionId:battleSession,side,expiresAt:now+600000};
+      const payload=encoder.encode(JSON.stringify(data)),signature=new Uint8Array(await crypto.subtle.sign('HMAC',key,payload));
+      return {pass:encodeURL(payload)+'.'+encodeURL(signature)};
+    }
+    if(typeof body.pass!=='string'||body.pass.length>4096)fail(400,'INVALID_TRAINER_PASS','トレーナーの認証情報が正しくありません。');
+    try {
+      const parts=body.pass.split('.');if(parts.length!==2)throw new Error('Invalid encoding');
+      const payload=decodeURL(parts[0]),signature=decodeURL(parts[1]);
+      if(signature.length!==32||!await crypto.subtle.verify('HMAC',key,signature,payload))throw new Error('Invalid signature');
+      const data=JSON.parse(new TextDecoder().decode(payload));
+      if(data.v!==1||data.kind!=='trainer'||typeof data.playerId!=='string'||!WORLD_PLAYER_ID.test(data.playerId)||data.sessionId!==battleSession||data.side!==side||!integer(data.expiresAt,now+1,now+600001))throw new Error('Invalid payload');
+      // Re-read the current role and name, rather than letting an old signed
+      // administrator profile survive an ownership transfer or release.
+      const row=await env.DB.prepare(`SELECT p.id,p.name,w.avatar,EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id) AS is_admin
+        FROM players p LEFT JOIN world_presence w ON w.player_id=p.id WHERE p.id=?`).bind(data.playerId).first();
+      if(!row)throw new Error('Player missing');
+      return {trainer:worldProfile(row.id,row.name,row.is_admin,row.avatar)};
+    } catch(error) {
+      if(error instanceof ApiError)throw error;
+      fail(403,'INVALID_TRAINER_PASS','トレーナーの認証情報が無効、または期限切れです。');
+    }
+  }
+  if(path==='/api/world/presence'&&method==='POST') {
+    const body=validateWorldPresence(await bodyJSON(request));
+    // A conditional UPSERT caps writes at four per second per player, including
+    // concurrent requests, without sharing limits with players behind one NAT.
+    const accepted=await env.DB.prepare(`INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at) VALUES (?,?,?,?,?,?,?,?)
+      ON CONFLICT(player_id) DO UPDATE SET map_id=excluded.map_id,x=excluded.x,y=excluded.y,facing=excluded.facing,avatar=excluded.avatar,status=excluded.status,updated_at=excluded.updated_at
+      WHERE world_presence.updated_at<=? RETURNING player_id`).bind(player.id,body.map,body.x,body.y,body.facing,body.avatar,body.status,now,now-250).first();
+    if(!accepted)fail(429,'WORLD_UPDATE_TOO_FAST','少し待ってからフィールドを更新してください。');
+    await env.DB.batch([
+      env.DB.prepare("UPDATE world_invitations SET state='expired',updated_at=? WHERE (sender_id=? OR target_id=?) AND state='pending' AND (expires_at<=? OR map_id<>?)").bind(now,player.id,player.id,now,body.map),
+      env.DB.prepare('DELETE FROM world_presence WHERE player_id IN (SELECT player_id FROM world_presence WHERE updated_at<? LIMIT 32)').bind(now-WORLD_TTL*4),
+      // Accepted trade invitations remain until their trade expires, so a
+      // suspended tab can still join its reserved room after reconnecting.
+      env.DB.prepare("DELETE FROM world_invitations WHERE id IN (SELECT i.id FROM world_invitations i WHERE i.expires_at<? AND NOT(i.kind='trade' AND i.state='accepted' AND EXISTS(SELECT 1 FROM trades t WHERE t.code=i.room_code AND t.state='open' AND t.expires_at>?)) LIMIT 32)").bind(now-WORLD_INVITE_RETENTION,now)
+    ]);
+    return worldSnapshot(env,player,body,now);
+  }
+  if(path==='/api/world/presence'&&method==='DELETE') {
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM world_presence WHERE player_id=?').bind(player.id),
+      env.DB.prepare("UPDATE world_invitations SET state='cancelled',updated_at=? WHERE (sender_id=? OR target_id=?) AND state='pending'").bind(now,player.id,player.id)
+    ]);
+    return {left:true,serverTime:now};
+  }
+  if(path==='/api/world/invitations'&&method==='POST') {
+    const body=await bodyJSON(request),code=typeof body.roomCode==='string'?body.roomCode.trim().toUpperCase():'';
+    if(Object.keys(body).some(key=>!WORLD_INVITE_FIELDS.has(key))||typeof body.targetId!=='string'||!WORLD_PLAYER_ID.test(body.targetId)||body.targetId===player.id||!['battle','trade'].includes(body.kind)||!/^[A-HJ-NP-Z2-9]{6}$/.test(code)||body.requestId!==undefined&&(typeof body.requestId!=='string'||!UUID.test(body.requestId)))fail(400,'INVALID_WORLD_INVITATION','お誘いの相手・種類・ルームコードを確認してください。');
+    const requestId=(body.requestId||crypto.randomUUID()).toLowerCase();
+    const prior=await env.DB.prepare('SELECT id FROM world_invitations WHERE sender_id=? AND request_id=?').bind(player.id,requestId).first();
+    if(prior) {
+      const row=await worldInviteRow(env,prior.id,player.id);
+      if(row.target_id!==body.targetId||row.kind!==body.kind||row.room_code!==code)fail(409,'WORLD_REQUEST_REUSED','同じ作成情報で別のお誘いは送れません。');
+      return {invitation:worldInviteView(row),serverTime:now};
+    }
+    await consumeLimit(env,request,`world-invite:${player.id}`,8,60000,true);
+    const {sender,target}=await worldNearby(env,player.id,body.targetId,now);
+    if(sender.status!=='idle'||target.status!=='idle')fail(409,'WORLD_PLAYER_BUSY','相手の対戦・交換・会話が終わるまでお待ちください。');
+    if(body.kind==='trade') {
+      const trade=await env.DB.prepare('SELECT * FROM trades WHERE code=?').bind(code).first();
+      if(!trade||trade.host_id!==player.id||trade.state!=='open'||trade.guest_id||trade.expires_at<=now)fail(409,'WORLD_TRADE_UNAVAILABLE','自分で作成した、参加者のいない交換ルームを選んでください。');
+      if(await activeTrade(env,body.targetId))fail(409,'WORLD_PLAYER_BUSY','相手は交換中です。交換が終わるまでお待ちください。');
+    }
+    const id=crypto.randomUUID(),tradeGuard=body.kind==='trade'?" AND EXISTS(SELECT 1 FROM trades tr WHERE tr.code=? AND tr.host_id=s.player_id AND tr.state='open' AND tr.guest_id IS NULL AND tr.expires_at>?) AND NOT EXISTS(SELECT 1 FROM trade_active ta WHERE ta.player_id=t.player_id)":'';
+    const create=env.DB.prepare(`INSERT OR IGNORE INTO world_invitations (id,request_id,sender_id,target_id,kind,room_code,map_id,created_at,expires_at,updated_at)
+      SELECT ?,?,s.player_id,t.player_id,?,?,s.map_id,?,?,? FROM world_presence s JOIN world_presence t ON t.player_id=?
+      WHERE s.player_id=? AND s.status='idle' AND t.status='idle' AND s.updated_at>? AND t.updated_at>?
+      AND s.map_id=t.map_id AND ABS(s.x-t.x)+ABS(s.y-t.y)<=?
+      AND NOT EXISTS(SELECT 1 FROM world_invitations i WHERE i.state='pending' AND i.expires_at>? AND (i.sender_id IN(s.player_id,t.player_id) OR i.target_id IN(s.player_id,t.player_id)))${tradeGuard}`)
+      .bind(id,requestId,body.kind,code,now,now+WORLD_INVITE_TTL,now,body.targetId,player.id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS,now,...(body.kind==='trade'?[code,now]:[]));
+    const statements=[create];
+    if(body.kind==='trade')statements.push(env.DB.prepare('UPDATE trades SET world_guest_id=? WHERE code=? AND host_id=? AND EXISTS(SELECT 1 FROM world_invitations WHERE id=?)').bind(body.targetId,code,player.id,id));
+    await env.DB.batch(statements);
+    const created=await env.DB.prepare('SELECT id FROM world_invitations WHERE sender_id=? AND request_id=?').bind(player.id,requestId).first();
+    if(!created)fail(409,'WORLD_INVITATION_BUSY','相手または自分に進行中のお誘いがあります。現在のお誘いを確認してください。');
+    return {invitation:worldInviteView(await worldInviteRow(env,created.id,player.id),now),serverTime:now};
+  }
+  const match=/^\/api\/world\/invitations\/([0-9a-f-]+)(?:\/(respond|cancel))?$/.exec(path);
+  if(!match)fail(404,'NOT_FOUND','このフィールド操作はありません。');
+  const [,id,operation]=match;
+  let row=await worldInviteRow(env,id,player.id);
+  if(!operation&&method==='GET')return {invitation:worldInviteView(row,now),serverTime:now};
+  if(method!=='POST')fail(405,'METHOD_NOT_ALLOWED','この操作方法には対応していません。');
+  const body=await bodyJSON(request);
+  if(operation==='respond') {
+    if(row.target_id!==player.id)fail(403,'WORLD_RECIPIENT_REQUIRED','お誘いを受けた人だけが返事できます。');
+    if(typeof body.accept!=='boolean'||Object.keys(body).some(key=>key!=='accept'))fail(400,'INVALID_WORLD_RESPONSE','参加するか、断るかを選んでください。');
+    if(row.state!=='pending'||row.expires_at<=now)return {invitation:worldInviteView(row,now),serverTime:now};
+    await consumeLimit(env,request,`world-respond:${player.id}`,30,60000,true);
+    if(body.accept) {
+      const {sender,target}=await worldNearby(env,row.sender_id,row.target_id,now);
+      if(sender.map_id!==row.map_id||target.map_id!==row.map_id)fail(409,'WORLD_TOO_FAR','お誘いを送ったフィールドで、もう一度近くで話しかけてください。');
+      if(row.kind==='trade') {
+        const room=await env.DB.prepare("SELECT id FROM trades WHERE code=? AND host_id=? AND world_guest_id=? AND state='open' AND guest_id IS NULL AND expires_at>?").bind(row.room_code,row.sender_id,row.target_id,now).first();
+        if(!room||await activeTrade(env,row.target_id))fail(409,'WORLD_TRADE_UNAVAILABLE','交換ルームの状態が変わりました。もう一度お誘いを受けてください。');
+      }
+    }
+    // Recheck presence and proximity inside the same atomic update that accepts
+    // the invitation, in case a player moved between the reads above.
+    const nearGuard=body.accept?` AND EXISTS(SELECT 1 FROM world_presence s JOIN world_presence t ON t.player_id=world_invitations.target_id WHERE s.player_id=world_invitations.sender_id AND s.updated_at>? AND t.updated_at>? AND s.map_id=world_invitations.map_id AND t.map_id=s.map_id AND ABS(s.x-t.x)+ABS(s.y-t.y)<=?)`:'';
+    const operations=[env.DB.prepare(`UPDATE world_invitations SET state=?,updated_at=? WHERE id=? AND target_id=? AND state='pending' AND expires_at>?${nearGuard}`).bind(body.accept?'accepted':'declined',now,id,player.id,now,...(body.accept?[now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS]:[]))];
+    if(body.accept)operations.push(env.DB.prepare("UPDATE world_presence SET status='busy' WHERE player_id IN (?,?) AND EXISTS(SELECT 1 FROM world_invitations WHERE id=? AND state='accepted')").bind(row.sender_id,row.target_id,id));
+    await env.DB.batch(operations);
+  } else if(operation==='cancel') {
+    if(row.sender_id!==player.id)fail(403,'WORLD_SENDER_REQUIRED','お誘いを送った人だけが取り消せます。');
+    if(Object.keys(body).length)fail(400,'INVALID_WORLD_RESPONSE','取り消しの形式が正しくありません。');
+    await env.DB.prepare("UPDATE world_invitations SET state='cancelled',updated_at=? WHERE id=? AND sender_id=? AND state='pending'").bind(now,id,player.id).run();
+  } else fail(404,'NOT_FOUND','このフィールド操作はありません。');
+  row=await worldInviteRow(env,id,player.id);
+  return {invitation:worldInviteView(row,now),serverTime:now};
+}
+
 async function route(request, env, url) {
   const path = url.pathname.replace(/\/$/, '') || '/', method = request.method;
   if (path === '/api/status' && method === 'GET') return adminState(env, request);
@@ -343,6 +531,7 @@ async function route(request, env, url) {
     return verifyPass(env, await bodyJSON(request));
   }
   const player = await authenticate(env, request);
+  if(path==='/api/world'||path.startsWith('/api/world/'))return worldRoute(request,env,path,method,player);
   if(path==='/api/trades'||path.startsWith('/api/trades/'))return tradeRoute(request,env,path,method,player);
   if (path === '/api/me' && method === 'GET') {
     const {cursor, limit} = paging(url);
@@ -481,7 +670,7 @@ export default {
     if (origin && !allowed.has(origin)) return json({ok:false, error:{code:'ORIGIN_DENIED', message:'この送信元は許可されていません。'}}, 403);
     if (origin) headers.set('Access-Control-Allow-Origin', origin);
     if (request.method === 'OPTIONS') {
-      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, OPTIONS');
+      headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
       headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
       headers.set('Access-Control-Max-Age', '600');
       return new Response(null, {status:204, headers});

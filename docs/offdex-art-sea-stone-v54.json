@@ -1,0 +1,167 @@
+{
+  "version": 54,
+  "method": "Built-in image_gen; copied unchanged with generated transparency",
+  "views": "Left half authored front; right half independently authored rear",
+  "entries": [
+    {
+      "reference": "4.png",
+      "asset": "assets/offdex-v54-04.png",
+      "generatedSource": "/workspace/scratch/d0ed77e28063/generated_images/exec-4808f06d-1316-4844-aab7-f9928d932e08.png",
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG pixel-art sprite sheet with TWO authored views of the SAME reference creature, used in a released browser game. Input image is the precise character-design reference; preserve its identity, silhouette, anatomy, colors and distinctive markings.\nPrimary request: convert this reference monster into exceptionally clean crisp 16-bit pixel art, and author its genuine back view. SMALL BASE FORM: chubby adorable turquoise/teal seal-walrus cub, big round head, two large amber eyes, tiny translucent cyan icy tusks, white sweeping little hair tuft marked with a turquoise V, tiny foreflippers with white tips, pale mint belly, small split tail. Preserve the cute compact anatomy of input 4.png.\nComposition: wide 2:1 transparent canvas divided conceptually into two equal square cells, with no drawn dividing line. In LEFT HALF show ONE full-body FRONT three-quarter view, facing SCREEN LEFT so eyes/nose aim left. In RIGHT HALF show ONE full-body REAR three-quarter view, facing SCREEN RIGHT, looking away from viewer; show the actual back of head, back, limbs and tail, not the front mirrored and not a second front face. Match body scale and baseline between views. Center each figure in its own half, entire silhouette visible, about 76% of cell height, at least 8% completely clear padding on every cell edge. Ensure a wide completely transparent central gutter, no limbs crossing halves.\nStyle: meticulously clustered pixel art intended to read cleanly at 160x160 game pixels per creature, obvious square pixel steps, limited cohesive palette, dark 1-pixel silhouette outline, controlled 3-to-5 shade ramps, no smooth photographic textures, no blur or antialiasing. Maintain the reference's exact creature features; do not invent armor accessories, horns or extra limbs.\nBackground: actual transparent alpha across all empty pixels. No ground, cast shadow, scenery, checkerboard texture, text, labels, watermark, border or UI. Only TWO complete creature sprites.",
+      "frontDirection": -1,
+      "backDirection": 1,
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "0dce927264d261c28948d45b7d6691f1d50f4584f0522cfccf4d124a2640fc87",
+      "bytes": 900212,
+      "frames": [
+        [
+          172,
+          93,
+          626,
+          736
+        ],
+        [
+          988,
+          93,
+          621,
+          735
+        ]
+      ],
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "reference": "5.png",
+      "asset": "assets/offdex-v54-05.png",
+      "generatedSource": "/workspace/scratch/d0ed77e28063/generated_images/exec-0fe37359-3f61-42a4-bbb3-9bb79d821a63.png",
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG pixel-art sprite sheet with TWO authored views of the SAME reference creature, used in a released browser game. Input image is the precise character-design reference; preserve its identity, silhouette, anatomy, colors and distinctive markings.\nPrimary request: convert this reference monster into exceptionally clean crisp 16-bit pixel art, and author its genuine back view. MIDDLE EVOLUTION: elegant upright long-necked teal sea lion, long flipper-like arms with icy white ends, pale mint chest and belly, confident amber eyes, white swept-back crest with turquoise V, two slender icy tusks, cyan body stripes and forked swimming tail. Preserve long graceful proportions and design in input 5.png.\nComposition: wide 2:1 transparent canvas divided conceptually into two equal square cells, with no drawn dividing line. In LEFT HALF show ONE full-body FRONT three-quarter view, facing SCREEN LEFT so eyes/nose aim left. In RIGHT HALF show ONE full-body REAR three-quarter view, facing SCREEN RIGHT, looking away from viewer; show the actual back of head, back, limbs and tail, not the front mirrored and not a second front face. Match body scale and baseline between views. Center each figure in its own half, entire silhouette visible, about 76% of cell height, at least 8% completely clear padding on every cell edge. Ensure a wide completely transparent central gutter, no limbs crossing halves.\nStyle: meticulously clustered pixel art intended to read cleanly at 160x160 game pixels per creature, obvious square pixel steps, limited cohesive palette, dark 1-pixel silhouette outline, controlled 3-to-5 shade ramps, no smooth photographic textures, no blur or antialiasing. Maintain the reference's exact creature features; do not invent armor accessories, horns or extra limbs.\nBackground: actual transparent alpha across all empty pixels. No ground, cast shadow, scenery, checkerboard texture, text, labels, watermark, border or UI. Only TWO complete creature sprites.",
+      "frontDirection": -1,
+      "backDirection": 1,
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "e7fc71d36879211610d39172fdf3c05e3a0770ea221c71c06a4e60940dacfccc",
+      "bytes": 803200,
+      "frames": [
+        [
+          61,
+          104,
+          769,
+          692
+        ],
+        [
+          942,
+          113,
+          762,
+          667
+        ]
+      ],
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "reference": "6.png",
+      "asset": "assets/offdex-v54-06.png",
+      "generatedSource": "/workspace/scratch/d0ed77e28063/generated_images/exec-626be2c5-2ce8-4a14-a470-2769aae6ef14.png",
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG pixel-art sprite sheet with TWO authored views of the SAME reference creature, used in a released browser game. Input image is the precise character-design reference; preserve its identity, silhouette, anatomy, colors and distinctive markings.\nPrimary request: convert this reference monster into exceptionally clean crisp 16-bit pixel art, and author its genuine back view. FINAL EVOLUTION: massive bulky quadrupedal dark teal walrus/sea-lion beast, extremely thick muscular front flippers planted wide, huge translucent turquoise icy tusks hanging beside open mouth, amber eyes, flowing swept white mane with turquoise V, pale mint heavy belly, sharp luminous cyan markings across shoulders and back, short split tail. Preserve imposing stocky anatomy and every major marking from 6.png.\nComposition: wide 2:1 transparent canvas divided conceptually into two equal square cells, with no drawn dividing line. In LEFT HALF show ONE full-body FRONT three-quarter view, facing SCREEN LEFT so eyes/nose aim left. In RIGHT HALF show ONE full-body REAR three-quarter view, facing SCREEN RIGHT, looking away from viewer; show the actual back of head, back, limbs and tail, not the front mirrored and not a second front face. Match body scale and baseline between views. Center each figure in its own half, entire silhouette visible, about 76% of cell height, at least 8% completely clear padding on every cell edge. Ensure a wide completely transparent central gutter, no limbs crossing halves.\nStyle: meticulously clustered pixel art intended to read cleanly at 160x160 game pixels per creature, obvious square pixel steps, limited cohesive palette, dark 1-pixel silhouette outline, controlled 3-to-5 shade ramps, no smooth photographic textures, no blur or antialiasing. Maintain the reference's exact creature features; do not invent armor accessories, horns or extra limbs.\nBackground: actual transparent alpha across all empty pixels. No ground, cast shadow, scenery, checkerboard texture, text, labels, watermark, border or UI. Only TWO complete creature sprites.",
+      "frontDirection": -1,
+      "backDirection": 1,
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "3ab7961d3d95831ce1c8f1f9c83810be79cce3e4fcd6e9ca65ca4527fa39a29c",
+      "bytes": 1429806,
+      "frames": [
+        [
+          41,
+          108,
+          821,
+          699
+        ],
+        [
+          919,
+          107,
+          816,
+          685
+        ]
+      ],
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "reference": "7.png",
+      "asset": "assets/offdex-v54-07.png",
+      "generatedSource": "/workspace/scratch/d0ed77e28063/generated_images/exec-f05f2eab-96a3-40c1-ac79-0791a45fff33.png",
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG pixel-art sprite sheet with TWO authored views of the SAME reference creature, used in a released browser game. Input image is the precise character-design reference; preserve its identity, silhouette, anatomy, colors and distinctive markings.\nPrimary request: convert this reference monster into exceptionally clean crisp 16-bit pixel art, and author its genuine back view. SMALL BASE FORM: small egg-round blue stone creature, very short rounded rock arms and feet, light blue double-peaked stone cap/brow, friendly round luminous cyan eyes, small faceted cobalt blue gem nose, pale blue cheek stones, broad pale blue V stone chest plate with cyan glowing seams. Preserve the cute short compact body and stone layering from 7.png.\nComposition: wide 2:1 transparent canvas divided conceptually into two equal square cells, with no drawn dividing line. In LEFT HALF show ONE full-body FRONT three-quarter view, facing SCREEN LEFT so eyes/nose aim left. In RIGHT HALF show ONE full-body REAR three-quarter view, facing SCREEN RIGHT, looking away from viewer; show the actual back of head, back, limbs and tail, not the front mirrored and not a second front face. Match body scale and baseline between views. Center each figure in its own half, entire silhouette visible, about 76% of cell height, at least 8% completely clear padding on every cell edge. Ensure a wide completely transparent central gutter, no limbs crossing halves.\nStyle: meticulously clustered pixel art intended to read cleanly at 160x160 game pixels per creature, obvious square pixel steps, limited cohesive palette, dark 1-pixel silhouette outline, controlled 3-to-5 shade ramps, no smooth photographic textures, no blur or antialiasing. Maintain the reference's exact creature features; do not invent armor accessories, horns or extra limbs.\nBackground: actual transparent alpha across all empty pixels. No ground, cast shadow, scenery, checkerboard texture, text, labels, watermark, border or UI. Only TWO complete creature sprites.",
+      "frontDirection": -1,
+      "backDirection": 1,
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "17b7793960b37892be3d6787766bb9725621df4c7b92186400eaf717eee4b9b0",
+      "bytes": 942610,
+      "frames": [
+        [
+          137,
+          128,
+          606,
+          647
+        ],
+        [
+          1031,
+          128,
+          606,
+          647
+        ]
+      ],
+      "alphaRange": [
+        0,
+        255
+      ]
+    },
+    {
+      "reference": "8.png",
+      "asset": "assets/offdex-v54-08.png",
+      "generatedSource": "/workspace/scratch/d0ed77e28063/generated_images/exec-74847655-7486-4bac-b63a-c3d543310091.png",
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG pixel-art sprite sheet with TWO authored views of the SAME reference creature, used in a released browser game. Input image is the precise character-design reference; preserve its identity, silhouette, anatomy, colors and distinctive markings.\nPrimary request: convert this reference monster into exceptionally clean crisp 16-bit pixel art, and author its genuine back view. EVOLVED FORM: larger squat layered blue stone golem, broad shoulders with pale-blue stone armor plates, stacked blue rock torso and heavy short segmented arms with cyan glowing joints, flat chunky feet, deep-set cyan glowing eyes beneath pale heavy rock brows, enlarged angular cobalt blue gem nose, pale V-shaped chest plate with bright cyan seams and two peaks atop the head. Preserve stocky wide anatomy and armor from 8.png.\nComposition: wide 2:1 transparent canvas divided conceptually into two equal square cells, with no drawn dividing line. In LEFT HALF show ONE full-body FRONT three-quarter view, facing SCREEN LEFT so eyes/nose aim left. In RIGHT HALF show ONE full-body REAR three-quarter view, facing SCREEN RIGHT, looking away from viewer; show the actual back of head, back, limbs and tail, not the front mirrored and not a second front face. Match body scale and baseline between views. Center each figure in its own half, entire silhouette visible, about 76% of cell height, at least 8% completely clear padding on every cell edge. Ensure a wide completely transparent central gutter, no limbs crossing halves.\nStyle: meticulously clustered pixel art intended to read cleanly at 160x160 game pixels per creature, obvious square pixel steps, limited cohesive palette, dark 1-pixel silhouette outline, controlled 3-to-5 shade ramps, no smooth photographic textures, no blur or antialiasing. Maintain the reference's exact creature features; do not invent armor accessories, horns or extra limbs.\nBackground: actual transparent alpha across all empty pixels. No ground, cast shadow, scenery, checkerboard texture, text, labels, watermark, border or UI. Only TWO complete creature sprites.",
+      "frontDirection": -1,
+      "backDirection": 1,
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "45b42c3f671e8693e59cb8fca35a7a520e7c34b87001494e883d04d52efc54f0",
+      "bytes": 1304652,
+      "frames": [
+        [
+          116,
+          85,
+          686,
+          732
+        ],
+        [
+          972,
+          85,
+          690,
+          733
+        ]
+      ],
+      "alphaRange": [
+        0,
+        255
+      ]
+    }
+  ]
+}

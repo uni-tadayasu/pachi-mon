@@ -1,0 +1,130 @@
+{
+  "version": 54,
+  "tool": "built-in image_gen.imagegen",
+  "mode": "style-transfer",
+  "notes": [
+    "Filename order is authoritative: 1 baby, 2 bulky crouched middle, 3 slender ribbon-finned final.",
+    "Every PNG is copied byte-for-byte from built-in generation, retaining its original alpha; no artistic pixel editing or background-removal script was used.",
+    "Two independent views per sheet: front on left, anatomically authored rear on right. Rear views are not mirrored front images.",
+    "Frames below are measured x,y,width,height foreground bounds using alpha >=32 for inspection only. Alpha pixels and original files are unchanged."
+  ],
+  "assets": [
+    {
+      "source": "exec-d7426253-cf0d-440d-916c-937c7e2d6981.png",
+      "file": "assets/offdex-v54-01.png",
+      "reference": "1.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "bytes": 1597000,
+      "sha256": "22e62557681cb390db9f8164337f582fdec7f53564add86014af007077bd4d82",
+      "frames": [
+        [
+          152,
+          151,
+          527,
+          724
+        ],
+        [
+          857,
+          147,
+          522,
+          724
+        ]
+      ],
+      "directions": [
+        -1,
+        1
+      ],
+      "alpha": {
+        "range": [
+          0,
+          254
+        ],
+        "transparentPixels": 1006738,
+        "foregroundPixels": 489195
+      },
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG two-view game sprite sheet. Input image: the attached 1.png is the exact character design reference, preserve its identity. Create ONE wide transparent PNG sprite sheet containing exactly TWO complete full-body sprites of this same small baby creature: LEFT half front three-quarter view facing screen LEFT; RIGHT half authentic rear three-quarter view facing screen RIGHT, showing the back of its shell hood and its two small leaflike fins, not a mirrored front. Subject invariants: small friendly violet body, huge pearlescent peach/pink/lilac swept shell hood, bright golden eyes, pearl cheek drops, single oval green gem on pearly belly plate, short rounded arms, cream toe claws, two little lilac back fins with pale green veins. Preserve its cute small proportions and all identifying features. Style: highly polished 16-bit JRPG pixel art with crisp visible square-pixel clusters and dark plum outline, restricted deliberate shading, clearly readable when each sprite is rendered at about 160 pixels tall. No smooth painted shading or vector curves. Composition: 1536x1024 wide sheet, two equally sized cells, sprites at identical scale and baseline, each entirely within its own half with at least 60 pixels transparent margin and a generous empty central gutter. Actual alpha transparency everywhere outside the creature, no white matte, no checkerboard, no floor or ground shadow, no labels, no text, no boxes, no border, no logo, no additional subjects. Rear view keeps genuine volume and anatomically plausible shell back; belly gem is not visible from behind."
+    },
+    {
+      "source": "exec-1551f88e-fb81-4cf9-a340-4409e2f34ce7.png",
+      "file": "assets/offdex-v54-02.png",
+      "reference": "2.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "bytes": 1841124,
+      "sha256": "530af45a81f812a0d25beea82b3e35280d00b30c8337851de6d2e426200c3435",
+      "frames": [
+        [
+          57,
+          249,
+          660,
+          523
+        ],
+        [
+          815,
+          247,
+          663,
+          521
+        ]
+      ],
+      "directions": [
+        -1,
+        1
+      ],
+      "alpha": {
+        "range": [
+          0,
+          254
+        ],
+        "transparentPixels": 874259,
+        "foregroundPixels": 521290
+      },
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG two-view game sprite sheet. Make exactly two full-body sprites of the SAME reference creature on ONE 1536x1024 transparent PNG. LEFT cell is front three-quarter view facing screen LEFT. RIGHT cell is a genuine rear three-quarter view facing screen RIGHT, showing the character's actual back anatomy, not a mirrored front. Match scales and ground baselines, leave at least 60 pixels safe transparent margin at every canvas edge and a wide empty central gutter. High-quality 16-bit JRPG pixel art, visible crisp square-pixel clusters, controlled small palette shading, dark plum outline, readable at about160px rendered size. True transparent alpha background, fully solid creature pixels, no glow or halo, no white backdrop/checkerboard, no floor/shadow, no text/labels/border/logo. Preserve the supplied design, proportions, anatomy and color palette. Input image2.png: edit target and exact identity reference. This is the BULKY CROUCHING middle evolution. Preserve the low wide muscular violet body, huge folded iridescent peach/pink/lilac shell pauldrons enveloping both shoulders, swept pearl forehead shell, goldeneyes, pearl cheekdrops, three green oval gems stacked on pale bellyplating, long clawed powerful arms, broad toes, two short purple leaflike fins with pale green veins emerging above the shoulder shell. Front sprite must remain low and broad with one big hand onground and the other lifted infront. Rear sprite must show the huge shell surfaces and purple torso/limbs frombehind; no belly gems visible frombehind. Do not replace with the taller final evolution or small baby."
+    },
+    {
+      "source": "exec-36dbb717-651a-4703-bc72-efa3fd3185e1.png",
+      "file": "assets/offdex-v54-03.png",
+      "reference": "3.png",
+      "size": [
+        1536,
+        1024
+      ],
+      "mode": "RGBA",
+      "bytes": 2080972,
+      "sha256": "57f999dfd37a7e997208dcda0a19795c8e23fb2620fa0b012a038457dcfa3248",
+      "frames": [
+        [
+          24,
+          114,
+          719,
+          791
+        ],
+        [
+          790,
+          115,
+          723,
+          787
+        ]
+      ],
+      "directions": [
+        -1,
+        1
+      ],
+      "alpha": {
+        "range": [
+          0,
+          254
+        ],
+        "transparentPixels": 813332,
+        "foregroundPixels": 528253
+      },
+      "prompt": "Use case: style-transfer. Asset type: original monster RPG two-view game sprite sheet. Make exactly two full-body sprites of the SAME reference creature on ONE 1536x1024 transparent PNG. LEFT cell is front three-quarter view facing screen LEFT. RIGHT cell is a genuine rear three-quarter view facing screen RIGHT, showing the character's actual back anatomy, not a mirrored front. Match scales and ground baselines, leave at least 60 pixels safe transparent margin at every canvas edge and a wide empty central gutter. High-quality 16-bit JRPG pixel art, visible crisp square-pixel clusters, controlled small palette shading, dark plum outline, readable at about160px rendered size. True transparent alpha background, fully solid creature pixels, no glow or halo, no white backdrop/checkerboard, no floor/shadow, no text/labels/border/logo. Preserve the supplied design, proportions, anatomy and color palette. Input image3.png: edit target and exact identity reference. This is the TALL SLENDER final evolution. Preserve long upright athletic violet body, broad swept scalloped iridescent peach/pink/lilac shell crown, narrow glowing goldeneyes, pointed pearl facependants, elongated sculpted pearlescent breastplate and hipplate with paired rows of green oval gems, long arms withcreamclaws, digitigrade muscular legs and cream shell greaves, threecream toes, two huge trailing purple translucent fin/ribbon wings with bright pale-greenbranchingveins onback. Both ribbons must fit in each cell without cropping. Front posture is poised tall fullbody, rearshows shell crown back, shoulder ribbon attachments, purple spine andlegarmor, no duplicate eyes/belly gems onback. Do not replace with bulky middle form or baby."
+    }
+  ]
+}

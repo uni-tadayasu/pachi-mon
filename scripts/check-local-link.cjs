@@ -154,6 +154,17 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
 
   // Invalid or out-of-order partners end the trade without touching either save.
   const wire = species => { const e = new Engine(); e.newGame('hibana'); return copy(e.toTradeWire(e.makeMonster(species, 10))); };
+  // The new off-dex companions can join link battles, but retain the existing
+  // hidden-species trade restriction in either direction of the local link.
+  for (const species of D.offDexLines.ids) {
+    A = device('hibana', [[species, 24]]); B = device('shizuku'); p = pair(A, B); [h] = p.sessions;
+    const beforeA = A.save, beforeB = B.save, sent = p.log.length;
+    const offered = h.offer(A.engine.state.party[1]); assert.equal(offered.ok, false); assert.match(offered.message, /交換/);
+    assert.equal(p.log.length, sent, 'A forbidden offer never reaches the other device');
+    h.receive({ t: 'offer', revision: 1, monster: { ...wire('komori'), species } });
+    assert.equal(h.phase, 'error'); assert.match(h.message, /交換/);
+    assert.equal(A.commits + B.commits, 0); assert.equal(A.save, beforeA); assert.equal(B.save, beforeB);
+  }
   const bad = [
     [{ t: 'offer', revision: 1, monster: { ...wire('komori'), species: 'futo' } }, /交換の対象/],
     [{ t: 'offer', revision: 1, monster: { ...wire('komori'), heldItem: 'berry' } }, /持ち物/],
@@ -210,5 +221,5 @@ const qrcode = require(path.join(root, 'vendor', 'qrcode-generator.js')), jsQR =
   const licenses = fs.readFileSync(path.join(root, 'LICENSES.txt'), 'utf8');
   assert(/qrcode-generator/.test(licenses) && /jsQR/.test(licenses) && fs.existsSync(path.join(root, 'vendor', 'jsQR.LICENSE.txt')) && fs.existsSync(path.join(root, 'vendor', 'qrcode-generator.LICENSE.txt')), 'bundled library licenses');
   console.log(JSON.stringify({ ok: true, codeChars: { offer: offer.length, answer: answer.length },
-    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'invalid partners', 'cancel', 'Bluetooth tethering requirements, device connection type and camera permission', 'page wiring and licenses'] }));
+    checks: ['typed compressed codes', 'trimmed SDP', 'wrapped paste', 'wrong-side and corrupt codes', 'QR round trip (bundled libraries)', 'ping/pong', 'size limits', 'malformed peers dropped', 'bye', 'one-time swap with the real engine', 'second confirmer saves first', 'changed offers withdraw confirmations', 'stale confirmations ignored', 'dry run refuses', 'failed save leaves the partner untouched', 'all 8 new hidden forms rejected in both trade directions without messages or saves', 'invalid partners', 'cancel', 'Bluetooth tethering requirements, device connection type and camera permission', 'page wiring and licenses'] }));
 })().catch(error => { console.error(error); process.exit(1); });

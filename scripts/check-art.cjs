@@ -179,7 +179,7 @@ async function main() {
   }
   assert(fronts.size >= 200 && backs.size >= 200, 'Species artwork lost its individual visual variations');
 
-  const kinds = [...new Set(['hero', 'hero-female', ...maps.flatMap(m => (m.npcs || []).map(n => n.kind || 'dialogue'))])].filter(k => k !== 'cache');
+  const kinds = [...new Set(['hero', 'hero-female', 'kasai', ...maps.flatMap(m => (m.npcs || []).map(n => n.kind || 'dialogue'))])].filter(k => k !== 'cache');
   let personCount = 0;
   for (const kind of kinds) for (const direction of ['down', 'left', 'right', 'up']) {
     const hashes = new Set();
@@ -190,7 +190,7 @@ async function main() {
       hashes.add(visible(sprite, `${kind} ${direction} ${frame}`, true).hash); personCount++;
       if (personCount % 24 === 0) await settle();
     }
-    if (kind === 'hero' || kind === 'hero-female') assert(hashes.size > 1, `${direction}: walking animation is static`);
+    if (kind === 'hero' || kind === 'hero-female' || kind === 'kasai') assert.equal(hashes.size, 3, `${kind}/${direction}: missing authored walking animation`);
   }
 
   const counters = {};
@@ -280,7 +280,7 @@ async function main() {
   assert(delayed.LT.CreatureArt.status().arvelionLoaded, 'Late legendary atlas was not adopted');
   visible(delayed.LT.CreatureArt.get('arvelion'), 'Late legendary front recovery', true);
   visible(delayed.LT.CreatureArt.get('arvelion',true), 'Late legendary rear recovery', true);
-  assert.equal(delayed.LT.TravellerArt.stats.loaded, 3, 'Late traveller atlases were not adopted');
+  assert.equal(delayed.LT.TravellerArt.stats.loaded, 4, 'Late traveller atlases were not adopted');
   visible(delayed.LT.CreatureArt.get(species[0].id), 'Late creature recovery', true);
   visible(delayed.LT.TravellerArt.get('hero'), 'Late traveller recovery', true);
   visible(delayed.LT.FieldArt.tree('village'), 'Late tree recovery', true);

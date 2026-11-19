@@ -13,7 +13,7 @@ assert.equal(D.mythical.species,'floravelle');assert.equal(D.mythical.adminLevel
 assert.equal(D.species.floravelle.element,'leaf');assert(D.species.floravelle.adminOnly&&D.species.floravelle.specialOnly);
 assert.equal(D.species.floravelle.rarity,'mythical');assert(!D.species.floravelle.evolvesTo);
 assert.equal(D.content.species,254);assert.equal(D.content.totalSpecies,256);assert.equal(D.content.specialSpecies,2);
-assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,3);assert.equal(D.content.playableSpecies,259);assert.equal(Object.keys(D.species).length,259);
+assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,11);assert.equal(D.content.playableSpecies,267);assert.equal(Object.keys(D.species).length,267);
 assert.deepEqual(copy(D.species.floravelle.moves),ids);assert(ids.every(id=>D.moves[id].element==='leaf'));
 assert(Object.values(D.maps).every(m=>!m.encounters.includes('floravelle')));
 assert(!D.starters.includes('floravelle'));assert(!D.collectionRoutes.wild.includes('floravelle'));
@@ -68,4 +68,4 @@ for(const playing of [true,false]){
  failWrite=false;assert(bridge.persistGiftMutation('receiveAdminMythical',grant).ok);assert.equal(writes,1);assert(stored.giftReceipts.includes(grant.grantId));
  assert(bridge.persistGiftMutation('receiveAdminMythical',grant).alreadyReceived);assert.equal(writes,1);
 }
-console.log('Mythical checks passed: owner entitlement validation, 254 ordinary / 256 dex / 259 playable species, no ordinary acquisition, link battles at standard Lv.50 stats, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, physical leaf moves, poison, recharge and half restoration in solo/duel.');
+console.log('Mythical checks passed: owner entitlement validation, 254 ordinary / 256 dex / 267 playable species, no ordinary acquisition, link battles at standard Lv.50 stats, party/storage capacity, duplicate/release safety, save identity and rollback, Lv100/no evolution, physical leaf moves, poison, recharge and half restoration in solo/duel.');

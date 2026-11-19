@@ -4,15 +4,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),ctx=vm.createContext({console});
 for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(s[1]))continue;vm.runInContext(s[2],ctx);if(ctx.LT?.Engine)break;}
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
+const {eligible:tradeEligible}=require('../trade-client.js');
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
-const all=Object.keys(D.species),hidden=[...D.glitchLine.ids],nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,259);
-const genderless=[...D.genderless],gendered=[...D.starters,...hidden];
+const all=Object.keys(D.species),hidden=all.filter(id=>D.species[id].hiddenDex),nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,267);assert.equal(hidden.length,11);
+for(const id of D.glitchLine.ids)assert.deepEqual(copy(D.species[id].moves),nullMoves);
+const genderless=[...D.genderless],gendered=[...D.starters,...hidden.filter(id=>!genderless.includes(id))];
 function assertCapturedGender(engine,mon,gender,enemyUID){
  assert.notEqual(mon.uid,enemyUID,'Capture assigns a new individual ID');assert.equal(engine.genderOf(mon),gender,'The displayed encounter gender survives capture');
  assert.equal(mon.gender,gender==='none'?undefined:gender,'Captured gender is explicit unless the species is genderless');
 }
-// The operator selector covers every species, including the three off-dex
-// stages. One capsule captures exactly the chosen form and level.
+// The operator selector covers every species, including all eleven off-dex
+// forms. One capsule captures exactly the chosen form and level.
 for(const [i,id] of all.entries()){
  const e=make(),level=i%2?100:1;e.state.inventory.chime=0;
  assert(e.startAdminEncounter(id,level,owner).ok,id);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,level);
@@ -29,6 +31,22 @@ for(const [i,id] of all.entries()){
   assert.equal(mon.grantId,expected);assert(e.state.giftReceipts.includes(expected));
  }else assert.equal(mon.grantId,undefined);
 }
+// Future additions are eligible from the live catalogue even when they are
+// hidden and glitch-only without joining an old ID allowlist. Operator-only
+// entitlements keep their existing save-proof checks, exercised above.
+const futureId='secret_future_fixture';
+function withFutureSpecies(run){
+ const previous=D.species[futureId];
+ D.species[futureId]={...D.species.komori,id:futureId,name:'ミライノコ',hiddenDex:true,glitchOnly:true,specialOnly:true,evolvesTo:null};
+ try{return run();}finally{if(previous)D.species[futureId]=previous;else delete D.species[futureId];}
+}
+withFutureSpecies(()=>{
+ const e=make();assert(e.startAdminEncounter(futureId,37,owner,{shiny:true,gender:'female'}).ok);
+ assert.equal(e.resonanceChance(),1);assert(e.action({type:'resonate'}).ok);
+ const mon=e.state.party.at(-1);assert.equal(mon.species,futureId);assert.equal(mon.level,37);assert.equal(mon.gender,'female');assert.equal(mon.shiny,true);
+ assert.deepEqual(copy(new Engine(e.serialize()).state.party.at(-1)),copy(mon));
+ assert.equal(mon.grantId,undefined);
+});
 for(const species of ['floravelle',...hidden])for(const denied of [null,{}, {id:owner.id,isAdmin:false},{id:'invalid',isAdmin:true},{id:owner.id,isAdmin:1}]){
  const e=make(),state=JSON.stringify(e.state);assert(!e.startAdminEncounter(species,70,denied).ok);assert.equal(e.battle,null);assert.equal(JSON.stringify(e.state),state);
 }
@@ -41,14 +59,15 @@ for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100
  const e=make();if(destination==='storage')while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',5));
  const before=e.state[destination].length;
  assert(e.startAdminEncounter(id,level,owner,{shiny}).ok);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,level);assert.equal(e.battle.enemy.shiny,shiny);
- assert.deepEqual(copy(e.moves(e.battle.enemy).map(move=>move.id)),nullMoves);assert.equal(e.resonanceChance(),1);
+ assert.deepEqual(copy(e.moves(e.battle.enemy).map(move=>move.id)),copy(D.species[id].moves));assert.equal(e.resonanceChance(),1);
  const result=e.action({type:'resonate'});assert(result.ok);assert.equal(result.ended,'caught');assert.equal(e.state[destination].length,before+1);
  const mon=e.state[destination].at(-1);assert.equal(mon.species,id);assert.equal(mon.level,level);assert.equal(mon.shiny,shiny);
- assert.deepEqual(Object.keys(mon.pp),nullMoves);for(const move of e.moves(mon))assert.equal(mon.pp[move.id],e.maxPP(move));
+ assert.deepEqual(Object.keys(mon.pp),copy(D.species[id].moves));for(const move of e.moves(mon))assert.equal(mon.pp[move.id],e.maxPP(move));
  assert.equal(mon.grantId,undefined);assert.throws(()=>e.tradeMonster(mon),/交換/,'Operator capture does not grant exchange eligibility');
+ assert.equal(tradeEligible(mon,D),false,'Online trade chooser excludes every off-dex individual');
  const loaded=new Engine(e.serialize()),restored=loaded.state[destination].find(item=>item.uid===mon.uid);
  assert.deepEqual(copy(restored),copy(mon));assert.equal(restored.species,id);assert.equal(restored.level,level);assert.equal(restored.shiny,shiny);
- assert.deepEqual(copy(loaded.moves(restored).map(move=>move.id)),nullMoves);
+ assert.deepEqual(copy(loaded.moves(restored).map(move=>move.id)),copy(D.species[id].moves));
 }
 // Explicit genders survive the new capture UID, both destinations, and reload.
 // Exercise both sexes for the ordinary starters and every off-dex stage.
@@ -177,9 +196,9 @@ for(const [species,gender] of [['komori',null],['komori','none'],...hidden.map(i
 const source=fs.readFileSync(path.join(root,'secret-encounter.js'),'utf8');
 function ui(){
  const state={now:10000,click:null,dialog:null,authCalls:0,startCalls:[],messages:[],admin:true,playing:true};
- function element(tag){return {tag,children:[],get options(){return this.children;},value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
+ function element(tag){return {tag,children:[],get options(){return this.children;},value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},replaceChildren(...children){this.children=[];this.value='';for(const child of children)this.append(child);},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
  const document={body:{append(node){state.dialog=node;}},addEventListener(name,fn){if(name==='click')state.click=fn;},querySelectorAll(){return state.dialog?.open?[state.dialog]:[];},createElement(tag){const node=element(tag);if(tag==='dialog'){
-  const fields={'#secret-species':element('select'),'#secret-level':element('input'),'#secret-gender':element('select'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
+  const fields={'#secret-species':element('select'),'#secret-search':element('input'),'#secret-count':element('p'),'#secret-level':element('input'),'#secret-gender':element('select'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button'),'[data-secret-random]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
   // Read the new select's options from the real markup, so the harness cannot
   // conceal a missing control or incorrect values/labels in the UI source.
   Object.defineProperty(node,'innerHTML',{set(markup){
@@ -187,20 +206,22 @@ function ui(){
    for(const option of select[1].matchAll(/<option\b[^>]*\bvalue="([^"]*)"[^>]*>([^<]*)<\/option>/g)){const child=element('option');child.value=option[1];child.textContent=option[2];fields['#secret-gender'].append(child);}
   }});
  }return node;}};
- const LT={DATA:D,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
+ const LT={DATA:D,TypeSystem:ctx.LT.TypeSystem,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
  vm.runInNewContext(source,{LT,document,Date:{now:()=>state.now},console});
+ state.open=()=>LT.SecretEncounter.open();
  state.tap=()=>state.click({target:{closest:selector=>selector==='#pachi-console-title'?{}:null}});
  state.submit=()=>state.dialog.querySelector('#secret-form').onsubmit({preventDefault(){}});
  state.selectSpecies=id=>{const select=state.dialog.querySelector('#secret-species');select.value=id;assert.equal(typeof select.onchange,'function');select.onchange();};
+ state.search=query=>{const input=state.dialog.querySelector('#secret-search');input.value=query;input.oninput();return state.dialog.querySelector('#secret-species').children;};
  return state;
 }
 async function main(){
  const settle=()=>new Promise(resolve=>setImmediate(resolve));
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
- u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,259);
+ u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,267);
  const choices=u.dialog.querySelector('#secret-species').children;assert.deepEqual(choices.map(option=>option.value).sort(),all.slice().sort());
  let genderSelect=u.dialog.querySelector('#secret-gender');assert.deepEqual(genderSelect.options.map(option=>[option.value,option.textContent]),[['auto','おまかせ'],['male','オス ♂'],['female','メス ♀']]);assert.equal(genderSelect.value,'auto');assert.equal(genderSelect.disabled,false);
- for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');}
+ for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');assert(option.textContent.includes(ctx.LT.TypeSystem.of(id).map(type=>D.elements[type].name).join('・')),'Both types are displayed in the selector');}
  u.selectSpecies('floravelle');assert.equal(genderSelect.disabled,true);assert.equal(genderSelect.options[0].textContent,'性別なし');await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.deepEqual(copy(u.startCalls[0]),['floravelle',70,owner,{shiny:false,gender:'auto'}]);assert(!u.dialog.open);
  u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,3);assert(!u.dialog.open);assert.equal(u.startCalls.length,1,'Reopening rechecks permissions instead of reusing the earlier authorization');
  for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100]){
@@ -235,6 +256,33 @@ async function main(){
  }
  u=ui();for(let n=0;n<6;n++)u.tap();u.now+=2501;u.tap();await settle();assert.equal(u.authCalls,0);
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-level').value='101';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 259 species capture/save; 3 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; male/female and automatic gender through capture UID changes, both destinations, reload and evolution; genderless/input rejection without side effects; owner/battle/capacity guards, private permit, special receipts, hidden Futo sync/reload and legacy gifts, normal odds restored, bridge identity/gender forwarding, seven-tap UI, gender switching/reopening/validation, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
+ // Direct admin-menu access shares the seven-tap path's authorization. Search
+ // includes types/tags, normalizes kana, and never triggers a wild battle.
+ u=ui();await u.open();assert.equal(u.authCalls,1);assert(u.dialog.open);
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'267種を表示 / 全267種');
+ assert.deepEqual(u.search('きらしーど').map(option=>option.value),['floravelle']);
+ assert.deepEqual(u.search('ﾌｰﾄ').map(option=>option.value),['futo']);
+ assert.deepEqual(u.search('図鑑外').map(option=>option.value).sort(),hidden.slice().sort());
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'11種を表示 / 全267種');
+ assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
+ const ice=u.search('氷').map(option=>option.value);
+ assert(ice.length>0);assert(ice.every(id=>ctx.LT.TypeSystem.of(id).some(type=>D.elements[type].name==='氷')));
+ for(let n=0;n<20;n++){
+  u.dialog.querySelector('[data-secret-random]').onclick();
+  assert(ice.includes(u.dialog.querySelector('#secret-species').value));assert.equal(u.startCalls.length,0);
+ }
+ assert.equal(u.search('該当種族のない検索語').length,0);assert.equal(u.dialog.querySelector('#secret-species').disabled,true);
+ assert.equal(u.dialog.querySelector('[type="submit"]').disabled,true);assert.equal(u.dialog.querySelector('[data-secret-random]').disabled,true);
+ await u.submit();assert.equal(u.startCalls.length,0);assert.equal(u.authCalls,1);
+ assert.equal(u.search('').length,all.length);assert.equal(u.dialog.querySelector('[type="submit"]').disabled,false);
+ // Reopening an existing dialog reads current data instead of a cached list.
+ D.species[futureId]={...D.species.komori,id:futureId,name:'ミライノコ',hiddenDex:true,glitchOnly:true,specialOnly:true};
+ try{
+  await u.open();assert.equal(u.authCalls,2);assert.equal(u.dialog.querySelector('#secret-species').children.length,268);
+  assert.deepEqual(u.search('みらいのこ').map(option=>option.value),[futureId]);await u.submit();
+  assert.equal(u.authCalls,3);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],futureId);
+ }finally{delete D.species[futureId];}
+ u=ui();u.admin=false;await u.open();assert.equal(u.authCalls,1);assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);
+ console.log('Secret encounter checks passed: all 267 species capture/save; every off-dex form, shiny/gender/level/capacity behavior and special receipt rules; current operator authorization on every open/submit; searchable complete catalogue with kana/type/tag matching, empty-result guards, random selection, and future hidden species without an ID allowlist.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
