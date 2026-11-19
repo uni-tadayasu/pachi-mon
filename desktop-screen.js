@@ -55,10 +55,13 @@
     root.classList.toggle('desktop-fit', nextDesktop);
     // A phone/tablet layout must never inherit an in-page desktop expansion.
     if (!nextDesktop) fallbackExpanded = false;
-    // Reveal the destination before restoring focus to a relocated control.
-    sidebar.hidden = !nextDesktop || !document.body.classList.contains('in-battle');
+    // Reveal a desktop destination before restoring focus. Keep a desktop
+    // source visible until its focused control has moved back to mobile.
+    const hideSidebar = !nextDesktop || !document.body.classList.contains('in-battle');
+    if (nextDesktop) sidebar.hidden = hideSidebar;
     if (changedLayout) moveBattleControls(nextDesktop);
     desktop = nextDesktop;
+    sidebar.hidden = hideSidebar;
 
     const expanded = !!fullscreenElement() || fallbackExpanded;
     root.classList.toggle('desktop-expanded', desktop && expanded);
