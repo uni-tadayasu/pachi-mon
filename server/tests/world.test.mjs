@@ -8,7 +8,7 @@ import worker,{WORLD_MAP_BOUNDS,WORLD_TTL} from '../server.mjs';
 class LocalD1 {
   constructor() {
     this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec('PRAGMA foreign_keys=ON');
-    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
   }
   prepare(sql) {
     const db=this;
@@ -57,7 +57,7 @@ test('world map bounds match every published outdoor and indoor map',()=>{
     if(/\bsrc=|application\/ld\+json/.test(match[1]))continue;
     runInNewContext(match[2],context);if(context.LT?.Engine)break;
   }
-  const actual=Object.fromEntries(Object.entries(context.LT.DATA.maps).map(([id,map])=>[id,[map.width,map.height]]));
+  const actual=Object.fromEntries(Object.entries(context.LT.DATA.maps).filter(([id,map])=>!map.sharedRoom&&!id.startsWith('room:')).map(([id,map])=>[id,[map.width,map.height]]));
   assert.deepEqual(WORLD_MAP_BOUNDS,actual);assert.equal(Object.keys(actual).length,232);
 });
 

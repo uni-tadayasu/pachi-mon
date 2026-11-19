@@ -1,5 +1,127 @@
 # パチモンの通信交換API
 
+## 壁のひみつ部屋とカサイの試練（v56）
+
+`drizzle/0003_rooms.sql` は、公開する部屋 `world_rooms`、挑戦セッション `kasai_challenges`、
+一人一回の受取記録 `kasai_rewards` を追加します。既存のプレイヤー・運営・配布・交換記録は維持します。
+部屋と試練のAPIはすべて既存のBearer認証が必要です。
+
+### 部屋
+
+| 操作 | API | 送信内容・応答 |
+| --- | --- | --- |
+| アイテムと間取り | `GET /api/world/rooms/catalog` | `{catalog,layouts,serverTime}` |
+| 作れる壁 | `GET /api/world/rooms/walls?map=village` | `{walls:[{x,y,facings}],serverTime}` |
+| フィールドの入口 | `GET /api/world/rooms?map=village` | `{rooms,serverTime}` |
+| 自分の部屋 | `GET /api/world/rooms/mine` | `{room:null または部屋,serverTime}` |
+| カサイの部屋 | `GET /api/world/rooms/kasai` | 現在の運営の部屋。運営未登録なら `room:null` |
+| 部屋を見る・訪問する | `GET /api/world/rooms/:ownerPlayerId` | 認証済みなら誰でも取得可能 |
+| 部屋を作る | `POST /api/world/rooms` | `{map,x,y,facing,name?}` |
+| 模様替え | `PATCH /api/world/rooms/:ownerPlayerId` | `{revision,name?,decorations?}`。持ち主のみ |
+
+部屋はひとり一つで、入口は固定です。同じ入口への作成再送は既存の部屋を返します。
+壁の座標 `(x,y)` に対し、`facing` はプレイヤーが壁を見る向きです。
+例: `up` なら壁の下 `(x,y+1)` が入口前・退出後の位置になります。
+232エリアの実際の `#`・`B` タイルから作成可能な壁と向きを生成しており、
+歩ける接近位置がない壁、既存の出入口に隣接する壁、人物の前は対象外です。
+同じ壁への作成はD1の一意制約で競合を防ぎます。現在のマップでは最大378候補なので、
+一覧の上限400件ですべての入口が収まります。入室に招待や持ち主の承認は不要です。
+
+部屋の形式:
+
+```js
+{
+  id: 'P0123456789abcdef',
+  mapId: 'room:P0123456789abcdef',
+  owner: {id, name, isAdmin, avatar},
+  kind: 'secret', // 現在の運営の部屋だけ 'kasai'
+  name, entrance: {map, x, y, facing, returnX, returnY},
+  width, height, spawn: {x, y}, exit: {x, y},
+  protected: [{x, y, width, height}],
+  decorations: [{id, itemId, x, y, rotation}],
+  revision, createdAt, updatedAt
+}
+```
+
+`decorations[].id` は部屋内で重複しない1〜40文字の英数字・`_`・`-`、`itemId` はカタログのIDです。
+カタログは `plant/lamp/stool/table/sofa/shelf/bed/aquarium/crystal/plush/rug/banner` の12種類です。
+各項目の `width/height/solid` を描画・当たり判定にも使います。回転は数値の `0/90/180/270` のみで、
+90度・270度は縦横の占有マスを入れ替えます。最大32個、ラグを含めて占有マスの重なりは禁止です。
+保存は送信した `revision` との比較更新で行い、別タブの編集・運営の交代が競合すると `409 ROOM_CHANGED` を返します。
+
+通常の部屋は18×16、登場位置 `(9,12)`、退出位置 `(9,14)`。
+配置できる床は `x=1..16, y=2..13`、中央の `x=8,9` は通り道として空けます。
+カサイの部屋は24×20、登場位置 `(12,16)`、退出位置 `(12,18)`。
+配置できる床は `x=1..22, y=2..17` で、中央の `x=11,12` と舞台 `x=8..15,y=2..7` を空けます。
+カサイは `(12,4)` にいます。アイテムは占有するすべてのマスが配置可能な床に収まる必要があります。
+
+カサイが部屋を作成する前でも、`/rooms/kasai`・運営本人の `/rooms/mine`・里の入口一覧は、
+現在の運営の部屋を自動で一度だけ作成します。既に別の壁に作った部屋があればそれを使います。
+既定の壁は里の `(32,7)`、以後の運営交代では `(14,7)`・`(6,7)`、さらに空いている有効な壁を使用します。
+最初の三つの壁は通常の部屋作成から予約しています。前の運営の部屋も削除せず、通常の部屋として残ります。
+役割変更で間取りが変わった場合は、現在の間取りで安全に置けるアイテムだけを表示します。
+
+`POST /api/world/presence` は `room:<ownerPlayerId>` にも対応します。
+その部屋がD1に存在することを確認し、現在の役割に応じた間取りで座標範囲を検証します。
+未作成の部屋IDを送って、架空の共有フィールドを作ることはできません。
+
+### カサイの試練・一度限りの報酬
+
+| 操作 | API | 送信内容・応答 |
+| --- | --- | --- |
+| 挑戦を準備 | `POST /api/world/kasai/challenges` | `{requestId,roomId,party,storageCount}` |
+| 結果の確認と報酬受取 | `POST /api/world/kasai/challenges/:id/complete` | `{token,actions,storageCount}` |
+| 挑戦を中止 | `POST /api/world/kasai/challenges/:id/cancel` | `{token}` |
+| 受取状況・明示的な復旧 | `GET /api/world/kasai/reward` | `{receipt:null または受取記録,serverTime}` |
+| 端末保存完了 | `POST /api/world/kasai/reward/ack` | `{receiptId}` |
+
+準備の `requestId` はUUID、`roomId` は現在の運営のプレイヤーIDです。
+開始時は15秒以内の位置更新があり、カサイの部屋内で `(12,4)` からマンハッタン距離3以内である必要があります。
+準備の応答は `{challenge:{id,roomId,seed,rulesVersion,party,opponents,expiresAt,state},token,rewardClaimed,serverTime}`。
+`token` を `challenge` に合わせてからクライアントの `startKasaiBattle` に渡します。
+トークンは `DUEL_SIGNING_KEY` から決定的に生成するため、応答を失っても同じ `requestId` で再取得できます。
+有効期限は30分、新しい挑戦を準備すると本人の古い未完了セッションを取り消します。
+
+`server/kasai-replay.mjs` はクライアントと同じデータ・Engineを、動的評価を使わない静的なモジュールとして保持します。
+`scripts/sync-kasai-replay.cjs` で生成し、`--check` でクライアントとの一致を検証できます。
+サーバーの種、開始時の仲間、最大512件の操作を再生して、実際に勝利まで到達した場合だけ報酬を作ります。
+許可する操作は `{type:'move',index}`、`{type:'switch',index}`、`{type:'replace',index}`、`{type:'struggle'}` です。
+`won:true` だけの申告、途中で終わる記録、不正操作、終了後に続く操作は受理しません。
+カサイの固定チームはアルヴェリオン・フート・キラシードのLv.70で、開始時にプレイヤーの仲間全員を全回復します。
+
+通常の仲間のレベル・成長・持ち物などは、端末の冒険データをEngineの保存形式で検証したものです。
+過去のオフラインプレイの真正性を証明する仕組みではありません。
+配布IDを持つ仲間は本人の配布記録・現在の運営権限・勝利報酬を追加確認し、
+独自能力のフートは配布された能力と技の範囲を確認します。
+
+勝利報酬は `{id,grantId,species:'floravelle',level:70,gender,createdAt,ackedAt,delivered}`。
+`id` と `grantId` はともに `kasai-reward:<playerId>`、性別はサーバーが初回だけ `male/female` を選び保存します。
+勝利の確定と一度限りの受取記録を同じD1トランザクションで保存します。再送・再戦でも個体情報は変わりません。
+保存後のACKも一度だけ記録し、`delivered:true` は既に保存済みの報酬として扱います。
+古いセーブへ戻した場合も、配送済みの記録から新しい個体を作り直さないでください。
+
+ひかえが192体の場合は、パーティーに空きがあっても `409 KASAI_STORAGE_FULL` で受取を止めます。
+このとき受取記録は作らず、通常の `/me` の配布キューにも入れません。
+空きを作った後に本人が明示的に受取を再試行でき、未完了の挑戦は元の30分期限まで利用できます。
+送信された `storageCount` は整数・上限を検証しますが、サーバーは端末の実際のセーブを読み取れません。
+クライアントでも受取操作直前とセーブ書込み直前に192体未満を確認してください。
+`GET /reward` は状況表示・明示的な復旧用で、自動配布のトリガーにしません。
+
+既存の `/api/duel-pass` は、本人の `kasai-reward:<playerId>` にも署名できます。
+v3の証明は保存済みの勝利報酬を確認し、現在の運営であることを要求しません。
+通信対戦では既存のキラシードと同じ標準Lv.50の能力を返します。キラシードの既存の交換制限は維持しています。
+
+公開時は `0003_rooms.sql` をD1の次のマイグレーションとして追加し、
+`server/server.mjs` と **`server/kasai-replay.mjs` の両方**をWorkerへ同期してください。
+入口モジュールが `worker/index.js` なら、リプレイモジュールは `worker/kasai-replay.mjs` に置きます。
+
+検証:
+
+```sh
+node scripts/sync-kasai-replay.cjs --check
+node --test server/tests/rooms.test.mjs server/tests/world.test.mjs server/tests/server.test.mjs server/tests/trades.test.mjs
+```
+
 ## ソロ冒険の共有フィールド（v55）
 
 世界のプレイヤーの位置は `world_presence` に保存し、Workerの実行先が違っても同じエリアの参加者を取得します。

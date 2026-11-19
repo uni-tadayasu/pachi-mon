@@ -82,7 +82,7 @@ const start=html.indexOf('  function showStorage('),end=html.indexOf('  function
 const depositStart=html.indexOf('  function partyDepositReason('),depositEnd=html.indexOf('  function showParty(',depositStart);
 function storageUI(count,slot){
   const c=vm.createContext({engine:game(count),DATA:D,portrait:m=>`<img data-uid="${m.uid}">`,nameOf:m=>m.nickname||m.species,
-    escape:s=>String(s),ico:()=>'',shinyBadge:()=>'',typeBadge:()=>'', $:()=>null,openModal:(title,body)=>{c.result={title,body};}});
+    escape:s=>String(s),ico:()=>'',shinyBadge:()=>'',typeBadge:()=>'',speciesBadges:()=>'', $:()=>null,openModal:(title,body)=>{c.result={title,body};}});
   vm.runInContext(html.slice(depositStart,depositEnd),c);
   vm.runInContext(html.slice(start,end),c);c.showStorage(slot);return c;
 }

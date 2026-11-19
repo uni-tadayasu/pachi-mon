@@ -21,11 +21,12 @@
   const FUTO_LINK_ALLOCATION = Object.freeze({ hp: 16, atk: 17, def: 16, spAtk: 17, spDef: 16, speed: 16 });
 
   function ownedList() { const state = LT.adminBridge?.getEngine?.()?.state; return [...(state?.party || []), ...(state?.storage || [])]; }
-  // Futo comes only from an operator gift; Floravelle only as the operator's own companion.
+  // Futo is a gift; Floravelle is the operator's companion or a Kasai victory reward.
   function owned() { return ownedList().find(mon => mon.species === 'futo' && typeof mon.grantId === 'string' && mon.grantId.length > 0) || null; }
-  function ownedMythical() { return ownedList().find(mon => mon.species === 'floravelle' && /^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId || '')) || null; }
+  function ownedMythical() { return ownedList().find(mon => mon.species === 'floravelle' && (/^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId || '') || LT.KasaiRules?.isReward(mon))) || null; }
   function ownedLegendary() { const id = LT.DATA.legendary?.species; return id ? ownedList().find(mon => mon.species === id) || null : null; }
-  const lookOf = mon => ({ nickname: mon?.nickname || '', shiny: mon?.shiny === true });
+  const lookOf = mon => ({ nickname: mon?.nickname || '', shiny: mon?.shiny === true,
+    ...(LT.KasaiRules?.isReward(mon)&&['male','female'].includes(mon.gender)?{grantId:mon.grantId,gender:mon.gender}:{}) });
   // All of the individual's assigned points, independent of the Lv.50 base stats;
   // Futo with operator stats keeps its existing even 98-point spread.
   function allocationOf(id, mon) {
@@ -73,8 +74,9 @@
   const validItems = team => team.items === undefined || (Array.isArray(team.ids) && Duel.validateItems(team.items, team.ids.length).ok && team.items.some(Boolean));
   function validAppearance(team) {
     if (team.appearance === undefined) return true;
-    return Array.isArray(team.appearance) && team.appearance.length === team.ids?.length && team.appearance.every(item => {
-      if (!only(item, ['nickname', 'shiny']) || typeof item.shiny !== 'boolean' || typeof item.nickname !== 'string') return false;
+    return Array.isArray(team.appearance) && team.appearance.length === team.ids?.length && team.appearance.every((item,index) => {
+      const reward=only(item,['nickname','shiny','grantId','gender'])&&team.ids[index]==='floravelle'&&/^kasai-reward:P[0-9a-f]{16}$/.test(item.grantId)&&['male','female'].includes(item.gender);
+      if ((!only(item, ['nickname', 'shiny'])&&!reward) || typeof item.shiny !== 'boolean' || typeof item.nickname !== 'string') return false;
       try { return LT.MonsterIdentity.normalizeNickname(item.nickname) === item.nickname; } catch (_) { return false; }
     });
   }
@@ -93,7 +95,9 @@
     const duel = Duel.create(config);
     config.appearance?.forEach((team, side) => team?.forEach((look, index) => {
       const mon = duel.state.teams[side].monsters[index];
-      if (mon && look) { mon.shiny = look.shiny === true; if (look.nickname) mon.nickname = look.nickname; }
+      if (mon && look) { mon.shiny = look.shiny === true; if (look.nickname) mon.nickname = look.nickname;
+        if(mon.species==='floravelle'&&/^kasai-reward:P[0-9a-f]{16}$/.test(look.grantId||'')&&['male','female'].includes(look.gender)){mon.grantId=look.grantId;mon.gender=look.gender;}
+      }
     }));
     return duel;
   }
@@ -140,7 +144,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 9 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 10 };
 })();
