@@ -1,7 +1,7 @@
 /* Pachi Monsters — one crisp display grid for every original creature sprite. */
 (() => {
   'use strict';
-  const LT=globalThis.LT=globalThis.LT||{},GRID=80;
+  const LT=globalThis.LT=globalThis.LT||{},GRID=160;
   let cache=new WeakMap();
   function surface(source,width,height){
     const doc=source.ownerDocument||globalThis.document;let canvas;
@@ -11,7 +11,7 @@
     if(!canvas||canvas===source||typeof canvas.getContext!=='function')return null;
     canvas.width=width;canvas.height=height;return canvas;
   }
-  // All game sprite cells are square, so they become 80×80. A smaller native
+  // All game sprite cells are square, so they become 160×160. A smaller native
   // sprite keeps its own pixels; rectangular inputs keep their aspect ratio.
   // The source's colour, transparency and view box are sampled without edits.
   function get(source){

@@ -62,7 +62,8 @@ for(const method of ['drum','instrument','sweep','texture'])audio[method]=(...ar
 function impact(event){voices.length=0;return {kind:audio.damageImpact(event,1),voices:JSON.stringify(voices)};}
 
 test('the new 無 type and every stage are registered without changing the five-type chart',()=>{
-  assert.equal(D.elements.void?.name,'無');assert.equal(Object.keys(D.elements).length,6);
+  assert.equal(D.elements.void?.name,'無');assert.equal(Object.keys(D.elements).length,9);
+  assert.equal(Object.values(D.elements).filter(type=>!type.hiddenDex).length,8);
   for(const [type,id]of Object.entries(REPRESENTATIVES))assert.equal(D.species[id].element,type);
   for(const id of ['nullmie','nullva','zeroveil']){
     const species=D.species[id];assert.equal(species.element,'void');assert(species.hiddenDex&&species.glitchOnly);

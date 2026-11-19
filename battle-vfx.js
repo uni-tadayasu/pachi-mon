@@ -13,6 +13,9 @@
     ember: ['#fff2bc', '#ffb247', '#ed5b64', '#fffaf0'],
     wind: ['#f0ffe3', '#aae6c5', '#69a9da', '#ffffff'],
     crystal: ['#fff2ff', '#d6acff', '#7685ec', '#fff9cf'],
+    thunder: ['#fff6b0', '#f1c746', '#9a6c34', '#fffdf1'],
+    ice: ['#eaffff', '#a7e8ed', '#538bba', '#ffffff'],
+    earth: ['#edd3a4', '#b58b57', '#63503d', '#fff0cb'],
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff'],
     void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0']
   };
@@ -106,6 +109,11 @@
       ' 01222334440 ', '  012233440  ', '  01223340   ', '   012340    ',
       '    0130     ', '     00      '
     ],
+    rock:[
+      '    00000    ', '  00233300   ', ' 0233344420  ', '023333442210 ',
+      '023334222110 ', '0233322221110', '0123222211110', '0122222111110',
+      '011222111110 ', ' 0112111110  ', '  01111000   ', '   0000      '
+    ],
     droplet:[
       '      0      ', '     030     ', '     0340    ', '    02340    ',
       '   0233440   ', '  023344440  ', ' 02334444220 ', '023344442210 ',
@@ -189,6 +197,9 @@
   }
   function accentCell(event){
     if(['faint','arrival','miss','condition'].includes(event.style))return -1;
+    // The old sheet has no electrical, frost or soil cell. Their authored
+    // pixel materials stay readable without an unrelated decorative overlay.
+    if(['thunder','ice','earth'].includes(event.element))return -1;
     if(event.move?.startsWith('futo_'))return 6;
     if(event.style==='healing')return event.move==='arvelion_renewal'?5:7;
     if(['shield','ascension','capture','star-rings','starfall'].includes(event.style))return event.element==='leaf'?7:5;
@@ -224,6 +235,9 @@
     if(move.kind==='guard')return 'shield';
     if(move.kind==='boost')return 'ascension';
     if(NAMED_EFFECTS[move.id])return NAMED_EFFECTS[move.id];
+    if(move.element==='thunder')return 'lightning';
+    if(move.element==='ice')return 'ice';
+    if(move.element==='earth')return move.category==='special'?'crystals':'impact';
     const byRole=ROLE_EFFECTS[move.role]?.[move.element];if(byRole)return byRole;
     return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
   }
@@ -310,7 +324,7 @@
       // The original renderer uses physical canvas coordinates and owns its
       // effect opacity; caller transforms/alpha must not move or dim this pass.
       c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;
-      painted=layer(c,w,h,{long:384},target=>{rendered=renderPass(target,w,h,time,event,options,presentation);});
+      painted=layer(c,w,h,{long:768},target=>{rendered=renderPass(target,w,h,time,event,options,presentation);});
     } catch(_) { painted=false; }
     finally { c.restore(); }
     if(!painted)return renderPass(c,w,h,time,event,options);
@@ -370,6 +384,17 @@
       const dx=Math.cos(angle),dy=Math.sin(angle),rr=len*.24;
       poly([[x+dx*len,y+dy*len],[x-dy*rr,y+dx*rr],[x-dx*len*.7,y-dy*len*.7],[x+dy*rr,y-dx*rr]],color,alpha);
       stroke([[x-dx*len*.55,y-dy*len*.55],[x+dx*len*.75,y+dy*len*.75]],p[3],1,alpha*.8);
+    };
+    const rock=(x,y,r,angle=0,alpha=1)=>{
+      if(r<=0||alpha<=0)return;
+      if(pixelMaterial(c,'rock',x,y,r*2.1,r*1.8,angle,p,alpha))return;
+      // Canvas factories can be unavailable in embedders and test contexts.
+      // Keep a complete, faceted fallback without reading any source pixels.
+      const points=[],lengths=[1,.83,.96,.77,.93,.86];
+      for(let i=0;i<6;i++){const a=angle+i*TAU/6;points.push([x+Math.cos(a)*r*lengths[i],y+Math.sin(a)*r*.85*lengths[i]]);}
+      poly(points,p[1],alpha);stroke(points,p[2],2.2,alpha,true);
+      poly([points[0],points[1],[x,y],points[5]],p[0],alpha*.8);
+      poly([points[2],points[3],points[4],[x,y]],p[2],alpha*.65);
     };
     const leaf=(x,y,r,angle,color=p[1],alpha=1)=>{
       if(pixelMaterial(c,e.element==='wind'?'feather':'leaf',x,y,r*2.25,r*1.7,angle+Math.PI/4,[p[0],color,p[2],p[3]],alpha))return;
@@ -652,7 +677,59 @@
       glow(source.x,source.y,35*s,charge*.38);
       ellipse(source.x,source.y,23*s*charge,14*s*charge,p[1],1,charge*.65);
     }
-    switch(e.style) {
+    if(e.element==='earth'&&attack){
+      // Share the existing impact/crystal cue families, with soil and rock
+      // materials instead of stars or gems. The gameplay clock stays .43.
+      const floor=Math.min(h-8*s,cy+54*s),unfurl=ease(phase(t,.14,.43)),decay=1-smooth(phase(t,.68,.98));
+      const impact=smooth(phase(t,.38,.47))*decay,scatter=ease(phase(t,.43,.96));
+      const pierce=e.move==='atlas_leaf_7',drain=e.move==='atlas_crystal_5';
+      if(pierce){
+        for(let i=0,n=low?3:5;i<n;i++){
+          const x=cx+(i-(n-1)/2)*23*s,rise=smooth(phase(t,.19+i*.022,.43+i*.022));
+          const height=(43+random(seed,i+151)*35)*s*rise,width=(11+random(seed,i+156)*5)*s;
+          const tip=x+(random(seed,i+159)-.5)*15*s;
+          poly([[x-width,floor],[x-width*.62,floor-height*.62],[tip,floor-height],[x+width*.62,floor-height*.53],[x+width,floor]],p[1],decay);
+          poly([[x,floor],[tip,floor-height],[x+width*.62,floor-height*.53],[x+width,floor]],p[2],decay*.85);
+          stroke([[x-width*.62,floor-height*.62],[tip,floor-height],[x+width*.24,floor-height*.48]],p[0],1.8,decay);
+        }
+      }else if(drain){
+        const reach=mixPoint({x:source.x,y:Math.min(h-8*s,source.y+49*s)},{x:cx,y:floor},unfurl);
+        const path=[];
+        for(let i=0;i<=8;i++){const pt=mixPoint({x:source.x,y:Math.min(h-8*s,source.y+49*s)},reach,i/8);path.push([pt.x,pt.y+(i%2?5:-4)*s]);}
+        stroke(path,p[2],6,decay*.6);stroke(path,p[0],1.6,decay*.8);
+        for(let i=0,n=low?5:8;i<n;i++){
+          const progress=phase(t,.38+i*.025,.85+i*.018),pt=mixPoint({x:cx,y:floor},source,ease(progress));
+          const alpha=Math.sin(progress*Math.PI)*decay;
+          rock(pt.x,pt.y-Math.sin(progress*Math.PI)*29*s,(4+i%2*2)*s,progress*1.7+i,alpha);
+        }
+      }else{
+        const shot=mixPoint(source,{x:cx,y:cy+12*s},unfurl),radius=(e.power>=40?24:13)*s;
+        const alpha=1-smooth(phase(t,.45,.63));
+        rock(shot.x,shot.y-Math.sin(unfurl*Math.PI)*23*s,radius,t*3,alpha);
+        for(let i=0,n=low?3:5;i<n;i++){
+          const tail=mixPoint(source,{x:cx,y:cy+12*s},Math.max(0,unfurl-(i+1)*.065));
+          rock(tail.x,tail.y-Math.sin(unfurl*Math.PI)*23*s+(i%2?5:-5)*s,(3.5+i%2)*s,i+t,alpha*(.5-i*.06));
+        }
+      }
+      for(let i=0,n=low?3:5;i<n;i++){
+        const a=i*TAU/n+.24,reach=(17+scatter*61)*s;
+        const end={x:cx+Math.cos(a)*reach,y:floor+Math.sin(a)*reach*.26};
+        const crack=[[cx,floor],[cx+Math.cos(a+.13)*reach*.42,floor+Math.sin(a+.13)*reach*.12],[end.x,end.y]];
+        stroke(crack,p[2],3.2,impact);stroke(crack,p[0],.9,impact*.7);
+      }
+      for(let i=0,n=low?8:14;i<n;i++){
+        const a=random(seed,i+171)*TAU,r=(16+scatter*(38+random(seed,i+191)*33))*s;
+        const x=cx+Math.cos(a)*r,y=floor+Math.sin(a)*r*.27-scatter*(1-scatter)*(65+random(seed,i+211)*50)*s;
+        rock(x,y,(3+random(seed,i+221)*5)*s,scatter*3+i,impact*(1-scatter*.6));
+      }
+      // Square dust clusters keep the footprint sharp at either screen mode.
+      c.save();c.globalAlpha*=impact*.42;c.fillStyle=p[1];
+      for(let i=0,n=low?8:16;i<n;i++){
+        const x=cx+(random(seed,i+231)-.5)*(58+scatter*120)*s,y=floor-5*s+(random(seed,i+251)-.5)*18*s-scatter*9*s;
+        const r=(3+random(seed,i+271)*6)*s;c.fillRect(snap(x),snap(y),Math.max(1,Math.round(r*1.7)),Math.max(1,Math.round(r)));
+      }
+      c.restore();
+    }else switch(e.style) {
       case 'faint': {
         const outward=ease(t),alpha=1-smooth(phase(t,.32,1));
         ellipse(cx,cy+38*s,(22+outward*45)*s,(7+outward*11)*s,p[1],2,alpha*.7);
@@ -952,9 +1029,14 @@
         }impactRing();sparks(cx,cy,Math.floor(count*.6));break;
       }
       case 'lightning': {
-        const end=phase(t,.08,.44),top={x:cx-35*s,y:Math.max(0,cy-190*s)},bottom={x:cx,y:cy+30*s};
-        const points=[];for(let i=0;i<=12;i++){const f=i/12*end;points.push([top.x+(bottom.x-top.x)*f+(i===0||i===12?0:(random(seed,i)-.5)*48*s),top.y+(bottom.y-top.y)*f]);}
-        const energy=1-smooth(phase(t,.55,.92));stroke(points,p[2],15,energy*.22);stroke(points,'#f7d9ff',5,energy);stroke(points,'#ffffff',1.3,energy);
+        const conducted=e.element==='thunder'&&e.category==='special';
+        const end=phase(t,.08,.44),top=conducted?source:{x:cx-35*s,y:Math.max(0,cy-190*s)},bottom={x:cx,y:cy+(conducted?0:30*s)};
+        const points=[],steps=low?8:12,angle=Math.atan2(bottom.y-top.y,bottom.x-top.x);
+        for(let i=0;i<=steps;i++){
+          const f=i/steps*end,jitter=i===0||i===steps?0:(random(seed,i)-.5)*48*s;
+          points.push([top.x+(bottom.x-top.x)*f+(conducted?-Math.sin(angle)*jitter:jitter),top.y+(bottom.y-top.y)*f+(conducted?Math.cos(angle)*jitter:0)]);
+        }
+        const energy=1-smooth(phase(t,.55,.92));stroke(points,p[2],15,energy*.22);stroke(points,e.element==='thunder'?p[0]:'#f7d9ff',5,energy);stroke(points,p[3],1.3,energy);
         for(let i=0;i<3;i++){const b=points[Math.min(points.length-1,4+i*2)];stroke([b,[b[0]+(i%2?30:-30)*s,b[1]+20*s],[b[0]+(i%2?50:-40)*s,b[1]+43*s]],p[1],2,energy*.7);}
         impactRing(90*s);sparks(cx,cy);break;
       }
@@ -1083,6 +1165,12 @@
         }else if(e.element==='crystal'){
           shard(x,y,(3+random(seed,i+451)*5)*s,a+expansion*.4,p[i%3],coronaAlpha*.8);
           if(i%3===0)star(x,y,8*s*coronaAlpha,p[3],0,coronaAlpha*.65);
+        }else if(e.element==='thunder'){
+          stroke([[start.x,start.y],[(start.x+x)/2+5*s,(start.y+y)/2-6*s],[x,y]],p[i%2],1.5,coronaAlpha*.75);
+        }else if(e.element==='ice'){
+          shard(x,y,(3+random(seed,i+451)*4)*s,a+expansion*.2,p[i%3],coronaAlpha*.8);
+        }else if(e.element==='earth'){
+          rock(x,y+expansion*24*s,(3+random(seed,i+451)*4)*s,a+expansion,coronaAlpha*.65);
         }else mote(x,y,3*s,p[1],coronaAlpha*.6);
       }
       if(physical){

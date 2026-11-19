@@ -3,8 +3,8 @@
 
 Reads the per-species atlas coordinates from assets/creatures-individual-catalog.js
 plus the three special-creature images, and writes lossless 96x96 WebP thumbnails.
-Each front view is fitted within 74px on an 80x80 logical canvas, then enlarged
-with nearest-neighbor sampling to match the game's shared pixel-art scale.
+Each original front view is fitted directly within 88px on the final 96x96
+canvas with nearest-neighbor sampling, preserving fine details and crisp pixels.
 Requires Pillow. Re-run after artwork changes:  python3 scripts/build-dex-sprites.py
 """
 import json, re, sys
@@ -14,22 +14,21 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'assets' / 'dex'
 SIZE = 96
-LOGICAL_SIZE = 80
-MARGIN = 3
+MARGIN = 4
 
 def fit(img):
     img = img.convert('RGBA')
     box = img.getchannel('A').getbbox()
     if box:
         img = img.crop(box)
-    scale = min((LOGICAL_SIZE - MARGIN * 2) / img.width,
-                (LOGICAL_SIZE - MARGIN * 2) / img.height)
+    scale = min((SIZE - MARGIN * 2) / img.width,
+                (SIZE - MARGIN * 2) / img.height)
     w, h = max(1, round(img.width * scale)), max(1, round(img.height * scale))
     img = img.resize((w, h), Image.NEAREST)
-    canvas = Image.new('RGBA', (LOGICAL_SIZE, LOGICAL_SIZE), (0, 0, 0, 0))
+    canvas = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
     # Unmasked paste preserves each sampled RGBA value, including partial alpha.
-    canvas.paste(img, ((LOGICAL_SIZE - w) // 2, LOGICAL_SIZE - h - MARGIN))
-    return canvas.resize((SIZE, SIZE), Image.NEAREST)
+    canvas.paste(img, ((SIZE - w) // 2, SIZE - h - MARGIN))
+    return canvas
 
 def main():
     text = (ROOT / 'assets' / 'creatures-individual-catalog.js').read_text(encoding='utf-8')

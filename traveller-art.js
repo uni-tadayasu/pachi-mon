@@ -2,7 +2,7 @@
  * Generated with OpenAI image generation for this original game: detailed pixel
  * traveller (teal coat, ochre cap, rust scarf), four NPC professions, four views.
  * Revision 33 sheets preserve fine material details and transparent silhouettes.
- * Revision 51 samples derived views on a shared 24×32 display grid.
+ * Revision 52 samples the original artwork on a finer 48×64 display grid.
  * Image atlases are authored for this project. Runtime extraction retains the
  * transparent silhouettes and a shared feet baseline for world depth sorting.
  */
@@ -142,8 +142,8 @@
     if (!hero) varyCloth(ctx, role, variant);
     // Sample only this derived view. Source poses, colours, feet baseline and
     // its output dimensions stay intact; high-density portraits use the same
-    // 24×32 logical grid as their 96×128 field counterparts.
-    LT.ScenePixels?.apply?.(cv, { step: 4 * density });
+    // 48×64 logical grid as their 96×128 field counterparts.
+    LT.ScenePixels?.apply?.(cv, { step: 2 * density });
     cache.set(key, cv); stats.generated++;
     if (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value);
     return cv;

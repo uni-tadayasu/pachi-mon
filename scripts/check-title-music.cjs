@@ -52,25 +52,32 @@ const settle = () => wait(20);
   // Title: the recording loops through the shared mix; nothing is synthesized meanwhile.
   let w = world(); await w.audio.setEnabled(true); await settle();
   assert.equal(w.audio.currentId, 'title'); assert(w.audio.group?.recorded, 'the title plays the recording');
-  assert.deepEqual(w.log.fetches, ['assets/music/title-16bit.mp3?v=20261117-aishiteirukara'], 'fetched once, same origin');
-  assert(w.audio.recording.ready); assert.equal(w.log.audio.loop, true); assert.equal(w.log.audio.attrs.playsinline, ''); assert.equal(w.log.audio.src, 'blob:title');
-  assert(w.log.sources[0].outputs[0] === w.audio.recording.gain && w.audio.recording.gain.outputs[0] === w.audio.mix, 'routed into the mix (volume and mute apply)');
-  assert.equal(w.log.audio.paused, false); assert.equal(w.audio.recording.gain.gain.value, .5);
+  assert.deepEqual(w.log.fetches.filter(url=>url.includes('title-16bit')), ['assets/music/title-16bit.mp3?v=20261117-aishiteirukara'], 'title fetched once, same origin');
+  assert.equal(w.log.fetches.filter(url=>url.includes('battle-custom')).length,1,'common battle recording is prepared separately');
+  assert.equal(w.log.fetches.filter(url=>url.includes('field-custom')).length,1,'common field recording is prepared separately');
+  assert(w.audio.recording.ready); assert.equal(w.audio.recording.audio.loop, true); assert.equal(w.audio.recording.audio.attrs.playsinline, ''); assert.equal(w.audio.recording.audio.src, 'blob:title');
+  assert(w.log.sources.find(node=>node.element===w.audio.recording.audio).outputs[0] === w.audio.recording.gain && w.audio.recording.gain.outputs[0] === w.audio.mix, 'routed into the mix (volume and mute apply)');
+  assert.equal(w.audio.recording.audio.paused, false); assert.equal(w.audio.recording.gain.gain.value, .5);
   for (let i = 0; i < 20; i++) { w.audio.ctx.currentTime += .1; w.audio.tick(); }
   assert.equal(w.notes(), 0, 'no composed notes over the recording');
-  // Another scene stops it (fade, then rewind); the composed music takes over.
+  // The outdoor field recording replaces the title (fade, then rewind).
   w.audio.setScene({ map: 'village' }); assert.notEqual(w.audio.currentId, 'title'); assert.equal(w.audio.recording.gain.gain.value, 0);
+  assert.equal(w.audio.group?.recording?.id,'field-custom','outdoor scenes use the supplied field recording');
   for (let i = 0; i < 20; i++) { w.audio.ctx.currentTime += .1; w.audio.tick(); }
-  assert(w.notes() > 0, 'scene music is synthesized again'); await wait(500);
-  assert.equal(w.log.audio.paused, true); assert.equal(w.log.audio.currentTime, 0, 'back to the start for the next title visit');
-  w.audio.setScene({ title: true }); assert(w.audio.group.recorded); assert.equal(w.log.audio.paused, false, 'plays again on the title');
+  assert.equal(w.notes(),0,'no composed notes over the field recording'); await wait(500);
+  assert.equal(w.audio.recording.audio.paused, true); assert.equal(w.audio.recording.audio.currentTime, 0, 'back to the start for the next title visit');
+  // Existing interior music remains composed and cannot revive the title.
+  w.audio.setScene({ map:'village', interior:true, roomKind:'inn' }); assert(!w.audio.group?.recorded);
+  for (let i = 0; i < 20; i++) { w.audio.ctx.currentTime += .1; w.audio.tick(); }
+  assert(w.notes()>0,'interior music is synthesized again');assert.equal(w.audio.recording.audio.paused,true);
+  w.audio.setScene({ title: true }); assert(w.audio.group.recorded); assert.equal(w.audio.recording.audio.paused, false, 'plays again on the title');
   // Music room: the title entry describes the recording.
   const title = w.audio.getTracks()[0];
   assert.equal(title.id, 'title'); assert.match(title.name, /愛しているから（16ビットアレンジ）/); assert.equal(title.recording.seconds, 222);
   // Hidden page: paused; visible again: resumes.
-  await w.audio.suspend(); assert.equal(w.log.audio.paused, true); await w.audio.setEnabled(true); await settle(); assert.equal(w.log.audio.paused, false);
+  await w.audio.suspend(); assert.equal(w.audio.recording.audio.paused, true); await w.audio.setEnabled(true); await settle(); assert.equal(w.audio.recording.audio.paused, false);
   // Muting stops it.
-  await w.audio.setEnabled(false); await wait(400); assert.equal(w.log.audio.paused, true);
+  await w.audio.setEnabled(false); await wait(400); assert.equal(w.audio.recording.audio.paused, true);
 
   // Missing file: the composed title score plays instead.
   w = world({ fetchOk: false }); await w.audio.setEnabled(true); await settle();
@@ -79,7 +86,7 @@ const settle = () => wait(20);
   assert(w.notes() > 0, 'fallback title score');
 
   // Autoplay: where allowed, it starts with no interaction; where blocked, it waits.
-  w = world(); assert.equal(await w.audio.tryAutoplay(), true); await settle(); assert(w.audio.enabled && w.audio.group?.recorded && !w.log.audio.paused);
+  w = world(); assert.equal(await w.audio.tryAutoplay(), true); await settle(); assert(w.audio.enabled && w.audio.group?.recorded && !w.audio.recording.audio.paused);
   w = world({ resume: 'never' }); const t0 = Date.now(); assert.equal(await w.audio.tryAutoplay(), false);
   assert(Date.now() - t0 < 1500, 'gives up quickly'); assert.equal(w.audio.enabled, false); assert(w.audio.needsUnlock(), 'the first touch will start it');
   assert(w.log.fetches.length === 1, 'the recording is fetched early, ready for the first touch');

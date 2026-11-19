@@ -9,7 +9,7 @@
     if(!Number.isFinite(width)||!Number.isFinite(height)||width<1||height<1)return null;
     const step=Number(options.step),long=Number(options.long);
     const ratio=Number.isFinite(long)&&long>0?Math.min(1,long/Math.max(width,height)):
-      Number.isFinite(step)&&step>=1?1/step:1/4;
+      Number.isFinite(step)&&step>=1?1/step:1/2;
     return {width:Math.max(1,Math.round(width*ratio)),height:Math.max(1,Math.round(height*ratio))};
   }
   function surface(source,width,height){

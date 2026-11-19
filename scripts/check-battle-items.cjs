@@ -27,7 +27,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 assert.equal(Object.keys(D.heldItems).length, 48); assert(D.statuses.bloom && D.statusByElement.leaf === 'bloom');
 
 // ── Rules: version, fingerprint, item lists.
-assert.equal(Duel.rules.version, 8); assert.match(Duel.rules.items, /once-per-team/); assert.match(Duel.rules.conditions, /shown-every-turn/); assert.match(Duel.rules.special, /standard-lv50/);
+assert.equal(Duel.rules.version, 9); assert.match(Duel.rules.items, /once-per-team/); assert.match(Duel.rules.conditions, /shown-every-turn/); assert.match(Duel.rules.special, /standard-lv50/);
 assert(Duel.validateItems(null, 3).ok && Duel.validateItems([null, null, null], 3).ok && Duel.validateItems(['leafcrown', null, 'healberry'], 3).ok);
 assert.match(Duel.validateItems(['healberry', 'healberry', null], 3).error, /同じ持ち物/, 'the same item twice in a team is refused');
 for (const bad of [['nope', null, null], ['leafcrown', null], 'x', [1, null, null]]) assert.equal(Duel.validateItems(bad, 3).ok, false, JSON.stringify(bad));

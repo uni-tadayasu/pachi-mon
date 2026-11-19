@@ -7,7 +7,7 @@
   source.onload=()=>{
     try{
       if(!source.naturalWidth||!source.naturalHeight)return;
-      const scale=Math.min(1,384/Math.max(source.naturalWidth,source.naturalHeight));
+      const scale=Math.min(1,768/Math.max(source.naturalWidth,source.naturalHeight));
       const canvas=document.createElement('canvas');
       canvas.width=Math.max(1,Math.round(source.naturalWidth*scale));
       canvas.height=Math.max(1,Math.round(source.naturalHeight*scale));
@@ -19,5 +19,5 @@
     }catch(_){/* The existing CSS illustration remains available on failure. */}
   };
   source.onerror=()=>{};
-  source.src=new URL('assets/cover-handheld.webp',new URL('.',document.currentScript?.src||document.baseURI)).href;
+  source.src=new URL('assets/cover-pixel.webp',new URL('.',document.currentScript?.src||document.baseURI)).href;
 })();

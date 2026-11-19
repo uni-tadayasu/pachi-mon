@@ -101,7 +101,24 @@ assert(publicHome.includes(`${data.regionIds.length}のステージ。`), 'the h
 assert(publicHome.includes(`${Object.keys(data.guardians).length}の旅紋を集め`), 'the home crest count matches the guardian data');
 assert(guide.includes(`ひかえには最大${data.limits.storage}体`), 'the guide storage limit matches the engine');
 assert(visible.some(([q,a])=>/ひかえ/.test(q)&&a.includes(`${data.limits.storage}体`)), 'the FAQ explains the storage limit');
-assert(guide.includes('フルカラー（高精細ドット）が初期設定'), 'the guide explains the full-colour default');
+assert(guide.includes('初期設定はカラーです')&&guide.includes('カラーとモノクロの2種類'), 'the guide explains the two equally detailed modes');
+const types=dataContext.LT.TypeSystem, typeIds=Array.from(types.order).filter(type=>!data.elements[type].hiddenDex), dex=read('monsters/index.html');
+assert.equal(typeIds.length,8);
+for(const type of typeIds){
+ assert(dex.includes(`id="${type}"`),`${type} has a public dex group`);
+ assert(moves.includes(`id="g-${data.elements[type].name}タイプ"`),`${type} has a move group`);
+ const group=dex.split(`<section class="window" id="${type}">`)[1]?.split('</section>')[0]||'';
+ for(const s of publicSpecies)assert.equal(group.includes(`href="${s.id}.html"`),types.has(s,type),`${s.id} appears under every declared type, including its secondary`);
+}
+let dualPages=0;
+for(const s of publicSpecies){
+ const declared=Array.from(types.of(s)),page=read(`monsters/${s.id}.html`),name=declared.map(type=>data.elements[type].name).join('・')+'タイプ';
+ assert(page.includes(`<tr><th>タイプ</th><td>${name}</td></tr>`),`${s.id}: both types in facts`);
+ if(declared.length===2)dualPages++;
+ for(const attack of typeIds){const factor=types.effectiveness(attack,s);if(factor!==1)assert(page.includes(`${data.elements[attack].name}（${factor}倍）`),`${s.id}: published ${attack} matchup agrees with combat`);}
+}
+assert(dualPages>0&&dualPages<publicSpecies.length,'a subset of existing species are dual types');
+assert.equal((guide.match(/scope="col"/g)||[]).length,9,'the guide shows all eight defending types');
 assert(!/全262種|64のエリア|64の探索エリア|16の証を集め/.test(publicHome), 'stale home counts were removed');
 assert(!read('monsters/komori.html').includes('通常レンタル'), 'dex pages no longer describe retired rental battles');
 console.log(JSON.stringify({ ok: true, pages: pages.length, indexable: canonicals.size, redirects, links, images, faq: visible.length, publicFactsMatchEngine: true }));
