@@ -19,6 +19,8 @@ const controllers=slice('  function fieldDialogOpen()','  document.addEventListe
 const keyboard=slice('  function walk(dx,dy)','  window.addEventListener(\'keyup\'');
 const menu=slice('  function showMenu()','  function openOnlineFromMenu(');
 const scene=slice('  function updateScene(){','  function sceneOptions()');
+const interaction=slice('  function interact() {','  function showShop(');
+const touchAction=html.match(/^  \$\('touch-action'\)\.onclick=.*$/m)?.[0];assert(touchAction,'The touch A button must use the main interaction handler');
 const roomMenuBranch=html.match(/if\(d\.ui==='rooms'\)\{[^\n]+\}/)?.[0];assert(roomMenuBranch,'The menu must have its rooms action');
 const record=(kind='secret',decorations=[])=>({id:OWNER,mapId:'room:'+OWNER,owner:{id:OWNER,name:'旅人',isAdmin:kind==='kasai'},kind,name:'テストの部屋',revision:1,decorations,
   entrance:{map:'village',x:32,y:7,facing:'up',returnX:32,returnY:8}});
@@ -45,10 +47,45 @@ function harness(){
       KasaiChallenge:{isDialogOpen:()=>controls.kasaiOpen,isWorking:()=>controls.kasaiWorking,closeDialog(){controls.kasaiCloses++;controls.kasaiOpen=false;return true;}}},
     localStorage:{getItem(key){if(key==='room-save'){controls.reads++;return controls.raw;}return null;},setItem(key,value){if(key==='room-backup')return;if(key!=='room-save')throw Error('Unexpected storage key');trace.push('write-attempt');if(controls.quota)throw Error('Storage quota exceeded');new Engine(JSON.parse(value));controls.raw=value;controls.writes++;trace.push('written');}}
   });
-  vm.runInContext([barrier,keyboard,controllers,menu,scene,trades,gifting,bridge,'function dispatchRoomMenu(){const d={ui:"rooms"};'+roomMenuBranch+'}'].join('\n'),c);
+  vm.runInContext([barrier,keyboard,controllers,menu,scene,trades,gifting,bridge,interaction,touchAction,'function dispatchRoomMenu(){const d={ui:"rooms"};'+roomMenuBranch+'}'].join('\n'),c);
   controls.reads=0;trace.length=0;
   return {c,controls,trace,events,primary,dialog,bridge:c.LT.adminBridge,room:RoomArt.createMap(record()),kasai:RoomArt.createMap(record('kasai'))};
 }
+
+test('touch A, keyboard confirm and gamepad confirm all route wall actions before nearby players',()=>{
+  for(const input of ['touch','E','Enter',' ','gamepad']){
+    const h=harness(),seen=[];
+    h.c.LT.Rooms.interact=()=>{seen.push('wall');return true;};
+    h.c.LT.World.interact=()=>{seen.push('player');return true;};
+    h.c.engine.interact=()=>{seen.push('npc');return null;};
+    if(input==='touch')h.c.$('touch-action').onclick();
+    else if(input==='gamepad'){h.c.setupController();h.controls.pad.onConfirm(null);}
+    else for(const callback of h.events.keydown)callback({key:input,code:input==='E'?'KeyE':input===' '?'Space':input,target:{tagName:'DIV'},preventDefault(){}});
+    assert.deepEqual(seen,['wall'],input);
+  }
+});
+
+test('ordinary NPC interaction remains available when no room entrance or wall was selected',()=>{
+  const h=harness(),seen=[];
+  h.c.LT.Rooms.interact=()=>{seen.push('room-pass');return false;};
+  h.c.LT.World.interact=()=>{seen.push('world-pass');return false;};
+  h.c.engine.interact=()=>{seen.push('npc');return null;};
+  h.c.$('touch-action').onclick();assert.deepEqual(seen,['room-pass','world-pass','npc']);
+});
+
+test('touch A cannot open a wall workflow during a battle, exchange, online session or room operation',()=>{
+  for(const block of [h=>h.c.engine.battle={},h=>h.controls.locked=true,h=>h.c.LT.onlineActive=true,h=>h.c.LT.localTradeActive=true,h=>h.controls.roomWorking=true,h=>h.controls.roomOpen=true,h=>h.c.busy=true]){
+    const h=harness();let opened=0;h.c.LT.Rooms.interact=()=>{opened++;return true;};block(h);
+    h.c.$('touch-action').onclick();assert.equal(opened,0);
+  }
+});
+
+test('live-stage talk still reaches the room handler while Kasai movement is locked',()=>{
+  const h=harness();let talked=0;
+  h.c.LT.KasaiLive={locked:()=>true,isActive:()=>true};
+  h.c.LT.Rooms.interact=()=>{talked++;return true;};
+  h.c.$('touch-action').onclick();assert.equal(talked,1);
+});
 
 test('room entry keeps the live room position while every durable save uses the safe outside entrance',()=>{
   const h=harness();assert.equal(h.bridge.enterSharedRoom(h.room).ok,true);

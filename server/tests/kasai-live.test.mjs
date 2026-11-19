@@ -19,7 +19,11 @@ function setup(t){
  const call=async(path,actor,method='GET',body)=>{const response=await worker.fetch(new Request('https://live.example/api'+path,{method,headers:{'Content-Type':'application/json',Origin:'https://uni-tadayasu.github.io','CF-Connecting-IP':'192.0.2.'+(++ip),...(actor?{Authorization:'Bearer '+actor.token}:{})},body:body===undefined?undefined:JSON.stringify(body)}),env);const data=await response.json();assert(!JSON.stringify(data).includes(SECRET));assert(!JSON.stringify(data).includes(SIGNING));return {status:response.status,...data};};
  const register=async(name='挑戦者')=>{const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),result=await call('/register',null,'POST',{name,token});assert.equal(result.status,200);return {token,...result.player};};
  const presence=async(actor,position={},elapsed=300)=>{advance(elapsed);return call('/world/presence',actor,'POST',{map:'village',x:21,y:17,facing:'up',avatar:'male',status:'idle',...position});};
- const players=async()=>{const challenger=await register(),admin=await register('運営'),third=await register('他の挑戦者');assert.equal((await call('/admin/claim',admin,'POST',{key:SECRET})).status,200);await presence(challenger);await presence(admin,{x:22,facing:'left'});await presence(third,{x:20});return {challenger,admin,third};};
+ const players=async({createRoom=true}={})=>{
+  const challenger=await register(),admin=await register('運営'),third=await register('他の挑戦者');assert.equal((await call('/admin/claim',admin,'POST',{key:SECRET})).status,200);
+  if(createRoom){const wall=worldRoomWalls('village')[0],facing=wall.facings[0],[dx,dy]={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]}[facing];await presence(admin,{x:wall.x-dx,y:wall.y-dy,facing});assert.equal((await call('/world/rooms',admin,'POST',{map:'village',x:wall.x,y:wall.y,facing})).status,200);}
+  await presence(challenger);await presence(admin,{x:22,facing:'left'});await presence(third,{x:20});return {challenger,admin,third};
+ };
  const live=(actor,id,action,body={})=>call('/world/kasai/live'+(id?'/'+id:'')+(action?'/'+action:''),actor,action?'POST':'GET',action?body:undefined);
  const start=(actor,extra={})=>call('/world/kasai/live',actor,'POST',{requestId:crypto.randomUUID(),party:party(),storageCount:0,...extra});
  const stage=async(challenger,admin,adminParty=party('komori',1),extra={})=>{const result=await start(challenger,extra);assert.equal(result.status,200,JSON.stringify(result));const id=result.session.id;assert.equal((await live(challenger,id,'arrive')).status,200);assert.equal((await live(admin,id,'arrive',{party:adminParty})).status,200);return id;};
@@ -41,6 +45,18 @@ async function finish(h,challenger,admin,session){
  }
  assert.equal(session.state,'result');return session;
 }
+
+test('a live invitation needs an explicitly created Kasai room and never makes a doorway or locks either player',async t=>{
+ const h=setup(t),{challenger,admin}=await h.players({createRoom:false}),requestId=crypto.randomUUID();
+ const unavailable=await h.start(challenger,{requestId});assert.equal(unavailable.status,409);assert.equal(unavailable.error.code,'KASAI_ROOM_UNAVAILABLE');assert.match(unavailable.error.message,/運営が壁を向いてAで部屋を作成/);
+ assert.equal((await h.call('/world/rooms/kasai',challenger)).room,null);assert.equal((await h.call('/world/rooms/mine',admin)).room,null);
+ for(const table of ['world_rooms','kasai_live_sessions','kasai_live_members'])assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM '+table).get().n,0);
+ for(const actor of [challenger,admin])assert.equal(h.env.DB.sqlite.prepare('SELECT map_id FROM world_presence WHERE player_id=?').get(actor.id).map_id,'village');
+ const wall=worldRoomWalls('forest')[0],facing=wall.facings[0],[dx,dy]={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]}[facing];
+ await h.presence(admin,{map:'forest',x:wall.x-dx,y:wall.y-dy,facing});const created=await h.call('/world/rooms',admin,'POST',{map:'forest',x:wall.x,y:wall.y,facing});assert.equal(created.status,200);assert.equal(created.room.kind,'kasai');
+ await h.presence(admin,{x:22,facing:'left'});const accepted=await h.start(challenger,{requestId});assert.equal(accepted.status,200);assert.equal(accepted.session.roomId,admin.id);
+ assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,1);assert.equal(h.env.DB.sqlite.prepare('SELECT map_id FROM world_rooms WHERE owner_id=?').get(admin.id).map_id,'forest');
+});
 
 test('live creation requires the real nearby idle administrator, rejects self/CPU and atomically locks one pair',async t=>{
  const h=setup(t),{challenger,admin,third}=await h.players();
@@ -135,6 +151,7 @@ test('a genuine human victory grants once, full storage blocks, and recovery sur
 test('one room per player is retained through relocation with furniture and safe ownership checks',async t=>{
  const h=setup(t),{challenger,admin,third}=await h.players();
  const wall=worldRoomWalls('meadow')[0],facing=wall.facings[0],dirs={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]},[dx,dy]=dirs[facing];
+ await h.presence(challenger,{map:'meadow',x:wall.x-dx,y:wall.y-dy,facing});
  const first=await h.call('/world/rooms',challenger,'POST',{map:'meadow',x:wall.x,y:wall.y,facing,name:'家具を残す部屋'});assert.equal(first.status,200);
  const furniture=[{id:'plant',itemId:'plant',x:2,y:3,rotation:0}];assert.equal((await h.call('/world/rooms/'+challenger.id,challenger,'PATCH',{revision:1,decorations:furniture})).status,200);
  const target=worldRoomWalls('forest')[0],newFacing=target.facings[0],[nx,ny]=dirs[newFacing],body={revision:2,map:'forest',x:target.x,y:target.y,facing:newFacing};
@@ -144,7 +161,7 @@ test('one room per player is retained through relocation with furniture and safe
  const moved=await h.call('/world/rooms/'+challenger.id+'/relocate',challenger,'POST',body);assert.equal(moved.status,200);assert.equal(moved.room.id,first.room.id);assert.equal(moved.room.name,first.room.name);assert.deepEqual(moved.room.decorations,furniture);assert.equal(moved.room.revision,3);assert.equal(moved.room.entrance.map,'forest');
  assert.equal((await h.call('/world/rooms/'+challenger.id+'/relocate',challenger,'POST',body)).error.code,'ROOM_CHANGED');
  assert.equal((await h.call('/world/rooms',challenger,'POST',{map:'meadow',x:wall.x,y:wall.y,facing})).error.code,'ROOM_ALREADY_EXISTS');
- const other=await h.call('/world/rooms',third,'POST',{map:'meadow',x:wall.x,y:wall.y,facing});assert.equal(other.status,200);
+ await h.presence(third,{map:'meadow',x:wall.x-dx,y:wall.y-dy,facing});const other=await h.call('/world/rooms',third,'POST',{map:'meadow',x:wall.x,y:wall.y,facing});assert.equal(other.status,200);
  await h.presence(challenger,{map:'meadow',x:wall.x-dx,y:wall.y-dy,facing});assert.equal((await h.call('/world/rooms/'+challenger.id+'/relocate',challenger,'POST',{revision:3,map:'meadow',x:wall.x,y:wall.y,facing})).error.code,'ROOM_ENTRANCE_OCCUPIED');
  const kasai=(await h.call('/world/rooms/kasai',admin)).room;assert.equal(kasai.id,admin.id);
  const adminTarget=worldRoomWalls('coast')[0],adminFacing=adminTarget.facings[0],[ax,ay]=dirs[adminFacing];await h.presence(admin,{map:'coast',x:adminTarget.x-ax,y:adminTarget.y-ay,facing:adminFacing});

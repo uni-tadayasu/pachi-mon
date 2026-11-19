@@ -54,16 +54,21 @@ function setup(t){
     const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),result=await call('/register',{method:'POST',body:{name,token}});
     assert.equal(result.status,200);return {token,...result.player};
   }
-  async function admin(){
+  async function admin({createRoom=true,entrance}={}){
     const a=await register('運営');assert.equal((await call('/admin/claim',{token:a.token,method:'POST',body:{key:SECRET}})).status,200);
     const engine=new runtime.LT.Engine(),party=copy(['arvelion','futo','floravelle'].map(species=>engine.makeMonster(species,70)));
     party[2].grantId='admin-mythical:'+a.id;
     assert.equal((await call('/world/kasai/party',{token:a.token,method:'POST',body:{party}})).status,200);
+    if(createRoom)assert.equal((await create(a,entrance||door('coast',env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM world_rooms WHERE map_id='coast'").get().n))).status,200);
     return a;
   }
-  const door=(map='village',index=0)=>{const cell=worldRoomWalls(map).filter(cell=>map!=='village'||![6,14,32].some(x=>cell.x===x&&cell.y===7))[index];return {map,x:cell.x,y:cell.y,facing:cell.facings[0]};};
-  const create=(player,entrance=door(),extra={})=>call('/world/rooms',{token:player.token,method:'POST',body:{...entrance,...extra}});
-  async function presence(player,map,x=9,y=12){advance(300);return call('/world/presence',{token:player.token,method:'POST',body:{map,x,y,facing:'up',avatar:'male',status:'idle'}});}
+  const door=(map='village',index=0)=>{const cell=worldRoomWalls(map)[index];return {map,x:cell.x,y:cell.y,facing:cell.facings[0]};};
+  async function presence(player,map,x=9,y=12,facing='up'){advance(300);return call('/world/presence',{token:player.token,method:'POST',body:{map,x,y,facing,avatar:'male',status:'idle'}});}
+  async function atWall(player,entrance){const [dx,dy]={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]}[entrance.facing];const result=await presence(player,entrance.map,entrance.x-dx,entrance.y-dy,entrance.facing);assert.equal(result.status,200,JSON.stringify(result));}
+  async function create(player,entrance=door(),extra={}){
+    if(typeof entrance.map==='string'&&worldRoomWalls(entrance.map).some(cell=>cell.x===entrance.x&&cell.y===entrance.y&&cell.facings.includes(entrance.facing)))await atWall(player,entrance);
+    return call('/world/rooms',{token:player.token,method:'POST',body:{...entrance,...extra}});
+  }
   async function challenge(player,room,extra={}){
     // Fixtures model already-issued v57 sessions. Production no longer creates
     // CPU challenges; only their pre-update result/recovery path is retained.
@@ -80,7 +85,7 @@ function setup(t){
     return {status:200,token,challenge:{id,roomId:room.id,seed,rulesVersion:RULES_VERSION,party,opponents,expiresAt,state:'pending'},rewardClaimed:!!env.DB.sqlite.prepare('SELECT player_id FROM kasai_rewards WHERE player_id=?').get(player.id)};
   }
   const complete=(player,result,actions,storageCount=0)=>call('/world/kasai/challenges/'+result.challenge.id+'/complete',{token:player.token,method:'POST',body:{token:result.token,actions,storageCount}});
-  return {env,call,register,admin,door,create,presence,challenge,complete,advance};
+  return {env,call,register,admin,door,create,presence,atWall,challenge,complete,advance};
 }
 
 test('room doorway catalog exactly matches actual walls, safe approaches and existing exits',()=>{
@@ -117,10 +122,10 @@ test('rooms are permanent, unique, public to authenticated players and never acc
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,1);
 });
 
-test('invalid door geometry and reserved Kasai doors cannot be claimed',async t=>{
+test('invalid door geometry is rejected while the former reserved walls are available to ordinary players',async t=>{
   const {call,register,door,create}=setup(t),a=await register();
   for(const patch of [{map:'__proto__'},{map:'unknown'},{map:['village']},{x:21,y:17},{x:-1},{x:44},{y:30},{x:1.5},{facing:['up']},{facing:'north'},{name:'\u202e'},{name:'a'.repeat(33)}])assert.equal((await create(a,{...door(),...patch})).status,400,JSON.stringify(patch));
-  assert.equal((await create(a,{map:'village',x:32,y:7,facing:'up'})).error.code,'ROOM_ENTRANCE_RESERVED');
+  assert.equal((await create(a,{map:'village',x:32,y:7,facing:'up'})).status,200);
   assert.equal((await call('/world/rooms/walls?map=unknown',{token:a.token})).status,400);
   assert.deepEqual((await call('/world/rooms/walls?map=village',{token:a.token})).walls,worldRoomWalls('village'));
 });
@@ -143,19 +148,53 @@ test('owner furnishing uses revision compare-and-swap, strict footprints and pro
 });
 
 test('concurrent room creation retains one doorway and one room per player',async t=>{
-  const {env,register,create,door}=setup(t),a=await register(),b=await register();
-  const results=await Promise.all([create(a,door()),create(a,door('meadow'))]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
-  const occupied=results.find(r=>r.status===200).room.entrance;
-  assert.equal((await create(b,{map:occupied.map,x:occupied.x,y:occupied.y,facing:occupied.facing})).status,409);
-  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,1);
+  const {env,call,register,create,door,atWall}=setup(t),a=await register(),b=await register(),c=await register(),entrance=door();
+  await atWall(a,entrance);
+  const post=actor=>call('/world/rooms',{token:actor.token,method:'POST',body:entrance});
+  const retries=await Promise.all([post(a),post(a)]);assert(retries.every(result=>result.status===200));assert.deepEqual(retries[0].room,retries[1].room);
+  assert.equal((await create(a,door('meadow'))).error.code,'ROOM_ALREADY_EXISTS');
+  assert.equal((await create(b,entrance)).error.code,'ROOM_ENTRANCE_OCCUPIED');
+  const other=door('forest');await atWall(b,other);await atWall(c,other);
+  const contested=await Promise.all([b,c].map(actor=>call('/world/rooms',{token:actor.token,method:'POST',body:other})));assert.deepEqual(contested.map(result=>result.status).sort(),[200,409]);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms WHERE owner_id=?').get(a.id).n,1);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,2);
 });
 
-test('Kasai room is always discoverable, changes role safely, and keeps old permanent rooms',async t=>{
-  const {env,call,register,admin,create}=setup(t),visitor=await register();
+test('room and population reads never create a room for an administrator',async t=>{
+  const {env,call,register,admin}=setup(t),visitor=await register(),owner=await admin({createRoom:false});
+  const changes=env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n;
+  for(const actor of [owner,visitor]){
+    for(const path of ['/world/rooms/mine','/world/rooms/kasai'])assert.equal((await call(path,{token:actor.token})).room,null);
+    for(const path of ['/world/rooms?kind=kasai','/world/rooms?map=village','/world/rooms?map=coast'])assert.deepEqual((await call(path,{token:actor.token})).rooms,[]);
+    assert.equal((await call('/world/population',{token:actor.token})).total,0);
+  }
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,0);
+  assert.equal(env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n,changes);
+});
+
+test('initial creation requires fresh presence at the chosen wall for ordinary players and Kasai',async t=>{
+  const {env,call,register,admin,door,presence,atWall,advance}=setup(t),guest=await register(),owner=await admin({createRoom:false});
+  for(const [index,actor] of [guest,owner].entries()){
+    const entrance=door('forest',index),post=()=>call('/world/rooms',{token:actor.token,method:'POST',body:entrance});
+    assert.equal((await post()).error.code,'ROOM_NOT_NEARBY');
+    await presence(actor,'village',21,17);assert.equal((await post()).error.code,'ROOM_NOT_NEARBY');
+    await atWall(actor,entrance);
+    const [dx,dy]={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]}[entrance.facing];
+    await presence(actor,entrance.map,entrance.x-dx,entrance.y-dy,entrance.facing==='up'?'down':'up');assert.equal((await post()).error.code,'ROOM_NOT_NEARBY');
+    await atWall(actor,entrance);advance(WORLD_TTL);assert.equal((await post()).error.code,'ROOM_NOT_NEARBY');
+    await atWall(actor,entrance);const created=await post();assert.equal(created.status,200);assert.equal(created.room.kind,index?'kasai':'secret');
+  }
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,2);
+});
+
+test('Kasai creates at a chosen wall, relocates with decorations, and role changes never recreate a village room',async t=>{
+  const {env,call,register,admin,create,door,atWall}=setup(t),visitor=await register();
   assert.equal((await call('/world/rooms/kasai',{token:visitor.token})).room,null);
-  const owner=await admin();const [one,two]=await Promise.all([call('/world/rooms/kasai',{token:visitor.token}),call('/world/rooms/kasai',{token:owner.token})]);
+  const owner=await admin({createRoom:false}),entrance=door('forest'),created=await create(owner,entrance);assert.equal(created.status,200);
+  const [one,two]=await Promise.all([call('/world/rooms/kasai',{token:visitor.token}),call('/world/rooms/mine',{token:owner.token})]);
   assert.equal(one.room.id,owner.id);assert.deepEqual(one.room,two.room);assert.equal(one.room.width,24);assert.equal(one.room.owner.name,'謎のトレーナー カサイ');
-  assert.deepEqual(one.room.entrance,{map:'village',x:32,y:7,facing:'up',returnX:32,returnY:8});
+  assert.equal(one.room.name,'カサイのひみつ部屋');assert.equal(one.room.kind,'kasai');assert.deepEqual(one.room.protected,ROOM_LAYOUTS.kasai.protected);
+  for(const key of ['map','x','y','facing'])assert.equal(one.room.entrance[key],entrance[key]);
   assert.equal((await create(owner)).error.code,'ROOM_ALREADY_EXISTS');
   const decorations=[{id:'outside',itemId:'plant',x:20,y:10,rotation:0},{id:'sofa',itemId:'sofa',x:3,y:12,rotation:90}];
   const decorated=await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision:1,name:'カサイのアトリエ',decorations}});
@@ -163,9 +202,17 @@ test('Kasai room is always discoverable, changes role safely, and keeps old perm
   assert.deepEqual((await call('/world/rooms/'+owner.id,{token:visitor.token})).room,decorated.room);
   assert.equal((await call('/world/rooms/'+owner.id,{token:visitor.token,method:'PATCH',body:{revision:2,decorations:[]}})).error.code,'ROOM_OWNER_REQUIRED');
   for(const [x,y] of [[12,4],[11,10],[12,18]])assert.equal((await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision:2,decorations:[{id:'blocked',itemId:'plant',x,y,rotation:0}]}})).status,400);
-  env.DB.sqlite.prepare('DELETE FROM admin_owner').run();const nextOwner=await admin();
-  const next=(await call('/world/rooms/kasai',{token:visitor.token})).room;assert.equal(next.id,nextOwner.id);assert.equal(next.entrance.x,14);
-  const old=(await call('/world/rooms/'+owner.id,{token:visitor.token})).room;assert.equal(old.kind,'secret');assert.equal(old.width,18);assert.deepEqual(old.decorations,[decorations[1]]);assert.equal(old.entrance.x,32);
+  const target=door('coast');await atWall(owner,target);
+  const moved=await call('/world/rooms/'+owner.id+'/relocate',{token:owner.token,method:'POST',body:{revision:2,...target}});assert.equal(moved.status,200);assert.equal(moved.room.id,one.room.id);assert.equal(moved.room.createdAt,one.room.createdAt);assert.equal(moved.room.name,decorated.room.name);assert.deepEqual(moved.room.decorations,decorations);assert.equal(moved.room.revision,3);
+  assert.deepEqual((await call('/world/rooms/kasai',{token:visitor.token})).room,moved.room);
+  assert.deepEqual((await call('/world/rooms?kind=kasai',{token:owner.token})).rooms,[moved.room]);
+  for(const map of ['village','forest'])assert.deepEqual((await call('/world/rooms?map='+map,{token:visitor.token})).rooms,[]);
+  assert.deepEqual((await call('/world/rooms?map=coast',{token:visitor.token})).rooms,[moved.room]);
+  env.DB.sqlite.prepare('DELETE FROM admin_owner').run();const nextOwner=await admin({createRoom:false});
+  assert.equal((await call('/world/rooms/kasai',{token:visitor.token})).room,null);
+  const next=(await create(nextOwner,door('meadow'))).room;assert.equal(next.id,nextOwner.id);assert.equal(next.kind,'kasai');
+  const old=(await call('/world/rooms/'+owner.id,{token:visitor.token})).room;assert.equal(old.kind,'secret');assert.equal(old.width,18);assert.deepEqual(old.decorations,[decorations[1]]);assert.deepEqual(old.entrance,moved.room.entrance);
+  assert.deepEqual(JSON.parse(env.DB.sqlite.prepare('SELECT decorations_json FROM world_rooms WHERE owner_id=?').get(owner.id).decorations_json),decorations);
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,2);
 });
 
@@ -336,10 +383,10 @@ test('an unconfigured or newly transferred administrator never falls back to a f
   assert.equal((await call('/world/kasai/party',{token:a.token})).party,null);
   assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:oldRoom.id,party:team(),storageCount:0}})).error.code,'KASAI_LIVE_REQUIRED');
   env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(next.id);
-  const nextRoom=(await call('/world/rooms/kasai',{token:a.token})).room;assert.equal(nextRoom.id,next.id);
+  assert.equal((await call('/world/rooms/kasai',{token:a.token})).room,null);
   assert.equal((await call('/world/kasai/party',{token:a.token})).party,null);
   assert.equal((await call('/world/kasai/party',{token:owner.token,method:'POST',body:{party:team()}})).error.code,'ADMIN_REQUIRED');
-  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:nextRoom.id,party:team(),storageCount:0}})).error.code,'KASAI_LIVE_REQUIRED');
+  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:next.id,party:team(),storageCount:0}})).error.code,'KASAI_LIVE_REQUIRED');
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_challenges').get().n,0);
 });
 
