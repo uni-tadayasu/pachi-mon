@@ -67,6 +67,9 @@
  *   panels and trade views refresh together, including the ability stylesheet.
  * v54: eight off-dex companions and three evolution lines gain their own
  *   front/rear pixel artwork, secret encounter choices and owned link rosters.
+ * v55: solo fields automatically share live travellers; signed Kasai identity,
+ *   dedicated pixel avatar and battle music, directed battle/trade invitations,
+ *   and the complete secret-grass species picker refresh with versioned clients.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

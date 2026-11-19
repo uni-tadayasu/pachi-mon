@@ -1,5 +1,55 @@
 # パチモンの通信交換API
 
+## ソロ冒険の共有フィールド（v55）
+
+世界のプレイヤーの位置は `world_presence` に保存し、Workerの実行先が違っても同じエリアの参加者を取得します。
+既存のプレイヤー登録・Bearer認証を使います。位置はゲーム内のマップIDとマス座標だけで、端末の位置情報は使いません。
+
+| 操作 | API | 内容 |
+| --- | --- | --- |
+| 表示・移動・周辺取得 | `POST /api/world/presence` | `{map,x,y,facing,avatar,status}` |
+| フィールド退出 | `DELETE /api/world/presence` | 本人の表示を削除し、未確定のお誘いを取り消す |
+| 近くの相手を誘う | `POST /api/world/invitations` | `{targetId,kind,roomCode,requestId}` |
+| お誘いの確認 | `GET /api/world/invitations/:id` | 送信者・受信者のみ取得可能 |
+| 参加・断る | `POST /api/world/invitations/:id/respond` | 受信者だけが `{accept:true}` または `{accept:false}` を送る |
+| お誘いの取消 | `POST /api/world/invitations/:id/cancel` | 送信者だけが `{}` を送る |
+| 対戦の本人証明 | `POST /api/world/trainer-pass` | `{sessionId,side}` から10分間の署名付き証明を作成 |
+| 相手の本人証明確認 | `POST /api/world/trainer-pass/verify` | `{sessionId,side,pass}` を検証し、現在の役割を返す |
+
+`facing` は `down/left/right/up`、送信する `avatar` は `male/female`、`status` は `idle/busy` です。
+マップと座標は232エリアの範囲内に制限されます。位置の更新は同じプレイヤーにつき最大4回/秒です。
+`presence` の応答には `self`、同じマップの近い順で最大80人の `players`、本人が関係する最大20件の `invitations`、
+`serverTime`、`ttlMs:15000`、`pollAfterMs:500` を含みます。15秒以上更新のないプレイヤーは表示対象から外れます。
+
+プレイヤーの表示は `{id,name,isAdmin,avatar,map,x,y,facing,status,updatedAt}` です。
+運営権限は既存の `admin_owner` だけで判断し、現在の運営には名前「謎のトレーナー カサイ」と `avatar:kasai` を返します。
+クライアントから名前・運営フラグ・カサイのアバターを送って役割を変更することはできません。
+
+お誘いは同じマップでマンハッタン距離3マス以内、両者 `idle` の場合に作成でき、60秒で期限切れになります。
+ルームを準備してお誘いを送る間は送信者を `idle` に保ち、受信者が参加を選んだ後に対戦・交換へ移行します。
+受信者の確認ダイアログ中に `busy` へ変わっても返事できますが、受諾時には新しい位置と距離を再確認します。
+同じ `requestId` の再送は同じお誘いを返します。どちらかが別のマップへ移動したり退出したりすると未確定のお誘いを終了します。
+通常のプレイヤー同士の直接招待リンクは引き続き利用できます。
+
+お誘いの形式は `{id,requestId,kind,roomCode,state,from,to,createdAt,expiresAt,updatedAt}`、
+`state` は `pending/accepted/declined/cancelled/expired` です。`from/to` にサーバー確認済みの `{id,name,isAdmin,avatar}` が入ります。
+交換ルームは送信者が作成した空きルームかを確認し、誘われた相手が承諾してからだけ参加できるよう予約します。
+対戦ルームの通信自体は既存のPeerJSを使用します。D1はPeerJSルームの所有者を検証しないため、対戦開始時の本人表示には
+既存の `DUEL_SIGNING_KEY` を使った `trainer-pass` を併用します。証明は対戦セッション・側・期限と結び付き、検証時に現在の運営登録を再確認します。
+署名キーが未設定の場合は `503 TRAINER_NOT_CONFIGURED` を返し、クライアントは通常の対戦を継続できます。
+
+公開時は `drizzle/0002_world.sql` を既存のD1へ追加し、マイグレーションの連番へ登録します。
+運営登録、配布、既存の交換記録を作り直す必要はありません。`server.mjs` はこれまでどおりSitesの `worker/index.js` へ同期してください。
+
+検証: `node --test server/tests/world.test.mjs server/tests/server.test.mjs server/tests/trades.test.mjs`
+
+交換ルームの待機終了処理には `POST /api/trades/:id/cancel` へ
+`{waitingOnly:true,expectedRevision:<最後に取得した版番号>}` を送ります。
+作成者本人のルームが未参加・未変更の場合だけ取り消します。直前に相手が参加した場合は取り消さず、
+現在の `trade` をそのまま返すため、クライアントは交換画面・受取確認を継続します。
+
+## 通信交換
+
 既存のプレイヤー登録トークンで認証し、6文字のコードで2人が参加します。
 ルームは15分で期限切れになります。確定後の交換記録は期限切れにならず、
 端末の保存に失敗しても同じ受取記録を取得できます。

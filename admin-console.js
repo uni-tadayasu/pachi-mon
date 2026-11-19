@@ -11,7 +11,17 @@
   let identityEpoch=0, restoreAttempt=0, syncQueued=false, registerQueued=false, sendBusy=false, pendingGrant=null;
   let adminRegistration=null, releaseReview=null, releaseBusy=false, refreshBusy=false;
   const staleIdentity=()=>Object.assign(new Error('プレイヤー情報が切り替わりました。'),{staleIdentity:true});
-  try { const x=JSON.parse(localStorage.getItem(KEY)); if(x && /^[A-Za-z0-9_-]{43}$/.test(x.token))identity=x; } catch (_) {}
+  function storedIdentity(raw){
+    if(typeof raw!=='string'||raw.length>4096)return null;
+    try{
+      const value=JSON.parse(raw);
+      if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(value.token))return null;
+      // Cached IDs/roles are not authorization. The token's server profile is
+      // loaded before showing an identity or granting any operator controls.
+      return {token:value.token,...(typeof value.id==='string'&&/^P[0-9a-f]{16}$/.test(value.id)?{id:value.id}:{}),name:typeof value.name==='string'?value.name.slice(0,32):'旅人'};
+    }catch(_){return null;}
+  }
+  try { identity=storedIdentity(localStorage.getItem(KEY)); } catch (_) {}
   function randomToken(){ const bytes=crypto.getRandomValues(new Uint8Array(32)); return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
   function persist(next){
     localStorage.setItem(KEY,JSON.stringify(next));
@@ -26,14 +36,14 @@
     persist(next);player=nextPlayer;status=serviceStatus({adminExists,adminRecoveryAvailable},null);lastError='';revision=0;savedConfig=null;adminRegistration=null;releaseReview=null;
     if(consoleDialog?.open)consoleDialog.close();
   }
-  async function request(path, {method='GET',body,token=identity?.token,auth=true,guardIdentity=true}={}){
+  async function request(path, {method='GET',body,token=identity?.token,auth=true,guardIdentity=true,keepalive=false}={}){
     const epoch=identityEpoch;
     const abort=new AbortController(), timer=setTimeout(()=>abort.abort(),15000);
     try {
       const headers={Accept:'application/json'};
       if(body!==undefined)headers['Content-Type']='application/json';
       if(auth && token)headers.Authorization='Bearer '+token;
-      const res=await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:abort.signal,credentials:'omit',cache:'no-store',referrerPolicy:'strict-origin-when-cross-origin'});
+      const res=await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:abort.signal,keepalive,credentials:'omit',cache:'no-store',referrerPolicy:'strict-origin-when-cross-origin'});
       const data=await res.json().catch(()=>null);
       if(guardIdentity&&epoch!==identityEpoch)throw staleIdentity();
       if(!res.ok || !data?.ok){const err=new Error(data?.error?.message || '通信できませんでした。少し待って再試行してください。');err.code=data?.error?.code;err.status=res.status;throw err;}
@@ -254,7 +264,7 @@
     const data=await request('/admin/config');savedConfig=data.config;revision=data.revision;adminRegistration=data.adminRegistration||null;releaseReview=null;
     if(!consoleDialog){consoleDialog=document.createElement('dialog');consoleDialog.className='pachi-console';consoleDialog.setAttribute('aria-labelledby','pachi-console-title');document.body.append(consoleDialog);consoleDialog.addEventListener('click',handleConsole);consoleDialog.addEventListener('cancel',event=>{if(sendBusy||releaseBusy){event.preventDefault();say('操作の結果を確認しています。少しお待ちください。');}});consoleDialog.addEventListener('close',()=>{void sync();});}
     const cfg={...data.config,moves:LT.FutoRules?.normalizeMoves?LT.FutoRules.normalizeMoves(data.config.moves):data.config.moves};const moveLabel=m=>m.kind==='attack'?`${m.category==='physical'?'物理':'特殊'}・威力${m.power}`:m.kind==='heal'?`体力${m.power}%回復`:m.kind==='boost'?'全能力アップ':'防御';const options=selected=>futoMoveEntries().map(([id,m])=>`<option value="${escape(id)}"${id===selected?' selected':''}>${escape(m.name)} · ${escape(moveLabel(m))}</option>`).join('');
-    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">フートの運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>運営登録</legend><p>登録を解除すると、運営キーの入力欄を再び公開します。</p><button class="btn" data-admin-action="release-review">運営登録の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
+    consoleDialog.innerHTML=`<header class="pachi-console-head"><h2 id="pachi-console-title">カサイの運営管理</h2><button class="btn btn-small" data-admin-action="close-console" aria-label="運営管理を閉じる">閉じる</button></header><div class="pachi-console-body"><section class="pachi-owner-identity"><h3>謎のトレーナー カサイ</h3><p>専用の姿で世界のプレイヤーと冒険。幻の草むらでは、すべてのパチモンに出会えます。</p><button type="button" class="btn btn-primary" data-admin-action="secret-grass">裏技・幻の草むら</button></section><div class="pachi-console-hero"><img src="assets/futo-front-v2.png" alt="フート"><div><p class="pachi-kicker">FUTO · ADMINISTRATOR</p><h3>きみが決める、フートの力。</h3><p>能力を設定し、全員または選んだプレイヤーへ届けます。<br>運営のフートには保存した設定が反映されます。</p></div></div><fieldset><legend>レベル・能力値</legend><div class="pachi-stat-grid"><label>レベル · 1〜100<input name="level" type="number" min="1" max="100" step="1" inputmode="numeric" value="${cfg.level}"></label>${fields.map(([key,label,max])=>`<label>${label} · 1〜${max}<input name="${key}" type="number" min="1" max="${max}" step="1" inputmode="numeric" value="${cfg.stats[key]}"></label>`).join('')}</div><small>能力値は戦闘で使う実際の数値です。フートは設定値を基準に、レベルアップすると能力が伸びます。</small><div class="pachi-move-grid">${cfg.moves.map((id,i)=>`<label>技 ${i+1}<select name="move${i}">${options(id)}</select></label>`).join('')}</div><small>初期技は、裂空拳（物理100）・星核砲（特殊100）・全霊覚醒（全能力アップ）・再生の光（体力半分回復）の順です。</small><div class="pachi-actions"><button class="btn btn-small" data-admin-action="default-moves">初期技4つに戻す</button><button class="btn btn-primary" data-admin-action="config">能力設定を保存</button></div><small>設定の変更は、これから配布する個体と運営の最初の1体に反映。配布済みの個体はそのままです。</small></fieldset><fieldset><legend>プレイヤーへ配布</legend><div class="pachi-send-grid"><label>配布先<select id="pachi-recipient"><option value="all">接続済みの全プレイヤー</option><option value="self">自分だけ</option></select></label><button class="btn btn-small" data-admin-action="players">プレイヤー一覧を更新</button></div><div class="pachi-actions"><button class="btn" data-admin-action="more-players" hidden>次のプレイヤーを読み込む</button><button class="btn btn-primary" data-admin-action="review">配布内容を確認</button></div><small>「全プレイヤー」は、配布した時点で本サービスに接続済みのプレイヤー全員です。未接続のプレイヤーは含まれません。受け取りは次の起動時にも行われます。</small><div id="pachi-review" hidden></div></fieldset>${adminRegistration?'<fieldset class="pachi-owner-controls"><legend>運営登録</legend><p>登録を解除すると、運営キーの入力欄を再び公開します。</p><button class="btn" data-admin-action="release-review">運営登録の解除を確認</button><div id="pachi-release-review" class="pachi-review" hidden></div></fieldset>':''}<p class="pachi-status" role="status" aria-live="polite"></p></div>`;
     consoleDialog._playersCursor=null;pendingGrant=loadPendingGrant();renderPendingGrant();
     if(!consoleDialog.open)consoleDialog.showModal();await loadPlayers(false);renderPendingGrant();
   }
@@ -270,6 +280,7 @@
     if(button.disabled||sendBusy||releaseBusy)return;
     if(action==='close-console'){consoleDialog.close();return;}
     await withButton(button,async()=>{
+      if(action==='secret-grass'){await LT.SecretEncounter?.open?.();return;}
       if(action==='release-review'){prepareRelease();return;}
       if(action==='release-cancel'){releaseReview=null;renderReleaseReview();return;}
       if(action==='release-confirm'){await releaseAdmin();return;}
@@ -328,8 +339,37 @@
   new MutationObserver(mountSettings).observe(document.getElementById('modal-content'),{childList:true});
   for(const name of ['pachi-game-ready','pachi-admin-bridge-ready'])document.addEventListener(name,()=>{void sync({fresh:true});});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync();});
+  window.addEventListener?.('storage',event=>{
+    if(event.key!==KEY&&event.key!==null||event.storageArea&&event.storageArea!==localStorage)return;
+    let raw;try{raw=localStorage.getItem(KEY);}catch(_){return;}
+    // A later write may already be on disk when an older event is delivered.
+    // Let its matching event handle that value instead of restoring stale data.
+    if(event.key===KEY&&raw!==event.newValue)return;
+    const next=raw===null?null:storedIdentity(raw);
+    if(raw!==null&&!next)return; // Keep malformed data intact for recovery.
+    if(identity?.token===next?.token){
+      if(next){identity=next;void sync({fresh:true});}
+      return;
+    }
+    identityEpoch++;restoreAttempt++;
+    identity=next;player=null;status=null;pending=0;registration=null;pendingGrant=null;
+    adminRegistration=null;releaseReview=null;revision=0;savedConfig=null;lastError='';
+    if(consoleDialog?.open)consoleDialog.close();
+    refreshSettings();LT.adminBridge?.refresh?.();
+    // Do not echo a storage event back to disk. Registration/profile reads use
+    // this new token; old requests fail their captured epoch before applying.
+    // A removal retires the old token without immediately writing a new one.
+    if(next)void sync({fresh:true});
+  });
   setInterval(()=>{if(!document.hidden)void sync();},30000);
   LT.Admin={sync,open:openConsole,get player(){return player;},get pending(){return pending;},
+    async worldRequest(path,options={}){
+      if(typeof path!=='string'||!/^\/world\/(?:presence|trainer-pass(?:\/verify)?|invitations(?:\/[a-zA-Z0-9-]+(?:\/(?:respond|cancel))?)?)$/.test(path))throw new Error('交流先の指定が正しくありません。');
+      await ensureIdentity();
+      const data=await request(path,{method:options.method||'GET',...(options.body!==undefined?{body:options.body}:{}),keepalive:options.keepalive===true});
+      if(data.self&&data.self.id===player?.id)player={...player,isAdmin:data.self.isAdmin===true};
+      return data;
+    },
     async tradeIdentity(){const current=await ensureIdentity();return {...current};},
     async tradeRequest(path,options={}){
       if(typeof path!=='string'||!/^\/trades(?:\/(?:active|join|[a-zA-Z0-9-]+)(?:\/(?:offer|confirm|cancel|ack))?)?$/.test(path))throw new Error('交換先の指定が正しくありません。');

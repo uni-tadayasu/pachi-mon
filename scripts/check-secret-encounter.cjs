@@ -31,6 +31,22 @@ for(const [i,id] of all.entries()){
   assert.equal(mon.grantId,expected);assert(e.state.giftReceipts.includes(expected));
  }else assert.equal(mon.grantId,undefined);
 }
+// Future additions are eligible from the live catalogue even when they are
+// hidden and glitch-only without joining an old ID allowlist. Operator-only
+// entitlements keep their existing save-proof checks, exercised above.
+const futureId='secret_future_fixture';
+function withFutureSpecies(run){
+ const previous=D.species[futureId];
+ D.species[futureId]={...D.species.komori,id:futureId,name:'ミライノコ',hiddenDex:true,glitchOnly:true,specialOnly:true,evolvesTo:null};
+ try{return run();}finally{if(previous)D.species[futureId]=previous;else delete D.species[futureId];}
+}
+withFutureSpecies(()=>{
+ const e=make();assert(e.startAdminEncounter(futureId,37,owner,{shiny:true,gender:'female'}).ok);
+ assert.equal(e.resonanceChance(),1);assert(e.action({type:'resonate'}).ok);
+ const mon=e.state.party.at(-1);assert.equal(mon.species,futureId);assert.equal(mon.level,37);assert.equal(mon.gender,'female');assert.equal(mon.shiny,true);
+ assert.deepEqual(copy(new Engine(e.serialize()).state.party.at(-1)),copy(mon));
+ assert.equal(mon.grantId,undefined);
+});
 for(const species of ['floravelle',...hidden])for(const denied of [null,{}, {id:owner.id,isAdmin:false},{id:'invalid',isAdmin:true},{id:owner.id,isAdmin:1}]){
  const e=make(),state=JSON.stringify(e.state);assert(!e.startAdminEncounter(species,70,denied).ok);assert.equal(e.battle,null);assert.equal(JSON.stringify(e.state),state);
 }
@@ -180,9 +196,9 @@ for(const [species,gender] of [['komori',null],['komori','none'],...hidden.map(i
 const source=fs.readFileSync(path.join(root,'secret-encounter.js'),'utf8');
 function ui(){
  const state={now:10000,click:null,dialog:null,authCalls:0,startCalls:[],messages:[],admin:true,playing:true};
- function element(tag){return {tag,children:[],get options(){return this.children;},value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
+ function element(tag){return {tag,children:[],get options(){return this.children;},value:'',textContent:'',checked:false,disabled:false,open:false,append(child){this.children.push(child);if(tag==='select'&&this.children.length===1)this.value=child.value;},replaceChildren(...children){this.children=[];this.value='';for(const child of children)this.append(child);},setAttribute(){},addEventListener(name,fn){this[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
  const document={body:{append(node){state.dialog=node;}},addEventListener(name,fn){if(name==='click')state.click=fn;},querySelectorAll(){return state.dialog?.open?[state.dialog]:[];},createElement(tag){const node=element(tag);if(tag==='dialog'){
-  const fields={'#secret-species':element('select'),'#secret-level':element('input'),'#secret-gender':element('select'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
+  const fields={'#secret-species':element('select'),'#secret-search':element('input'),'#secret-count':element('p'),'#secret-level':element('input'),'#secret-gender':element('select'),'#secret-shiny':element('input'),'#secret-status':element('p'),'#secret-form':element('form'),'[type="submit"]':element('button'),'[data-secret-close]':element('button'),'[data-secret-random]':element('button')};fields['#secret-level'].value='70';node.querySelector=selector=>fields[selector];
   // Read the new select's options from the real markup, so the harness cannot
   // conceal a missing control or incorrect values/labels in the UI source.
   Object.defineProperty(node,'innerHTML',{set(markup){
@@ -192,9 +208,11 @@ function ui(){
  }return node;}};
  const LT={DATA:D,TypeSystem:ctx.LT.TypeSystem,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
  vm.runInNewContext(source,{LT,document,Date:{now:()=>state.now},console});
+ state.open=()=>LT.SecretEncounter.open();
  state.tap=()=>state.click({target:{closest:selector=>selector==='#pachi-console-title'?{}:null}});
  state.submit=()=>state.dialog.querySelector('#secret-form').onsubmit({preventDefault(){}});
  state.selectSpecies=id=>{const select=state.dialog.querySelector('#secret-species');select.value=id;assert.equal(typeof select.onchange,'function');select.onchange();};
+ state.search=query=>{const input=state.dialog.querySelector('#secret-search');input.value=query;input.oninput();return state.dialog.querySelector('#secret-species').children;};
  return state;
 }
 async function main(){
@@ -238,6 +256,33 @@ async function main(){
  }
  u=ui();for(let n=0;n<6;n++)u.tap();u.now+=2501;u.tap();await settle();assert.equal(u.authCalls,0);
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-level').value='101';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 267 species capture/save; 11 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; male/female and automatic gender through capture UID changes, both destinations, reload and evolution; genderless/input rejection without side effects; owner/battle/capacity guards, private permit, special receipts, hidden Futo sync/reload and legacy gifts, normal odds restored, bridge identity/gender forwarding, seven-tap UI, gender switching/reopening/validation, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
+ // Direct admin-menu access shares the seven-tap path's authorization. Search
+ // includes types/tags, normalizes kana, and never triggers a wild battle.
+ u=ui();await u.open();assert.equal(u.authCalls,1);assert(u.dialog.open);
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'267種を表示 / 全267種');
+ assert.deepEqual(u.search('きらしーど').map(option=>option.value),['floravelle']);
+ assert.deepEqual(u.search('ﾌｰﾄ').map(option=>option.value),['futo']);
+ assert.deepEqual(u.search('図鑑外').map(option=>option.value).sort(),hidden.slice().sort());
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'11種を表示 / 全267種');
+ assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
+ const ice=u.search('氷').map(option=>option.value);
+ assert(ice.length>0);assert(ice.every(id=>ctx.LT.TypeSystem.of(id).some(type=>D.elements[type].name==='氷')));
+ for(let n=0;n<20;n++){
+  u.dialog.querySelector('[data-secret-random]').onclick();
+  assert(ice.includes(u.dialog.querySelector('#secret-species').value));assert.equal(u.startCalls.length,0);
+ }
+ assert.equal(u.search('該当種族のない検索語').length,0);assert.equal(u.dialog.querySelector('#secret-species').disabled,true);
+ assert.equal(u.dialog.querySelector('[type="submit"]').disabled,true);assert.equal(u.dialog.querySelector('[data-secret-random]').disabled,true);
+ await u.submit();assert.equal(u.startCalls.length,0);assert.equal(u.authCalls,1);
+ assert.equal(u.search('').length,all.length);assert.equal(u.dialog.querySelector('[type="submit"]').disabled,false);
+ // Reopening an existing dialog reads current data instead of a cached list.
+ D.species[futureId]={...D.species.komori,id:futureId,name:'ミライノコ',hiddenDex:true,glitchOnly:true,specialOnly:true};
+ try{
+  await u.open();assert.equal(u.authCalls,2);assert.equal(u.dialog.querySelector('#secret-species').children.length,268);
+  assert.deepEqual(u.search('みらいのこ').map(option=>option.value),[futureId]);await u.submit();
+  assert.equal(u.authCalls,3);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],futureId);
+ }finally{delete D.species[futureId];}
+ u=ui();u.admin=false;await u.open();assert.equal(u.authCalls,1);assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);
+ console.log('Secret encounter checks passed: all 267 species capture/save; every off-dex form, shiny/gender/level/capacity behavior and special receipt rules; current operator authorization on every open/submit; searchable complete catalogue with kana/type/tag matching, empty-result guards, random selection, and future hidden species without an ID allowlist.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

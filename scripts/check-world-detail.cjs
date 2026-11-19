@@ -12,7 +12,7 @@ async function main() {
   const { LT, engine, imageErrors, warnings } = await runtime();
   assert.equal(imageErrors.length, 0, imageErrors.join('\n'));
   assert.equal(warnings.length, 0, warnings.join('\n'));
-  assert.equal(LT.TravellerArt.status().loaded, 3, 'All three new traveller sheets must load');
+  assert.equal(LT.TravellerArt.status().loaded, 4, 'All four traveller sheets must load');
   assert.equal(LT.TravellerArt.status().failed, 0, 'A traveller atlas failed to decode');
   assert.equal(LT.FieldArt.status().loaded.length, 4, 'All four new environment sheets must load');
   const maps = Object.values(LT.DATA.maps), before = JSON.stringify(LT.DATA.maps), state = JSON.stringify(engine.state);
@@ -41,9 +41,9 @@ async function main() {
 
   // New portrait surfaces must come from the detailed source cells, not from a
   // nearest-neighbour enlargement of the already downsampled field figure.
-  const portraitSheet = canvas.createCanvas(8 * 192, 2 * 256);
+  const portraitSheet = canvas.createCanvas(8 * 192, 3 * 256);
   const portraitContext = portraitSheet.getContext('2d');
-  for (const [row, kind] of ['hero', 'hero-female'].entries()) {
+  for (const [row, kind] of ['hero', 'hero-female', 'kasai'].entries()) {
     for (const [column, facing] of ['down', 'left', 'right', 'up'].entries()) {
       const walking = new Set();
       for (const frame of [0, 1, 2]) {

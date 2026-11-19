@@ -8,6 +8,7 @@ const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'ind
 const source=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].find(m=>m[1].includes('class LuminaAudio'))[1];
 const URL_BATTLE='assets/music/battle-custom.mp3?v=20261119-battle-v52';
 const URL_FIELD='assets/music/field-custom.mp3?v=20261119-field-v52';
+const URL_KASAI='assets/music/kasai-one-light-v55.mp3';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
 class Param{
@@ -199,4 +200,88 @@ test('late field loads cannot overtake battle, and field failure falls back with
  for(let i=0;i<20;i++){b.ctx.currentTime+=.1;b.tick();b.setScene({map:'village'});}assert(f.notes()>0);assert.deepEqual(f.log.fetches,[URL_BATTLE,URL_FIELD]);
  b.setScene(solo());await settle();assert.equal(b.group.recording.id,'battle-custom');assert(!b.group.recording.audio.paused);
  const e=world(),c=e.audio;c.setScene({map:'village'});await c.setEnabled(true);await settle();c.group.recording.audio.fail();assert(!c.group.recorded);assert.equal(c.currentId,'village');
+});
+
+test('Kasai theme is the exact supplied 186.432-second 48 kHz stereo MP3',()=>{
+ const mp3=fs.readFileSync(path.join(root,URL_KASAI));
+ assert.equal(mp3.length,4272606);
+ assert.equal(crypto.createHash('sha256').update(mp3).digest('hex'),'0441c3a622f73675fd7788e7c4f8215cf53ed2c3b5900fd7297ffa93c06ee3d2');
+ assert.equal(mp3.toString('ascii',0,3),'ID3');let at=10;
+ for(let i=6,size=0;i<10;i++){size=(size<<7)|(mp3[i]&127);if(i===9)at+=size;}
+ while(at<mp3.length-4&&!(mp3[at]===255&&(mp3[at+1]&224)===224))at++;
+ const header=mp3.readUInt32BE(at);assert.equal((header>>19)&3,3);assert.equal((header>>17)&3,1);assert.equal((header>>10)&3,1);assert.notEqual((header>>6)&3,3);
+ const tag=Math.max(mp3.indexOf('Xing',at),mp3.indexOf('Info',at));assert(tag>at&&tag<at+64);assert(mp3.readUInt32BE(tag+4)&1);
+ assert(Math.abs(mp3.readUInt32BE(tag+8)*1152/48000-186.432)<.1);
+});
+
+test('Kasai audio loads only on its scene and can prepare silently during team selection',async()=>{
+ const w=world(),a=w.audio;a.setScene({...solo(),kasai:true});assert.equal(w.log.fetches.length,0,'No media fetch without an audio context');
+ a.setScene(solo());await a.setEnabled(true);await settle();assert.deepEqual(w.log.fetches,[URL_BATTLE,URL_FIELD]);
+ a.setScene({title:true,kasai:true});await settle();const kasai=a.recordings.get('kasai-one-light');
+ assert(kasai.ready&&kasai.audio.paused);assert.equal(kasai.audio.plays,0);assert.equal(a.group.recording.id,'title');
+ a.setScene({...solo(),kasai:true});await settle();assert.equal(a.group.recording,kasai);assert(!kasai.audio.paused);assert(kasai.audio.loop);
+ const info=a.getCurrentTrack();assert.equal(info.special,'kasai');assert.equal(info.name,'謎のトレーナー カサイ / Pop Man -One Light-');
+ assert.equal(info.recording.id,'kasai-one-light');assert.equal(info.recording.seconds,186.432);assert.equal(a.getTracks().length,64);
+ assert.equal(w.log.fetches.filter(url=>url===URL_KASAI).length,1);
+});
+
+test('Kasai has battle priority, keeps its loop across turns, and changes cleanly to an ordinary opponent',async()=>{
+ const w=world(),a=w.audio;a.setScene({...solo(),kasai:true});await a.setEnabled(true);await settle();const kasai=a.group.recording,group=a.group;
+ kasai.audio.currentTime=51.25;const starts=kasai.audio.plays;
+ const scenes=[solo(),solo({rival:true},'east'),solo({champion:true}),solo({enemy:{species:'arvelion',hp:1}}),
+  ...['single','double'].map(mode=>({theme:'meadow',battle:{rival:true,mode,teams:[{active:[0],monsters:[{species:'nullmie',hp:1}]},{active:[0],monsters:[{species:'zeroveil',hp:1}]}]}}))];
+ for(const scene of scenes){a.setScene({...scene,kasai:true});await settle();assert.equal(a.group,group);assert.equal(a.group.recording,kasai);assert.equal(kasai.audio.currentTime,51.25);assert.equal(kasai.audio.plays,starts);}
+ assert.equal(kasai.gain.outputs[0],a.recordedMusicBus);
+ for(let i=0;i<20;i++){a.ctx.currentTime+=.1;a.tick();}assert.equal(w.notes(),0,'No procedural battle score overlaps Kasai');
+ a.setScene(solo());await settle();const regular=a.group.recording;assert.equal(regular.id,'battle-custom');assert.equal(a.getCurrentTrack().special,undefined);
+ w.flush();assert(kasai.audio.paused);assert.equal(kasai.audio.currentTime,0);
+ a.setScene({...solo(),kasai:true});await settle();assert.equal(a.group.recording,kasai);assert(!kasai.audio.paused);w.flush();assert(regular.audio.paused);
+ assert.equal(w.log.fetches.filter(url=>url===URL_KASAI).length,1);
+});
+
+test('Kasai results and music-room previews retain the existing event cues and selected preview',async()=>{
+ for(const [result,id]of [['won','victory'],['caught','resonance'],['lost','village'],['fled','village']]){
+  const w=world(),a=w.audio;a.setScene({...solo(),kasai:true});await a.setEnabled(true);await settle();const kasai=a.group.recording;
+  a.setScene({...solo({result}),kasai:true});await settle();assert.equal(a.currentId,id);assert.notEqual(a.group?.recording,kasai);assert.equal(a.getCurrentTrack().special,undefined);w.flush();assert(kasai.audio.paused);
+ }
+ const w=world(),a=w.audio;a.setScene({...solo(),kasai:true});await a.setEnabled(true);await settle();const kasai=a.group.recording;
+ for(const [preview,recording]of [['battle','battle-custom'],['expedition','field-custom'],['glitchbattle',null]]){
+  assert(a.preview(preview));await settle();assert.equal(a.group.recording?.id||null,recording);assert.equal(a.getCurrentTrack().special,undefined);
+  a.preview(null);await settle();assert.equal(a.group.recording,kasai);assert.equal(a.getCurrentTrack().special,'kasai');
+ }
+ a.setScene({map:'village',kasai:true});await settle();assert.equal(a.group.recording.id,'field-custom');w.flush();assert(kasai.audio.paused);
+});
+
+test('Kasai suspend, mute and disposal use the shared recording lifecycle',async()=>{
+ const w=world(),a=w.audio;a.setScene({...solo(),kasai:true});await a.setEnabled(true);await settle();const kasai=a.group.recording;
+ kasai.audio.currentTime=92.5;await a.suspend();assert(kasai.audio.paused);await a.setEnabled(true);await settle();assert(!kasai.audio.paused);assert.equal(kasai.audio.currentTime,92.5);
+ a.setVolume(.18);assert.equal(a.master.gain.value,.18*.72);a.duckMusic(2,.6,.4);assert(a.recordedMusicBus.gain.events.some(event=>event[0]==='ramp'&&event[1]===.4));
+ await a.setEnabled(false);w.flush();assert.equal(a.master.gain.value,0);assert.equal(a.group,null);assert(w.log.audios.every(media=>media.paused));assert.equal(kasai.audio.currentTime,0);
+ a.dispose();assert.equal(w.log.revoked.length,3);assert.equal(a.recordings.size,0);
+ a.setScene({...solo(),kasai:true});await a.setEnabled(true);await settle();assert.equal(w.log.fetches.length,3);assert(w.log.audios.every(media=>media.paused));
+});
+
+test('late Kasai downloads cannot take over an ordinary battle, muted game, or disposed audio engine',async()=>{
+ for(const exit of ['ordinary','mute','dispose']){
+  const w=world({deferFetch:true}),a=w.audio;a.setScene({...solo(),kasai:true});await a.setEnabled(true);
+  if(exit==='ordinary')a.setScene(solo());else if(exit==='mute')await a.setEnabled(false);else a.dispose();
+  w.ready(URL_KASAI);w.ready(URL_BATTLE);w.ready(URL_FIELD);await settle();w.flush();
+  if(exit==='dispose'){assert.equal(w.log.audios.length,0);assert.equal(a.recordings.size,0);}
+  else{const kasai=a.recordings.get('kasai-one-light');assert(kasai.ready&&kasai.audio.paused);assert.equal(kasai.audio.plays,0);if(exit==='ordinary')assert.equal(a.group.recording.id,'battle-custom');else assert.equal(a.group,null);}
+ }
+});
+
+test('pending Kasai play cannot revive after exit or silence a newer Kasai playback',async()=>{
+ const w=world(),a=w.audio;a.setScene(solo());await a.setEnabled(true);await settle();a.setScene({title:true,kasai:true});await settle();const kasai=a.recordings.get('kasai-one-light');
+ const old=deferred();w.plays.push(old);a.setScene({...solo(),kasai:true});await settle();a.setScene(solo());w.flush();assert(kasai.audio.paused);
+ old.resolve();await settle();assert(kasai.audio.paused,'An exited late play is paused');
+ const earlier=deferred();w.plays.push(earlier);a.setScene({...solo(),kasai:true});await settle();a.setScene({map:'village'});w.flush();a.setScene({...solo(),kasai:true});await settle();assert(!kasai.audio.paused);
+ earlier.resolve();await settle();assert(!kasai.audio.paused,'An older completion cannot pause the current Kasai owner');
+});
+
+test('a failed Kasai recording falls back once without preventing ordinary battle music',async()=>{
+ const w=world({deferFetch:true}),a=w.audio;a.setScene({...solo({rival:true}),kasai:true});await a.setEnabled(true);w.fail(URL_KASAI);w.ready(URL_BATTLE);w.ready(URL_FIELD);await settle();
+ assert.equal(a.currentId,'rival');assert(!a.group.recorded);assert(a.recordings.get('kasai-one-light').failed);assert.equal(a.getCurrentTrack().special,undefined);
+ for(let i=0;i<20;i++){a.ctx.currentTime+=.1;a.tick();a.setScene({...solo({rival:true}),kasai:true});}assert(w.notes()>0);assert.equal(w.log.fetches.filter(url=>url===URL_KASAI).length,1);
+ a.setScene(solo());await settle();assert.equal(a.group.recording.id,'battle-custom');assert(!a.group.recording.audio.paused);
 });

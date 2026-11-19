@@ -1,0 +1,137 @@
+{
+  "image": "kasai-overworld-v55.png",
+  "imageWidth": 1086,
+  "imageHeight": 1448,
+  "description": "ImageGen reference-based transparent overworld Kasai sheet; rendering crop metadata only. source pixels unmodified.",
+  "frames": [
+    {
+      "direction": "down",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 13,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 339
+    },
+    {
+      "direction": "down",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 13,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 339
+    },
+    {
+      "direction": "down",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 13,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 339
+    },
+    {
+      "direction": "left",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 369,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "left",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 369,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "left",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 369,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "right",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 725,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "right",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 725,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "right",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 725,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 336
+    },
+    {
+      "direction": "up",
+      "phase": "idle",
+      "sx": 110,
+      "sy": 1083,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 338
+    },
+    {
+      "direction": "up",
+      "phase": "walk1",
+      "sx": 442,
+      "sy": 1083,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 338
+    },
+    {
+      "direction": "up",
+      "phase": "walk2",
+      "sx": 774,
+      "sy": 1083,
+      "sw": 202,
+      "sh": 350,
+      "anchorX": 101,
+      "anchorY": 338
+    }
+  ],
+  "renderSize": [
+    96,
+    128
+  ],
+  "renderFeetY": 122,
+  "fitExtent": {
+    "width": 160,
+    "height": 330
+  }
+}
