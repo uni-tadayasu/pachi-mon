@@ -1,0 +1,115 @@
+/* Pachi Monsters — v51 pixel surfaces for the rest of the handheld interface.
+ * Load after the existing UI styles. Only paint properties change here:
+ * typography, layout, controls, focus rings and health/progress widths remain
+ * owned by their existing styles and controllers. No content is rasterized.
+ * © 2026 KASAI SOLUTIONS INC. */
+
+:root{
+  --pm-world-shell:linear-gradient(180deg,rgba(255,255,255,.15) 0 3px,transparent 3px 100%),linear-gradient(180deg,var(--pm-shell) 0 24%,#4b3daf 24% 48%,var(--pm-shell-2) 48% 74%,var(--pm-shell-3) 74% 100%);
+  --pm-world-card:linear-gradient(180deg,rgba(129,170,255,.13) 0 3px,rgba(100,139,228,.06) 3px 50%,rgba(3,8,38,.11) 50% calc(100% - 3px),rgba(4,9,41,.26) calc(100% - 3px) 100%);
+  --pm-world-title-wide:linear-gradient(90deg,rgba(7,10,34,.95) 0 20%,rgba(7,10,34,.86) 20% 36%,rgba(7,10,34,.64) 36% 48%,rgba(7,10,34,.38) 48% 60%,rgba(7,10,34,.16) 60% 72%,rgba(7,10,34,.04) 72% 100%),linear-gradient(0deg,rgba(7,10,34,.9) 0 8%,rgba(7,10,34,.58) 8% 18%,rgba(7,10,34,.24) 18% 30%,transparent 30% 100%);
+  --pm-world-title-tall:linear-gradient(0deg,rgba(7,10,34,.98) 0 28%,rgba(7,10,34,.9) 28% 46%,rgba(7,10,34,.62) 46% 58%,rgba(7,10,34,.26) 58% 76%,rgba(7,10,34,.45) 76% 100%);
+}
+
+/* Small decorative icons retain their established symbols and colours.
+ * QR codes, camera frames, logos and other SVG artwork are not selected. */
+.ui-icon,
+.brand-mark svg,.journal-seal svg,.location-compass svg,
+.item-symbol svg,.music-emblem svg,.credits-emblem svg,.seal svg,.dpad svg{
+  shape-rendering:crispEdges;
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+}
+
+/* The outer room and title shade use the same discrete tones as the windows.
+ * The title illustration itself is supplied by the existing artwork renderer. */
+html{
+  background:linear-gradient(180deg,#161537 0 24%,#11132f 24% 60%,#0e102a 60% 84%,var(--pm-bg) 84% 100%);
+}
+.title-backdrop::after{background:var(--pm-world-title-wide)}
+.game-info{
+  background:linear-gradient(180deg,#070a1c 0 14%,#0b1032 14% 36%,#0c1038 36% 64%,#0a0d2c 64% 100%);
+}
+.topbar{box-shadow:0 3px 0 var(--pm-ink),0 6px 0 rgba(0,0,0,.25)}
+.mobile-screen .topbar{box-shadow:0 3px 0 var(--pm-ink)}
+
+/* Keep the purple PM-01 shell. Its shading and corners now read as blocks,
+ * while the PC, tablet and phone sizing rules continue to determine its fit. */
+html:not(.mobile-screen) .console-body{
+  background:var(--pm-world-shell);
+  border-radius:4px 4px 12px 12px;
+  box-shadow:inset 0 3px 0 #8f80db,inset 0 -6px 0 #251d65,inset 3px 0 0 #6d5fbd,inset -3px 0 0 #31266f,0 0 0 2px #1b1550,6px 8px 0 rgba(0,0,0,.34);
+}
+.mobile-screen .play-column{
+  background:var(--pm-world-shell);
+  border-radius:4px 4px 12px 4px;
+  box-shadow:inset 0 3px 0 #8f80db,inset 0 -6px 0 #251d65,0 0 0 2px #1b1550;
+}
+.console-screen,.mobile-screen .console-screen{border-radius:2px 2px 6px 2px}
+.console-led i{
+  box-shadow:0 0 0 1px #0b251e,0 0 0 3px rgba(95,242,143,.18);
+}
+.console-shoulder{
+  background:linear-gradient(180deg,#7669c0 0 2px,#4a3fa2 2px 35%,#3f3594 35% 70%,#2b2470 70% 100%);
+  border-radius:2px 2px 0 0;
+}
+.console-shoulder:hover{
+  background:linear-gradient(180deg,#9485df 0 2px,#6253bc 2px 35%,#4a40a8 35% 70%,#332b80 70% 100%);
+}
+.mobile-screen .console-shoulder{border-radius:0}
+.dpad button.pressed,.dpad button:active{
+  background:linear-gradient(180deg,#100d2b 0 3px,#17153a 3px 50%,#221f52 50% calc(100% - 2px),#3c3567 calc(100% - 2px) 100%);
+  box-shadow:inset 0 3px 0 #08051d;
+}
+.console-pill:hover>i{
+  background:linear-gradient(180deg,#a397d0 0 2px,#62558a 2px 6px,#332a5b 6px 100%);
+}
+.touch-action:active>span{
+  box-shadow:inset 2px 0 0 #e6b35c,inset -2px 0 0 #946025,inset 0 3px 0 #a86821;
+}
+.touch-b:active>span,.touch-b.pressed>span{
+  box-shadow:inset 2px 0 0 #83cbe0,inset -2px 0 0 #286c87,inset 0 3px 0 #28748c;
+}
+
+/* One quiet stepped surface across inventory, shops, settings and link panels.
+ * Background colour and border colour still communicate selection, ownership,
+ * confirmation and errors; the existing hover and disabled states are intact. */
+.item-row,.stat-cell,.purchase-sum,.alloc-panel,.battle-switch-member,
+.link-box,.link-team-card,.link-command-card,.link-rules,.link-log,.pachi-service,
+.pachi-trade .trade-card,.pachi-trade .trade-entry-card,
+.local-role-card,.local-offer,.local-manual-code,.local-howto,
+.online-invite-share,.online-invite-notice{
+  background-image:var(--pm-world-card);
+}
+.purchase-sum,.alloc-panel,.link-rules,
+.pachi-trade .trade-card,.pachi-trade .trade-entry-card,
+.local-role-card,.local-offer,.local-manual-code,.local-howto{
+  box-shadow:var(--pm-card-edge);
+}
+.levelup-card{
+  box-shadow:0 0 0 2px var(--pm-ink),0 0 0 4px rgba(255,214,90,.28),4px 6px 0 rgba(0,0,0,.4);
+}
+
+/* Follow the established title orientation without changing its composition. */
+@media(max-width:700px){
+  .title-backdrop::after{background:var(--pm-world-title-tall)}
+}
+.mobile-screen .title-backdrop::after{background:var(--pm-world-title-tall)}
+@media(orientation:landscape){
+  .mobile-screen .title-backdrop::after{background:var(--pm-world-title-wide)}
+}
+
+/* Leave high-contrast mode in control of essential surfaces and icon colours. */
+@media(forced-colors:active){
+  .item-row,.stat-cell,.purchase-sum,.alloc-panel,.battle-switch-member,
+  .link-box,.link-team-card,.link-command-card,.link-rules,.link-log,.pachi-service,
+  .pachi-trade .trade-card,.pachi-trade .trade-entry-card,
+  .local-role-card,.local-offer,.local-manual-code,.local-howto,
+  .online-invite-share,.online-invite-notice{background-image:none}
+}
+
+/* Render only the illustration on a small canvas. Title text stays in HTML. */
+.title-backdrop.pixel-backdrop-ready{background-image:none}
+.title-backdrop>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:70% center;image-rendering:pixelated;pointer-events:none}
+/* Match the existing mobile background crop in both portrait and landscape. */
+.mobile-screen .title-backdrop>canvas{object-position:72% 30%}

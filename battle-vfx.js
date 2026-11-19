@@ -286,7 +286,44 @@
       || globalThis.document?.documentElement?.classList?.contains('reduce-motion')===true
       || globalThis.document?.body?.classList?.contains('reduce-motion')===true;
   }
+  function paintLabel(c,label) {
+    c.save();
+    try {
+      c.globalAlpha=label.alpha;c.lineCap='square';c.lineJoin='miter';
+      c.font=label.font;c.textAlign='center';c.textBaseline='middle';
+      c.lineWidth=label.width;c.strokeStyle=label.ink;c.fillStyle=label.fill;
+      c.strokeText(label.text,label.x,label.y);c.fillText(label.text,label.x,label.y);
+    } finally { c.restore(); }
+  }
+  // Only effect art enters the transparent pixel layer. Labels and numbers
+  // retain the display's native resolution, and the battle beneath is never
+  // copied or resampled. Without the optional helper, the normal renderer works.
   function render(c,w,h,time,event,options={}) {
+    if(!c||!event||event.kind==='text'||!Number.isFinite(time))return false;
+    const reduced=motionReduced(options),duration=clamp(Number(event.duration)||940,300,2400),progress=(time-event.started)/duration;
+    if(reduced&&!(event.style==='condition'&&event.condition==='curse')||progress<0||progress>1)return false;
+    const layer=LT.ScenePixels?.layer;
+    if(typeof layer!=='function')return renderPass(c,w,h,time,event,options);
+    const presentation={labels:[],layered:true};let rendered=false,painted=false;
+    c.save();
+    try {
+      // The original renderer uses physical canvas coordinates and owns its
+      // effect opacity; caller transforms/alpha must not move or dim this pass.
+      c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;
+      painted=layer(c,w,h,{long:384},target=>{rendered=renderPass(target,w,h,time,event,options,presentation);});
+    } catch(_) { painted=false; }
+    finally { c.restore(); }
+    if(!painted)return renderPass(c,w,h,time,event,options);
+    if(rendered&&presentation.labels.length){
+      c.save();
+      try {
+        c.setTransform(1,0,0,1,0,0);c.beginPath();c.rect(0,0,w,h);c.clip();
+        for(const label of presentation.labels)paintLabel(c,label);
+      } finally { c.restore(); }
+    }
+    return rendered;
+  }
+  function renderPass(c,w,h,time,event,options={},presentation=null) {
     if(!c||!event||event.kind==='text'||!Number.isFinite(time))return false;
     const reduced=motionReduced(options);
     // Curse keeps a quiet, stationary ghost when motion is reduced. Every
@@ -306,7 +343,7 @@
     const direction=Math.atan2(cy-source.y,cx-source.x);
     const point=mixPoint(source,target,travel),q=low?2:1;
     const snap=n=>Math.round(n/q)*q;
-    c.save();c.setTransform(1,0,0,1,0,0);c.beginPath();c.rect(0,0,w,h);c.clip();
+    c.save();if(!presentation?.layered)c.setTransform(1,0,0,1,0,0);c.beginPath();c.rect(0,0,w,h);c.clip();
     c.globalAlpha=fade;c.lineCap='square';c.lineJoin='miter';c.imageSmoothingEnabled=false;
     if(accentCell(e)>=0){if(!low)void preload();drawAccent(c,e,cx,cy,s,t,size,low);}
     const stroke=(points,color,width=2,alpha=1,close=false)=>{
@@ -555,9 +592,9 @@
       const name=globalThis.LT?.DATA?.statuses?.[kind]?.name||globalThis.LT?.DATA?.volatileConditions?.[kind]?.name||CONDITION_NAMES[kind]||'';
       const label=moment==='tick'?(e.amount?String(e.amount):''):moment==='blocked'?'動けない':cure?'':name;
       if(label&&t>.3){
-        const alpha=smooth(phase(t,.3,.42))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
-        c.font=`900 ${Math.max(12,Math.round(21*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle=ink;c.fillStyle=p[0];
-        const yy=Math.max(14*s,cy-H*1.12-ease(phase(t,.3,1))*14*s);c.strokeText(label,cx,yy);c.fillText(label,cx,yy);c.restore();
+        const alpha=smooth(phase(t,.3,.42))*(1-smooth(phase(t,.84,1))),yy=Math.max(14*s,cy-H*1.12-ease(phase(t,.3,1))*14*s);
+        const text={text:label,x:cx,y:yy,alpha:c.globalAlpha*alpha,font:`900 ${Math.max(12,Math.round(21*s))}px system-ui, sans-serif`,width:4*s,ink,fill:p[0]};
+        if(presentation)presentation.labels.push(text);else paintLabel(c,text);
       }
     }
     const attack=!['healing','shield','ascension','capture','miss','faint','arrival'].includes(e.style);
@@ -1073,10 +1110,10 @@
     }
     // Damage labels are intentionally localized to their target, not screen-sized flashes.
     const label=e.kind==='miss'?'ミス':e.kind==='guard'?'防御':e.kind==='boost'?(e.move==='arvelion_crown'?(e.raised===false?'護炎':'全能力↑・護炎'):e.move==='forest_crown'?(e.raised===false?'葉の結界':'全能力↑・結界'):e.move==='futo_ascend'?'全能力↑':'能力↑'):e.kind==='heal'?(e.amount?'+'+e.amount:'回復'):e.amount?String(e.amount):'';
-    if(label&&t>.42){const alpha=smooth(phase(t,.42,.53))*(1-smooth(phase(t,.84,1)));c.save();c.globalAlpha*=alpha;
-      c.font=`900 ${Math.max(13,Math.round((e.critical?27:23)*s))}px system-ui, sans-serif`;c.textAlign='center';c.textBaseline='middle';c.lineWidth=4*s;c.strokeStyle='#19253d';
-      c.fillStyle=e.kind==='heal'?'#d5ffad':e.kind==='miss'?'#e5e9f1':e.critical?'#ffe09c':'#ffffff';
-      const yy=cy-42*s-ease(phase(t,.42,1))*22*s;c.strokeText(label,cx,yy);c.fillText(label,cx,yy);c.restore();
+    if(label&&t>.42){const alpha=smooth(phase(t,.42,.53))*(1-smooth(phase(t,.84,1))),yy=cy-42*s-ease(phase(t,.42,1))*22*s;
+      const text={text:label,x:cx,y:yy,alpha:c.globalAlpha*alpha,font:`900 ${Math.max(13,Math.round((e.critical?27:23)*s))}px system-ui, sans-serif`,width:4*s,ink:'#19253d',
+        fill:e.kind==='heal'?'#d5ffad':e.kind==='miss'?'#e5e9f1':e.critical?'#ffe09c':'#ffffff'};
+      if(presentation)presentation.labels.push(text);else paintLabel(c,text);
     }
     c.restore();return true;
   }

@@ -391,6 +391,7 @@
     const cut=crop(sheets.trees,i,4,4,true),out=canvas(128,160),c=out.getContext('2d');
     const ratio=Math.min(122/cut.width,148/cut.height),w=Math.round(cut.width*ratio),h=Math.round(cut.height*ratio);
     c.imageSmoothingEnabled=false;c.drawImage(cut.cv,cut.left,cut.top,cut.width,cut.height,Math.round((128-w)/2),153-h,w,h);
+    LT.ScenePixels?.apply(out,{step:4});
     return bounded(trees,key,out,80);
   }
   function building(c,b,p,index=0,theme='village') {
