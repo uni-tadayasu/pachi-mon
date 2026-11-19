@@ -7159,7 +7159,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(!el?.isConnected)return;
     // The name row can be display:contents, so measure against the card (or the command grid).
     const card=el.closest('.combatant'),box=card||el.parentElement;
-    const key=`${el.textContent}|${card?.querySelector('.combatant-top')?.textContent||''}|${card?.querySelector('.type-badge')?.textContent||''}|${box?.clientWidth||0}`;
+    const key=`${el.textContent}|${card?.querySelector('.combatant-top')?.textContent||''}|${card?.querySelector('.type-badge')?.textContent||''}|${box?.clientWidth||0}|${el.clientWidth||0}|${document.documentElement?.clientHeight||0}`;
     if(el.dataset.fit===key)return;
     el.style.fontSize='';el.classList.remove('fit-wrap');
     if(!el.clientWidth){delete el.dataset.fit;return;}
@@ -10239,7 +10239,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="world-pixels.css?v=20261119-fine-pixels-v52">
 <link rel="stylesheet" href="screen-modes.css?v=20261119-display-v52">
 <link rel="stylesheet" href="abilities.css?v=20261119-abilities-v53">
-<link rel="stylesheet" href="desktop-screen.css?v=20261119-desktop-fit-v60b">
+<link rel="stylesheet" href="desktop-screen.css?v=20261119-desktop-battle-fit-v61">
 <script src="pixel-backdrop.js?v=20261119-fine-pixels-v52"></script>
 <script src="online-invites.js?v=20261118-easy-connect-v37"></script>
 <script src="mobile-screen.js?v=20261119-touch-guard-v38"></script>
