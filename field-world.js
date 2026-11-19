@@ -67,7 +67,7 @@
   };
   const mine=()=>LT.Admin?.player?.id||model.self?.id;
   const localAdmin=()=>LT.Admin?.player?.isAdmin===true||(model.self?.id===LT.Admin?.player?.id&&model.self?.isAdmin===true);
-  const isBusy=()=>!!(LT.adminBridge?.isBusy?.()||LT.onlineActive||LT.tradeActive||LT.localTradeActive||LT.Trade?.isLocked?.()||document.querySelector('dialog[open]'));
+  const isBusy=()=>!!(LT.adminBridge?.isBusy?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isWorking?.()||LT.onlineActive||LT.tradeActive||LT.localTradeActive||LT.Trade?.isLocked?.()||document.querySelector('dialog[open]'));
   function networkStatus(){
     // Creating an invitation opens its room before publishing the directed offer.
     // That room is still available to its one invited player.
@@ -80,9 +80,10 @@
     if(bar)return;
     const stage=document.querySelector('.game-stage');if(!stage)return;
     bar=document.createElement('section');bar.className='world-network-bar';bar.setAttribute('aria-label','フィールド交流');
-    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
+    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><button type="button" data-world-rooms>秘密部屋</button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
     stage.append(bar);
     bar.querySelector('[data-world-nearby]').onclick=()=>openNearby();
+    bar.querySelector('[data-world-rooms]').onclick=()=>{void LT.Rooms?.open?.();};
     bar.querySelector('[data-world-invite]').onclick=()=>{if(incoming)showIncoming(incoming);};
   }
   function status(){
@@ -92,6 +93,7 @@
     const label=!online()?'接続待ち · 回線が戻ると自動で再開':document.hidden?'復帰すると交流を再開':connected?`世界と接続 · このエリア ${peers.length}人`:failures?'再接続中 · 冒険は続けられます':'世界につないでいます…';
     const text=bar.querySelector('[data-world-status]');if(text.textContent!==label)text.textContent=label;
     bar.querySelector('[data-world-nearby]').disabled=!connected||!playing()||isBusy();
+    bar.querySelector('[data-world-rooms]').disabled=!online()||!playing()||isBusy();
     const alert=bar.querySelector('[data-world-invite]');alert.hidden=!incoming;alert.textContent=incoming?`${incoming.from.name}から${incoming.kind==='trade'?'交換':'対戦'}のお誘い`:'';
   }
   function makeDialog(){
@@ -119,7 +121,7 @@
   function showPerson(peer){
     selectedPeer={...peer};
     const busy=peer.status==='busy';
-    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':peer.isAdmin?'「やあ。君のパチモンたちの力、見せてもらおうか。」':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy?'disabled':''}>対戦を申し込む</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">相手が承諾すると通信を始めます。交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
+    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${peer.isAdmin?'「やあ。君のパチモンたちの力、特別なステージで見せてもらおうか。」':busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy&&!peer.isAdmin?'disabled':''}>${peer.isAdmin?'カサイとバトル':'対戦を申し込む'}</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">${peer.isAdmin?'バトルを選ぶとカサイの専用ステージへ移動します。奥のカサイに話しかけるとソロバトルが始まります。':'相手が承諾すると通信を始めます。'}交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
   }
   function openNearby(){
     if(!playing()||isBusy())return false;
@@ -152,6 +154,10 @@
     if(!peer||outgoing||incoming||working)return;
     const state=game()?.state;
     if(!active()||!state||distance({x:peer.targetX??peer.x,y:peer.targetY??peer.y},state)>3){say('相手に近づいてから話しかけてください。');return;}
+    if(peer.isAdmin&&kind==='battle'){
+      dialog?.close();setWorking(true);
+      try{await LT.Rooms?.enterKasai?.(peer.id);}finally{setWorking(false);schedule(50);}return;
+    }
     setWorking(true);
     const current={target:{id:peer.id,name:peer.name,isAdmin:peer.isAdmin===true,avatar:peer.avatar},kind,phase:'preparing',id:null,createdAt:Date.now()};outgoing=current;
     dialog?.close();
@@ -289,6 +295,7 @@
     isDialogOpen:()=>dialog?.open===true,
     closeDialog(){if(!dialog?.open||working)return false;if(dialogMode==='incoming')void respond(false);else dialog.close();return true;},
     moved,openNearby,
+    refreshPresence:async()=>{if(inFlight)await inFlight;return pulse();},
     status:()=>({enabled:true,connected,players:model.actors(game()?.state?.map).length,displayName:localAdmin()?KASAI:null})
   };
   document.addEventListener('pachi-game-ready',()=>schedule(50));

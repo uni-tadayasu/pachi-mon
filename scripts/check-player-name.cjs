@@ -42,7 +42,7 @@ const decode=value=>value.replace(/&(amp|lt|gt|quot|#39);/g,(_,entity)=>({amp:'&
 const ui=vm.createContext({tradeLocked:()=>false,console,Engine,DATA,LT:{...LT,onlineActive:false},engine:e,playing:true,busy:false,storedSave:e.serialize(),lastSave:0,
   selectedPlayerName:I.defaultName,selectedAvatar:'male',performance:{now:()=>123},SAVE_KEY:'test-adventure',escape:esc,
   document:{querySelectorAll:selector=>selector==='[data-avatar]'?avatarButtons:[]},$:id=>elements.get(id),
-  paintAnimatedPortraits(){},portrait:()=>'',typeBadge:()=>'',creatureDescription:species=>species.description,
+  paintAnimatedPortraits(){},portrait:()=>'',typeBadge:()=>'',speciesBadges:()=>'',creatureDescription:species=>species.description,
   showSettings(){ui.settingsOpened=(ui.settingsOpened||0)+1;},updateAll(){},toast:message=>{ui.lastToast=message;},
   localStorage:{setItem(key,value){if(failWrite)throw Error('Storage full');writes.push([key,value]);}},
   openModal(title,markup,pane){ui.modal={title,markup,pane};elements.clear();for(const match of markup.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)){
@@ -84,7 +84,7 @@ function online(explicit){
   const c=vm.createContext({console,LT:{...LT,adminBridge:{getEngine:()=>e},Art:{ready:Promise.resolve()},PixelSprites:{}},
     localStorage:{getItem:key=>storage.get(key)||null,setItem(key,value){changes.push(key);storage.set(key,value);},removeItem(key){changes.push(key);storage.delete(key);}},
     document:{getElementById:element,querySelectorAll:()=>[],addEventListener(){},dispatchEvent(){}},window:{addEventListener(){}},
-    requestAnimationFrame:()=>1,cancelAnimationFrame(){},CustomEvent:class{},performance:{now:()=>0}});
+    requestAnimationFrame:()=>1,cancelAnimationFrame(){},setTimeout:()=>1,clearTimeout(){},CustomEvent:class{},performance:{now:()=>0}});
   vm.runInContext(onlineScript[2],c);return {c,nodes,changes,storage};
 }
 e.renamePlayer('旅人🌿');let o=online();o.c.LT.OnlineUI.open();assert(o.nodes.get('online-content').innerHTML.includes('value="旅人🌿"'));assert.equal(o.changes.length,0);

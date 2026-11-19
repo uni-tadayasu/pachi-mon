@@ -70,7 +70,9 @@
  * v55: solo fields automatically share live travellers; signed Kasai identity,
  *   dedicated pixel avatar and battle music, directed battle/trade invitations,
  *   and the complete secret-grass species picker refresh with versioned clients.
- * © 2026 KASAI SOLUTIONS INC. */
+ * © 2026 KASAI SOLUTIONS INC. * v56: shared secret rooms, personal furniture layouts, Kasai solo challenge
+ *   and one-time Kiraseed rewards update with the room and challenge clients.
+ */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';
 const KEEP = [SHELL, ART, FONTS];

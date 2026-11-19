@@ -16,7 +16,7 @@ const fresh=()=>{const e=new Engine();e.newGame(DATA.starters[0]);e.state.party.
 const writes=new Map(),elements=new Map();let storageFails=false;
 const c=vm.createContext({tradeLocked:()=>false,Engine,DATA,LT:{onlineActive:false},engine:fresh(),playing:true,busy:false,storedSave:null,lastSave:0,moveAnim:{},
   SAVE_KEY:'release-save',performance:{now:()=>123},escape:s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'),
-  portrait:(id,size)=>`<canvas data-creature="${id}" data-size="${size}"></canvas>`,creatureView:()=>'<canvas></canvas>',nameOf:mon=>model.LT.displayName(mon),shinyBadge:()=>'',creatureDescription:species=>species.description,typeBadge:()=>'',hpBar:()=>'',
+  portrait:(id,size)=>`<canvas data-creature="${id}" data-size="${size}"></canvas>`,creatureView:()=>'<canvas></canvas>',nameOf:mon=>model.LT.displayName(mon),shinyBadge:()=>'',creatureDescription:species=>species.description,typeBadge:()=>'',speciesBadges:()=>'',abilityPanel:()=>'',hpBar:()=>'',
   localStorage:{setItem(key,value){if(storageFails)throw Error('Quota exceeded');writes.set(key,value);}},
   $:id=>elements.get(id),updateAll:()=>{c.updates=(c.updates||0)+1;},toast:message=>{c.toastMessage=message;},
   showParty:index=>{c.navigation={source:'party',index};},showStorage:index=>{c.navigation={source:'storage',index};},
