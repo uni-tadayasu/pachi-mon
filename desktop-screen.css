@@ -2,7 +2,7 @@
 html.desktop-fit:has(body.is-playing){height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
 html.desktop-fit body.is-playing{height:var(--app-height,100dvh);min-height:0;min-width:0;margin:0;overflow:hidden}
 html.desktop-fit body.is-playing #app{display:grid;grid-template-rows:54px minmax(0,1fr) 24px;width:100%;height:100%;min-height:0;overflow:hidden}
-html.desktop-fit body.is-playing .topbar{position:relative;top:auto;min-height:0;height:54px;padding:4px 14px;gap:16px;box-shadow:0 2px 0 var(--pm-ink)}
+html.desktop-fit body.is-playing .topbar{position:relative;top:auto;min-height:0;height:54px;width:100%;max-width:none;margin:0;justify-self:stretch;padding:4px 14px;gap:16px;box-shadow:0 2px 0 var(--pm-ink)}
 html.desktop-fit body.is-playing .brand-copy strong{font-size:20px}
 html.desktop-fit body.is-playing .brand-copy small{font-size:6px}
 html.desktop-fit body.is-playing .brand-mark{width:28px;height:32px}

@@ -80,6 +80,7 @@
  *   player-chosen Kasai room locations update with the versioned room client.
  * v60: desktop viewport FIT, unobstructed battle sidebars and fullscreen FIT
  *   refresh together with the versioned desktop screen controller and styles.
+ * v60b: keep the compact desktop header stretched across the viewport.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';
