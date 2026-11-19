@@ -18,10 +18,10 @@ for (const file of sources) {
   // Manifests list sheet files relative to assets/.
   if (file.endsWith('.json')) for (const m of text.matchAll(/"([A-Za-z0-9_-]+\.(?:webp|png))"/g)) urls.add(`assets/${m[1]}`);
 }
-const skip = /^assets\/(dex\/|ogp-|apple-touch|favicon|icon-|cover-pixel|offline-manifest\.json)/; // the list never lists itself
+const skip = /^assets\/(dex\/|ogp-|apple-touch|favicon|icon-|offline-manifest\.json)/; // the list never lists itself
 const files = [...urls].filter(url => !skip.test(url)).filter(url => fs.existsSync(path.join(root, url.split('?')[0]))).sort()
   .map(url => ({ url, bytes: fs.statSync(path.join(root, url.split('?')[0])).size }));
-const core = files.filter(f => /^assets\/(traveller-|environment-|battle-landscapes|cover-handheld|creatures-(individual-)?(catalog|manifest|designs)|creatures-evolution-manifest|creatures-manifest|nullmie-v46|nullva-v46|zeroveil-v46)/.test(f.url)).map(f => f.url);
+const core = files.filter(f => /^assets\/(traveller-|environment-|battle-landscapes|cover-(?:handheld|pixel)|creatures-(individual-)?(catalog|manifest|designs)|creatures-evolution-manifest|creatures-manifest|nullmie-v46|nullva-v46|zeroveil-v46)/.test(f.url)).map(f => f.url);
 const manifest = { version: process.env.OFFLINE_VERSION || new Date().toISOString().slice(0, 10), files, core,
   totalBytes: files.reduce((sum, f) => sum + f.bytes, 0), coreBytes: files.filter(f => core.includes(f.url)).reduce((sum, f) => sum + f.bytes, 0) };
 fs.writeFileSync(path.join(root, 'assets', 'offline-manifest.json'), JSON.stringify(manifest, null, 1) + '\n');

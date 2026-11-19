@@ -11,8 +11,10 @@ for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
 }
 const {Engine,DATA,displayName}=model.LT,hiddenIds=[...DATA.glitchLine.ids];
 const publicIds=Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex);
+const publicTypes=['leaf','tide','ember','wind','crystal','thunder','ice','earth'];
 function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,start);assert(start>=0&&end>start);return html.slice(start,end);}
-const source=[section('  function showDex(', '  function showMap() {'),
+const source=[section('  function typeBadge(', '  const nameOf='),
+  section('  function showDex(', '  function showMap() {'),
   section('  function partyDepositReason(', '  const HELD_ITEMS='),
   section('  function showRecords(){', '  function showMenu() {')].join('\n');
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -27,7 +29,6 @@ function ui(complete=false){
     portrait:id=>`<canvas data-creature="${escape(typeof id==='string'?id:id.species)}"></canvas>`,
     creatureView:mon=>`<canvas data-creature="${escape(typeof mon==='string'?mon:mon.species)}"></canvas>`,
     nameOf:displayName,creatureDescription:species=>species.description,
-    typeBadge:element=>`<span data-type="${escape(element||'neutral')}">${escape(DATA.elements[element]?.name||'無属性')}</span>`,
     genderMark:()=>'',shinyBadge:()=>'',conditionChip:()=>'',partyVitals:()=>'',statCells:()=>'',allocationPanel:()=>'',
     toast:()=>{},heardTracks:()=>new Set(),sound:{getTracks:()=>[],preview:id=>previews.push(id)}});
   vm.runInContext(source,context);
@@ -43,19 +44,35 @@ test('all 259 internal discoveries still render exactly the 256 public dex entri
   assert.match(markup,/捕獲 <strong>256<\/strong> \/ 256/);assert.match(markup,/発見 256<\/p>/);
   assert(!/No\.25[7-9]/.test(markup));assert(!markup.includes('未発見'));
   const options=[...markup.matchAll(/<option value="([^"]+)"/g)].map(match=>match[1]);
-  assert.deepEqual(options,['all','leaf','tide','ember','wind','crystal']);assert(!options.includes('void'));
+  assert.deepEqual(options,['all',...publicTypes]);assert(!options.includes('void'));
 });
 
-test('partial discovery and the actual element-change callback preserve ordinary filters',()=>{
+test('partial discovery and the actual element-change callback include either type without hidden entries',()=>{
   const app=ui();assert.equal(app.engine.state.caught.length,4);app.context.showDex();
   assert.match(app.modal.markup,/捕獲 <strong>1<\/strong> \/ 256/);assert.match(app.modal.markup,/発見 1<\/p>/);
   assert.equal(cards(app.modal.markup).length,256);assert(app.modal.markup.includes('未発見'));assertNoHidden(app.modal.markup);
-  for(const element of ['leaf','tide','ember','wind','crystal']){
+  for(const element of publicTypes){
     app.elements.get('dex-filter').onchange({target:{value:element}});
-    assert.deepEqual(cards(app.modal.markup),publicIds.filter(id=>DATA.species[id].element===element));
+    assert.deepEqual(cards(app.modal.markup),publicIds.filter(id=>model.LT.TypeSystem.has(id,element)));
     assertNoHidden(app.modal.markup);
   }
   app.context.showDex('void');assert.equal(cards(app.modal.markup).length,0);assertNoHidden(app.modal.markup);
+  const complete=ui(true),dual=publicIds.filter(id=>model.LT.TypeSystem.of(id).length===2);
+  assert.equal(dual.length,64);
+  for(const element of publicTypes){
+    complete.context.showDex(element);
+    const visible=cards(complete.modal.markup);
+    assert.deepEqual(visible,publicIds.filter(id=>model.LT.TypeSystem.has(id,element)));
+    for(const id of dual.filter(id=>DATA.species[id].types[1]===element))assert(visible.includes(id),id+' appears under its secondary type');
+    assertNoHidden(complete.modal.markup);
+  }
+  for(const id of dual){
+    complete.context.showDexEntry(id);
+    const labels=model.LT.TypeSystem.of(id).map(type=>DATA.elements[type].name);
+    assert(complete.modal.markup.includes(`aria-label="${labels.join('・')}タイプ"`));
+    for(const label of labels)assert(complete.modal.markup.includes(`>${label}</span>`),id+' displays both type badges');
+    assertNoHidden(complete.modal.markup);
+  }
 });
 
 test('direct hidden entry and lineage calls reveal nothing while normal evolution entries work',()=>{
@@ -75,7 +92,7 @@ test('owned hidden companions show their name and growth details without an inve
     const mon=app.engine.makeMonster(id,[5,24,48][index]);app.engine.state.party[1]=mon;app.context.showParty(1);
     const {markup,title,pane}=app.modal;assert.equal(pane,'party');assert.equal(title,DATA.species[id].name);
     assert(markup.includes('図鑑未登録 · バグ技で出会ったパチモン'));assert(!markup.includes('No.'));
-    assert(markup.includes(`data-creature="${id}"`));assert(markup.includes('data-type="void"'));
+    assert(markup.includes(`data-creature="${id}"`));assert(markup.includes('aria-label="無タイプ"'));assert(markup.includes('>無</span>'));
     assert(markup.includes(`Lv.${mon.level}`));assert(markup.includes(`data-nickname="${mon.uid}"`));
     assert(markup.includes(index===2?'完成した姿':`Lv.${DATA.species[id].evolveLevel}で新しい姿に進化`));
     app.context.showDex();assertNoHidden(app.modal.markup);

@@ -28,7 +28,7 @@ h2::before{content:"▶ ";font-size:.7em}
 .dex-hero>div{flex:1;min-width:240px}
 .dex-no{margin:0;color:var(--gold);font:400 14px/1.4 var(--pixel);letter-spacing:.1em}
 .chip{display:inline-block;padding:0 9px;margin:0 4px 4px 0;border:2px solid rgba(10,18,66,.55);background:#8f96c8;color:#0d1240;font:400 13px/1.6 var(--pixel);text-shadow:0 1px 0 rgba(255,255,255,.4)}
-.t-leaf{background:#79b88f}.t-tide{background:#68b8d3}.t-ember{background:#ed9674}.t-wind{background:#b0bdda}.t-crystal{background:#c6a2da}.t-none{background:#a5abc9}
+.t-leaf{background:#79b88f}.t-tide{background:#68b8d3}.t-ember{background:#ed9674}.t-wind{background:#b0bdda}.t-crystal{background:#c6a2da}.t-thunder{background:#e7bc4b}.t-ice{background:#8fcedd}.t-earth{background:#bd9368}.t-none,.t-void{background:#a5abc9}
 table{width:100%;border-collapse:collapse;margin:0 0 12px;font-size:14px}
 th,td{padding:8px 10px;border-bottom:2px dashed rgba(247,248,255,.25);text-align:left;vertical-align:top}
 thead th{color:var(--gold);font:400 13px/1.4 var(--pixel);background:rgba(10,18,66,.35)}

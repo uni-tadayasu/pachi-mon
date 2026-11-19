@@ -15,7 +15,7 @@ for(const marker of ['original world and game data','Original creature atlas and
 vm.runInContext(vfxSource,context);
 const {LT}=context,{Engine,Duel,DATA,BattleVFX}=LT,copy=value=>JSON.parse(JSON.stringify(value));
 const species=['komori','shizuku','hibana','fuwari','kirari','nullmie'];
-const forElement=element=>species.find(id=>DATA.species[id].element===element);
+const forElement=element=>Object.values(DATA.species).find(s=>s.element===element)?.id||Object.values(DATA.species).find(s=>LT.TypeSystem.of(s).includes(element))?.id;
 const team=(first,size)=>[first,...species.filter(id=>id!==first)].slice(0,size);
 const classify=factor=>factor>1?'super':factor<1?'resisted':'normal';
 
@@ -47,9 +47,10 @@ function spyAudio(){
 test('solo and link combat expose the same attribute multiplier independently of critical hits and guard',()=>{
   let count=0;const seen=new Set();
   for(const element of [null,...Object.keys(DATA.elements)])for(const defenderElement of Object.keys(DATA.elements)){
-    const expected=new Engine().effectiveness(element,defenderElement),critical=count%3===0,guarded=count%2===0;
+    const defender=forElement(defenderElement);assert(defender,`${defenderElement} has a real species`);
+    const expected=new Engine().effectiveness(element,DATA.species[defender]),critical=count%3===0,guarded=count%2===0;
     for(const mode of ['single','double']){
-      const pair=combatPair(element,forElement(defenderElement),critical,guarded,mode);
+      const pair=combatPair(element,defender,critical,guarded,mode);
       for(const event of Object.values(pair)){
         assert(event,'a landed attack produces a damage event');assert.equal(event.effectiveness,expected);
         assert.equal(event.critical,critical);assert.equal(event.guarded,guarded);assert(event.amount>0);
@@ -59,7 +60,8 @@ test('solo and link combat expose the same attribute multiplier independently of
     }
     seen.add(expected);count++;
   }
-  assert.deepEqual([...seen].sort(),[.7,.8,1,1.5]);assert.equal(count,42);
+  assert(seen.has(1)&&[...seen].some(value=>value>1)&&[...seen].some(value=>value<1));
+  const types=Object.keys(DATA.elements).length;assert.equal(count,(types+1)*types);
 });
 
 test('three impact signatures stay distinct and use affinity, not numerical damage or log text',()=>{
@@ -167,7 +169,7 @@ class Context {
   createBuffer(channels,length){const data=Array.from({length:channels},()=>new Float32Array(length));return {getChannelData:i=>data[i]};}
 }
 test('the actual graph reserves room for result cues with a full BGM and respects quality and master volume',()=>{
-  for(const quality of ['high','low'])for(const effectiveness of [1.5,.7,1]){
+  for(const moveId of ['arvelion_nova',...DATA.moveRoster.reclassified])for(const quality of ['high','low'])for(const effectiveness of [1.5,.7,1]){
     const c=vm.createContext({console,AudioContext:Context,navigator:{},document:{hidden:false},matchMedia:()=>({matches:quality==='low'})});
     vm.runInContext(audioSource,c);const audio=new c.LT.Audio();audio.setup();audio.enabled=true;audio.setVolume(.25);
     assert.equal(audio.master.gain.value,.18,'effects route through the existing user volume');
@@ -176,7 +178,7 @@ test('the actual graph reserves room for result cues with a full BGM and respect
     assert.equal(audio.voices.size,audio.maxVoices-8,'BGM preserves eight FX voices');
     const cueVoices=[];const impact=audio.damageImpact;
     audio.damageImpact=function(...args){const before=new Set(this.voices),kind=impact.apply(this,args);cueVoices.push(...[...this.voices].filter(v=>!before.has(v)));return kind;};
-    audio.move(DATA.moves.arvelion_nova,{kind:'damage',effectiveness,amount:140},{duration:1180,impactAt:.43,releaseAt:.14});
+    audio.move(DATA.moves[moveId],{kind:'damage',effectiveness,amount:140},{duration:1180,impactAt:.43,releaseAt:.14});
     assert.equal(cueVoices.length,effectiveness>1?3:2,'cue is reserved before ornamental move layers');
     assert(audio.voices.size<=audio.maxVoices,quality+' voice cap');
     for(const voice of cueVoices){assert.equal(voice.group,null);assert(voice.nodes.some(n=>n.connections.includes(audio.fxBus)));}

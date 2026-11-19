@@ -1,0 +1,10 @@
+/* Two display choices, with the same artwork resolution in both modes.
+ * CSS colour conversion keeps animation fast and works without Canvas filters.
+ * Only game illustrations change; controls, text and focus indicators stay clear. */
+html[data-screen-mode="mono"] #game-canvas,
+html[data-screen-mode="mono"] #link-battle-canvas,
+html[data-screen-mode="mono"] canvas[data-creature],
+html[data-screen-mode="mono"] canvas[data-online-creature],
+html[data-screen-mode="mono"] canvas[data-trade-portrait],
+html[data-screen-mode="mono"] .title-backdrop>canvas,
+html[data-screen-mode="mono"] canvas[data-avatar-preview]{filter:grayscale(1)}

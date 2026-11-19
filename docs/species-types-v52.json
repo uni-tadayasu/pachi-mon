@@ -1,0 +1,1568 @@
+{
+  "version": 52,
+  "title": "高精細ドットと雷・氷・土の種分類",
+  "species": 259,
+  "changedSpecies": 66,
+  "dualSpecies": 64,
+  "typeLabels": {
+    "thunder": "雷",
+    "ice": "氷",
+    "earth": "土"
+  },
+  "policy": {
+    "maximumTypes": 2,
+    "speciesElement": "types[0]",
+    "artElement": "従来の主属性。既存アートとfallbackの配色・意匠を維持する。",
+    "moves": "種ごとの既存4技ID・順番・PPを維持する。",
+    "protectedSingleTypes": {
+      "futo": "crystal",
+      "arvelion": "ember",
+      "floravelle": "leaf",
+      "nullmie": "void",
+      "nullva": "void",
+      "zeroveil": "void"
+    },
+    "starters": "コモリ・シズク・ヒバナの全進化段階は従来の単属性を維持。"
+  },
+  "primaryCounts": {
+    "leaf": 53,
+    "tide": 55,
+    "ember": 48,
+    "wind": 42,
+    "crystal": 32,
+    "earth": 13,
+    "ice": 10,
+    "thunder": 3,
+    "void": 3
+  },
+  "typeIncidenceCounts": {
+    "leaf": 55,
+    "tide": 59,
+    "ember": 51,
+    "wind": 44,
+    "crystal": 54,
+    "earth": 35,
+    "ice": 13,
+    "thunder": 9,
+    "void": 3
+  },
+  "matchingAttackCoverage": {
+    "allSpecies": 259,
+    "thunder": {
+      "typed": 9,
+      "matching": 9
+    },
+    "ice": {
+      "typed": 13,
+      "matching": 8
+    },
+    "earth": {
+      "typed": 35,
+      "matching": 12
+    }
+  },
+  "mapping": {
+    "komori": [
+      "leaf"
+    ],
+    "komorion": [
+      "leaf"
+    ],
+    "shizuku": [
+      "tide"
+    ],
+    "shizurua": [
+      "tide"
+    ],
+    "hibana": [
+      "ember"
+    ],
+    "akebino": [
+      "ember"
+    ],
+    "fuwari": [
+      "wind"
+    ],
+    "sorahane": [
+      "wind"
+    ],
+    "chirari": [
+      "ember"
+    ],
+    "tomoriga": [
+      "ember"
+    ],
+    "nemuri": [
+      "leaf"
+    ],
+    "kodamori": [
+      "leaf"
+    ],
+    "minamo": [
+      "tide"
+    ],
+    "shionagi": [
+      "tide"
+    ],
+    "kirari": [
+      "crystal"
+    ],
+    "seiran": [
+      "crystal"
+    ],
+    "hatane": [
+      "leaf"
+    ],
+    "sunokko": [
+      "wind"
+    ],
+    "kagetsu": [
+      "ember"
+    ],
+    "hoshiwa": [
+      "earth",
+      "crystal"
+    ],
+    "yorune": [
+      "wind"
+    ],
+    "astralith": [
+      "crystal"
+    ],
+    "momiji": [
+      "leaf"
+    ],
+    "akihane": [
+      "leaf"
+    ],
+    "koromo": [
+      "leaf"
+    ],
+    "moriboshi": [
+      "leaf"
+    ],
+    "tsumugi": [
+      "wind"
+    ],
+    "orihime": [
+      "wind"
+    ],
+    "suine": [
+      "tide"
+    ],
+    "suirei": [
+      "tide"
+    ],
+    "sazanami": [
+      "tide"
+    ],
+    "shioshige": [
+      "tide"
+    ],
+    "sunari": [
+      "earth",
+      "ember"
+    ],
+    "sabaryo": [
+      "earth",
+      "ember"
+    ],
+    "honoha": [
+      "ember"
+    ],
+    "enraku": [
+      "ember"
+    ],
+    "kourin": [
+      "ice",
+      "crystal"
+    ],
+    "setsurei": [
+      "ice",
+      "crystal"
+    ],
+    "yukumo": [
+      "ice",
+      "tide"
+    ],
+    "hakurou": [
+      "ice",
+      "tide"
+    ],
+    "raito": [
+      "crystal",
+      "earth"
+    ],
+    "raigai": [
+      "crystal",
+      "earth"
+    ],
+    "sorami": [
+      "wind"
+    ],
+    "amakumo": [
+      "wind"
+    ],
+    "kuroto": [
+      "crystal"
+    ],
+    "yorutsuki": [
+      "crystal"
+    ],
+    "irisowl": [
+      "wind",
+      "thunder"
+    ],
+    "mosselk": [
+      "leaf"
+    ],
+    "cocoroc": [
+      "earth",
+      "leaf"
+    ],
+    "sahari": [
+      "earth",
+      "ember"
+    ],
+    "enneko": [
+      "ember"
+    ],
+    "tobari": [
+      "wind",
+      "thunder"
+    ],
+    "rurihime": [
+      "tide"
+    ],
+    "yashiro": [
+      "earth",
+      "crystal"
+    ],
+    "gurenka": [
+      "ember"
+    ],
+    "aotori": [
+      "tide"
+    ],
+    "silfara": [
+      "wind"
+    ],
+    "luminarch": [
+      "leaf"
+    ],
+    "tanemaru": [
+      "leaf"
+    ],
+    "fukumori": [
+      "leaf"
+    ],
+    "saikaju": [
+      "leaf"
+    ],
+    "ruron": [
+      "tide"
+    ],
+    "mizukane": [
+      "tide"
+    ],
+    "suirinka": [
+      "tide"
+    ],
+    "hikumaru": [
+      "ember"
+    ],
+    "akazuchi": [
+      "ember"
+    ],
+    "akakagura": [
+      "ember"
+    ],
+    "piyumu": [
+      "wind"
+    ],
+    "kazaharu": [
+      "wind"
+    ],
+    "soramado": [
+      "wind",
+      "thunder"
+    ],
+    "chokori": [
+      "earth",
+      "crystal"
+    ],
+    "sekkura": [
+      "earth",
+      "crystal"
+    ],
+    "sekkokyo": [
+      "earth",
+      "crystal"
+    ],
+    "tsurune": [
+      "leaf"
+    ],
+    "hagalune": [
+      "leaf"
+    ],
+    "shinjuka": [
+      "leaf"
+    ],
+    "nakakiri": [
+      "tide"
+    ],
+    "umikiri": [
+      "tide"
+    ],
+    "umihibiki": [
+      "tide"
+    ],
+    "lumitomo": [
+      "ember"
+    ],
+    "yorutomo": [
+      "ember"
+    ],
+    "akatsubame": [
+      "ember"
+    ],
+    "fukiho": [
+      "wind"
+    ],
+    "fukiryu": [
+      "wind"
+    ],
+    "kuchuri": [
+      "crystal"
+    ],
+    "kujyura": [
+      "crystal"
+    ],
+    "mofuri": [
+      "leaf"
+    ],
+    "mofurou": [
+      "leaf"
+    ],
+    "hakone": [
+      "wind"
+    ],
+    "hakozora": [
+      "wind"
+    ],
+    "sorotto": [
+      "wind"
+    ],
+    "sorotora": [
+      "wind"
+    ],
+    "nagin": [
+      "tide"
+    ],
+    "naginori": [
+      "tide"
+    ],
+    "sibuki": [
+      "tide"
+    ],
+    "shibunami": [
+      "tide"
+    ],
+    "sumina": [
+      "ember"
+    ],
+    "sumirekka": [
+      "ember"
+    ],
+    "kanero": [
+      "crystal"
+    ],
+    "kanedora": [
+      "crystal"
+    ],
+    "amaguri": [
+      "leaf"
+    ],
+    "amagurio": [
+      "leaf"
+    ],
+    "nukumi": [
+      "ember"
+    ],
+    "nukumaru": [
+      "ember"
+    ],
+    "kiraho": [
+      "ice",
+      "crystal"
+    ],
+    "kirawashi": [
+      "ice",
+      "crystal"
+    ],
+    "hazumi": [
+      "leaf"
+    ],
+    "hazuhane": [
+      "leaf"
+    ],
+    "shiori": [
+      "tide"
+    ],
+    "shioraku": [
+      "tide",
+      "ice"
+    ],
+    "torone": [
+      "wind"
+    ],
+    "toronari": [
+      "wind"
+    ],
+    "hoshimi": [
+      "crystal"
+    ],
+    "hoshimori": [
+      "crystal"
+    ],
+    "riyuna": [
+      "tide",
+      "crystal"
+    ],
+    "riyutai": [
+      "tide",
+      "crystal"
+    ],
+    "nomori": [
+      "leaf"
+    ],
+    "nomorika": [
+      "leaf"
+    ],
+    "ennori": [
+      "ember"
+    ],
+    "ennoraku": [
+      "ember"
+    ],
+    "yurushi": [
+      "tide"
+    ],
+    "yurushio": [
+      "tide"
+    ],
+    "nureha": [
+      "tide",
+      "leaf"
+    ],
+    "tousa": [
+      "ice",
+      "wind"
+    ],
+    "fukuro": [
+      "leaf",
+      "earth"
+    ],
+    "aonagi": [
+      "tide",
+      "ice"
+    ],
+    "oshire": [
+      "tide",
+      "crystal"
+    ],
+    "kagaru": [
+      "ember"
+    ],
+    "murasora": [
+      "wind"
+    ],
+    "yamone": [
+      "leaf"
+    ],
+    "sazuka": [
+      "earth",
+      "tide"
+    ],
+    "genro": [
+      "crystal"
+    ],
+    "enritsu": [
+      "ember",
+      "earth"
+    ],
+    "shimarune": [
+      "tide",
+      "crystal"
+    ],
+    "kuromado": [
+      "crystal"
+    ],
+    "suiraku": [
+      "tide"
+    ],
+    "haneko": [
+      "leaf"
+    ],
+    "toganashi": [
+      "leaf"
+    ],
+    "mairaku": [
+      "ember"
+    ],
+    "hotarune": [
+      "ember"
+    ],
+    "sumizora": [
+      "wind",
+      "tide"
+    ],
+    "namisora": [
+      "tide",
+      "ice"
+    ],
+    "ringetsu": [
+      "crystal"
+    ],
+    "tokimori": [
+      "leaf"
+    ],
+    "yoruumi": [
+      "tide"
+    ],
+    "velora_1": [
+      "leaf"
+    ],
+    "velora_2": [
+      "leaf"
+    ],
+    "velora_3": [
+      "leaf"
+    ],
+    "nereid_1": [
+      "tide"
+    ],
+    "nereid_2": [
+      "tide"
+    ],
+    "nereid_3": [
+      "tide"
+    ],
+    "ignox_1": [
+      "ember",
+      "earth"
+    ],
+    "ignox_2": [
+      "ember",
+      "earth"
+    ],
+    "ignox_3": [
+      "ember",
+      "earth"
+    ],
+    "aerlyn_1": [
+      "wind"
+    ],
+    "aerlyn_2": [
+      "wind"
+    ],
+    "aerlyn_3": [
+      "wind"
+    ],
+    "quartz_1": [
+      "crystal",
+      "earth"
+    ],
+    "quartz_2": [
+      "crystal",
+      "earth"
+    ],
+    "quartz_3": [
+      "crystal",
+      "earth"
+    ],
+    "papilio_1": [
+      "leaf"
+    ],
+    "papilio_2": [
+      "leaf"
+    ],
+    "papilio_3": [
+      "leaf"
+    ],
+    "brine_1": [
+      "tide",
+      "crystal"
+    ],
+    "brine_2": [
+      "tide",
+      "crystal"
+    ],
+    "brine_3": [
+      "tide",
+      "crystal"
+    ],
+    "carmine_1": [
+      "ember"
+    ],
+    "carmine_2": [
+      "ember"
+    ],
+    "carmine_3": [
+      "ember"
+    ],
+    "gale_1": [
+      "wind"
+    ],
+    "gale_2": [
+      "wind"
+    ],
+    "gale_3": [
+      "wind"
+    ],
+    "opal_1": [
+      "crystal"
+    ],
+    "opal_2": [
+      "crystal"
+    ],
+    "opal_3": [
+      "crystal"
+    ],
+    "thorn_1": [
+      "leaf"
+    ],
+    "thorn_2": [
+      "leaf"
+    ],
+    "thorn_3": [
+      "leaf"
+    ],
+    "rill_1": [
+      "tide"
+    ],
+    "rill_2": [
+      "tide"
+    ],
+    "rill_3": [
+      "tide"
+    ],
+    "ferrum_1": [
+      "ember",
+      "earth"
+    ],
+    "ferrum_2": [
+      "ember",
+      "earth"
+    ],
+    "ferrum_3": [
+      "ember",
+      "earth"
+    ],
+    "cirrus_1": [
+      "wind"
+    ],
+    "cirrus_2": [
+      "wind"
+    ],
+    "cirrus_3": [
+      "wind"
+    ],
+    "obsidian_1": [
+      "crystal",
+      "earth"
+    ],
+    "obsidian_2": [
+      "crystal",
+      "earth"
+    ],
+    "obsidian_3": [
+      "crystal",
+      "earth"
+    ],
+    "saffron_1": [
+      "leaf"
+    ],
+    "saffron_2": [
+      "leaf"
+    ],
+    "saffron_3": [
+      "leaf"
+    ],
+    "abyss_1": [
+      "tide"
+    ],
+    "abyss_2": [
+      "tide"
+    ],
+    "abyss_3": [
+      "tide"
+    ],
+    "flint_1": [
+      "ember",
+      "earth"
+    ],
+    "flint_2": [
+      "ember",
+      "earth"
+    ],
+    "flint_3": [
+      "ember",
+      "earth"
+    ],
+    "volt_1": [
+      "thunder"
+    ],
+    "volt_2": [
+      "thunder"
+    ],
+    "volt_3": [
+      "thunder",
+      "wind"
+    ],
+    "lunette_1": [
+      "crystal"
+    ],
+    "lunette_2": [
+      "crystal"
+    ],
+    "lunette_3": [
+      "crystal"
+    ],
+    "cedran_1": [
+      "leaf"
+    ],
+    "cedran_2": [
+      "leaf"
+    ],
+    "cedran_3": [
+      "leaf"
+    ],
+    "corall_1": [
+      "tide"
+    ],
+    "corall_2": [
+      "tide"
+    ],
+    "corall_3": [
+      "tide"
+    ],
+    "vermion_1": [
+      "ember"
+    ],
+    "vermion_2": [
+      "ember"
+    ],
+    "vermion_3": [
+      "ember"
+    ],
+    "zephyr_1": [
+      "wind"
+    ],
+    "zephyr_2": [
+      "wind"
+    ],
+    "zephyr_3": [
+      "wind"
+    ],
+    "aurora_1": [
+      "ice",
+      "crystal"
+    ],
+    "aurora_2": [
+      "ice",
+      "crystal"
+    ],
+    "aurora_3": [
+      "ice",
+      "crystal"
+    ],
+    "fernix_1": [
+      "leaf"
+    ],
+    "fernix_2": [
+      "leaf"
+    ],
+    "fernix_3": [
+      "leaf"
+    ],
+    "pelagic_1": [
+      "tide"
+    ],
+    "pelagic_2": [
+      "tide"
+    ],
+    "pelagic_3": [
+      "tide"
+    ],
+    "solstice_1": [
+      "ember"
+    ],
+    "solstice_2": [
+      "ember"
+    ],
+    "solstice_3": [
+      "ember"
+    ],
+    "stratus_1": [
+      "wind",
+      "thunder"
+    ],
+    "stratus_2": [
+      "wind",
+      "thunder"
+    ],
+    "stratus_3": [
+      "wind",
+      "thunder"
+    ],
+    "noctil_1": [
+      "crystal"
+    ],
+    "noctil_2": [
+      "crystal"
+    ],
+    "noctil_3": [
+      "crystal"
+    ],
+    "bromel_1": [
+      "leaf"
+    ],
+    "bromel_2": [
+      "leaf"
+    ],
+    "bromel_3": [
+      "leaf"
+    ],
+    "isola_1": [
+      "tide",
+      "earth"
+    ],
+    "isola_2": [
+      "tide",
+      "earth"
+    ],
+    "isola_3": [
+      "tide",
+      "earth"
+    ],
+    "pyrrha_1": [
+      "ember"
+    ],
+    "pyrrha_2": [
+      "ember"
+    ],
+    "pyrrha_3": [
+      "ember"
+    ],
+    "skarn_1": [
+      "earth",
+      "crystal"
+    ],
+    "skarn_2": [
+      "earth",
+      "crystal"
+    ],
+    "skarn_3": [
+      "earth",
+      "crystal"
+    ],
+    "caelum_1": [
+      "wind"
+    ],
+    "caelum_2": [
+      "wind"
+    ],
+    "caelum_3": [
+      "wind"
+    ],
+    "futo": [
+      "crystal"
+    ],
+    "komorizen": [
+      "leaf"
+    ],
+    "shizunaria": [
+      "tide"
+    ],
+    "akehomura": [
+      "ember"
+    ],
+    "arvelion": [
+      "ember"
+    ],
+    "floravelle": [
+      "leaf"
+    ],
+    "nullmie": [
+      "void"
+    ],
+    "nullva": [
+      "void"
+    ],
+    "zeroveil": [
+      "void"
+    ]
+  },
+  "artElements": {
+    "komori": "leaf",
+    "komorion": "leaf",
+    "shizuku": "tide",
+    "shizurua": "tide",
+    "hibana": "ember",
+    "akebino": "ember",
+    "fuwari": "wind",
+    "sorahane": "wind",
+    "chirari": "ember",
+    "tomoriga": "ember",
+    "nemuri": "leaf",
+    "kodamori": "leaf",
+    "minamo": "tide",
+    "shionagi": "tide",
+    "kirari": "crystal",
+    "seiran": "crystal",
+    "hatane": "leaf",
+    "sunokko": "wind",
+    "kagetsu": "ember",
+    "hoshiwa": "crystal",
+    "yorune": "wind",
+    "astralith": "crystal",
+    "momiji": "leaf",
+    "akihane": "leaf",
+    "koromo": "leaf",
+    "moriboshi": "leaf",
+    "tsumugi": "wind",
+    "orihime": "wind",
+    "suine": "tide",
+    "suirei": "tide",
+    "sazanami": "tide",
+    "shioshige": "tide",
+    "sunari": "ember",
+    "sabaryo": "ember",
+    "honoha": "ember",
+    "enraku": "ember",
+    "kourin": "crystal",
+    "setsurei": "crystal",
+    "yukumo": "tide",
+    "hakurou": "tide",
+    "raito": "crystal",
+    "raigai": "crystal",
+    "sorami": "wind",
+    "amakumo": "wind",
+    "kuroto": "crystal",
+    "yorutsuki": "crystal",
+    "irisowl": "wind",
+    "mosselk": "leaf",
+    "cocoroc": "leaf",
+    "sahari": "ember",
+    "enneko": "ember",
+    "tobari": "wind",
+    "rurihime": "tide",
+    "yashiro": "crystal",
+    "gurenka": "ember",
+    "aotori": "tide",
+    "silfara": "wind",
+    "luminarch": "leaf",
+    "tanemaru": "leaf",
+    "fukumori": "leaf",
+    "saikaju": "leaf",
+    "ruron": "tide",
+    "mizukane": "tide",
+    "suirinka": "tide",
+    "hikumaru": "ember",
+    "akazuchi": "ember",
+    "akakagura": "ember",
+    "piyumu": "wind",
+    "kazaharu": "wind",
+    "soramado": "wind",
+    "chokori": "crystal",
+    "sekkura": "crystal",
+    "sekkokyo": "crystal",
+    "tsurune": "leaf",
+    "hagalune": "leaf",
+    "shinjuka": "leaf",
+    "nakakiri": "tide",
+    "umikiri": "tide",
+    "umihibiki": "tide",
+    "lumitomo": "ember",
+    "yorutomo": "ember",
+    "akatsubame": "ember",
+    "fukiho": "wind",
+    "fukiryu": "wind",
+    "kuchuri": "crystal",
+    "kujyura": "crystal",
+    "mofuri": "leaf",
+    "mofurou": "leaf",
+    "hakone": "wind",
+    "hakozora": "wind",
+    "sorotto": "wind",
+    "sorotora": "wind",
+    "nagin": "tide",
+    "naginori": "tide",
+    "sibuki": "tide",
+    "shibunami": "tide",
+    "sumina": "ember",
+    "sumirekka": "ember",
+    "kanero": "crystal",
+    "kanedora": "crystal",
+    "amaguri": "leaf",
+    "amagurio": "leaf",
+    "nukumi": "ember",
+    "nukumaru": "ember",
+    "kiraho": "crystal",
+    "kirawashi": "crystal",
+    "hazumi": "leaf",
+    "hazuhane": "leaf",
+    "shiori": "tide",
+    "shioraku": "tide",
+    "torone": "wind",
+    "toronari": "wind",
+    "hoshimi": "crystal",
+    "hoshimori": "crystal",
+    "riyuna": "tide",
+    "riyutai": "tide",
+    "nomori": "leaf",
+    "nomorika": "leaf",
+    "ennori": "ember",
+    "ennoraku": "ember",
+    "yurushi": "tide",
+    "yurushio": "tide",
+    "nureha": "leaf",
+    "tousa": "wind",
+    "fukuro": "leaf",
+    "aonagi": "tide",
+    "oshire": "crystal",
+    "kagaru": "ember",
+    "murasora": "wind",
+    "yamone": "leaf",
+    "sazuka": "tide",
+    "genro": "crystal",
+    "enritsu": "ember",
+    "shimarune": "crystal",
+    "kuromado": "crystal",
+    "suiraku": "tide",
+    "haneko": "leaf",
+    "toganashi": "leaf",
+    "mairaku": "ember",
+    "hotarune": "ember",
+    "sumizora": "wind",
+    "namisora": "tide",
+    "ringetsu": "crystal",
+    "tokimori": "leaf",
+    "yoruumi": "tide",
+    "velora_1": "leaf",
+    "velora_2": "leaf",
+    "velora_3": "leaf",
+    "nereid_1": "tide",
+    "nereid_2": "tide",
+    "nereid_3": "tide",
+    "ignox_1": "ember",
+    "ignox_2": "ember",
+    "ignox_3": "ember",
+    "aerlyn_1": "wind",
+    "aerlyn_2": "wind",
+    "aerlyn_3": "wind",
+    "quartz_1": "crystal",
+    "quartz_2": "crystal",
+    "quartz_3": "crystal",
+    "papilio_1": "leaf",
+    "papilio_2": "leaf",
+    "papilio_3": "leaf",
+    "brine_1": "tide",
+    "brine_2": "tide",
+    "brine_3": "tide",
+    "carmine_1": "ember",
+    "carmine_2": "ember",
+    "carmine_3": "ember",
+    "gale_1": "wind",
+    "gale_2": "wind",
+    "gale_3": "wind",
+    "opal_1": "crystal",
+    "opal_2": "crystal",
+    "opal_3": "crystal",
+    "thorn_1": "leaf",
+    "thorn_2": "leaf",
+    "thorn_3": "leaf",
+    "rill_1": "tide",
+    "rill_2": "tide",
+    "rill_3": "tide",
+    "ferrum_1": "ember",
+    "ferrum_2": "ember",
+    "ferrum_3": "ember",
+    "cirrus_1": "wind",
+    "cirrus_2": "wind",
+    "cirrus_3": "wind",
+    "obsidian_1": "crystal",
+    "obsidian_2": "crystal",
+    "obsidian_3": "crystal",
+    "saffron_1": "leaf",
+    "saffron_2": "leaf",
+    "saffron_3": "leaf",
+    "abyss_1": "tide",
+    "abyss_2": "tide",
+    "abyss_3": "tide",
+    "flint_1": "ember",
+    "flint_2": "ember",
+    "flint_3": "ember",
+    "volt_1": "wind",
+    "volt_2": "wind",
+    "volt_3": "wind",
+    "lunette_1": "crystal",
+    "lunette_2": "crystal",
+    "lunette_3": "crystal",
+    "cedran_1": "leaf",
+    "cedran_2": "leaf",
+    "cedran_3": "leaf",
+    "corall_1": "tide",
+    "corall_2": "tide",
+    "corall_3": "tide",
+    "vermion_1": "ember",
+    "vermion_2": "ember",
+    "vermion_3": "ember",
+    "zephyr_1": "wind",
+    "zephyr_2": "wind",
+    "zephyr_3": "wind",
+    "aurora_1": "crystal",
+    "aurora_2": "crystal",
+    "aurora_3": "crystal",
+    "fernix_1": "leaf",
+    "fernix_2": "leaf",
+    "fernix_3": "leaf",
+    "pelagic_1": "tide",
+    "pelagic_2": "tide",
+    "pelagic_3": "tide",
+    "solstice_1": "ember",
+    "solstice_2": "ember",
+    "solstice_3": "ember",
+    "stratus_1": "wind",
+    "stratus_2": "wind",
+    "stratus_3": "wind",
+    "noctil_1": "crystal",
+    "noctil_2": "crystal",
+    "noctil_3": "crystal",
+    "bromel_1": "leaf",
+    "bromel_2": "leaf",
+    "bromel_3": "leaf",
+    "isola_1": "tide",
+    "isola_2": "tide",
+    "isola_3": "tide",
+    "pyrrha_1": "ember",
+    "pyrrha_2": "ember",
+    "pyrrha_3": "ember",
+    "skarn_1": "crystal",
+    "skarn_2": "crystal",
+    "skarn_3": "crystal",
+    "caelum_1": "wind",
+    "caelum_2": "wind",
+    "caelum_3": "wind",
+    "futo": "crystal",
+    "komorizen": "leaf",
+    "shizunaria": "tide",
+    "akehomura": "ember",
+    "arvelion": "ember",
+    "floravelle": "leaf",
+    "nullmie": "void",
+    "nullva": "void",
+    "zeroveil": "void"
+  },
+  "groups": [
+    {
+      "ids": [
+        "volt_1",
+        "volt_2"
+      ],
+      "types": [
+        "thunder"
+      ],
+      "reason": "稲妻形の頭びれ・背筋・ジグザグ尾、静電気の生態。承認された雷技が各段階にある。"
+    },
+    {
+      "ids": [
+        "volt_3"
+      ],
+      "types": [
+        "thunder",
+        "wind"
+      ],
+      "reason": "雷の系統を維持し、最終進化の雷雲下の滑空・翼の設定に風を加える。"
+    },
+    {
+      "ids": [
+        "stratus_1",
+        "stratus_2",
+        "stratus_3"
+      ],
+      "types": [
+        "wind",
+        "thunder"
+      ],
+      "reason": "嵐のフクロウ系統。風の主属性を保ち、雲・嵐と各段階の雷技を複合属性に反映。"
+    },
+    {
+      "ids": [
+        "irisowl"
+      ],
+      "types": [
+        "wind",
+        "thunder"
+      ],
+      "reason": "雨雲と陽光の境界を飛ぶ高空の守り手。現攻撃の雷雲の裂け目・雷鳴の和音に一致。"
+    },
+    {
+      "ids": [
+        "tobari"
+      ],
+      "types": [
+        "wind",
+        "thunder"
+      ],
+      "reason": "雨粒を集めて夕空を漂う帆の姿。既存の雷雲系二技に合わせ、風を保って雷を追加。"
+    },
+    {
+      "ids": [
+        "soramado"
+      ],
+      "types": [
+        "wind",
+        "thunder"
+      ],
+      "reason": "雲の動きを読む最終進化の大型猛禽。既存の雷雲の裂け目を一致攻撃として残す。前二段階は風単。"
+    },
+    {
+      "ids": [
+        "kourin",
+        "setsurei"
+      ],
+      "types": [
+        "ice",
+        "crystal"
+      ],
+      "reason": "霜の耳・雪原・雪輪・凍夜・極光という明確な生態。月と透明な角の晶も保持。"
+    },
+    {
+      "ids": [
+        "yukumo",
+        "hakurou"
+      ],
+      "types": [
+        "ice",
+        "tide"
+      ],
+      "reason": "雪雲をまとう小熊から氷河の白獣への系統。氷を主とし、水由来の既存攻撃を活かす潮を保持。"
+    },
+    {
+      "ids": [
+        "kiraho",
+        "kirawashi"
+      ],
+      "types": [
+        "ice",
+        "crystal"
+      ],
+      "reason": "羽先の氷の鏡と鏡翼。既存の晶の攻撃・鏡の設定を保ちながら氷を追加。"
+    },
+    {
+      "ids": [
+        "tousa"
+      ],
+      "types": [
+        "ice",
+        "wind"
+      ],
+      "reason": "元アートは白い高山ヤギと氷板の肩毛。高山・峠を渡る風を保持。"
+    },
+    {
+      "ids": [
+        "aonagi"
+      ],
+      "types": [
+        "tide",
+        "ice"
+      ],
+      "reason": "元アートは北極の白鯨と氷の背びれ。主属性の潮を保ち氷を追加。"
+    },
+    {
+      "ids": [
+        "aurora_1",
+        "aurora_2",
+        "aurora_3"
+      ],
+      "types": [
+        "ice",
+        "crystal"
+      ],
+      "reason": "雪・寒夜の結晶・氷の湾・極光が全段階で一貫する。光学的な結晶の姿と既存晶技も保持。"
+    },
+    {
+      "ids": [
+        "shioraku"
+      ],
+      "types": [
+        "tide",
+        "ice"
+      ],
+      "reason": "薄い水の花弁をまとい水路を漂う最終形。既存の氷柱の調べと薄氷の刃の二技を反映。基礎形shioriは潮単。"
+    },
+    {
+      "ids": [
+        "namisora"
+      ],
+      "types": [
+        "tide",
+        "ice"
+      ],
+      "reason": "白い海鳥と潮獣の姿、既存の氷柱の調べと薄氷の刃を反映。潮を主属性として保持。"
+    },
+    {
+      "ids": [
+        "hoshiwa"
+      ],
+      "types": [
+        "earth",
+        "crystal"
+      ],
+      "reason": "落下した石と周回する石輪のゴーレム。土を主とし星の軌跡・晶技を保持。"
+    },
+    {
+      "ids": [
+        "sunari",
+        "sabaryo"
+      ],
+      "types": [
+        "earth",
+        "ember"
+      ],
+      "reason": "砂に潜る砂色トカゲと砂丘の竜。土を主とし、温かい足跡と胸の灯を灯で表す。"
+    },
+    {
+      "ids": [
+        "raito",
+        "raigai"
+      ],
+      "types": [
+        "crystal",
+        "earth"
+      ],
+      "reason": "鉱石の角・坑道・鉱物の鎧。元絵の角は稲妻状だが、本文と承認技では雷一致がないため晶を主として土を追加。"
+    },
+    {
+      "ids": [
+        "cocoroc"
+      ],
+      "types": [
+        "earth",
+        "leaf"
+      ],
+      "reason": "砂岩と台地状の甲羅を持つ亀。土を主とし、背の薬草園を芽として保持。"
+    },
+    {
+      "ids": [
+        "sahari"
+      ],
+      "types": [
+        "earth",
+        "ember"
+      ],
+      "reason": "砂丘の砂色サソリ。土を主とし、砂漠の日差しを蓄える尾の灯を灯として保持。"
+    },
+    {
+      "ids": [
+        "yashiro"
+      ],
+      "types": [
+        "earth",
+        "crystal"
+      ],
+      "reason": "石柱・鳥居状の肩を持つ石のゴーレム。土を主とし天文台と星の設定を晶で保持。"
+    },
+    {
+      "ids": [
+        "chokori",
+        "sekkura",
+        "sekkokyo"
+      ],
+      "types": [
+        "earth",
+        "crystal"
+      ],
+      "reason": "土器状の胴と石・鉱石を集めるゴーレム系統。土を主とし成長する晶洞・結晶を保持。"
+    },
+    {
+      "ids": [
+        "fukuro"
+      ],
+      "types": [
+        "leaf",
+        "earth"
+      ],
+      "reason": "地中に巣を作るキノコ帽のフクロウ。芽を保持し、土中の生態を追加。"
+    },
+    {
+      "ids": [
+        "sazuka"
+      ],
+      "types": [
+        "earth",
+        "tide"
+      ],
+      "reason": "元アートは砂岩の甲羅・砂丘状の隆起を持つ蟹。土を主とし貝庭と浅瀬の潮を保持。"
+    },
+    {
+      "ids": [
+        "enritsu"
+      ],
+      "types": [
+        "ember",
+        "earth"
+      ],
+      "reason": "火山のトカゲと大きな玄武岩の尾。灯を主とし地質的な体を土で表す。"
+    },
+    {
+      "ids": [
+        "ignox_1",
+        "ignox_2",
+        "ignox_3"
+      ],
+      "types": [
+        "ember",
+        "earth"
+      ],
+      "reason": "玄武岩・黒曜石・溶岩の割れ目を使う一貫した火山系統。灯を保持し土を追加。"
+    },
+    {
+      "ids": [
+        "ferrum_1",
+        "ferrum_2",
+        "ferrum_3"
+      ],
+      "types": [
+        "ember",
+        "earth"
+      ],
+      "reason": "地面の鉄粉・鉱石・鍛冶を使う甲虫系統。熱源の灯と鉱床の土の複合。"
+    },
+    {
+      "ids": [
+        "flint_1",
+        "flint_2",
+        "flint_3"
+      ],
+      "types": [
+        "ember",
+        "earth"
+      ],
+      "reason": "火打ち石の角・割れた石の体・荒野の火花。灯を保持し土を追加。"
+    },
+    {
+      "ids": [
+        "quartz_1",
+        "quartz_2",
+        "quartz_3"
+      ],
+      "types": [
+        "crystal",
+        "earth"
+      ],
+      "reason": "水晶の角と鉱石の体を持つ甲虫系統。晶を主とし鉱物の基盤を土で表す。"
+    },
+    {
+      "ids": [
+        "obsidian_1",
+        "obsidian_2",
+        "obsidian_3"
+      ],
+      "types": [
+        "crystal",
+        "earth"
+      ],
+      "reason": "黒曜石でできたコウモリと角張る鉱物翼。晶を主として火山岩の土を追加。"
+    },
+    {
+      "ids": [
+        "isola_1",
+        "isola_2",
+        "isola_3"
+      ],
+      "types": [
+        "tide",
+        "earth"
+      ],
+      "reason": "石灰岩の小島を背負う浅海の蟹系統。潮を主として島の地質を土で表す。"
+    },
+    {
+      "ids": [
+        "skarn_1",
+        "skarn_2",
+        "skarn_3"
+      ],
+      "types": [
+        "earth",
+        "crystal"
+      ],
+      "reason": "花崗岩の甲羅・石の体・鉱石の角と結晶骨。土を主とし晶も保持。"
+    },
+    {
+      "ids": [
+        "riyuna",
+        "riyutai"
+      ],
+      "types": [
+        "tide",
+        "crystal"
+      ],
+      "reason": "透明なひれと分節したダイヤ状の尾。潮を保ちながら明確な宝石の外見を晶へ反映。"
+    },
+    {
+      "ids": [
+        "nureha"
+      ],
+      "types": [
+        "tide",
+        "leaf"
+      ],
+      "reason": "雨滴の斑点と吸盤、傘状の首ひれを持つ雨のヤモリ。潮を主として元の芽と葉状のひれを保持。"
+    },
+    {
+      "ids": [
+        "oshire"
+      ],
+      "types": [
+        "tide",
+        "crystal"
+      ],
+      "reason": "元アートは暗い海の蛇。海の生態を潮に戻し、紫の硬質な体と既存晶技を保持。"
+    },
+    {
+      "ids": [
+        "shimarune"
+      ],
+      "types": [
+        "tide",
+        "crystal"
+      ],
+      "reason": "珊瑚の角を持つ島の鹿。潮を主として硬い珊瑚・既存晶技を保持。"
+    },
+    {
+      "ids": [
+        "brine_1",
+        "brine_2",
+        "brine_3"
+      ],
+      "types": [
+        "tide",
+        "crystal"
+      ],
+      "reason": "塩の結晶冠と透明なはさみを持つ潮溜まりの蟹。潮を主に結晶の第二属性を追加。"
+    },
+    {
+      "ids": [
+        "sumizora"
+      ],
+      "types": [
+        "wind",
+        "tide"
+      ],
+      "reason": "空を滑る墨絵のエイ。風を主とし、エイと墨・水のモチーフおよび既存潮技を潮で表す。"
+    }
+  ]
+}

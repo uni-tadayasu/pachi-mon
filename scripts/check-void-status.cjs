@@ -63,16 +63,16 @@ test('all three stages reject every condition in adventure and both link modes, 
 });
 
 test('immunity follows the declared type, not a hard-coded list of the three species', () => {
-  const original = D.species.komori.element;
+  const original = D.species.komori.element, originalTypes = D.species.komori.types;
   try {
-    D.species.komori.element = 'void';
+    D.species.komori.element = 'void';D.species.komori.types = ['void'];
     for (const kind of CONDITIONS) {
       const move = probe(D.statuses[kind].element), { e, ally } = solo('komori');
       assert.equal(e.inflictCondition(ally, 'ally', move, []), false); clean(ally, `additional void species/${kind}`);
       const d = duel('double', 'komori'), mon = d.active(0)[0];
       assert.equal(d._inflict(0, 0, mon, move), false); clean(mon, `additional void species online/${kind}`);
     }
-  } finally { D.species.komori.element = original; }
+  } finally { D.species.komori.element = original;if(originalTypes===undefined)delete D.species.komori.types;else D.species.komori.types=originalTypes; }
 });
 
 test('real attack resolution damages void targets but never adds a condition, on either side or double slot', () => {

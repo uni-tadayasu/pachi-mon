@@ -315,10 +315,11 @@
     const sourceHue=hue(palette[canonical[shape]]||palette.leaf);
     // Keep the original coat color and variation seed through each evolution;
     // the stage's accent can develop without turning the family another color.
-    const targetHue=hue(original.color||palette[original.element]||palette.leaf);
+    const originalElement=original.artElement||original.element,displayElement=d.artElement||d.element;
+    const targetHue=hue(original.color||palette[originalElement]||palette.leaf);
     const rotation=angular(targetHue,sourceHue)+(n%19)-9;
-    const bodyHue=canonical[shape]===original.element?rotation*.28:rotation;
-    const accent=(d.accent||palette[d.element]||palette.leaf).match(/^#([0-9a-f]{6})$/i);
+    const bodyHue=canonical[shape]===originalElement?rotation*.28:rotation;
+    const accent=(d.accent||palette[displayElement]||palette.leaf).match(/^#([0-9a-f]{6})$/i);
     const accentRGB=accent?accent[1].match(/../g).map(x=>parseInt(x,16)):[204,225,171];
     for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
       const i=(y*sw+x)*4;

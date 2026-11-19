@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-/* 96 public moves: 15 per type, 6 neutral, 12 special, 3 starter signatures.
+/* 96 public moves: 75 across eight types, 6 neutral, 12 special, 3 starter signatures.
  * Four hidden moves belong only to the off-dex Null lineage.
  * Every move is learned by someone; old saves, trades with the exchange
  * server and saved Futo settings keep working. */
@@ -21,10 +21,15 @@ assert.equal(Object.keys(M).length, 100); assert.equal(publicMoves.length, 96); 
 assert.equal(D.content.moves, 96); assert.equal(D.moveRoster.total, 96); assert.equal(D.content.hiddenMoves, 4); assert.equal(D.content.totalMoves, 100);
 assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch']);
 const byElement = {}; for (const m of publicMoves) { const key = m.role === 'special' ? 'special' : m.role === 'signature' ? 'signature' : m.element || 'neutral'; byElement[key] = (byElement[key] || 0) + 1; }
-assert.deepEqual(byElement, { leaf: 15, tide: 15, ember: 15, wind: 15, crystal: 15, neutral: 6, special: 12, signature: 3 });
-for (const element of ['leaf', 'tide', 'ember', 'wind', 'crystal']) {
-  const roles = Object.values(M).filter(m => m.element === element && D.moveRoster.roles.includes(m.role)).map(m => m.role).sort();
-  assert.deepEqual(roles, [...D.moveRoster.roles].sort(), `${element} has one move per role`);
+assert.deepEqual(byElement, { leaf: 14, tide: 13, ember: 15, wind: 10, crystal: 11, thunder: 4, ice: 4, earth: 4, neutral: 6, special: 12, signature: 3 });
+assert.equal(D.moveRoster.perElement, null, 'The reclassified roster no longer claims a uniform type count');
+assert.deepEqual(copy(D.moveRoster.byElement), Object.fromEntries(Object.entries(byElement).filter(([key]) => !['neutral', 'special', 'signature'].includes(key))));
+for (const role of D.moveRoster.roles) {
+  assert.equal(publicMoves.filter(m => m.role === role).length, 5, `${role} keeps all five original techniques`);
+}
+for (const element of ['thunder', 'ice', 'earth']) {
+  const categories = new Set(publicMoves.filter(m => m.element === element).map(m => m.category));
+  assert(categories.has('physical') && categories.has('special'), `${element} has physical and special attacks`);
 }
 for (const m of Object.values(M)) {
   assert(m.name && m.description, m.id); assert(['attack', 'heal', 'guard', 'boost'].includes(m.kind), m.id);
@@ -120,4 +125,4 @@ for (const id of Object.keys(M).filter(id => !exclusive.has(id))) assert(accepte
 // ── Online: rental teams fight with the new movesets.
 const duel = LT.Duel?.create?.({ mode: 'single', teams: [['komori', 'fuwari', 'kirari'], ['hibana', 'shizuku', 'glint' in M ? 'komorion' : 'komorion']], seed: 3 });
 if (duel) assert.deepEqual(copy(duel.moves(duel.state.teams[0].monsters[0]).map(m => m.id)), copy(D.species.komori.moves));
-console.log(JSON.stringify({ ok: true, publicMoves: 96, hiddenMoves: 4, totalMoves: 100, perElement: 15, neutral: 6, special: 12, signature: 3, retired: 19, tradable }));
+console.log(JSON.stringify({ ok: true, publicMoves: 96, hiddenMoves: 4, totalMoves: 100, byElement: D.moveRoster.byElement, neutral: 6, special: 12, signature: 3, retired: 19, tradable }));

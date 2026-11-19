@@ -9,6 +9,8 @@ const source=scripts.find(m=>m[2].includes('class LuminaAudio'))[2];
 const dataContext=vm.createContext({console});
 for(const [,attributes,code] of scripts){if(/\bsrc=|application\/ld\+json/.test(attributes))continue;vm.runInContext(code,dataContext);if(dataContext.LT?.Engine)break;}
 const D=dataContext.LT.DATA,copy=value=>JSON.parse(JSON.stringify(value));
+const BATTLE_URL='assets/music/battle-custom.mp3?v=20261119-battle-v52';
+const FIELD_URL='assets/music/field-custom.mp3?v=20261119-field-v52';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 class Param{
@@ -53,7 +55,7 @@ const solo=(ally='komori',enemy='shizuku',extra={})=>({map:'village',party:[mon(
 const team=(active,ids)=>({active,monsters:ids.map(id=>mon(id))});
 const duel=(teams,extra={})=>({theme:'meadow',battle:{teams,rival:true,...extra}});
 
-test('無 uses the ordinary solo battle theme on either side, including bosses and both continents',()=>{
+test('無 shares the supplied battle recording on either side, including bosses and both continents',()=>{
   const {sound}=world();
   const cases=[
     [{},'battle'],[{guardian:'mio'},'guardian'],[{rival:'test'},'rival'],
@@ -64,7 +66,7 @@ test('無 uses the ordinary solo battle theme on either side, including bosses a
   for(const id of ['nullmie','nullva','zeroveil'])for(const [extra,expected] of cases){
     for(const scene of [solo(id,'shizuku',extra),solo('komori',id,extra),solo(id,id,extra)]){
       sound.setScene(scene);assert.equal(sound.currentId,expected,id+': '+JSON.stringify(extra));
-      assert.equal(sound.recordingDefinition(sound.currentId),null,'battle remains procedural');
+      assert.equal(sound.recordingDefinition(sound.currentId)?.id,'battle-custom','all opponents share the supplied recording');
     }
   }
   const east=Object.entries(D.maps).find(([,map])=>map.continent===2)?.[0];assert(east,'eastern continent fixture');
@@ -87,7 +89,7 @@ test('online single and double battles keep normal music across every active slo
   }
   sound.setScene(duel([team([0,1],['nullmie','nullva']),team([0,1],['zeroveil','nullva'])]));
   assert.equal(sound.currentId,'rival','all four void slots still use the online theme');
-  assert.equal(sound.recordingDefinition(sound.currentId),null);
+  assert.equal(sound.recordingDefinition(sound.currentId)?.id,'battle-custom');
 });
 
 test('reserves, fainting, results and non-battle scenes retain their ordinary themes',()=>{
@@ -104,16 +106,16 @@ test('reserves, fainting, results and non-battle scenes retain their ordinary th
   }
 });
 
-test('introducing or switching 無 does not restart music, fetch a recording or bypass mute and ducking',async()=>{
+test('introducing or switching 無 does not restart the common recording or bypass mute and ducking',async()=>{
   const w=world(),a=w.sound;a.setScene(solo());await a.setEnabled(true);await settle();
-  const group=a.group;assert(!group.recorded);group.step=27;group.next=15.5;
+  const group=a.group;assert(group.recorded);const rec=group.recording;rec.audio.currentTime=27;const plays=rec.audio.plays;
   for(const id of ['nullmie','nullva','zeroveil','komori']){
-    a.setScene(solo(id));assert.equal(a.group,group);assert.equal(group.step,27);assert.equal(group.next,15.5);
+    a.setScene(solo(id));assert.equal(a.group,group);assert.equal(rec.audio.currentTime,27);assert.equal(rec.audio.plays,plays);
   }
-  a.duckMusic(1,.75,.4);assert(a.musicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));
+  a.duckMusic(1,.75,.4);assert(a.musicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));assert(a.recordedMusicBus.gain.events.some(e=>e[0]==='ramp'&&e[1]===.4));
   a.setVolume(.22);assert.equal(a.master.gain.value,.22*.72);
-  a.setScene(solo('nullmie','shizuku',{rival:'test'}));assert.equal(a.currentId,'rival');assert.notEqual(a.group,group,'actual scene change still switches music');
-  assert.deepEqual(w.log.fetches,[],'no encounter recording is requested');assert.equal(w.log.audios.length,0);
+  a.setScene(solo('nullmie','shizuku',{rival:'test'}));assert.equal(a.currentId,'rival');assert.equal(a.group,group,'battle variants share one continuous recording');
+  assert.deepEqual(w.log.fetches,[BATTLE_URL,FIELD_URL],'battle and field recordings are prepared, with no species-specific download');assert.equal(w.log.audios.length,2);
   await a.setEnabled(false);assert.equal(a.enabled,false);assert.equal(a.group,null);
 });
 
@@ -122,21 +124,21 @@ test('the 64-track catalog and keeper preview restore the original synthesized t
   assert.equal(tracks.length,64);assert.equal(new Set(tracks.map(t=>t.id)).size,64);
   const keeper=tracks[60];assert.equal(keeper.id,'glitchbattle');assert.equal(keeper.name,'61 NULL BATTLE / ヌルの挑戦');
   assert.match(keeper.description,/裏部屋の番人戦/);assert.equal(keeper.bpm,176);assert.equal(keeper.recording,undefined);
-  for(const t of tracks)assert.equal(Boolean(t.recording),t.id==='title','only title has a recording');
+  for(const t of tracks)assert.equal(Boolean(t.recording),['title','battle','expedition'].includes(t.id),'only title, common battle and field previews are recordings');
   a.setScene(solo('nullmie'));a.preview('glitchbattle');await a.setEnabled(true);await settle();
-  assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded);assert.deepEqual(w.log.fetches,[]);
-  a.preview(null);assert.equal(a.currentId,'battle');assert(!a.group.recorded);
-  a.setScene(solo('nullva','zeroveil',{rival:'glitch-keeper'}));assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded);
+  assert.equal(a.currentId,'glitchbattle');assert(!a.group.recorded);assert.deepEqual(w.log.fetches,[BATTLE_URL,FIELD_URL]);
+  a.preview(null);assert.equal(a.currentId,'battle');assert(a.group.recorded);
+  a.setScene(solo('nullva','zeroveil',{rival:'glitch-keeper'}));assert.equal(a.currentId,'glitchbattle');assert(a.group.recorded);
 });
 
 test('the retained title recording cannot revive over a battle and remains playable on the title',async()=>{
   const w=world({deferFetch:true}),a=w.sound;await a.setEnabled(true);
-  a.setScene(solo('nullmie'));const battle=a.group;w.ready(0);await settle();
+  a.setScene(solo('nullmie'));const battle=a.group;w.ready(w.log.fetches.findIndex(url=>url.includes('title-16bit')));await settle();
   const rec=a.recording;assert(rec.ready&&rec.audio.paused);assert.equal(rec.audio.plays,0);assert.equal(a.group,battle,'late title load stays silent');
   a.preview('title');await settle();assert(a.group.recorded&&!rec.audio.paused);assert.equal(rec.gain.outputs[0],a.mix);assert(rec.audio.loop);
   rec.audio.currentTime=38;a.preview(null);w.flushTimers();assert(rec.audio.paused);assert.equal(rec.audio.currentTime,0);
-  assert.equal(a.currentId,'battle');assert.deepEqual(w.log.fetches,['assets/music/title-16bit.mp3?v=20261117-aishiteirukara']);
-  await a.suspend();assert(rec.audio.paused);await a.setEnabled(true);await settle();assert(!a.group.recorded&&rec.audio.paused);
+  assert.equal(a.currentId,'battle');assert.deepEqual(w.log.fetches,[BATTLE_URL,FIELD_URL,'assets/music/title-16bit.mp3?v=20261117-aishiteirukara']);
+  await a.suspend();assert(rec.audio.paused);await a.setEnabled(true);await settle();assert(a.group.recorded&&rec.audio.paused);
   a.dispose();assert.equal(w.timers.size,0);assert.equal(w.log.revoked.length,1);assert.equal(a.recordings.size,0);
 });
 

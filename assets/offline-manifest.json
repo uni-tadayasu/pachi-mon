@@ -1,5 +1,5 @@
 {
- "version": "20261119-world-pixels-v51",
+ "version": "20261119-fine-types-v52",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -14,8 +14,8 @@
    "bytes": 881734
   },
   {
-   "url": "assets/cover-handheld.webp",
-   "bytes": 121836
+   "url": "assets/cover-pixel.webp",
+   "bytes": 2944688
   },
   {
    "url": "assets/creatures-a-back.webp",
@@ -260,7 +260,7 @@
  ],
  "core": [
   "assets/battle-landscapes-v7.webp",
-  "assets/cover-handheld.webp",
+  "assets/cover-pixel.webp",
   "assets/creatures-individual-catalog.js?v=20261117-256",
   "assets/environment-buildings-v33.png",
   "assets/environment-props-v33.png",
@@ -273,6 +273,6 @@
   "assets/traveller-npcs-v33.png",
   "assets/zeroveil-v46.png"
  ],
- "totalBytes": 59837628,
- "coreBytes": 19435454
+ "totalBytes": 62660480,
+ "coreBytes": 22258306
 }

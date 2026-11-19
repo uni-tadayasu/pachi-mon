@@ -5,6 +5,11 @@ const ID='12345678-1234-4234-8234-123456789abc',key='pachi-pending-trade-v1',own
 const mon=(uid='owned',species='komori')=>({uid,species,level:10,xp:0,hp:30,pp:{move:4},shiny:true,nickname:'仲間'});
 const room=()=>({id:ID,code:'ABC234',state:'open',revision:2,expiresAt:Date.now()+900000,you:'host',host:{...owner,monster:mon(),confirmed:false},guest:{id:'Pb123456789012345',name:'相手',monster:mon('other','shizuku'),confirmed:false}});
 const copy=value=>JSON.parse(JSON.stringify(value));
+const typeRuntime=vm.createContext({console});
+for(const script of fs.readFileSync(require.resolve('../index.html'),'utf8').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
+ if(/\bsrc=|application\/ld\+json/.test(script[1]))continue;
+ vm.runInContext(script[2],typeRuntime);if(typeRuntime.LT?.Engine)break;
+}
 function harness(){
  const memory=new Map(),calls=[],timers=[],doc={hidden:false,activeElement:null,addEventListener(){},body:{append(node){doc.dialog=node;}}};
  class Element{
@@ -23,7 +28,7 @@ function harness(){
  doc.createElement=tag=>new Element(tag);
  const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}},ctx={console,crypto:webcrypto,document:doc,
   localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},addEventListener(){},
-  LT:{DATA:{species:{komori:{name:'コモリ',element:'leaf'},shizuku:{name:'シズク',element:'tide'},futo:{name:'フート',specialOnly:true}},elements:{leaf:{name:'草'},tide:{name:'水'}}},Art:{creature(){}},
+  LT:{DATA:typeRuntime.LT.DATA,TypeSystem:typeRuntime.LT.TypeSystem,Art:{creature(){}},
    Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,checkTrade:()=>({ok:true}),commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
  let source=fs.readFileSync(require.resolve('../trade-client.js'),'utf8');source=source.replace('\n  if(controller.isLocked())void resume();','\n  globalThis.__tradeController=controller;');vm.createContext(ctx);vm.runInContext(source,ctx);
  return{ctx,doc,memory,calls,engine,timers,async click(action){const button=doc.dialog.children.find(x=>x.dataset.trade===action);assert(button,'Missing action '+action);await doc.dialog.listeners.click({target:button});},blur(){doc.activeElement=null;doc.dialog.listeners.focusout();for(const timer of timers.filter(t=>t.delay===0))timer.fn();}};
@@ -32,8 +37,13 @@ function harness(){
 test('exchange dialog is accessible, labels both offers and escapes player content',async()=>{
  const h=harness();h.ctx.serverTrade=room();h.ctx.serverTrade.guest.name='<img src=x>';h.ctx.serverTrade.guest.monster.nickname='<花>';
  await h.ctx.LT.Trade.open();assert.equal(h.doc.dialog.id,'pachi-trade-dialog');assert.equal(h.doc.dialog['aria-labelledby'],'trade-title');assert(h.doc.dialog.open);assert(h.ctx.LT.tradeActive);
- assert.match(h.doc.dialog.innerHTML,/自分が渡す/);assert.match(h.doc.dialog.innerHTML,/相手から受け取る/);assert.match(h.doc.dialog.innerHTML,/水タイプ/);assert.match(h.doc.dialog.innerHTML,/Lv\.10/);assert.match(h.doc.dialog.innerHTML,/&lt;img src=x&gt;/);assert.match(h.doc.dialog.innerHTML,/&lt;花&gt;/);assert(!h.doc.dialog.innerHTML.includes('<img'));
+ assert.match(h.doc.dialog.innerHTML,/自分が渡す/);assert.match(h.doc.dialog.innerHTML,/相手から受け取る/);assert.match(h.doc.dialog.innerHTML,/潮タイプ/);assert.match(h.doc.dialog.innerHTML,/Lv\.10/);assert.match(h.doc.dialog.innerHTML,/&lt;img src=x&gt;/);assert.match(h.doc.dialog.innerHTML,/&lt;花&gt;/);assert(!h.doc.dialog.innerHTML.includes('<img'));
  assert(h.doc.dialog.children.find(x=>x.dataset.trade==='close').disabled);
+});
+
+test('both authoritative types are shown even when an offered individual carries stale type metadata',async()=>{
+ const h=harness();h.ctx.serverTrade=room();h.ctx.serverTrade.guest.monster={...mon('other','volt_3'),types:['void']};
+ await h.ctx.LT.Trade.open();assert.match(h.doc.dialog.innerHTML,/雷・風タイプ/);assert(!h.doc.dialog.innerHTML.includes('無タイプ'));
 });
 
 test('held individuals are absent from the selector and the existing item restriction is explained',async()=>{
