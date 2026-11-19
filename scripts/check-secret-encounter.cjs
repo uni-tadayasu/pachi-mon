@@ -4,15 +4,17 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const root=path.resolve(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.html'),'utf8'),ctx=vm.createContext({console});
 for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bsrc=|application\/ld\+json/.test(s[1]))continue;vm.runInContext(s[2],ctx);if(ctx.LT?.Engine)break;}
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
+const {eligible:tradeEligible}=require('../trade-client.js');
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
-const all=Object.keys(D.species),hidden=[...D.glitchLine.ids],nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,259);
-const genderless=[...D.genderless],gendered=[...D.starters,...hidden];
+const all=Object.keys(D.species),hidden=all.filter(id=>D.species[id].hiddenDex),nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,267);assert.equal(hidden.length,11);
+for(const id of D.glitchLine.ids)assert.deepEqual(copy(D.species[id].moves),nullMoves);
+const genderless=[...D.genderless],gendered=[...D.starters,...hidden.filter(id=>!genderless.includes(id))];
 function assertCapturedGender(engine,mon,gender,enemyUID){
  assert.notEqual(mon.uid,enemyUID,'Capture assigns a new individual ID');assert.equal(engine.genderOf(mon),gender,'The displayed encounter gender survives capture');
  assert.equal(mon.gender,gender==='none'?undefined:gender,'Captured gender is explicit unless the species is genderless');
 }
-// The operator selector covers every species, including the three off-dex
-// stages. One capsule captures exactly the chosen form and level.
+// The operator selector covers every species, including all eleven off-dex
+// forms. One capsule captures exactly the chosen form and level.
 for(const [i,id] of all.entries()){
  const e=make(),level=i%2?100:1;e.state.inventory.chime=0;
  assert(e.startAdminEncounter(id,level,owner).ok,id);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,level);
@@ -41,14 +43,15 @@ for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100
  const e=make();if(destination==='storage')while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',5));
  const before=e.state[destination].length;
  assert(e.startAdminEncounter(id,level,owner,{shiny}).ok);assert.equal(e.battle.enemy.species,id);assert.equal(e.battle.enemy.level,level);assert.equal(e.battle.enemy.shiny,shiny);
- assert.deepEqual(copy(e.moves(e.battle.enemy).map(move=>move.id)),nullMoves);assert.equal(e.resonanceChance(),1);
+ assert.deepEqual(copy(e.moves(e.battle.enemy).map(move=>move.id)),copy(D.species[id].moves));assert.equal(e.resonanceChance(),1);
  const result=e.action({type:'resonate'});assert(result.ok);assert.equal(result.ended,'caught');assert.equal(e.state[destination].length,before+1);
  const mon=e.state[destination].at(-1);assert.equal(mon.species,id);assert.equal(mon.level,level);assert.equal(mon.shiny,shiny);
- assert.deepEqual(Object.keys(mon.pp),nullMoves);for(const move of e.moves(mon))assert.equal(mon.pp[move.id],e.maxPP(move));
+ assert.deepEqual(Object.keys(mon.pp),copy(D.species[id].moves));for(const move of e.moves(mon))assert.equal(mon.pp[move.id],e.maxPP(move));
  assert.equal(mon.grantId,undefined);assert.throws(()=>e.tradeMonster(mon),/交換/,'Operator capture does not grant exchange eligibility');
+ assert.equal(tradeEligible(mon,D),false,'Online trade chooser excludes every off-dex individual');
  const loaded=new Engine(e.serialize()),restored=loaded.state[destination].find(item=>item.uid===mon.uid);
  assert.deepEqual(copy(restored),copy(mon));assert.equal(restored.species,id);assert.equal(restored.level,level);assert.equal(restored.shiny,shiny);
- assert.deepEqual(copy(loaded.moves(restored).map(move=>move.id)),nullMoves);
+ assert.deepEqual(copy(loaded.moves(restored).map(move=>move.id)),copy(D.species[id].moves));
 }
 // Explicit genders survive the new capture UID, both destinations, and reload.
 // Exercise both sexes for the ordinary starters and every off-dex stage.
@@ -187,7 +190,7 @@ function ui(){
    for(const option of select[1].matchAll(/<option\b[^>]*\bvalue="([^"]*)"[^>]*>([^<]*)<\/option>/g)){const child=element('option');child.value=option[1];child.textContent=option[2];fields['#secret-gender'].append(child);}
   }});
  }return node;}};
- const LT={DATA:D,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
+ const LT={DATA:D,TypeSystem:ctx.LT.TypeSystem,Admin:{async authorizeSecretEncounter(){state.authCalls++;return state.authOwner!==undefined?copy(state.authOwner):state.admin?copy(owner):{id:owner.id,isAdmin:false};}},adminBridge:{isPlaying:()=>state.playing,toast:message=>state.messages.push(message),startSecretEncounter(...args){state.startCalls.push(args);return {ok:true};}}};
  vm.runInNewContext(source,{LT,document,Date:{now:()=>state.now},console});
  state.tap=()=>state.click({target:{closest:selector=>selector==='#pachi-console-title'?{}:null}});
  state.submit=()=>state.dialog.querySelector('#secret-form').onsubmit({preventDefault(){}});
@@ -197,10 +200,10 @@ function ui(){
 async function main(){
  const settle=()=>new Promise(resolve=>setImmediate(resolve));
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
- u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,259);
+ u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,267);
  const choices=u.dialog.querySelector('#secret-species').children;assert.deepEqual(choices.map(option=>option.value).sort(),all.slice().sort());
  let genderSelect=u.dialog.querySelector('#secret-gender');assert.deepEqual(genderSelect.options.map(option=>[option.value,option.textContent]),[['auto','おまかせ'],['male','オス ♂'],['female','メス ♀']]);assert.equal(genderSelect.value,'auto');assert.equal(genderSelect.disabled,false);
- for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');}
+ for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');assert(option.textContent.includes(ctx.LT.TypeSystem.of(id).map(type=>D.elements[type].name).join('・')),'Both types are displayed in the selector');}
  u.selectSpecies('floravelle');assert.equal(genderSelect.disabled,true);assert.equal(genderSelect.options[0].textContent,'性別なし');await u.submit();assert.equal(u.authCalls,2);assert.equal(u.startCalls.length,1);assert.deepEqual(copy(u.startCalls[0]),['floravelle',70,owner,{shiny:false,gender:'auto'}]);assert(!u.dialog.open);
  u.admin=false;for(let n=0;n<7;n++)u.tap();await settle();assert.equal(u.authCalls,3);assert(!u.dialog.open);assert.equal(u.startCalls.length,1,'Reopening rechecks permissions instead of reusing the earlier authorization');
  for(const id of hidden)for(const shiny of [false,true])for(const level of [1,100]){
@@ -235,6 +238,6 @@ async function main(){
  }
  u=ui();for(let n=0;n<6;n++)u.tap();u.now+=2501;u.tap();await settle();assert.equal(u.authCalls,0);
  u=ui();for(let n=0;n<7;n++)u.tap();await settle();u.dialog.querySelector('#secret-level').value='101';await u.submit();assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 259 species capture/save; 3 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; male/female and automatic gender through capture UID changes, both destinations, reload and evolution; genderless/input rejection without side effects; owner/battle/capacity guards, private permit, special receipts, hidden Futo sync/reload and legacy gifts, normal odds restored, bridge identity/gender forwarding, seven-tap UI, gender switching/reopening/validation, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
+ console.log('Secret encounter checks passed: all 267 species capture/save; 11 off-dex forms x normal/shiny x Lv1/100 x party/reserve with exact form and dedicated moves; male/female and automatic gender through capture UID changes, both destinations, reload and evolution; genderless/input rejection without side effects; owner/battle/capacity guards, private permit, special receipts, hidden Futo sync/reload and legacy gifts, normal odds restored, bridge identity/gender forwarding, seven-tap UI, gender switching/reopening/validation, off-dex labels, and fresh authorization on every open/submit including revoked permissions.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

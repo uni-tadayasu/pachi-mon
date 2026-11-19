@@ -60,7 +60,7 @@ function unitChecks(){
 
 async function integratedChecks(){
  const {LT,engine,imageErrors}=await runtime(),P=LT.MonsterPixels,art=LT.CreatureArt,ids=Object.keys(LT.DATA.species),target=traced();
- assert(P&&P.grid===160,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,259);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
+ assert(P&&P.grid===160,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,267);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
  const before={data:JSON.stringify(LT.DATA),save:JSON.stringify(engine.state)},fronts=new Set(),backs=new Set();let renders=0;
  for(const [index,id]of ids.entries()){
   await art.preload([id],{back:'both'});const views=[];
@@ -81,7 +81,7 @@ async function integratedChecks(){
   assert.notEqual(views[0],views[1],`${id}: front and rear remain distinct`);fronts.add(views[0]);backs.add(views[1]);
   if((index+1)%8===0)await settle();if((index+1)%64===0)console.log(`Rendered ${index+1}/${ids.length} species on the 160-pixel grid`);
  }
- assert.equal(renders,1036);assert(fronts.size>=200&&backs.size>=200,'Individual species keep their distinct artwork');assert.equal(imageErrors.length,0,'The exhaustive pass must use valid shipped artwork');
+ assert.equal(renders,1068);assert(fronts.size>=200&&backs.size>=200,'Individual species keep their distinct artwork');assert.equal(imageErrors.length,0,'The exhaustive pass must use valid shipped artwork');
  assert.equal(JSON.stringify(LT.DATA),before.data);assert.equal(JSON.stringify(engine.state),before.save);
  console.log(`PASS actual Art.creature: ${ids.length} species, ${renders} front/back/normal/shiny renders, transparent bounds and facing`);
 

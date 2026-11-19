@@ -237,6 +237,38 @@ async function combatScenarios(env) {
     assert.equal(JSON.stringify(state), hiddenSave); hidden.close(); state.storage = [];
     assert(hiddenIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)), 'Released/evolved-away forms do not remain selectable');
 
+    // Each of the eight new off-dex forms follows ownership rules independently
+    // of the Null lineage. Verify actual peer setup, moves and a synchronized turn.
+    const addedIds = [...LT.DATA.offDexLines.ids]; assert.equal(addedIds.length, 8);
+    assert(addedIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)));
+    const addedUnowned = env.pair(); await addedUnowned.start();
+    for (const id of addedIds) assert(!(await addedUnowned.sessions[0].setTeam({ ids: [id, ...normal.slice(0, 2)] })).ok);
+    assert.equal(addedUnowned.queue.length, 0); addedUnowned.close();
+    for (const [index, id] of addedIds.entries()) {
+      const individual = { species: id, uid: 'offdex-' + index, level: 100, nickname: 'とくべつ', shiny: true,
+        alloc: { hp: 32, atk: 32, def: 32, spAtk: 32, spDef: 32, speed: 32 }, moveOrder: [3, 1, 0, 2], curse: true };
+      state.storage = [individual];
+      assert(LT.OnlineFuto.rosterIds(normal).includes(id));
+      assert.equal(LT.OnlineFuto.rosterIds(normal).filter(value => value === id).length, 1);
+      assert(addedIds.filter(value => value !== id).every(value => !LT.OnlineFuto.rosterIds(normal).includes(value)), 'Other forms are not unlocked by owning this form');
+      const before = JSON.stringify(state), added = env.pair(); await added.start();
+      assert((await added.sessions[0].setTeam({ name: 'Hidden owner', ids: [id, ...normal.slice(0, 2)] })).ok);
+      assert((await added.sessions[1].setTeam({ name: 'Opponent', ids: normal.slice(3, 6) })).ok);
+      await added.flush();
+      const mon = added.sessions[0].duel.state.teams[0].monsters[0];
+      assert.equal(mon.species, id); assert.equal(mon.level, 50); assert.equal(mon.nickname, individual.nickname); assert.equal(mon.shiny, true);
+      assert.deepEqual(plain(mon.stats), standard(LT, id, plain(LT.Duel.normalizeAllocation(individual.alloc))));
+      assert.deepEqual(Object.keys(mon.pp), plain(LT.DATA.species[id].moves));
+      assert.equal(mon.curse, true, 'New hidden families use ordinary curse rules, not Void immunity');
+      assert.equal(LT.Abilities.get(mon).id, LT.Abilities.get(id).id);
+      assert.equal(added.sessions[0].duel.fingerprint(), added.sessions[1].duel.fingerprint());
+      await Promise.all(added.sessions.map(session => session.submit(session.duel.legalOrders(session.role)))); await added.flush();
+      assert.equal(added.sessions[0].duel.fingerprint(), added.sessions[1].duel.fingerprint());
+      assert.equal(JSON.stringify(state), before, 'Link battle leaves the adventure individual untouched');
+      added.close(); state.storage = [];
+      assert(!LT.OnlineFuto.rosterIds(normal).includes(id), 'Releasing an off-dex form removes its roster entry');
+    }
+
     // Futo: standard stats with the even spread, species moves — not the operator's adventure stats or moves.
     const pair = env.pair(); await pair.start();
     assert((await pair.sessions[0].setTeam({ name: '運営', ids: ['futo', ...normal.slice(0, 2)] })).ok);
@@ -287,6 +319,6 @@ async function combatScenarios(env) {
     const combat = await combatScenarios(env);
     assert.equal(env.serverCalls, 0, 'No server was asked for anything');
     console.log(JSON.stringify({ ok: true, combat, scenarios: ['every species accepted by the duel, special ones offered only to owners', 'ordinary teams with looks', 'unowned special monsters refused before sending',
-      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'owned off-dex line with full points and synchronized peers', 'no server calls', 'adventure save untouched'] }));
+      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'owned Null line with full points and synchronized peers', 'all 8 new hidden forms: ownership, full points, appearance, ability, ordinary curse, synchronized turn, release', 'no server calls', 'adventure save untouched'] }));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -65,6 +65,8 @@
  *   Versioned code, CSS and MP3 URLs share the same offline page lifecycle.
  * v53: all species gain shared passive abilities; their battle rules, detail
  *   panels and trade views refresh together, including the ability stylesheet.
+ * v54: eight off-dex companions and three evolution lines gain their own
+ *   front/rear pixel artwork, secret encounter choices and owned link rosters.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

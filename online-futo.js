@@ -78,14 +78,15 @@
       try { return LT.MonsterIdentity.normalizeNickname(item.nickname) === item.nickname; } catch (_) { return false; }
     });
   }
-  // Glitch-only companions can battle once owned, but never become rentals or trades.
+  // Off-dex companions can battle once owned, but never become rentals or trades.
+  const hiddenRoster=Object.freeze([...(LT.DATA.glitchLine?.ids||[]),...(LT.DATA.offDexLines?.ids||[])]);
   function rosterIds(base) {
     const legendary = LT.DATA.legendary?.species, hasLegendary = !!ownedLegendary();
     const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly && (id !== legendary || hasLegendary));
     if (owned() && LT.DATA.species.futo) ids.push('futo');
     if (ownedMythical() && LT.DATA.species.floravelle) ids.push('floravelle');
-    for (const id of LT.DATA.glitchLine?.ids || []) if (firstOf(id)) ids.push(id);
-    return ids;
+    for (const id of hiddenRoster) if (LT.DATA.species[id]?.hiddenDex && firstOf(id)) ids.push(id);
+    return [...new Set(ids)];
   }
   // Looks are carried apart from combat data: they never change stats, levels or PP.
   function createDuel(config) {
@@ -139,7 +140,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v8-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 8 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 9 };
 })();
