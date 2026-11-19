@@ -68,7 +68,7 @@ for (const m of Object.values(D.maps)) for (const sid of m.encounters || []) (ha
 function obtain(id) {
   const s = D.species[id];
   if (id === D.legendary?.species) return `野生のパチモンが出る草むらだけに現れ、草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出現する伝説のパチモン（野生Lv.${D.legendary.minLevel}）。`;
-  if (id === D.mythical?.species) return `謎のトレーナー カサイの専用部屋でソロバトルに勝つと、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダムに決まります。手持ちに空きがあっても、ひかえが${D.limits.storage}体以上のときは受け取れません。空きを作った後はカサイの「報酬を受け取る」で結果を確認してください。自動では受け取りません。運営は初期メンバーとしても迎えられます。通常の草むらには出現せず、交換もできません。`;
+  if (id === D.mythical?.species) return `謎のトレーナー カサイの専用部屋で本人とのリアルタイム対戦に勝つと、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダムに決まります。手持ちに空きがあっても、ひかえが${D.limits.storage}体以上のときは受け取れません。空きを作った後は「秘密部屋」の「カサイの勝利報酬を確認」から受け取ってください。自動では受け取りません。運営は初期メンバーとしても迎えられます。通常の草むらには出現せず、交換もできません。`;
   if (s.adminOnly) return '運営専用の幻のパチモン。一般の冒険で入手する方法はありません。';
   if (s.specialOnly) return '運営からの配布で受け取れる特別なパチモン。';
   if (D.starters.includes(id)) return '冒険の最初に選べる相棒の1体（野生には出現しません）。';
@@ -139,7 +139,7 @@ for (const [index, id] of ids.entries()) {
   const ability = LT.Abilities.get(s);
   const chain = lineage(id);
   const evoText = s.evolvesTo ? `Lv.${s.evolveLevel}で${D.species[s.evolvesTo].name}に進化` : preOf[id] ? `${D.species[preOf[id].from].name}からLv.${preOf[id].level}で進化` : '進化しない';
-  const description = id===D.mythical?.species?`${s.name}（No.${number}）は${speciesTypeName(s)}の幻のパチモン。カサイとのソロバトルに勝利すると、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダム。ひかえが満員のときは受け取れません。特性・能力値・技・入手方法を掲載。`:`${s.name}（No.${number}）は${speciesTypeName(s)}のパチモン。${s.description}`.slice(0, 118) + ' 特性・能力値・覚える技・進化・入手方法を掲載。';
+  const description = id===D.mythical?.species?`${s.name}（No.${number}）は${speciesTypeName(s)}の幻のパチモン。カサイ本人とのリアルタイム対戦に勝利すると、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダム。ひかえが満員のときは受け取れません。特性・能力値・技・入手方法を掲載。`:`${s.name}（No.${number}）は${speciesTypeName(s)}のパチモン。${s.description}`.slice(0, 118) + ' 特性・能力値・覚える技・進化・入手方法を掲載。';
   const chainHtml = chain.length > 1 ? `<h2>進化の系譜</h2><ol class="evo">${chain.map((cid, i) => `<li${cid === id ? ' class="current"' : ''}><a href="${cid}.html"><img src="../${dexSprite(cid)}" width="96" height="96" alt="${esc(D.species[cid].name)}" loading="lazy" decoding="async"><span>${esc(D.species[cid].name)}</span></a>${D.species[cid].evolvesTo && i < chain.length - 1 ? `<small>Lv.${D.species[cid].evolveLevel} ▶</small>` : ''}</li>`).join('')}</ol>` : '';
   const prev = ids[index - 1], next = ids[index + 1];
   const body = `${crumbNav([['トップ', '../'], ['パチモン図鑑', './'], [s.name, '']], 1)}
@@ -234,8 +234,8 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <h2 id="rare">伝説・幻・色違い</h2>
   <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出会え（Lv.${D.legendary.minLevel}）、道・街・室内では現れません。体力を減らすほど捕まえやすくなりますが、捕獲率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
   <h3 id="kasai-challenge">カサイに勝利してキラシードを迎える</h3>
-  <p>幻の<a href="../monsters/floravelle.html">キラシード</a>は、謎のトレーナー カサイとの<strong>ソロバトルの勝利報酬</strong>で仲間にできます。フィールドのカサイに話しかけて対戦を選ぶと専用部屋へ移動します。奥にいるカサイに話しかけ、Lv.70の3体に挑みましょう。戦いの開始時に手持ちの体力とPPが全回復し、技と交代で戦います。挑戦と報酬の確認にはインターネット接続が必要です。</p>
-  <p>報酬は<strong>プレイヤーごとに一度だけ、Lv.70のキラシード1体</strong>です。性別は<strong>♂・♀からランダム</strong>に決まり、受け取りの再確認で変わりません。手持ちに空きがあっても、<strong>ひかえが${D.limits.storage}体以上のときは受け取れません</strong>。挑戦前にひかえの空きを作っておきましょう。満員や通信切断で受け取れなかった場合は、空きを作り、カサイに話しかけて「報酬を受け取る」を選びます。空きができても自動では受け取りません。挑戦の確認期限は開始から30分で、期限切れの記録は結果を確認した後に再挑戦できます。</p>
+  <p>幻の<a href="../monsters/floravelle.html">キラシード</a>は、謎のトレーナー カサイとの<strong>リアルタイム対戦の勝利報酬</strong>で仲間にできます。接続中の運営カサイにフィールドで話しかけて対戦を選ぶと、二人が専用部屋へ移動します。挑戦者は60秒以内に奥のカサイへ話しかけ、運営が対戦を許可すると始まります。時間内に話しかけないと二人ともフィールドへ戻ります。カサイは挑戦者が退出するまで向かいの席から移動できません。双方の保存済みの手持ちを使い、人数・順番・レベル・技・育成は入室時の構成を反映します。戦いの開始時に双方の体力とPPが全回復し、技と交代で戦います。運営カサイ本人は自分への挑戦や勝利報酬の受取はできません。挑戦と報酬の確認にはインターネット接続が必要です。</p>
+  <p>報酬は<strong>プレイヤーごとに一度だけ、Lv.70のキラシード1体</strong>です。性別は<strong>♂・♀からランダム</strong>に決まり、受け取りの再確認で変わりません。手持ちに空きがあっても、<strong>ひかえが${D.limits.storage}体以上のときは受け取れません</strong>。挑戦前にひかえの空きを作っておきましょう。満員や通信切断で受け取れなかった場合は、空きを作り、「秘密部屋」の「カサイの勝利報酬を確認」から「報酬を受け取る」を選びます。空きができても自動では受け取りません。勝利はサーバーで記録され、退出した後でも未受取の報酬を確認できます。</p>
   <p>運営は従来どおり初期メンバーとしてもキラシードを迎えられます。通常の草むらには出現せず、進化はせずにLv.100まで育ちます。育てた個体はオンライン・ローカルの通信対戦に編成できますが、交換はできません。</p>
   <h2 id="journey">128ステージ・32の旅紋・2人のチャンピオン</h2>
   <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者、<strong>2人</strong>のチャンピオン。</p>
@@ -275,7 +275,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'guide'), { recursive: true });
-write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。カサイとのソロバトル、Lv.70キラシードの一度限りの勝利報酬と受け取り条件、全128ステージ、32の旅紋、操作、8タイプ・複合タイプの相性、捕獲、進化、状態異常、持ち物、振り分けポイント、オンライン・ローカル対戦を解説します。', body: guideBody,
+write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。カサイ本人とのリアルタイム対戦、Lv.70キラシードの一度限りの勝利報酬と受け取り条件、全128ステージ、32の旅紋、操作、8タイプ・複合タイプの相性、捕獲、進化、状態異常、持ち物、振り分けポイント、オンライン・ローカル対戦を解説します。', body: guideBody,
   jsonld: [crumbs([['トップ', `${SITE}/`], ['攻略ガイド', `${SITE}/guide/`]]), { '@context': 'https://schema.org', '@type': 'Article', headline: 'パチモン攻略ガイド', inLanguage: 'ja', dateModified: DATE, author: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, publisher: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, mainEntityOfPage: `${SITE}/guide/` }] }));
 
 // ---------- moves ----------

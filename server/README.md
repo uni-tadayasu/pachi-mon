@@ -1,6 +1,6 @@
 # パチモンの通信交換API
 
-## 壁のひみつ部屋とカサイの試練（v56）
+## 壁のひみつ部屋とカサイ本人との対戦（v58）
 
 `drizzle/0003_rooms.sql` は、公開する部屋 `world_rooms`、挑戦セッション `kasai_challenges`、
 一人一回の受取記録 `kasai_rewards` を追加します。既存のプレイヤー・運営・配布・交換記録は維持します。
@@ -53,7 +53,7 @@
 配置できる床は `x=1..16, y=2..13`、中央の `x=8,9` は通り道として空けます。
 カサイの部屋は24×20、登場位置 `(12,16)`、退出位置 `(12,18)`。
 配置できる床は `x=1..22, y=2..17` で、中央の `x=11,12` と舞台 `x=8..15,y=2..7` を空けます。
-カサイは `(12,4)` にいます。アイテムは占有するすべてのマスが配置可能な床に収まる必要があります。
+対戦中の運営本人の待機位置は `(12,4)`・下向きです。常設のCPUカサイは配置しません。アイテムは占有するすべてのマスが配置可能な床に収まる必要があります。
 
 カサイが部屋を作成する前でも、`/rooms/kasai`・運営本人の `/rooms/mine`・里の入口一覧は、
 現在の運営の部屋を自動で一度だけ作成します。既に別の壁に作った部屋があればそれを使います。
@@ -65,29 +65,98 @@
 その部屋がD1に存在することを確認し、現在の役割に応じた間取りで座標範囲を検証します。
 未作成の部屋IDを送って、架空の共有フィールドを作ることはできません。
 
-### カサイの試練・一度限りの報酬
+### カサイ本人とのリアルタイム対戦
+
+新規のカサイ戦は実際に接続中の運営本人との通信対戦です。CPUは操作せず、運営がいない場合は開始できません。
+同じ通常フィールドで15秒以内に更新された位置が3マス以内、双方が待機中であることを開始時に確認します。
+運営本人は自分を誘えません。`kasai_live_members` のプレイヤーごとの一意制約で、二重の対戦参加を防ぎます。
+
+| 操作 | API | 送信内容 |
+| --- | --- | --- |
+| 自分の対戦を確認・接続を維持 | `GET /api/world/kasai/live` | `{session:null または自分の対戦,serverTime}` |
+| 対戦を申し込む | `POST /api/world/kasai/live` | `{requestId,party,storageCount,roomId?}` |
+| 指定対戦を確認 | `GET /api/world/kasai/live/:id` | 参加者だけが取得可能 |
+| 入場を確認 | `POST /api/world/kasai/live/:id/arrive` | `{party?}`。運営の初回入場は実際の手持ち必須 |
+| 挑戦者が話しかける | `POST /api/world/kasai/live/:id/talk` | `{}` |
+| 運営が許可・辞退 | `POST /api/world/kasai/live/:id/answer` | `{accept:true または false}` |
+| 双方が行動を選ぶ | `POST /api/world/kasai/live/:id/actions` | `{round,orders,requestId}` |
+| 挑戦者が退出 | `POST /api/world/kasai/live/:id/leave` | `{}` |
+| 元の場所への復帰確認 | `POST /api/world/kasai/live/:id/ack` | `{}`。閉じた対戦だけ |
+| 勝利報酬の明示的な受取 | `POST /api/world/kasai/live/:id/claim` | `{storageCount}` |
+
+`session` は `{id,role,state,roomId,challenger,kasai,deadlineAt,reason,returnPosition,stagePosition,arrived,battle,round,submitted,rewardEligible,rewardClaimed,rewardDelivered,revision,serverTime}` です。
+`role` は `challenger` または `kasai`、`arrived` と `submitted` は `[挑戦者,運営]` の真偽値です。
+`submitted` に他方の未解決の行動内容は含めません。部屋のデータは `/world/rooms/:roomId` で取得します。
+
+状態は `staging` → `permission` → `battle` → `result` → `closed` です。
+申し込みが成立すると、双方の元のフィールド・座標・向きを保存し、挑戦者を `(12,16)` 上向き、運営を `(12,4)` 下向きへ移します。
+運営は挑戦者が退出するまで対戦後も同じ場所で待ちます。移動・通常の退出・部屋の編集・移転をサーバーでも制限します。
+初回入場時の実際の手持ちを固定し、双方のHP・PPと通常の状態異常を回復します。レベル・育成・技・フートの独自能力・持ち物・色違い・永続する呪いは保持します。
+
+申し込み成立から60秒以内に、両者が入場し、挑戦者が運営の近くで話しかけなければ、双方を元のフィールドへ戻します。
+話しかけると運営へ許可を求め、運営が許可した場合だけ対戦を開始します。運営は入場待ち中にも辞退できます。
+参加者の接続更新が30秒途切れた場合、または運営権限が移った場合も、双方を元の場所へ戻して参加枠を解放します。
+タイムアウト処理は書込み時にも最新の状態・接続時刻を再確認し、既に成立した会話や接続更新を古い判定で取り消しません。
+
+`server/kasai-live-engine.mjs` は通常の人間同士の対戦モデルと同じソースから生成します。
+行動は両側の正当な入力が揃ったときだけ解決し、ターンと版番号の条件付き更新で並行リクエストでも一度だけ進みます。
+片方が交代を必要としない強制交代フェーズだけ、その側の空の行動 `[]` を自動確定できます。技・交代の選択をCPUが代行することはありません。
+`world_presence.input_at` で移動POSTの上限を管理し、接続確認のGETが位置更新を429にすることを防ぎます。
+入退室をまたいで遅れた位置更新は参加セッションIDも同じSQLで確認し、元の場所への復帰を上書きしません。
+
+勝者はサーバーの共通対戦結果で判定します。挑戦者が勝った後の `/claim` だけが、一度限りのLv.70・性別ランダムのキラシードの受取記録を作ります。
+ひかえが192体なら記録を作らず `KASAI_STORAGE_FULL` を返します。`rewardClaimed` は受取記録が存在すること、`rewardDelivered` は端末保存後のACK済みを示します。
+退出・復帰確認の後でも、`GET /world/kasai/reward` は未受取の勝利があれば `pendingLiveSessionId` を返します。
+この記録から明示的に `/live/:id/claim` を呼び直せます。証明済みの通信対戦の勝利には受取期限を設けません。
+通常のGETやオンライン人数の取得で、新しい報酬を自動配布することはありません。
+
+### 部屋の移転
+
+運営も一般プレイヤーも、`world_rooms.owner_id` の主キーで部屋は一人一つです。
+`POST /api/world/rooms/:ownerId/relocate` に `{revision,map,x,y,facing}` を送ると、同じ部屋の入口を移転できます。
+本人が移転先の壁の前に立ち、その壁を向いている最新の位置情報が必要です。部屋のID・名前・家具は維持し、版番号だけ進めます。
+他人の入口、通常の出入口、設置できない壁へは移せません。一般プレイヤーは運営用に予約された壁へ移せません。
+古い版番号は `ROOM_CHANGED`、壁の前にいない場合は `ROOM_NOT_NEARBY`、別の部屋がある場合は `ROOM_ENTRANCE_OCCUPIED` で拒否します。
+カサイとの対戦への参加中は、模様替えと移転を `KASAI_LIVE_BUSY` で拒否します。
+
+### 発行済みの旧ソロ挑戦の復旧
+
+以下は更新前に発行済みのCPU戦の復旧専用です。新規の `POST /world/kasai/challenges` は `KASAI_LIVE_REQUIRED` で拒否し、本人との通信対戦へ案内します。
+既存の対戦ID・トークンと勝利記録は保持し、期限内の操作記録の再送は引き続き検証できます。
+
 
 | 操作 | API | 送信内容・応答 |
 | --- | --- | --- |
-| 挑戦を準備 | `POST /api/world/kasai/challenges` | `{requestId,roomId,party,storageCount}` |
+| 運営の手持ちを同期 | `POST /api/world/kasai/party` | `{party}`。現在の運営だけが変更可能 |
+| 現在の手持ちを確認 | `GET /api/world/kasai/party` | `{party,playerId,updatedAt,serverTime}`。未同期なら `party:null` |
+| 発行済み挑戦のトークン再取得 | `POST /api/world/kasai/challenges` | `{requestId,roomId,party,storageCount}` |
 | 結果の確認と報酬受取 | `POST /api/world/kasai/challenges/:id/complete` | `{token,actions,storageCount}` |
 | 挑戦を中止 | `POST /api/world/kasai/challenges/:id/cancel` | `{token}` |
 | 受取状況・明示的な復旧 | `GET /api/world/kasai/reward` | `{receipt:null または受取記録,serverTime}` |
 | 端末保存完了 | `POST /api/world/kasai/reward/ack` | `{receiptId}` |
 
 準備の `requestId` はUUID、`roomId` は現在の運営のプレイヤーIDです。
+運営本人は開始・結果確定・受取復旧・ACKを `403 KASAI_SELF_BATTLE` で拒否します。
+古い自己対戦の記録も、相手の部屋の持ち主と挑戦者が同じなら、運営交代後も新たに報酬を受け取れません。
+役割変更が書込み直前に起きた場合もD1側の条件で拒否し、既に所有している個体・受取記録は削除しません。
+古い挑戦の中止は運営本人でもできます。
+
 開始時は15秒以内の位置更新があり、カサイの部屋内で `(12,4)` からマンハッタン距離3以内である必要があります。
 準備の応答は `{challenge:{id,roomId,seed,rulesVersion,party,opponents,expiresAt,state},token,rewardClaimed,serverTime}`。
 `token` を `challenge` に合わせてからクライアントの `startKasaiBattle` に渡します。
 トークンは `DUEL_SIGNING_KEY` から決定的に生成するため、応答を失っても同じ `requestId` で再取得できます。
-有効期限は30分、新しい挑戦を準備すると本人の古い未完了セッションを取り消します。
+有効期限は30分、更新後は新しいCPU挑戦を発行しません。
 
 `server/kasai-replay.mjs` はクライアントと同じデータ・Engineを、動的評価を使わない静的なモジュールとして保持します。
 `scripts/sync-kasai-replay.cjs` で生成し、`--check` でクライアントとの一致を検証できます。
 サーバーの種、開始時の仲間、最大512件の操作を再生して、実際に勝利まで到達した場合だけ報酬を作ります。
 許可する操作は `{type:'move',index}`、`{type:'switch',index}`、`{type:'replace',index}`、`{type:'struggle'}` です。
 `won:true` だけの申告、途中で終わる記録、不正操作、終了後に続く操作は受理しません。
-カサイの固定チームはアルヴェリオン・フート・キラシードのLv.70で、開始時にプレイヤーの仲間全員を全回復します。
+カサイのチームは、現在の運営が同期した実際の手持ち1〜6体です。種類・レベル・並び順・技の順番・育成配分・持ち物・色違い・性別・フートの独自能力を保存します。
+挑戦開始時点の手持ちを `opponents_json` に複製し、途中で運営が手持ちを変更しても進行中のバトルと検証には同じ編成を使います。
+`kasai-solo-v57` で発行済みの挑戦は、保存された手持ちの複製でのみ検証します。新規対戦は上記のライブAPIを利用します。
+双方のHP・PPと通常の状態異常は開始時に全回復します。永続する呪いは維持します。
+更新前の `kasai-solo-v56` かつ `opponents_json IS NULL` の記録だけは、有効期限内なら当時の固定チーム・乱数規則で結果を検証できます。
 
 通常の仲間のレベル・成長・持ち物などは、端末の冒険データをEngineの保存形式で検証したものです。
 過去のオフラインプレイの真正性を証明する仕組みではありません。
@@ -111,15 +180,16 @@
 v3の証明は保存済みの勝利報酬を確認し、現在の運営であることを要求しません。
 通信対戦では既存のキラシードと同じ標準Lv.50の能力を返します。キラシードの既存の交換制限は維持しています。
 
-公開時は `0003_rooms.sql` をD1の次のマイグレーションとして追加し、
-`server/server.mjs` と **`server/kasai-replay.mjs` の両方**をWorkerへ同期してください。
-入口モジュールが `worker/index.js` なら、リプレイモジュールは `worker/kasai-replay.mjs` に置きます。
+公開時は `0003_rooms.sql`・`0004_kasai_party.sql`・`0005_kasai_live.sql` をD1のマイグレーションとして適用し、
+`server/server.mjs`・**`server/kasai-replay.mjs`・`server/kasai-live-engine.mjs`** をWorkerへ同期してください。
+入口モジュールが `worker/index.js` なら、リプレイモジュールは `worker/kasai-replay.mjs`、人間同士の対戦モジュールは `worker/kasai-live-engine.mjs` に置きます。
+`0005` は既存の勝利報酬を全件保持し、旧挑戦と通信対戦のどちらか一方を受取元として記録できるようにします。
 
 検証:
 
 ```sh
 node scripts/sync-kasai-replay.cjs --check
-node --test server/tests/rooms.test.mjs server/tests/world.test.mjs server/tests/server.test.mjs server/tests/trades.test.mjs
+node --test server/tests/rooms.test.mjs server/tests/world.test.mjs server/tests/server.test.mjs server/tests/trades.test.mjs server/tests/kasai-live.test.mjs
 ```
 
 ## ソロ冒険の共有フィールド（v55）
@@ -130,6 +200,7 @@ node --test server/tests/rooms.test.mjs server/tests/world.test.mjs server/tests
 | 操作 | API | 内容 |
 | --- | --- | --- |
 | 表示・移動・周辺取得 | `POST /api/world/presence` | `{map,x,y,facing,avatar,status}` |
+| ステージ別オンライン人数 | `GET /api/world/population` | 最新15秒以内の実プレイヤー数。本人も含む |
 | フィールド退出 | `DELETE /api/world/presence` | 本人の表示を削除し、未確定のお誘いを取り消す |
 | 近くの相手を誘う | `POST /api/world/invitations` | `{targetId,kind,roomCode,requestId}` |
 | お誘いの確認 | `GET /api/world/invitations/:id` | 送信者・受信者のみ取得可能 |
@@ -142,6 +213,13 @@ node --test server/tests/rooms.test.mjs server/tests/world.test.mjs server/tests
 マップと座標は232エリアの範囲内に制限されます。位置の更新は同じプレイヤーにつき最大4回/秒です。
 `presence` の応答には `self`、同じマップの近い順で最大80人の `players`、本人が関係する最大20件の `invitations`、
 `serverTime`、`ttlMs:15000`、`pollAfterMs:500` を含みます。15秒以上更新のないプレイヤーは表示対象から外れます。
+
+`population` は `{rows:[{map,count,name?,kind?}],total,serverTime,ttlMs:15000}` を返します。
+人数が正のステージのみ含み、静的な232エリアと保存済みの秘密部屋を集計します。
+部屋の行だけ部屋名 `name` と `kind:secret/kasai` を付け、所有権の変更も現在の運営登録から判定します。
+全体人数は行の人数の合計で、近隣表示の80人上限には制限されません。同じプレイヤーIDは一度だけ数えます。
+位置の更新がちょうど15秒前の人、削除された部屋、不明なマップは除きます。
+認証必須・`Cache-Control:no-store` の読み取り専用APIで、取得によってオンライン時間を延長せず、滞在中のプレイヤー一覧・名前・認証トークンを返しません。
 
 プレイヤーの表示は `{id,name,isAdmin,avatar,map,x,y,facing,status,updatedAt}` です。
 運営権限は既存の `admin_owner` だけで判断し、現在の運営には名前「謎のトレーナー カサイ」と `avatar:kasai` を返します。

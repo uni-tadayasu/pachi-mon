@@ -47,7 +47,18 @@
         .sort((a,b)=>(distance(a,ahead)-distance(b,ahead))||a.id.localeCompare(b.id));
     }
   }
-  const core={WorldPresence,distance,KASAI};
+  function populationData(data){
+    if(!data||!Array.isArray(data.rows)||!Number.isSafeInteger(data.total)||data.total<0||!Number.isFinite(data.serverTime))throw Error('オンライン人数を確認できません。');
+    const maps=new Set(),rows=[];let total=0;
+    for(const row of data.rows){
+      if(typeof row?.map!=='string'||!(/^[a-z][a-z0-9_-]{0,79}$/.test(row.map)||/^room:P[0-9a-f]{16}$/.test(row.map))||maps.has(row.map)||!Number.isSafeInteger(row.count)||row.count<1)throw Error('オンライン人数を確認できません。');
+      maps.add(row.map);total+=row.count;if(!Number.isSafeInteger(total))throw Error('オンライン人数を確認できません。');
+      rows.push({map:row.map,count:row.count,name:typeof row.name==='string'?row.name.slice(0,80):'',kind:row.kind==='kasai'?'kasai':row.kind==='secret'?'secret':null});
+    }
+    if(total!==data.total)throw Error('オンライン人数を確認できません。');
+    return {rows,total,serverTime:data.serverTime,ttlMs:clamp(Number(data.ttlMs)||15000,5000,30000)};
+  }
+  const core={WorldPresence,distance,KASAI,populationData};
   if(typeof module!=='undefined'&&module.exports)module.exports=core;
   LT.WorldPresence=WorldPresence;
   if(!root.document?.createElement||!LT.DATA)return;
@@ -55,6 +66,7 @@
   const model=new WorldPresence();
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let timer=null,inFlight=null,leavePromise=null,epoch=0,lastSent=0,failures=0,clockOffset=0,connected=false,lastMap='',lastProfile='',lastPayload='',bar=null,dialog=null,dialogMode='',selectedPeer=null,incoming=null,outgoing=null,working=false;
+  let population=null,populationRequest=null,populationEpoch=0,populationNext=0,populationQuery='',populationOnlyActive=true,populationError='';
   const handled=new Set(),cleanup=new Set();
   const game=()=>LT.adminBridge?.getEngine?.();
   const playing=()=>LT.adminBridge?.isPlaying?.()===true;
@@ -67,11 +79,14 @@
   };
   const mine=()=>LT.Admin?.player?.id||model.self?.id;
   const localAdmin=()=>LT.Admin?.player?.isAdmin===true||(model.self?.id===LT.Admin?.player?.id&&model.self?.isAdmin===true);
-  const isBusy=()=>!!(LT.adminBridge?.isBusy?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isWorking?.()||LT.onlineActive||LT.tradeActive||LT.localTradeActive||LT.Trade?.isLocked?.()||document.querySelector('dialog[open]'));
+  const isBusy=(allowLiveRead=false)=>!!(LT.adminBridge?.isBusy?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isWorking?.()||LT.KasaiLive?.isWorking?.()||(!allowLiveRead&&LT.KasaiLive?.locked?.())||LT.onlineActive||LT.tradeActive||LT.localTradeActive||LT.Trade?.isLocked?.()||document.querySelector('dialog[open]'));
   function networkStatus(){
     // Creating an invitation opens its room before publishing the directed offer.
     // That room is still available to its one invited player.
     if(outgoing&&['preparing','sending','pending'].includes(outgoing.phase))return 'idle';
+    // Preparing a live Kasai request is the intended invitation action, not an
+    // unrelated busy state. Its fresh position must remain request-eligible.
+    if(LT.KasaiLive?.isRequesting?.()===true)return 'idle';
     if(dialog?.open&&dialogMode==='incoming')return 'idle';
     return isBusy()?'busy':'idle';
   }
@@ -80,48 +95,90 @@
     if(bar)return;
     const stage=document.querySelector('.game-stage');if(!stage)return;
     bar=document.createElement('section');bar.className='world-network-bar';bar.setAttribute('aria-label','フィールド交流');
-    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><button type="button" data-world-rooms>秘密部屋</button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
-    stage.append(bar);
+    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><button type="button" data-world-rooms>秘密部屋</button><button type="button" data-world-population aria-haspopup="dialog" aria-controls="world-player-dialog" aria-expanded="false">オンライン一覧</button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
+    // A separate row above the canvas keeps connection controls off the
+    // traveller sprites, including fixed-height phone and tablet layouts.
+    stage.before(bar);
     bar.querySelector('[data-world-nearby]').onclick=()=>openNearby();
     bar.querySelector('[data-world-rooms]').onclick=()=>{void LT.Rooms?.open?.();};
+    bar.querySelector('[data-world-population]').onclick=()=>openPopulation();
     bar.querySelector('[data-world-invite]').onclick=()=>{if(incoming)showIncoming(incoming);};
   }
   function status(){
     mount();if(!bar)return;
-    const state=game()?.state,peers=state?model.actors(state.map):[];
-    bar.hidden=!playing();bar.dataset.connected=String(connected&&active());
-    const label=!online()?'接続待ち · 回線が戻ると自動で再開':document.hidden?'復帰すると交流を再開':connected?`世界と接続 · このエリア ${peers.length}人`:failures?'再接続中 · 冒険は続けられます':'世界につないでいます…';
+    bar.hidden=!playing()||!!game()?.battle;bar.dataset.connected=String(connected&&active());
+    const label=!online()?'接続待ち':document.hidden?'一時停止':connected?'接続中':failures?'再接続中':'接続中…';
     const text=bar.querySelector('[data-world-status]');if(text.textContent!==label)text.textContent=label;
     bar.querySelector('[data-world-nearby]').disabled=!connected||!playing()||isBusy();
     bar.querySelector('[data-world-rooms]').disabled=!online()||!playing()||isBusy();
+    const populationButton=bar.querySelector('[data-world-population]');populationButton.disabled=!playing()||!online()||isBusy(true);populationButton.setAttribute('aria-expanded',String(dialog?.open&&dialogMode==='population'));
     const alert=bar.querySelector('[data-world-invite]');alert.hidden=!incoming;alert.textContent=incoming?`${incoming.from.name}から${incoming.kind==='trade'?'交換':'対戦'}のお誘い`:'';
+    if(dialog?.open&&dialogMode==='population')renderPopulation();
   }
   function makeDialog(){
     if(dialog)return;
     dialog=document.createElement('dialog');dialog.id='world-player-dialog';dialog.className='world-player-dialog';dialog.setAttribute('aria-labelledby','world-dialog-title');document.body.append(dialog);
     dialog.addEventListener('cancel',event=>{if(working){event.preventDefault();return;}if(dialogMode==='incoming'){event.preventDefault();void respond(false);}});
-    dialog.addEventListener('close',()=>{selectedPeer=null;dialogMode='';schedule(50);});
+    dialog.addEventListener('close',()=>{selectedPeer=null;dialogMode='';invalidatePopulation();status();schedule(50);});
     dialog.addEventListener('click',event=>{
       const button=event.target.closest('[data-world-action]');if(!button||button.disabled||working)return;
       const action=button.dataset.worldAction;
       if(action==='close'){dialog.close();return;}
+      if(action==='population-filter'){populationOnlyActive=!populationOnlyActive;renderPopulation();return;}
       if(action==='select'){const peer=model.peers.get(button.dataset.player);if(peer)showPerson(peer);return;}
       if(action==='battle'||action==='trade'){void invite(selectedPeer,action);return;}
       if(action==='accept'||action==='decline')void respond(action==='accept');
     });
   }
   function show(title,body,mode){
-    makeDialog();dialogMode=mode;
-    dialog.innerHTML=`<header><div><p>FIELD ENCOUNTER</p><h2 id="world-dialog-title">${escape(title)}</h2></div><button type="button" class="btn btn-small" data-world-action="${mode==='incoming'?'decline':'close'}">閉じる</button></header><div class="world-dialog-body">${body}<p data-world-error role="status" aria-live="polite"></p></div>`;
+    makeDialog();if(dialogMode==='population'&&mode!=='population')invalidatePopulation();dialogMode=mode;dialog.dataset.mode=mode;
+    dialog.innerHTML=`<header><div><p>${mode==='population'?'ONLINE STAGES':'FIELD ENCOUNTER'}</p><h2 id="world-dialog-title">${escape(title)}</h2></div><button type="button" class="btn btn-small" data-world-action="${mode==='incoming'?'decline':'close'}">閉じる</button></header><div class="world-dialog-body">${body}<p data-world-error role="status" aria-live="polite"></p></div>`;
     if(!dialog.open)dialog.showModal();
     for(const canvas of dialog.querySelectorAll('canvas[data-traveller]'))LT.Art?.traveller?.(canvas,{kind:canvas.dataset.traveller,size:150,facing:'down'});
     status();
+  }
+  function invalidatePopulation(){populationEpoch++;population=null;populationRequest=null;populationNext=0;populationError='';}
+  function populationFresh(){return population&&population.owner===mine()&&population.map===game()?.state?.map&&active()&&Date.now()-population.sampleAt<=population.ttlMs;}
+  function renderPopulation(){
+    if(!dialog?.open||dialogMode!=='population')return;
+    const summary=dialog.querySelector('[data-world-population-summary]'),list=dialog.querySelector('[data-world-population-list]'),updated=dialog.querySelector('[data-world-population-updated]'),filter=dialog.querySelector('[data-world-population-filter]');
+    if(!summary||!list||!updated||!filter)return;
+    filter.setAttribute('aria-pressed',String(populationOnlyActive));filter.textContent=populationOnlyActive?'接続中のみ':'全ステージ';
+    if(!populationFresh()){
+      summary.textContent=!active()?'接続が戻ると人数を更新します。':populationError?'最新のオンライン人数を取得できません。':'オンライン人数を更新しています…';
+      list.innerHTML='<li class="world-population-empty">人数を確認中です。</li>';updated.textContent=populationError||'実際に接続が確認できた人数だけを表示します。';return;
+    }
+    const currentMap=game().state.map,counts=new Map(population.rows.map(row=>[row.map,row])),rows=new Map();
+    for(const [map,info] of Object.entries(LT.DATA.maps))if(!info.sharedRoom)rows.set(map,{map,name:info.name||map,count:0});
+    for(const row of population.rows){const info=LT.DATA.maps[row.map];rows.set(row.map,{...row,name:row.name||info?.name||row.map});}
+    if(!rows.has(currentMap)&&LT.DATA.maps[currentMap])rows.set(currentMap,{map:currentMap,name:LT.DATA.maps[currentMap].name||'秘密部屋',count:0});
+    const query=populationQuery.trim().toLocaleLowerCase(),visible=[...rows.values()].filter(row=>(!populationOnlyActive||row.count>0)&&(!query||row.name.toLocaleLowerCase().includes(query)))
+      .sort((a,b)=>(Number(b.map===currentMap)-Number(a.map===currentMap))||(b.count-a.count)||a.name.localeCompare(b.name,'ja'));
+    summary.textContent=`世界全体 ${population.total}人 · このステージ ${counts.get(currentMap)?.count||0}人（自分を含む）`;
+    list.innerHTML=visible.map(row=>`<li class="world-population-row${row.map===currentMap?' is-current':''}"${row.map===currentMap?' aria-current="location"':''}><span><strong>${escape(row.name)}</strong><small>${row.map===currentMap?'現在地':row.kind==='kasai'?'カサイの部屋':row.kind==='secret'?'プレイヤーの秘密部屋':'フィールド・建物'}</small></span><span class="world-population-count">${row.count}<small>人</small></span></li>`).join('')||'<li class="world-population-empty">該当するステージはありません。</li>';
+    updated.textContent=populationError||`約5秒ごとに更新 · 退出した人は最大${Math.ceil(population.ttlMs/1000)}秒で一覧から外れます。`;
+  }
+  async function refreshPopulation(){
+    if(!dialog?.open||dialogMode!=='population'||!active()||populationRequest||Date.now()<populationNext)return false;
+    const task={epoch:populationEpoch,engine:game(),map:game()?.state?.map,owner:mine(),sampleAt:Date.now()};populationRequest=task;populationNext=Date.now()+5000;
+    const current=()=>populationRequest===task&&task.epoch===populationEpoch&&dialog?.open&&dialogMode==='population'&&active()&&game()===task.engine&&game()?.state?.map===task.map&&mine()===task.owner;
+    try{const data=populationData(await api('/world/population'));if(!current())return false;if(population&&data.serverTime<population.serverTime)return false;population={...data,...task};populationError='';renderPopulation();return true;}
+    catch(error){if(current()){populationError='人数を更新できません。接続を確認して再度お試しください。';renderPopulation();}return false;}
+    finally{if(populationRequest===task)populationRequest=null;}
+  }
+  function openPopulation(){
+    if(dialog?.open&&dialogMode==='population'){dialog.close();return true;}
+    if(!active()||isBusy(true))return false;
+    invalidatePopulation();populationQuery='';populationOnlyActive=true;
+    show('ステージ別オンライン人数','<p class="world-population-summary" data-world-population-summary role="status" aria-live="polite">オンライン人数を更新しています…</p><div class="world-population-tools"><label for="world-population-search">ステージを探す<input id="world-population-search" type="search" placeholder="ステージ名・部屋名" autocomplete="off"></label><button type="button" class="btn btn-small" data-world-action="population-filter" data-world-population-filter aria-pressed="true">接続中のみ</button></div><ul class="world-population-list" data-world-population-list aria-label="ステージごとの接続人数"></ul><p class="world-dialog-note" data-world-population-updated></p>','population');
+    dialog.querySelector('#world-population-search').addEventListener('input',event=>{populationQuery=String(event.target.value||'');renderPopulation();});
+    void refreshPopulation();return true;
   }
   function portrait(person){return `<canvas width="150" height="160" data-traveller="${person.isAdmin?'kasai':person.avatar==='female'?'hero-female':'hero'}" aria-label="${escape(person.name)}の姿"></canvas>`;}
   function showPerson(peer){
     selectedPeer={...peer};
     const busy=peer.status==='busy';
-    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${peer.isAdmin?'「やあ。君のパチモンたちの力、特別なステージで見せてもらおうか。」':busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy&&!peer.isAdmin?'disabled':''}>${peer.isAdmin?'カサイとバトル':'対戦を申し込む'}</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">${peer.isAdmin?'バトルを選ぶとカサイの専用ステージへ移動します。奥のカサイに話しかけるとソロバトルが始まります。':'相手が承諾すると通信を始めます。'}交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
+    show(peer.name,`<section class="world-trainer-card${peer.isAdmin?' is-kasai':''}">${portrait(peer)}<div><span class="world-trainer-role">${peer.isAdmin?'MYSTERY TRAINER':'ONLINE TRAINER'}</span><h3>${escape(peer.name)}</h3><p>${peer.isAdmin?(busy?'カサイはいま取り込み中です。対戦の受付が再開するまでお待ちください。':'「やあ。君のパチモンたちの力、特別なステージで見せてもらおうか。」'):busy?'いまは戦闘・交換・会話中です。少し待ってから話しかけてください。':'同じフィールドを旅しているプレイヤーです。対戦や交換に誘えます。'}</p></div></section><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-world-action="battle" ${busy?'disabled':''}>${peer.isAdmin?'カサイとバトル':'対戦を申し込む'}</button><button type="button" class="btn" data-world-action="trade" ${busy?'disabled':''}>交換を申し込む</button></div><p class="world-dialog-note">${peer.isAdmin?'カサイ本人と専用ステージへ移動します。60秒以内に近づいて話しかけ、カサイが承諾すると対戦が始まります。':'相手が承諾すると通信を始めます。'}交換は、お互いのパチモンを確認してから確定します。</p>`,'person');
   }
   function openNearby(){
     if(!playing()||isBusy())return false;
@@ -155,8 +212,10 @@
     const state=game()?.state;
     if(!active()||!state||distance({x:peer.targetX??peer.x,y:peer.targetY??peer.y},state)>3){say('相手に近づいてから話しかけてください。');return;}
     if(peer.isAdmin&&kind==='battle'){
+      if(peer.id===mine()||localAdmin()){say('運営カサイは自分自身に挑戦できません。');return;}
+      if(peer.status==='busy'){say('カサイはいま取り込み中です。少し待ってから話しかけてください。');return;}
       dialog?.close();setWorking(true);
-      try{await LT.Rooms?.enterKasai?.(peer.id);}finally{setWorking(false);schedule(50);}return;
+      try{if(!LT.KasaiLive?.request)throw Error('カサイとの対戦を読み込み中です。');const result=await LT.KasaiLive.request(peer.id);if(result?.ok===false)say(result.message||'カサイに申し込めませんでした。');}catch(error){say(error?.message||'カサイに申し込めませんでした。');}finally{setWorking(false);schedule(50);}return;
     }
     setWorking(true);
     const current={target:{id:peer.id,name:peer.name,isAdmin:peer.isAdmin===true,avatar:peer.avatar},kind,phase:'preparing',id:null,createdAt:Date.now()};outgoing=current;
@@ -261,7 +320,7 @@
   }
   async function leave(){
     if(leavePromise)return leavePromise;
-    epoch++;connected=false;model.clear();lastMap='';lastPayload='';
+    epoch++;connected=false;model.clear();lastMap='';lastPayload='';invalidatePopulation();
     // The server also expires missing heartbeats in 15 seconds if a browser
     // terminates a page before its best-effort leave request can finish.
     const pending=inFlight;
@@ -275,11 +334,13 @@
       status();schedule(1500);return;
     }
     await pulse();
+    if(dialog?.open&&dialogMode==='population'){renderPopulation();void refreshPopulation();}
     const wait=failures?Math.min(15000,1000*2**Math.min(failures,4)):networkStatus()==='busy'&&!incoming&&!outgoing?1800:500;
     schedule(wait);
   }
   function moved(){
     const state=game()?.state;if(state?.map!==model.map)model.clear();
+    if(dialog?.open&&dialogMode==='population'&&(population&&population.map!==state?.map||populationRequest&&populationRequest.map!==state?.map)){invalidatePopulation();renderPopulation();void refreshPopulation();}
     if(active()&&!inFlight)schedule(Math.max(0,270-(Date.now()-lastSent)));
   }
   function checkRoom(){
@@ -294,11 +355,11 @@
     interact(){if(!active()||!connected||isBusy())return false;const state=game()?.state,peer=state&&model.nearby(state,2)[0];if(!peer)return false;showPerson(peer);return true;},
     isDialogOpen:()=>dialog?.open===true,
     closeDialog(){if(!dialog?.open||working)return false;if(dialogMode==='incoming')void respond(false);else dialog.close();return true;},
-    moved,openNearby,
+    moved,openNearby,openPopulation,
     refreshPresence:async()=>{if(inFlight)await inFlight;return pulse();},
     status:()=>({enabled:true,connected,players:model.actors(game()?.state?.map).length,displayName:localAdmin()?KASAI:null})
   };
-  document.addEventListener('pachi-game-ready',()=>schedule(50));
+  document.addEventListener('pachi-game-ready',()=>{if(dialogMode==='population')dialog?.close();invalidatePopulation();schedule(50);});
   document.addEventListener('pachi-admin-bridge-ready',()=>schedule(50));
   document.addEventListener('pachi-online-state',checkRoom);
   document.addEventListener('pachi-trade-state',checkRoom);

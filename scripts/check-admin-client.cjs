@@ -13,7 +13,7 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 const response=data=>({ok:true,status:200,json:async()=>({ok:true,...data})});
 async function until(check){for(let i=0;i<100;i++){if(check())return;await Promise.resolve();}assert.fail('Expected asynchronous step was not reached');}
 function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}){
-  const calls=[],applied=[],updated=[],initial=[],toasts=[],listeners={},clock={now:1_000_000};
+  const calls=[],applied=[],updated=[],initial=[],toasts=[],listeners={},emitted=[],clock={now:1_000_000};
   const serviceBody={dataset:{},innerHTML:''},statusLine={dataset:{},textContent:''},keyField={value:'',focus(){}};
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
@@ -22,12 +22,12 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
-  const ctx={console,crypto:webcrypto,AbortController,URL,Blob,btoa,atob,
+  const ctx={console,crypto:webcrypto,AbortController,URL,Blob,btoa,atob,CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},
     setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,
     addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},
     localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},
     MutationObserver:class{observe(){}},
-    document:{getElementById:element,addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},hidden:false},
+    document:{getElementById:element,addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},dispatchEvent:event=>{emitted.push(event);for(const fn of listeners[event.type]||[])fn(event);},hidden:false},
     Date:class extends Date{static now(){return clock.now;}},
     LT:{DATA:{moves:Object.fromEntries(CONFIG.moves.map(id=>[id,{name:id}]))},adminBridge:{
       getEngine:()=>null,getPlayerName:()=> 'Traveller',toast:message=>toasts.push(message),
@@ -49,7 +49,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   const press=action=>{const button={dataset:{adminAction:action},disabled:false,isConnected:true};for(const fn of listeners.click||[])fn({target:{closest:()=>button}});return button;};
   const emitStorage=event=>{for(const fn of listeners.storage||[])fn({storageArea:ctx.localStorage,...event});};
   const changeIdentity=raw=>{const key='pachi-player-identity-v1',oldValue=storage.get(key)||null;if(raw===null)storage.delete(key);else storage.set(key,raw);emitStorage({key,newValue:raw,oldValue});};
-  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField,press,clock,emitStorage,changeIdentity};
+  return{ctx,api:ctx.__test,calls,applied,updated,initial,toasts,storage,serviceBody,statusLine,keyField,press,clock,emitStorage,changeIdentity,emitted};
 }
 function adopt(h,token=TOKEN_A,player=PLAYER_A){h.api.adoptIdentity({token,id:player.id,name:player.name},player,true);}
 
@@ -212,23 +212,23 @@ test('initial companion receipt survives reload only after its save succeeds',()
     if(ctx.LT?.Engine)break;
   }
   const engine=new ctx.LT.Engine();engine.newGame(ctx.LT.DATA.starters[0]);
-  let failWrite=true,saved=null,writes=0,events=0;
+  let failWrite=true,saved=null,writes=0;const events=[];
   Object.assign(ctx,{tradeLocked:()=>false,Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
     localStorage:{setItem:(key,value)=>{if(failWrite)throw Error('Storage full');saved=value;writes++;}},
     performance:{now:()=>100},updateAll(){},loadStored(){},
-    CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
-    document:{dispatchEvent:()=>events++}});
+    CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},
+    document:{dispatchEvent:event=>events.push(event)}});
   const start=html.indexOf('  function persistGiftMutation(method,...args){');
   const end=html.indexOf('  LT.playMoveSound=',start);
   assert(start>0&&end>start);vm.runInContext(html.slice(start,end),ctx);
   assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).pending,true);
-  assert.equal(engine.state.party.length,1);assert.equal(engine.state.giftReceipts.length,0);assert.equal(events,0);
+  assert.equal(engine.state.party.length,1);assert.equal(engine.state.giftReceipts.length,0);assert.equal(events.length,0);
   failWrite=false;
   assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).ok,true);
   assert.equal(engine.state.party.filter(mon=>mon.species==='arvelion').length,1);
-  assert.equal(writes,1);assert.equal(events,1);
+  assert.equal(writes,1);assert.deepEqual(events.map(event=>event.type),['pachi-party-changed','pachi-gift-received']);assert.equal(events[1].detail.grantId,LEGENDARY.grantId);
   assert.equal(ctx.persistGiftMutation('receiveAdminLegendary',LEGENDARY).alreadyReceived,true);
-  assert.equal(writes,1);assert.equal(events,1);
+  assert.equal(writes,1);assert.equal(events.length,2);
   const reloaded=new ctx.LT.Engine(JSON.parse(saved));
   assert.equal(reloaded.receiveAdminLegendary(LEGENDARY).alreadyReceived,true);
   assert.equal(reloaded.state.party.filter(mon=>mon.species==='arvelion').length,1);
@@ -428,4 +428,47 @@ test('secret encounter authorization cannot complete under a restored identity',
   pending.resolve(response({player:PLAYER_A,adminExists:true}));
   await assert.rejects(attempt,error=>error.staleIdentity===true);
   assert.equal(h.ctx.LT.Admin.player.id,PLAYER_B.id);
+});
+
+test('fresh challenge identity rechecks the current server role and announces no credentials or gifts',async()=>{
+  const h=harness({handle:c=>c.path==='/me'?response({player:{...PLAYER_A,isAdmin:false},adminExists:true,grants:[{grantId:'read-only-gift'}],initialCompanions:[LEGENDARY]}):null});adopt(h);
+  assert.equal((await h.ctx.LT.Admin.tradeIdentity()).isAdmin,true);assert.equal(h.calls.length,0);
+  const fresh=await h.ctx.LT.Admin.tradeIdentity({fresh:true});assert.equal(fresh.isAdmin,false);assert.equal(h.ctx.LT.Admin.player.isAdmin,false);
+  assert.equal(h.calls.length,1);assert.equal(h.calls[0].path,'/me');assert.equal(h.calls[0].search,'?limit=1');
+  assert.equal(h.applied.length,0);assert.equal(h.initial.length,0);
+  const event=h.emitted.findLast(event=>event.type==='pachi-admin-state');assert(event);assert.deepEqual(JSON.parse(JSON.stringify(event.detail)),{id:PLAYER_A.id,isAdmin:false});
+  assert(!JSON.stringify(h.emitted).includes(TOKEN_A));
+});
+
+test('fresh challenge identity cannot restore an old player after a token switch',async()=>{
+  const pending=deferred(),h=harness({handle:c=>c.path==='/me'?pending.promise:null});adopt(h);
+  const attempt=h.ctx.LT.Admin.tradeIdentity({fresh:true});await until(()=>h.calls.some(c=>c.path==='/me'));adopt(h,TOKEN_B,PLAYER_B);
+  pending.resolve(response({player:PLAYER_A,adminExists:true}));await assert.rejects(attempt,error=>error.staleIdentity===true);
+  assert.equal(h.ctx.LT.Admin.player.id,PLAYER_B.id);assert.equal(h.ctx.LT.Admin.player.isAdmin,false);
+});
+
+test('world client allows the roster and population endpoints and rejects invalid targets before authentication',async()=>{
+  const h=harness({handle:c=>c.path.startsWith('/world/')?response({updatedAt:1,party:c.body?.party,total:1}):null});
+  for(const path of ['/world/kasai/party/other','/world/kasai/party?owner=another','/world/population/other','/admin/config','https://example.test/world/kasai/party'])await assert.rejects(h.ctx.LT.Admin.worldRequest(path),/指定が正しく/);
+  assert.equal(h.calls.length,0);adopt(h);const party=[{uid:'one',species:'komori',level:5}];
+  await h.ctx.LT.Admin.worldRequest('/world/kasai/party',{method:'POST',body:{party}});
+  await h.ctx.LT.Admin.worldRequest('/world/population');
+  assert.deepEqual(h.calls.map(call=>call.path),['/world/kasai/party','/world/population']);assert.deepEqual(h.calls[0].body,{party});assert(h.calls.every(call=>call.token===TOKEN_A));
+});
+
+test('manual roster update checks readiness before saving and saves before forced synchronization',async()=>{
+  const sequence=[],h=harness({bridge:{canSyncKasaiParty:()=>false,saveNow:()=>{sequence.push('save');return true;}}});adopt(h);attachOwnerConsole(h);
+  h.ctx.LT.KasaiParty={sync:async options=>{sequence.push('sync');assert.equal(options.force,true);return {ok:true,message:'Roster updated'};}};
+  const click=()=>h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:'sync-kasai-party'},disabled:false,isConnected:true})}});
+  await click();assert.deepEqual(sequence,[]);assert.match(h.statusLine.textContent,/再読み込み|更新/);
+  h.ctx.LT.adminBridge.canSyncKasaiParty=()=>true;await click();assert.deepEqual(sequence,['save','sync']);assert.equal(h.statusLine.textContent,'Roster updated');
+  h.ctx.LT.adminBridge.saveNow=()=>false;await click();assert.deepEqual(sequence,['save','sync'],'A failed save cannot publish unsaved monsters');
+});
+
+test('owner decoration button closes management before opening the room editor',async()=>{
+  let playing=false,decorations=0;const h=harness({bridge:{isPlaying:()=>playing}});adopt(h);const view=attachOwnerConsole(h);
+  h.ctx.LT.Rooms={decorateMine:async()=>{assert.equal(view.dialog.open,false);decorations++;return true;}};
+  const click=()=>h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:'decorate-room'},disabled:false,isConnected:true})}});
+  await click();assert.equal(decorations,0);assert.equal(view.dialog.open,true);
+  playing=true;await click();assert.equal(decorations,1);assert.equal(view.dialog.closed,1);
 });

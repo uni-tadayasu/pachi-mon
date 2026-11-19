@@ -8,7 +8,7 @@ import worker,{WORLD_MAP_BOUNDS,WORLD_TTL} from '../server.mjs';
 class LocalD1 {
   constructor() {
     this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec('PRAGMA foreign_keys=ON');
-    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
   }
   prepare(sql) {
     const db=this;
@@ -222,4 +222,56 @@ test('waiting-only trade cancellation cannot cancel a joined or changed room, in
   await Promise.all([cancel(trade),call('/trades/join',{token:b.token,method:'POST',body:{code:trade.code}})]);
   const final=(await call('/trades/'+trade.id,{token:a.token})).trade;
   if(final.guest)assert.equal(final.state,'open');else assert.equal(final.state,'cancelled');
+});
+
+test('population is authenticated, read-only and expires at the same strict fifteen-second boundary',async t=>{
+  const {env,call,register,presence,advance}=setup(t),a=await register('集計確認'),b=await register('もう一人');
+  assert.equal((await call('/world/population')).status,401);
+  let result=await call('/world/population',{token:a.token});assert.equal(result.status,200);assert.deepEqual(result.rows,[]);assert.equal(result.total,0);assert.equal(result.ttlMs,WORLD_TTL);
+  await presence(a,{},0);await presence(b,{status:'busy'},0);
+  const changes=env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n,updated=env.DB.sqlite.prepare('SELECT updated_at FROM world_presence WHERE player_id=?').get(a.id).updated_at;
+  result=await call('/world/population',{token:a.token});assert.deepEqual(result.rows,[{map:'village',count:2}]);assert.equal(result.total,2);assert.equal(result.serverTime,Date.now());
+  assert.equal(env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n,changes,'listing counts never writes presence or rate-limit records');
+  assert.equal(env.DB.sqlite.prepare('SELECT updated_at FROM world_presence WHERE player_id=?').get(a.id).updated_at,updated);
+  const serialized=JSON.stringify(result);for(const value of [a.id,b.id,a.name,b.name,a.token,b.token])assert(!serialized.includes(value));
+  advance(WORLD_TTL-1);assert.equal((await call('/world/population',{token:a.token})).total,2);
+  advance(1);result=await call('/world/population',{token:a.token});assert.equal(result.total,0);assert.deepEqual(result.rows,[]);
+  assert.equal((await call('/world/population',{token:a.token,method:'POST',body:{}})).status,404);
+});
+
+test('population includes the requester once and moves a player between stages without double counting',async t=>{
+  const {call,pair,presence}=setup(t),{a,b}=await pair(),population=()=>call('/world/population',{token:a.token});
+  assert.equal((await population()).total,2);
+  await presence(b,{map:'meadow'});let result=await population();assert.deepEqual(result.rows,[{map:'meadow',count:1},{map:'village',count:1}]);assert.equal(result.total,2);
+  await presence(b,{map:'meadow',x:22});result=await population();assert.equal(result.total,2);assert.equal(result.rows.find(row=>row.map==='meadow').count,1);
+  await presence(a,{map:'interior-village-1',x:9,y:12});result=await population();assert.deepEqual(result.rows,[{map:'interior-village-1',count:1},{map:'meadow',count:1}]);
+  await call('/world/presence',{token:b.token,method:'DELETE'});result=await population();assert.equal(result.total,1);assert.deepEqual(result.rows,[{map:'interior-village-1',count:1}]);
+});
+
+test('population counts all real active participants beyond the eighty-person nearby display cap',async t=>{
+  const {call,register,presence}=setup(t),a=await register('一覧を開く人');await presence(a,{},0);
+  for(let n=0;n<90;n++){const player=await register('実プレイヤー'+n);assert.equal((await presence(player,{x:20},0)).status,200);}
+  const nearby=await presence(a);assert.equal(nearby.players.length,80);
+  const result=await call('/world/population',{token:a.token});assert.equal(result.status,200);assert.deepEqual(result.rows,[{map:'village',count:91}]);assert.equal(result.total,91);
+});
+
+test('population labels persisted rooms using current roles and excludes detached or unknown maps',async t=>{
+  const {env,call,register,presence}=setup(t),viewer=await register('閲覧者'),owner=await register('運営'),resident=await register('部屋の持ち主'),unknown=await register('無効マップ');
+  assert.equal((await call('/admin/claim',{token:owner.token,method:'POST',body:{key:SECRET}})).status,200);
+  const kasai=(await call('/world/rooms/kasai',{token:viewer.token})).room;
+  const walls=(await call('/world/rooms/walls?map=village',{token:resident.token})).walls,wall=walls.find(cell=>!(cell.y===7&&[6,14,32].includes(cell.x)));
+  const created=await call('/world/rooms',{token:resident.token,method:'POST',body:{map:'village',x:wall.x,y:wall.y,facing:wall.facings[0],name:'星空の部屋'}});assert.equal(created.status,200);
+  await presence(viewer,{map:'harbor'},0);await presence(owner,{map:kasai.mapId,x:12,y:5},0);await presence(resident,{map:created.room.mapId,x:9,y:12},0);
+  env.DB.sqlite.prepare("INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at) VALUES (?,'test-hidden-dead-map',1,1,'down','male','idle',?)").run(unknown.id,Date.now());
+  let result=await call('/world/population',{token:viewer.token});assert.equal(result.total,3);assert.equal(result.total,result.rows.reduce((sum,row)=>sum+row.count,0));
+  assert.deepEqual(result.rows.find(row=>row.map===kasai.mapId),{map:kasai.mapId,count:1,name:kasai.name,kind:'kasai'});
+  assert.deepEqual(result.rows.find(row=>row.map===created.room.mapId),{map:created.room.mapId,count:1,name:'星空の部屋',kind:'secret'});
+  assert(!result.rows.some(row=>row.map==='test-hidden-dead-map'));assert(result.rows.every(row=>row.count>0));
+  assert.equal((await call('/world/rooms/'+resident.id,{token:resident.token,method:'PATCH',body:{revision:1,name:'模様替えした部屋'}})).status,200);
+  result=await call('/world/population',{token:viewer.token});assert.equal(result.rows.find(row=>row.map===created.room.mapId).name,'模様替えした部屋');
+  env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(resident.id);
+  result=await call('/world/population',{token:viewer.token});assert.equal(result.rows.find(row=>row.map===kasai.mapId).kind,'secret');assert.equal(result.rows.find(row=>row.map===created.room.mapId).kind,'kasai');assert.equal(result.total,3);
+  env.DB.sqlite.prepare('DELETE FROM world_rooms WHERE owner_id=?').run(resident.id);
+  result=await call('/world/population',{token:viewer.token});assert.equal(result.total,2);assert(!result.rows.some(row=>row.map===created.room.mapId));
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms WHERE owner_id=?').get(resident.id).n,0,'population must not recreate a missing administrator room');
 });

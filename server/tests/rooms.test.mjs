@@ -4,12 +4,12 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import worker,{ROOM_CATALOG,ROOM_LAYOUTS,worldRoomWalls,validateRoomDecorations,WORLD_TTL,MYTHICAL_CONFIG,DEFAULT_CONFIG} from '../server.mjs';
-import {RULES_VERSION,replayChallenge} from '../kasai-replay.mjs';
+import {RULES_VERSION,LEGACY_RULES_VERSION,replayChallenge,normalizeParty} from '../kasai-replay.mjs';
 
 class LocalD1 {
   constructor(){
     this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec('PRAGMA foreign_keys=ON');
-    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
   }
   prepare(sql){
     const db=this;
@@ -54,13 +54,30 @@ function setup(t){
     const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),result=await call('/register',{method:'POST',body:{name,token}});
     assert.equal(result.status,200);return {token,...result.player};
   }
-  async function admin(){const a=await register('運営');assert.equal((await call('/admin/claim',{token:a.token,method:'POST',body:{key:SECRET}})).status,200);return a;}
+  async function admin(){
+    const a=await register('運営');assert.equal((await call('/admin/claim',{token:a.token,method:'POST',body:{key:SECRET}})).status,200);
+    const engine=new runtime.LT.Engine(),party=copy(['arvelion','futo','floravelle'].map(species=>engine.makeMonster(species,70)));
+    party[2].grantId='admin-mythical:'+a.id;
+    assert.equal((await call('/world/kasai/party',{token:a.token,method:'POST',body:{party}})).status,200);
+    return a;
+  }
   const door=(map='village',index=0)=>{const cell=worldRoomWalls(map).filter(cell=>map!=='village'||![6,14,32].some(x=>cell.x===x&&cell.y===7))[index];return {map,x:cell.x,y:cell.y,facing:cell.facings[0]};};
   const create=(player,entrance=door(),extra={})=>call('/world/rooms',{token:player.token,method:'POST',body:{...entrance,...extra}});
   async function presence(player,map,x=9,y=12){advance(300);return call('/world/presence',{token:player.token,method:'POST',body:{map,x,y,facing:'up',avatar:'male',status:'idle'}});}
   async function challenge(player,room,extra={}){
+    // Fixtures model already-issued v57 sessions. Production no longer creates
+    // CPU challenges; only their pre-update result/recovery path is retained.
     const result=await presence(player,room.mapId,12,5);assert.equal(result.status,200);
-    return call('/world/kasai/challenges',{token:player.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:room.id,party:team(),storageCount:0,...extra}});
+    if(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get()?.player_id===player.id)return call('/world/kasai/challenges',{token:player.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:room.id,party:team(),storageCount:0,...extra}});
+    const party=normalizeParty(extra.party||team()),roster=env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(room.id);
+    assert(roster,'An already-issued fixture needs its original opponent snapshot');
+    const opponents=JSON.parse(roster.party_json),id=crypto.randomUUID(),requestId=crypto.randomUUID(),seed=crypto.getRandomValues(new Uint32Array(1))[0],expiresAt=now+1800000;
+    const payload=new TextEncoder().encode(JSON.stringify({kind:'kasai-challenge',v:1,id,playerId:player.id,seed,rulesVersion:RULES_VERSION,expiresAt}));
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(SIGNING),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const token=Buffer.from(await crypto.subtle.sign('HMAC',key,payload)).toString('base64url'),hash=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+    env.DB.sqlite.prepare("UPDATE kasai_challenges SET state='cancelled',completed_at=? WHERE player_id=? AND state='pending'").run(now,player.id);
+    env.DB.sqlite.prepare('INSERT INTO kasai_challenges (id,player_id,request_id,room_owner_id,rules_version,party_json,opponents_json,seed,token_hash,created_at,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(id,player.id,requestId,room.id,RULES_VERSION,JSON.stringify(party),JSON.stringify(opponents),seed,hash,now,expiresAt);
+    return {status:200,token,challenge:{id,roomId:room.id,seed,rulesVersion:RULES_VERSION,party,opponents,expiresAt,state:'pending'},rewardClaimed:!!env.DB.sqlite.prepare('SELECT player_id FROM kasai_rewards WHERE player_id=?').get(player.id)};
   }
   const complete=(player,result,actions,storageCount=0)=>call('/world/kasai/challenges/'+result.challenge.id+'/complete',{token:player.token,method:'POST',body:{token:result.token,actions,storageCount}});
   return {env,call,register,admin,door,create,presence,challenge,complete,advance};
@@ -140,10 +157,15 @@ test('Kasai room is always discoverable, changes role safely, and keeps old perm
   assert.equal(one.room.id,owner.id);assert.deepEqual(one.room,two.room);assert.equal(one.room.width,24);assert.equal(one.room.owner.name,'謎のトレーナー カサイ');
   assert.deepEqual(one.room.entrance,{map:'village',x:32,y:7,facing:'up',returnX:32,returnY:8});
   assert.equal((await create(owner)).error.code,'ROOM_ALREADY_EXISTS');
-  assert.equal((await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision:1,decorations:[{id:'outside',itemId:'plant',x:20,y:10,rotation:0}]}})).status,200);
+  const decorations=[{id:'outside',itemId:'plant',x:20,y:10,rotation:0},{id:'sofa',itemId:'sofa',x:3,y:12,rotation:90}];
+  const decorated=await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision:1,name:'カサイのアトリエ',decorations}});
+  assert.equal(decorated.status,200);assert.deepEqual(decorated.room.decorations,decorations);
+  assert.deepEqual((await call('/world/rooms/'+owner.id,{token:visitor.token})).room,decorated.room);
+  assert.equal((await call('/world/rooms/'+owner.id,{token:visitor.token,method:'PATCH',body:{revision:2,decorations:[]}})).error.code,'ROOM_OWNER_REQUIRED');
+  for(const [x,y] of [[12,4],[11,10],[12,18]])assert.equal((await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision:2,decorations:[{id:'blocked',itemId:'plant',x,y,rotation:0}]}})).status,400);
   env.DB.sqlite.prepare('DELETE FROM admin_owner').run();const nextOwner=await admin();
   const next=(await call('/world/rooms/kasai',{token:visitor.token})).room;assert.equal(next.id,nextOwner.id);assert.equal(next.entrance.x,14);
-  const old=(await call('/world/rooms/'+owner.id,{token:visitor.token})).room;assert.equal(old.kind,'secret');assert.equal(old.width,18);assert.deepEqual(old.decorations,[]);assert.equal(old.entrance.x,32);
+  const old=(await call('/world/rooms/'+owner.id,{token:visitor.token})).room;assert.equal(old.kind,'secret');assert.equal(old.width,18);assert.deepEqual(old.decorations,[decorations[1]]);assert.equal(old.entrance.x,32);
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM world_rooms').get().n,2);
 });
 
@@ -157,32 +179,23 @@ test('dynamic presence requires persisted room and uses current room dimensions 
   assert.equal((await presence(owner,kasai.mapId,24,19)).status,400);
 });
 
-test('Kasai start is authenticated, nearby, idempotent and rejects invented special grants',async t=>{
-  const {call,register,admin,challenge,presence,advance}=setup(t),a=await register(),owner=await admin(),room=(await call('/world/rooms/kasai',{token:a.token})).room;
+test('CPU starts require live play, while authenticated issued-session recovery stays idempotent',async t=>{
+  const {env,call,register,admin,challenge}=setup(t),a=await register(),owner=await admin(),room=(await call('/world/rooms/kasai',{token:a.token})).room;
   const body={requestId:crypto.randomUUID(),roomId:room.id,party:team(),storageCount:0};
   assert.equal((await call('/world/kasai/challenges',{method:'POST',body})).status,401);
-  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body})).error.code,'KASAI_NOT_NEARBY');
-  await presence(a,room.mapId,12,5);advance(WORLD_TTL+1);
-  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body})).error.code,'KASAI_NOT_NEARBY');
-  await presence(a,room.mapId,12,5);
+  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body})).error.code,'KASAI_LIVE_REQUIRED');
+  assert.equal((await call('/world/kasai/challenges',{token:owner.token,method:'POST',body})).error.code,'KASAI_SELF_BATTLE');
   for(const patch of [{roomId:[owner.id]},{party:[]},{storageCount:'0'},{storageCount:193},{won:true}])assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{...body,...patch}})).status,400);
-  const invented=new runtime.LT.Engine().makeMonster('futo',100);invented.grantId='admin-initial:'+a.id;
-  assert.equal((await challenge(a,room,{party:[copy(invented)]})).error.code,'KASAI_PARTY_NOT_OWNED');
-  const configured=new runtime.LT.Engine().makeMonster('futo',100,DEFAULT_CONFIG.stats,DEFAULT_CONFIG.moves);
-  assert.equal((await challenge(a,room,{party:[copy(configured)]})).error.code,'KASAI_PARTY_NOT_OWNED');
-  configured.grantId='admin-initial:'+owner.id;
-  assert.equal((await challenge(owner,room,{party:[copy(configured)]})).status,200);
-  configured.customStats.atk++;
-  assert.equal((await challenge(owner,room,{party:[copy(configured)]})).error.code,'KASAI_PARTY_CHANGED');
-  const responses=await Promise.all([call('/world/kasai/challenges',{token:a.token,method:'POST',body}),call('/world/kasai/challenges',{token:a.token,method:'POST',body})]);
-  assert(responses.every(r=>r.status===200));assert.equal(responses[0].token,responses[1].token);assert.equal(responses[0].challenge.id,responses[1].challenge.id);assert.equal(responses[0].challenge.rulesVersion,RULES_VERSION);
-  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{...body,party:body.party.slice(0,1)}})).error.code,'KASAI_REQUEST_REUSED');
+  const issued=await challenge(a,room),record=env.DB.sqlite.prepare('SELECT request_id FROM kasai_challenges WHERE id=?').get(issued.challenge.id),retry={requestId:record.request_id,roomId:room.id,party:issued.challenge.party,storageCount:0};
+  const responses=await Promise.all([call('/world/kasai/challenges',{token:a.token,method:'POST',body:retry}),call('/world/kasai/challenges',{token:a.token,method:'POST',body:retry})]);
+  assert(responses.every(result=>result.status===200));assert.equal(responses[0].token,issued.token);assert.deepEqual(responses[0],responses[1]);assert.equal(responses[0].challenge.id,issued.challenge.id);
+  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{...retry,party:retry.party.slice(0,1)}})).error.code,'KASAI_REQUEST_REUSED');
 });
 
 test('actual deterministic win creates one durable random-gender receipt and explicit ACK',async t=>{
   const {env,call,register,admin,challenge,complete,advance}=setup(t),a=await register(),b=await register();await admin();
   const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room);assert.equal(start.status,200);
-  const actions=play({...start.challenge,token:start.token});assert.equal(replayChallenge(start.challenge.party,start.challenge.seed,actions).won,true);
+  const actions=play({...start.challenge,token:start.token});assert.equal(replayChallenge(start.challenge.party,start.challenge.seed,actions,start.challenge.opponents,start.challenge.rulesVersion).won,true);
   const endpoint='/world/kasai/challenges/'+start.challenge.id+'/complete',body={token:start.token,actions,storageCount:0};
   assert.equal((await call(endpoint,{token:b.token,method:'POST',body})).status,404);
   assert.equal((await call(endpoint,{token:a.token,method:'POST',body:{...body,token:'A'.repeat(43)}})).status,403);
@@ -230,7 +243,116 @@ test('a replayed loss consumes that session and a replacement session invalidate
   assert.equal((await complete(a,second,play({...second.challenge,token:second.token}))).status,200);
 });
 
-test('missing signing configuration prevents challenge issuance without creating a session',async t=>{
-  const {env,call,register,admin,challenge}=setup(t),a=await register();await admin();const room=(await call('/world/rooms/kasai',{token:a.token})).room;delete env.DUEL_SIGNING_KEY;
-  assert.equal((await challenge(a,room)).error.code,'KASAI_NOT_CONFIGURED');assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_challenges').get().n,0);
+test('missing signing configuration blocks reissuing an old challenge token',async t=>{
+  const {env,call,register,admin,challenge}=setup(t),a=await register();await admin();const room=(await call('/world/rooms/kasai',{token:a.token})).room,issued=await challenge(a,room);
+  const record=env.DB.sqlite.prepare('SELECT request_id FROM kasai_challenges WHERE id=?').get(issued.challenge.id);delete env.DUEL_SIGNING_KEY;
+  const result=await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:record.request_id,roomId:room.id,party:issued.challenge.party,storageCount:0}});
+  assert.equal(result.error.code,'KASAI_NOT_CONFIGURED');assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_challenges').get().n,1);
+});
+
+
+test('the current administrator cannot start, recover or acknowledge a self battle',async t=>{
+  const {env,call,register,admin,challenge}=setup(t),visitor=await register(),owner=await admin(),room=(await call('/world/rooms/kasai',{token:visitor.token})).room;
+  const started=await challenge(owner,room);assert.equal(started.status,403);assert.equal(started.error.code,'KASAI_SELF_BATTLE');
+  assert.equal((await call('/world/kasai/reward',{token:owner.token})).error.code,'KASAI_SELF_BATTLE');
+  assert.equal((await call('/world/kasai/reward/ack',{token:owner.token,method:'POST',body:{receiptId:'kasai-reward:'+owner.id}})).error.code,'KASAI_SELF_BATTLE');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_challenges').get().n,0);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards').get().n,0);
+  assert.equal((await challenge(visitor,room)).status,200);
+});
+
+test('a player promoted to administrator cannot complete an old challenge or recover a pending gift',async t=>{
+  const {env,call,register,admin,challenge,complete}=setup(t),a=await register(),b=await register();await admin();
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room),actions=play({...start.challenge,token:start.token});
+  const earned=await challenge(b,room),won=await complete(b,earned,play({...earned.challenge,token:earned.token}));assert.equal(won.status,200);
+  env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(a.id);
+  assert.equal((await complete(a,start,actions)).error.code,'KASAI_SELF_BATTLE');
+  assert.equal(env.DB.sqlite.prepare('SELECT state FROM kasai_challenges WHERE id=?').get(start.challenge.id).state,'pending');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards WHERE player_id=?').get(a.id).n,0);
+  assert.equal((await call('/world/kasai/challenges/'+start.challenge.id+'/cancel',{token:a.token,method:'POST',body:{token:start.token}})).cancelled,true);
+  env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(b.id);
+  assert.equal((await call('/world/kasai/reward',{token:b.token})).error.code,'KASAI_SELF_BATTLE');
+  assert.equal((await call('/world/kasai/reward/ack',{token:b.token,method:'POST',body:{receiptId:won.receipt.id}})).error.code,'KASAI_SELF_BATTLE');
+  assert.equal(env.DB.sqlite.prepare('SELECT acked_at FROM kasai_rewards WHERE player_id=?').get(b.id).acked_at,null);
+});
+
+test('legacy self-battle records cannot pay after ownership moves, and owned records are retained',async t=>{
+  const {env,call,register,admin,create,challenge,complete}=setup(t),a=await register();await create(a);await admin();
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room),actions=play({...start.challenge,token:start.token});
+  // A v56 self-battle can remain after its owner relinquishes the admin role.
+  env.DB.sqlite.prepare('UPDATE kasai_challenges SET room_owner_id=? WHERE id=?').run(a.id,start.challenge.id);
+  assert.equal((await complete(a,start,actions)).error.code,'KASAI_SELF_BATTLE');
+  env.DB.sqlite.prepare('UPDATE kasai_challenges SET room_owner_id=? WHERE id=?').run(room.id,start.challenge.id);
+  const won=await complete(a,start,actions);assert.equal(won.status,200);
+  env.DB.sqlite.prepare('UPDATE kasai_challenges SET room_owner_id=? WHERE id=?').run(a.id,start.challenge.id);
+  assert.equal((await call('/world/kasai/reward',{token:a.token})).error.code,'KASAI_SELF_BATTLE');
+  assert.equal((await call('/world/kasai/reward/ack',{token:a.token,method:'POST',body:{receiptId:won.receipt.id}})).error.code,'KASAI_SELF_BATTLE');
+  const stored=env.DB.sqlite.prepare('SELECT * FROM kasai_rewards WHERE player_id=?').get(a.id);assert.equal(stored.acked_at,null);
+  env.DB.sqlite.prepare('UPDATE kasai_rewards SET acked_at=? WHERE player_id=?').run(Date.now(),a.id);
+  assert.equal((await call('/duel-pass',{token:a.token,method:'POST',body:{sessionId:'0123456789abcdef'.repeat(2),side:0,grantId:won.receipt.id}})).status,200);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards WHERE player_id=?').get(a.id).n,1);
+});
+
+test('a role transfer during completion cannot commit a victory reward',async t=>{
+  const {env,call,register,admin,challenge,complete}=setup(t),a=await register();await admin();
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room),actions=play({...start.challenge,token:start.token});
+  const original=env.DB.batch.bind(env.DB);env.DB.batch=async statements=>{env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(a.id);return original(statements);};
+  assert.equal((await complete(a,start,actions)).error.code,'KASAI_SELF_BATTLE');
+  assert.equal(env.DB.sqlite.prepare('SELECT state FROM kasai_challenges WHERE id=?').get(start.challenge.id).state,'pending');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards').get().n,0);
+});
+
+test('only the current administrator publishes an authentic party and issued sessions retain their original snapshot',async t=>{
+  const {env,call,register,admin,challenge,complete,advance}=setup(t),a=await register(),owner=await admin(),engine=new runtime.LT.Engine();
+  const publish=(actor,party,extra={})=>call('/world/kasai/party',{token:actor.token,method:'POST',body:{party,...extra}});
+  const futo=engine.makeMonster('futo',100,DEFAULT_CONFIG.stats,DEFAULT_CONFIG.moves);futo.grantId='admin-initial:'+owner.id;
+  const mythic=engine.makeMonster('floravelle',70);mythic.grantId='admin-mythical:'+owner.id;
+  const legendary=engine.makeMonster('arvelion',88);Object.assign(legendary,{grantId:'admin-legendary:'+owner.id,shiny:true,nickname:'カサイ',moveOrder:[3,1,2,0],alloc:{hp:10,atk:30,def:12},bonusPoints:4,heldItem:'learnsash',curse:true,status:'scorch',xp:23});
+  const roster=copy([legendary,futo,mythic]);
+  assert.equal((await call('/world/kasai/party')).status,401);
+  assert.equal((await publish(a,roster)).error.code,'ADMIN_REQUIRED');
+  for(const party of [[],Array(7).fill(roster[0]),[{...roster[0],level:101}],null])assert.equal((await publish(owner,party)).status,400);
+  assert.equal((await publish(owner,roster,{playerId:a.id})).status,400);
+  assert.equal((await publish(owner,[{...roster[1],grantId:'admin-initial:'+a.id}])).error.code,'KASAI_PARTY_NOT_OWNED');
+  assert.equal((await publish(owner,[{...roster[1],customStats:{...roster[1].customStats,atk:roster[1].customStats.atk+1}}])).error.code,'KASAI_PARTY_CHANGED');
+  const saved=await publish(owner,roster);assert.equal(saved.status,200);assert.equal(saved.playerId,owner.id);
+  const actual=saved.party;assert.deepEqual(actual.map(mon=>mon.species),roster.map(mon=>mon.species));
+  for(const key of ['level','shiny','nickname','moveOrder','alloc','bonusPoints','heldItem','curse','xp'])assert.deepEqual(actual[0][key],roster[0][key],key);
+  assert.deepEqual(actual[1].customStats,roster[1].customStats);assert.deepEqual(actual[1].customMoves,roster[1].customMoves);assert.equal(actual[2].gender,roster[2].gender);
+  assert.deepEqual((await call('/world/kasai/party',{token:a.token})).party,actual);
+  advance(1000);assert.equal((await publish(owner,roster)).updatedAt,saved.updatedAt);
+  const weak=copy([engine.makeMonster('komori',7),engine.makeMonster('shizunaria',12)]),weakSaved=await publish(owner,weak);
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room);assert.equal(start.challenge.rulesVersion,RULES_VERSION);assert.deepEqual(start.challenge.opponents,weakSaved.party);
+  const changed=await publish(owner,copy([engine.makeMonster('arvelion',85)]));assert.equal(changed.status,200);
+  assert.deepEqual(JSON.parse(env.DB.sqlite.prepare('SELECT opponents_json FROM kasai_challenges WHERE id=?').get(start.challenge.id).opponents_json),weakSaved.party);
+  const won=await complete(a,start,play({...start.challenge,token:start.token}));assert.equal(won.won,true);
+  const next=await challenge(a,room);assert.deepEqual(next.challenge.opponents,changed.party);assert.equal(next.challenge.opponents.length,1);assert.equal(next.challenge.opponents[0].level,85);
+});
+
+test('an unconfigured or newly transferred administrator never falls back to a fixed party',async t=>{
+  const {env,call,register,admin,challenge}=setup(t),a=await register(),owner=await admin(),next=await register('次の運営');
+  const oldRoom=(await call('/world/rooms/kasai',{token:a.token})).room;
+  env.DB.sqlite.prepare('DELETE FROM kasai_parties WHERE player_id=?').run(owner.id);
+  assert.equal((await call('/world/kasai/party',{token:a.token})).party,null);
+  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:oldRoom.id,party:team(),storageCount:0}})).error.code,'KASAI_LIVE_REQUIRED');
+  env.DB.sqlite.prepare('UPDATE admin_owner SET player_id=?').run(next.id);
+  const nextRoom=(await call('/world/rooms/kasai',{token:a.token})).room;assert.equal(nextRoom.id,next.id);
+  assert.equal((await call('/world/kasai/party',{token:a.token})).party,null);
+  assert.equal((await call('/world/kasai/party',{token:owner.token,method:'POST',body:{party:team()}})).error.code,'ADMIN_REQUIRED');
+  assert.equal((await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:nextRoom.id,party:team(),storageCount:0}})).error.code,'KASAI_LIVE_REQUIRED');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_challenges').get().n,0);
+});
+
+test('real legacy challenge rules remain replayable only for a pre-v57 row without opponents',async t=>{
+  const {env,call,register,admin,challenge,complete}=setup(t),a=await register();await admin();
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room),row=env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(start.challenge.id);
+  const payload=new TextEncoder().encode(JSON.stringify({kind:'kasai-challenge',v:1,id:row.id,playerId:a.id,seed:row.seed,rulesVersion:LEGACY_RULES_VERSION,expiresAt:row.expires_at}));
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(SIGNING),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const token=Buffer.from(await crypto.subtle.sign('HMAC',key,payload)).toString('base64url'),hash=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+  env.DB.sqlite.prepare('UPDATE kasai_challenges SET rules_version=?,opponents_json=NULL,token_hash=? WHERE id=?').run(LEGACY_RULES_VERSION,hash,row.id);
+  const legacy={challenge:{...start.challenge,rulesVersion:LEGACY_RULES_VERSION,opponents:null},token},actions=play({...legacy.challenge,token});
+  assert.equal(replayChallenge(legacy.challenge.party,legacy.challenge.seed,actions,null,LEGACY_RULES_VERSION).won,true);
+  const won=await complete(a,legacy,actions);assert.equal(won.status,200);assert.equal(won.won,true);
+  const invalid=await challenge(a,room);env.DB.sqlite.prepare('UPDATE kasai_challenges SET opponents_json=NULL WHERE id=?').run(invalid.challenge.id);
+  assert.equal((await complete(a,invalid,actions)).error.code,'KASAI_CHALLENGE_FINISHED');
 });

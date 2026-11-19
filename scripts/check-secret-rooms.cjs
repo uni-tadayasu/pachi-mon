@@ -75,8 +75,9 @@ function runtime({handle,own=false,others=true}={}) {
   const outdoor={id:'village',name:'はじまりの里',width:12,height:10,tiles:Array.from({length:10},(_,y)=>Array.from({length:12},(_,x)=>x===0||y===0||x===11||y===9||x===4&&y===2?'#':'_').join('')),npcs:[],exits:[],level:[1,4]};
   const LT={DATA:{maps:{village:outdoor,forest:{...outdoor,id:'forest'}}},Admin:{player:{id:SELF,name:'みどり',isAdmin:false}},Trade:{isLocked:()=>false}};
   const newEngine=()=>({state:{started:true,map:'village',x:4,y:4,facing:'down'},battle:null,get map(){return LT.DATA.maps[this.state.map];},nearbyNPC(){return null;}});
-  const h={LT,doc,store,calls,messages,entered,refreshed,engine:newEngine(),playing:true,bridgeBusy:false,
+  const h={LT,doc,store,calls,messages,entered,refreshed,engine:newEngine(),playing:true,bridgeBusy:false,presenceRefreshes:0,freshPresence:true,liveStages:[],
     faceWall(){this.engine.state.x=4;this.engine.state.y=3;this.engine.state.facing='up';},
+    faceMoveWall(){this.engine.state.x=1;this.engine.state.y=5;this.engine.state.facing='left';},
     dialog:()=>doc.nodes.find(n=>n.id==='secret-room-dialog'),
     action(name,filter={}){return this.dialog()?.children.find(n=>n.dataset.roomAction===name&&Object.entries(filter).every(([key,value])=>n.dataset[key]===value));},
     click(name,filter={}){const button=this.action(name,filter);assert(button,'Missing room action '+name);this.dialog().emit('click',{target:button});},
@@ -97,6 +98,7 @@ function runtime({handle,own=false,others=true}={}) {
     if(url==='/world/rooms'&&options.method==='POST') {
       const room=makeRoom(LT.Admin.player.id),b=options.body;room.name=b.name;room.entrance={map:b.map,x:b.x,y:b.y,facing:b.facing,returnX:h.engine.state.x,returnY:h.engine.state.y};store.set(room.id,room);return {room:copy(room)};
     }
+    if(url.endsWith('/relocate')&&options.method==='POST'){const id=url.split('/').at(-2),room=store.get(id),b=options.body;assert.equal(id,LT.Admin.player.id);if(b.revision!==room.revision)throw Error('別の画面で更新されました。');const updated={...room,entrance:{map:b.map,x:b.x,y:b.y,facing:b.facing,returnX:h.engine.state.x,returnY:h.engine.state.y},revision:room.revision+1};store.set(id,updated);return {room:copy(updated)};}
     const id=url.split('/').at(-1),room=store.get(id);
     if(options.method==='PATCH') {
       assert.equal(id,LT.Admin.player.id,'A visitor attempted to save another owner’s room');
@@ -105,8 +107,10 @@ function runtime({handle,own=false,others=true}={}) {
     }
     return {room:copy(room||null)};
   };
+  LT.World={async refreshPresence(){h.presenceRefreshes++;return h.freshPresence;}};
   LT.adminBridge={getEngine:()=>h.engine,isPlaying:()=>h.playing,isBusy:()=>h.bridgeBusy,closeModal(){},getPlayerName:()=>LT.Admin.player.name,toast:message=>messages.push(message),
     enterSharedRoom(map){LT.DATA.maps[map.id]=map;Object.assign(h.engine.state,{map:map.id,...map.spawn});entered.push(map);return {ok:true};},
+    stageKasaiLive(room,session){h.liveStages.push({room:copy(room),session:copy(session)});const map=LT.RoomArt.createMap(room);LT.DATA.maps[map.id]=map;Object.assign(h.engine.state,{map:map.id,x:12,y:session.role==='kasai'?4:16,facing:session.role==='kasai'?'down':'up'});return {ok:true};},
     refreshSharedRoom(map){if(h.engine.state.map!==map.id)return {ok:false};LT.DATA.maps[map.id]=map;refreshed.push(map);return {ok:true};},
     leaveSharedRoom(){const point=h.engine.map.returnPoint;if(!point)return {ok:false};Object.assign(h.engine.state,{map:point.map,x:point.x,y:point.y,facing:point.facing});return {ok:true};},
   };
@@ -129,6 +133,89 @@ test('any visitor can enter public rooms, while only the owner sees furniture ed
   assert.equal(h.action('edit'),undefined);assert(h.action('leave'));h.click('leave');assert.equal(h.engine.state.map,'village');assert.equal(h.engine.state.y,3);
   await h.editOwn();h.place('plant',2,3);h.click('save');await settle();assert.equal(h.store.get(SELF).decorations.length,1);assert.equal(h.store.get(PEER).decorations.length,0);
   assert.equal(h.store.get(SELF).revision,2);assert.equal(h.refreshed.at(-1).roomRevision,2);
+});
+
+test('Kasai owner has a direct decoration action outside the stage and saves without teleporting',async()=>{
+  const h=runtime();h.identity(KASAI);h.LT.Admin.player.isAdmin=true;
+  assert(await h.LT.Rooms.open());assert.equal(h.action('create'),undefined);
+  assert.match(h.dialog().innerHTML,/運営カサイの部屋/);assert.match(h.dialog().innerHTML,/カサイの部屋を飾る/);
+  assert.equal(h.dialog().children.filter(node=>node.dataset.roomAction==='visit'&&node.dataset.roomOwner===KASAI).length,1);
+  h.click('edit-own');await settle();assert(h.action('place'));assert.match(h.dialog().innerHTML,/中央の対戦ステージと通路の両側/);
+  assert.equal(h.dialog().querySelector('#room-editor-canvas').width,24*28);
+  h.place('plant',20,10);h.place('lamp',11,10);assert.match(h.dialog().querySelector('[data-room-message]').textContent,/入口・通路・カサイのステージ/);
+  h.input('room-edit-name','カサイの星見の間');h.click('save');await settle();
+  assert.equal(h.store.get(KASAI).decorations.length,1);assert.equal(h.store.get(KASAI).decorations[0].x,20);
+  assert.equal(h.store.get(KASAI).name,'カサイの星見の間');assert.equal(h.store.get(KASAI).kind,'kasai');
+  assert.equal(h.engine.state.map,'village');assert.equal(h.entered.length,0);assert.equal(h.refreshed.length,0);assert.equal(h.LT.Rooms.current(),null);
+});
+
+test('own Kasai room has no offline double and decoration remains available through its owner control',async()=>{
+  const h=runtime();h.identity(KASAI);let battles=0;h.LT.KasaiChallenge={talk(){battles++;}};
+  assert(await h.LT.Rooms.enterKasai(KASAI));assert.equal(h.LT.Admin.player.isAdmin,false);
+  assert.match(h.messages.at(-1),/自分の専用ステージ/);assert.equal(h.engine.map.npcs.length,0);
+  assert.equal(h.LT.Rooms.interact(),false);assert.equal(battles,0);assert.equal(h.LT.Rooms.hint(),null);
+  assert(await h.LT.Rooms.open());h.click('edit');await settle();assert(h.action('place'));
+  h.place('plant',20,10);assert(await h.LT.Rooms.decorateMine());h.click('save');await settle();
+  assert.equal(h.store.get(KASAI).decorations.length,1,'Reopening the owner entry must preserve an unsaved draft');
+  assert.equal(h.refreshed.at(-1).roomKindTag,'kasai');assert.equal(h.refreshed.at(-1).roomRevision,2);
+});
+
+test('visitors may enter the Kasai room freely but cannot launch a ghost NPC battle or decorate it',async()=>{
+  const h=runtime();let battles=0;h.LT.KasaiChallenge={talk(){battles++;}};
+  assert(await h.LT.Rooms.enterKasai(KASAI));assert.match(h.messages.at(-1),/カサイ本人/);assert.equal(h.engine.map.npcs.length,0);
+  assert.equal(h.LT.Rooms.interact(),false);assert.equal(battles,0);
+  assert(await h.LT.Rooms.open());assert.equal(h.action('edit'),undefined);assert.equal(h.action('edit-own'),undefined);
+  assert.equal(await h.LT.Rooms.decorateMine(),false);assert.equal(h.action('place'),undefined);
+  assert(!h.calls.some(call=>call.method==='PATCH'));
+});
+
+test('authorized live staging uses the bridge, talks only through live eligibility and delegates exit',async()=>{
+  const h=runtime();let canTalk=false,talks=0,leaves=0;const session={id:'live-test',roomId:KASAI,role:'challenger',state:'staging'};
+  h.LT.KasaiLive={locked:()=>true,canTalk:()=>canTalk,hint:()=>canTalk?'カサイに話しかける':'60秒以内にカサイへ',talk(){talks++;},leave(){leaves++;return {ok:true};}};
+  assert.equal((await h.LT.Rooms.enterLive(makeRoom(KASAI),session)).ok,true);assert.equal(h.liveStages.length,1);assert.equal(h.engine.state.map,'room:'+KASAI);assert.equal(h.engine.state.y,16);
+  assert.equal(h.LT.Rooms.interact(),false);assert.equal(h.LT.Rooms.hint(),'60秒以内にカサイへ');
+  canTalk=true;assert.equal(h.LT.Rooms.interact(),true);assert.equal(talks,1);assert.equal(h.LT.Rooms.hint(),'カサイに話しかける');
+  assert.equal(await h.LT.Rooms.open(),false);assert.equal(await h.LT.Rooms.decorateMine(),false);assert.equal(await h.LT.Rooms.enter(PEER),false);
+  assert.equal(h.LT.Rooms.leave().ok,true);assert.equal(leaves,1);
+});
+
+test('guests can explicitly review victory rewards after leaving, while Kasai sees no self reward action',async()=>{
+  const h=runtime({own:true});let reviewed=0;h.LT.KasaiChallenge={async openRewards(){assert.equal(h.LT.Rooms.isDialogOpen(),false,'Room manager must close before the reward dialog opens');reviewed++;}};
+  assert(await h.LT.Rooms.open());assert(h.action('reward'));assert.equal(reviewed,0);h.click('reward');await settle();assert.equal(reviewed,1);
+  h.identity(KASAI);assert(await h.LT.Rooms.open());assert.equal(h.action('reward'),undefined,'Owner ID prevents the self reward action before its admin flag refresh');
+  h.identity(SELF);h.LT.Admin.player.isAdmin=true;assert(await h.LT.Rooms.open());assert.equal(h.action('reward'),undefined);
+});
+
+test('automatic live arrival never closes or discards an unsaved decoration draft',async()=>{
+  const h=runtime({own:true});await h.editOwn();h.place('plant',2,3);const draft=h.dialog().innerHTML;
+  assert.equal((await h.LT.Rooms.enterLive(makeRoom(KASAI),{roomId:KASAI,role:'challenger'})).ok,false);assert.equal(h.liveStages.length,0);assert.equal(h.dialog().innerHTML,draft);assert.equal(h.LT.Rooms.isDialogOpen(),true);
+  h.click('save');await settle();assert.equal(h.store.get(SELF).decorations.length,1);
+});
+
+test('ordinary and administrator rooms relocate as the same room with decorations and name intact',async()=>{
+  for(const id of [SELF,KASAI]){
+    const h=runtime({own:true});h.identity(id);h.LT.Admin.player.isAdmin=id===KASAI;const original=copy(h.store.get(id));original.decorations=[item('plant',2,3,0,'kept')];h.store.set(id,original);
+    h.faceMoveWall();assert(await h.LT.Rooms.open());assert.equal(h.action('create'),undefined);assert.equal(h.action('relocate').disabled,false);h.click('relocate');assert.match(h.dialog().innerHTML,/移転先：はじまりの里/);
+    assert(!h.calls.some(call=>call.path.endsWith('/relocate')),'Destination must be reviewed before changing the entrance');
+    h.click('confirm-relocate');await settle();const room=h.store.get(id);assert.equal(h.presenceRefreshes,1);assert.equal(room.id,original.id);assert.equal(room.name,original.name);assert.equal(room.kind,original.kind);assert.deepEqual(room.decorations,original.decorations);assert.equal(room.revision,original.revision+1);assert.deepEqual(room.entrance,{map:'village',x:0,y:5,facing:'left',returnX:1,returnY:5});
+    assert.equal(h.store.size,3);assert.equal(h.engine.state.map,'village');assert.equal(h.entered.length,0);assert.equal(h.action('relocate').disabled,true);
+    assert(!h.calls.some(call=>call.path==='/world/rooms'&&call.method==='POST'),'Relocation must never create a second room');
+  }
+});
+
+test('relocation refuses stale walls, absent presence and a live-session lock without losing the room',async()=>{
+  for(const mode of ['wall-changed','presence-missing','live-locked']){
+    const h=runtime({own:true});h.faceMoveWall();await h.LT.Rooms.open();h.click('relocate');const before=copy(h.store.get(SELF));
+    if(mode==='wall-changed')h.faceWall();if(mode==='presence-missing')h.freshPresence=false;if(mode==='live-locked')h.LT.KasaiLive={locked:()=>true};
+    h.click('confirm-relocate');await settle();assert.deepEqual(h.store.get(SELF),before);assert(!h.calls.some(call=>call.path.endsWith('/relocate')));assert.equal(h.LT.Rooms.isWorking(),false);
+  }
+});
+
+test('a rejected relocation keeps the original entrance and an old response cannot replace another identity',async()=>{
+  const h=runtime({own:true,handle:url=>url.endsWith('/relocate')?Promise.reject(Error('この壁には、ほかの部屋の入口があります。')):undefined});h.faceMoveWall();await h.LT.Rooms.open();h.click('relocate');const original=copy(h.store.get(SELF));h.click('confirm-relocate');await settle();
+  assert.deepEqual(h.store.get(SELF),original);assert.match(h.dialog().querySelector('[data-room-message]').textContent,/ほかの部屋/);assert.equal(h.action('confirm-relocate').disabled,false);
+  const pending=deferred(),changed=runtime({own:true,handle:url=>url.endsWith('/relocate')?pending.promise:undefined});changed.faceMoveWall();await changed.LT.Rooms.open();changed.click('relocate');changed.click('confirm-relocate');await settle();changed.identity(PEER);pending.resolve({room:{...makeRoom(),revision:2}});await settle();
+  assert.equal(changed.LT.Rooms.isDialogOpen(),false);assert.equal(changed.LT.Rooms.isWorking(),false);assert.equal(changed.entered.length,0);assert.equal(changed.LT.Rooms.current(),null);
 });
 
 test('failed saves preserve the draft, and unsaved-change confirmation returns to the editor safely',async()=>{
