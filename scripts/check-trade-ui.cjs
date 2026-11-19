@@ -28,7 +28,7 @@ function harness(){
  doc.createElement=tag=>new Element(tag);
  const engine={state:{started:true,party:[mon()],storage:[],tradeReceipts:[]}},ctx={console,crypto:webcrypto,document:doc,
   localStorage:{getItem:k=>memory.get(k)||null,setItem:(k,v)=>memory.set(k,v),removeItem:k=>memory.delete(k)},setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout(){},addEventListener(){},
-  LT:{DATA:typeRuntime.LT.DATA,TypeSystem:typeRuntime.LT.TypeSystem,Art:{creature(){}},
+  LT:{DATA:typeRuntime.LT.DATA,TypeSystem:typeRuntime.LT.TypeSystem,Abilities:typeRuntime.LT.Abilities,Art:{creature(){}},
    Admin:{tradeIdentity:async()=>owner,tradeRequest:async(path,options)=>{calls.push({path,...options});if(path.endsWith('/cancel'))ctx.serverTrade.state='cancelled';return{trade:copy(ctx.serverTrade)};}},adminBridge:{getEngine:()=>engine,isPlaying:()=>true,checkTrade:()=>({ok:true}),commitTrade:()=>ctx.saveOk?{ok:true}:{ok:false,message:'保存容量不足'}}},serverTrade:null,saveOk:true};
  let source=fs.readFileSync(require.resolve('../trade-client.js'),'utf8');source=source.replace('\n  if(controller.isLocked())void resume();','\n  globalThis.__tradeController=controller;');vm.createContext(ctx);vm.runInContext(source,ctx);
  return{ctx,doc,memory,calls,engine,timers,async click(action){const button=doc.dialog.children.find(x=>x.dataset.trade===action);assert(button,'Missing action '+action);await doc.dialog.listeners.click({target:button});},blur(){doc.activeElement=null;doc.dialog.listeners.focusout();for(const timer of timers.filter(t=>t.delay===0))timer.fn();}};
@@ -39,6 +39,7 @@ test('exchange dialog is accessible, labels both offers and escapes player conte
  await h.ctx.LT.Trade.open();assert.equal(h.doc.dialog.id,'pachi-trade-dialog');assert.equal(h.doc.dialog['aria-labelledby'],'trade-title');assert(h.doc.dialog.open);assert(h.ctx.LT.tradeActive);
  assert.match(h.doc.dialog.innerHTML,/自分が渡す/);assert.match(h.doc.dialog.innerHTML,/相手から受け取る/);assert.match(h.doc.dialog.innerHTML,/潮タイプ/);assert.match(h.doc.dialog.innerHTML,/Lv\.10/);assert.match(h.doc.dialog.innerHTML,/&lt;img src=x&gt;/);assert.match(h.doc.dialog.innerHTML,/&lt;花&gt;/);assert(!h.doc.dialog.innerHTML.includes('<img'));
  assert(h.doc.dialog.children.find(x=>x.dataset.trade==='close').disabled);
+ for(const person of [h.ctx.serverTrade.host,h.ctx.serverTrade.guest]){const ability=typeRuntime.LT.Abilities.get(person.monster);assert(ability);assert(h.doc.dialog.innerHTML.includes(ability.name));assert(h.doc.dialog.innerHTML.includes(ability.description));}
 });
 
 test('both authoritative types are shown even when an offered individual carries stale type metadata',async()=>{

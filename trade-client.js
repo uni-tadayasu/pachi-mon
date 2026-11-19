@@ -178,8 +178,8 @@
   LT.tradeActive=controller.isLocked();
   function monName(mon){return mon?.nickname||LT.DATA.species[mon?.species]?.name||'未選択';}
   function card(person,label){
-    const mon=person?.monster,species=LT.DATA.species[mon?.species],types=LT.TypeSystem.of(mon).map(type=>LT.DATA.elements[type].name).join('・');
-    return `<article class="trade-card"><h3>${label}</h3><p class="trade-player">${escape(person?.name||'相手を待っています')}</p>${mon?`<canvas width="240" height="240" data-trade-portrait="${escape(mon.species)}" data-trade-shiny="${mon.shiny===true}" aria-label="${escape(monName(mon))}の姿"></canvas><strong>${escape(monName(mon))}${mon.shiny?' ✦':''}</strong><p>${escape(species?.name)} · ${escape(types)}タイプ<br>Lv.${mon.level} · 体力 ${mon.hp}</p><span class="trade-confirmed">${person.confirmed?'確認済み':'未確認'}</span>`:'<p class="trade-empty">パチモンを選択中</p>'}</article>`;
+    const mon=person?.monster,species=LT.DATA.species[mon?.species],types=LT.TypeSystem.of(mon).map(type=>LT.DATA.elements[type].name).join('・'),ability=mon?LT.Abilities.get(mon):null;
+    return `<article class="trade-card"><h3>${label}</h3><p class="trade-player">${escape(person?.name||'相手を待っています')}</p>${mon?`<canvas width="240" height="240" data-trade-portrait="${escape(mon.species)}" data-trade-shiny="${mon.shiny===true}" aria-label="${escape(monName(mon))}の姿"></canvas><strong>${escape(monName(mon))}${mon.shiny?' ✦':''}</strong><p>${escape(species?.name)} · ${escape(types)}タイプ<br>Lv.${mon.level} · 体力 ${mon.hp}</p>${ability?`<section class="ability-panel" aria-label="特性"><h4><span class="ability-label">特性</span> ${escape(ability.name)}</h4><p>${escape(ability.description)}</p></section>`:''}<span class="trade-confirmed">${person.confirmed?'確認済み':'未確認'}</span>`:'<p class="trade-empty">パチモンを選択中</p>'}</article>`;
   }
   function ensureDialog(){
     if(dialog)return;

@@ -63,6 +63,8 @@
  * v52: finer source-art sampling, color/monochrome display modes, the supplied
  *   battle/field recordings, three new types and dual-type rules refresh together.
  *   Versioned code, CSS and MP3 URLs share the same offline page lifecycle.
+ * v53: all species gain shared passive abilities; their battle rules, detail
+ *   panels and trade views refresh together, including the ability stylesheet.
  * © 2026 KASAI SOLUTIONS INC. */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

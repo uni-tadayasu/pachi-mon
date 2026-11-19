@@ -152,6 +152,22 @@ test('paired link single and double turns execute all four selected slots and sy
   const a=fight(mode,side,slot,'hibana'),b=fight(mode,side,slot,'hibana');a.actorStages.def=b.actorStages.def=6;a.actorStages.spDef=b.actorStages.spDef=6;
   const initialPP=copy(a.actor.pp),active=copy(a.d.state.teams[side].active),bench=a.d.state.teams[side].monsters.findIndex((m,i)=>!active.includes(i));
   for(const selected of [1,2,'rest',3,0]){
+   // Species abilities can make the root hit plus flower poison knock out the
+   // opponent earlier. Resolve its real replacement phase on both peers; this
+   // free phase must preserve Kiraseed's still-pending one-turn recharge.
+   if(a.d.state.phase==='replacement'){
+    const turn=a.d.state.turn,recharge=a.actor.rechargeTurns,pp=copy(a.actor.pp);
+    const replacements=[0,1].map(teamSide=>{
+     const team=a.d.state.teams[teamSide],used=new Set(team.active);
+     return a.d.replacementSlots(teamSide).map(replaceSlot=>{
+      const index=team.monsters.findIndex((mon,i)=>mon.hp>0&&!used.has(i));assert(index>=0,'A fainted slot has a living reserve');used.add(index);
+      return{type:'switch',slot:replaceSlot,index};
+     });
+    });
+    a.d.resolve(copy(replacements));b.d.resolve(copy(replacements));assert.deepEqual(copy(a.d.state),copy(b.d.state));
+    assert.equal(a.d.state.phase,'action');assert.equal(a.d.state.turn,turn,'Forced replacement does not consume a turn');
+    assert.deepEqual(copy(a.d.state.teams[side].active),active);assert.deepEqual(copy(a.actor.pp),pp);assert.equal(a.actor.rechargeTurns,recharge,'Forced replacement cannot pay or reset the root hit recharge');
+   }
    const orders=[quietOrders(a.d,0),quietOrders(a.d,1)],current=orders[side].findIndex(order=>order.slot===slot);assert(current>=0);
    orders[side][current]=selected==='rest'?{type:'switch',slot,index:bench}:{type:'move',slot,move:selected,target:slot};
    const beforePP=copy(a.actor.pp);a.d.resolve(copy(orders));b.d.resolve(copy(orders));assert.deepEqual(copy(a.d.state),copy(b.d.state));

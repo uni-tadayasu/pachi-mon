@@ -374,8 +374,11 @@
     }
     function tradeHtml() {
       if (!session || !link?.connected) return '';
-      const engine = bridge().getEngine(), species = id => LT.DATA.species[id];
-      const card = (wire, title) => wire ? `<div class="local-offer"><span class="local-offer-title">${esc(title)}</span>${LT.portraitHTML ? LT.portraitHTML(wire, 72) : ''}<strong>${esc(label(wire))}</strong><small>${esc(LT.DATA.elements[species(wire.species).element].name)}タイプ · 体力 ${wire.hp}</small></div>` : `<div class="local-offer empty"><span class="local-offer-title">${esc(title)}</span><small>まだ選ばれていません</small></div>`;
+      const card = (wire, title) => {
+        if(!wire)return `<div class="local-offer empty"><span class="local-offer-title">${esc(title)}</span><small>まだ選ばれていません</small></div>`;
+        const ability=LT.Abilities.get(wire),types=LT.TypeSystem.of(wire).map(type=>LT.DATA.elements[type].name).join('・');
+        return `<div class="local-offer"><span class="local-offer-title">${esc(title)}</span>${LT.portraitHTML ? LT.portraitHTML(wire, 72) : ''}<strong>${esc(label(wire))}</strong><small>${esc(types)}タイプ · 体力 ${wire.hp}</small>${ability?`<section class="ability-panel" aria-label="特性"><h4><span class="ability-label">特性</span> ${esc(ability.name)}</h4><p>${esc(ability.description)}</p></section>`:''}</div>`;
+      };
       if (session.phase === 'done') return `<p class="local-done">${esc(session.result?.message || '交換が完了しました。')}</p><div class="local-actions"><button type="button" class="btn btn-primary" data-local="close">閉じる</button></div>`;
       if (session.phase === 'error') return '';
       if (session.phase === 'hello') return '<p class="local-lead">相手の準備を待っています…</p>';
