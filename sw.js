@@ -78,6 +78,8 @@
  * v58: the actual Kasai joins a shared live stage; both humans choose each turn.
  * v59: A-button wall creation and relocation, visible entrance marks, and
  *   player-chosen Kasai room locations update with the versioned room client.
+ * v60: desktop viewport FIT, unobstructed battle sidebars and fullscreen FIT
+ *   refresh together with the versioned desktop screen controller and styles.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

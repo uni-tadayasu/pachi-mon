@@ -8180,7 +8180,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   if($('quest-btn'))$('quest-btn').onclick=showQuests;
   if($('music-btn'))$('music-btn').onclick=showMusic;
   $('sound-btn').onclick=()=>{settings.sound=!settings.sound;sound.setEnabled(settings.sound);saveSettings();updateSound();};
-  $('fullscreen-btn').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('このブラウザでは全画面に対応していません。');}catch(_){toast('この環境では全画面を開始できません。');}};
+  $('fullscreen-btn').onclick=async()=>{if(LT.DesktopScreen&&document.documentElement.classList.contains('desktop-fit'))return LT.DesktopScreen.toggle();try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('このブラウザでは全画面に対応していません。');}catch(_){toast('この環境では全画面を開始できません。');}};
   $('modal-close').onclick=closeModal;
   $('modal').addEventListener('cancel',e=>{if(activePane==='shop-confirm'){e.preventDefault();returnToShop();}else if(activePane==='battle-switch-confirm'){e.preventDefault();closeModal();}});
   $('modal').addEventListener('click',e=>{if(e.target===$('modal')){const r=$('modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeModal();}});
@@ -8286,6 +8286,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(document.documentElement.classList.contains('mobile-screen')){
       const bounds=c.getBoundingClientRect();
       if(bounds.width>0&&bounds.height>0){const scale=Math.min(2,(field?720:1152)/Math.max(bounds.width,bounds.height));w=Math.max(1,Math.round(bounds.width*scale));h=Math.max(1,Math.round(bounds.height*scale));}
+    }else if(document.documentElement.classList.contains('desktop-fit')){
+      // The desktop LCD fills the space left by real controls and sidebars.
+      // Match its aspect ratio so a wider field never stretches the characters.
+      const bounds=c.getBoundingClientRect();
+      if(bounds.width>0&&bounds.height>0){const scale=Math.min(2,(field?1024:1536)/bounds.width,(field?800:960)/bounds.height);w=Math.max(1,Math.round(bounds.width*scale));h=Math.max(1,Math.round(bounds.height*scale));}
     }
     if(c.width!==w || c.height!==h){c.width=w;c.height=h;}
     if(engine?.battle)refitBattleText();
@@ -8309,7 +8314,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(moveAnim){const t=Math.min(1,(now-moveAnim.time)/(moveAnim.duration||132));if(!settings.reducedMotion){options.playerX=moveAnim.x+(engine.state.x-moveAnim.x)*t;options.playerY=moveAnim.y+(engine.state.y-moveAnim.y)*t;options.moving=t<1;options.walkPhase=moveAnim.stepIndex+t;}if(t===1||settings.reducedMotion)moveAnim=null;}
     if(engine.battle && playing){
       const panel=$('battle-panel'),stage=$('game-canvas');
-      LT.battleInset=!document.documentElement.classList.contains('mobile-screen')&&panel&&!panel.hidden&&stage?Math.max(0,Math.min(.4,panel.getBoundingClientRect().height/Math.max(1,stage.getBoundingClientRect().height))):0;
+      const panelBounds=panel&&!panel.hidden?panel.getBoundingClientRect():null,stageBounds=stage?.getBoundingClientRect();
+      // Only reserve canvas space for an actual overlay. Desktop commands now
+      // occupy their own sidebar, leaving the full stage for both creatures.
+      const overlaps=!document.documentElement.classList.contains('mobile-screen')&&panelBounds&&stageBounds&&panelBounds.left<stageBounds.right&&panelBounds.right>stageBounds.left;
+      LT.battleInset=overlaps?Math.max(0,Math.min(.4,(Math.min(panelBounds.bottom,stageBounds.bottom)-Math.max(panelBounds.top,stageBounds.top))/Math.max(1,stageBounds.height))):0;
       Art.battle($('game-canvas'),battleView||engine,settings.reducedMotion?0:now,options);
     }
     else Art.world($('game-canvas'),engine,settings.reducedMotion?0:now,options);
@@ -10230,8 +10239,10 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="world-pixels.css?v=20261119-fine-pixels-v52">
 <link rel="stylesheet" href="screen-modes.css?v=20261119-display-v52">
 <link rel="stylesheet" href="abilities.css?v=20261119-abilities-v53">
+<link rel="stylesheet" href="desktop-screen.css?v=20261119-desktop-fit-v60">
 <script src="pixel-backdrop.js?v=20261119-fine-pixels-v52"></script>
 <script src="online-invites.js?v=20261118-easy-connect-v37"></script>
 <script src="mobile-screen.js?v=20261119-touch-guard-v38"></script>
+<script src="desktop-screen.js?v=20261119-desktop-fit-v60"></script>
 </body>
 </html>
