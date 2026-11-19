@@ -70,8 +70,12 @@
  * v55: solo fields automatically share live travellers; signed Kasai identity,
  *   dedicated pixel avatar and battle music, directed battle/trade invitations,
  *   and the complete secret-grass species picker refresh with versioned clients.
- * © 2026 KASAI SOLUTIONS INC. * v56: shared secret rooms, personal furniture layouts, Kasai solo challenge
+ * v56: shared secret rooms, personal furniture layouts, Kasai solo challenge
  *   and one-time Kiraseed rewards update with the room and challenge clients.
+ * v57: Kasai cannot challenge himself; operator room decoration and the actual
+ *   operator party sync with immutable opponent snapshots for each challenge.
+ *   Live stage populations open in a dialog; social controls sit outside the canvas.
+ * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';
 const SHELL = 'pachi-shell-v1', ART = 'pachi-art-v1', FONTS = 'pachi-fonts-v1';

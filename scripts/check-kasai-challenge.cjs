@@ -6,7 +6,8 @@ for(const script of scripts){if(/\bsrc=|application\/ld\+json/.test(script[1]))c
 const {Engine,DATA:D,KasaiRules:Rules}=context.LT,copy=value=>JSON.parse(JSON.stringify(value));
 const player='P0123456789abcdef',receipt={id:'kasai-reward:'+player,grantId:'kasai-reward:'+player,species:'floravelle',level:70,gender:'female'};
 function game(level=100){const e=new Engine();e.newGame('komori');e.state.party=['akehomura','shizunaria','komorizen','arvelion','astralith','setsurei'].map((id,index)=>({...e.makeMonster(id,level),uid:'challenge-ally-'+index}));for(const mon of e.state.party)e.markCaught(mon.species);return e;}
-const challenge=(e,seed=57)=>({id:'challenge-test',token:'test-token-for-replay',seed,rulesVersion:Rules.version,party:copy(Rules.normalizeParty(e.state.party))});
+const adminParty=(e,entries=[['shizunaria',63],['fuwari',41],['akehomura',82]])=>copy(Rules.normalizeParty(entries.map(([species,level],index)=>({...e.makeMonster(species,level),uid:'admin-snapshot-'+index}))));
+const challenge=(e,seed=57,opponents=adminParty(e))=>({id:'challenge-test',token:'test-token-for-replay',seed,rulesVersion:Rules.version,party:copy(Rules.normalizeParty(e.state.party)),opponents:copy(opponents)});
 function battle(e){
   for(let i=0;i<Rules.maxActions&&!e.battle.result;i++){
     if(e.battle.pendingReplacement){const index=e.state.party.findIndex(mon=>mon.hp>0);assert(e.chooseReplacement(index).ok);continue;}
@@ -21,26 +22,61 @@ function battle(e){
   return e.finishBattle();
 }
 
-test('the live Engine wins the fixed Lv70 Kasai team and the literal server replay agrees',async()=>{
+test('the live Engine uses the captured administrator party and the literal server replay agrees',async()=>{
   const replay=await import('../server/kasai-replay.mjs');
-  for(const seed of [1,57,0xffffffff]){
-    const e=game(),start=challenge(e,seed),beforeRng=e.rng;assert(e.startKasaiBattle(start).ok);assert(e.isTrainerBattle());
-    assert.deepEqual(copy(e.battle.enemyTeam.map(mon=>[mon.species,mon.level])),[['arvelion',70],['futo',70],['floravelle',70]]);assert(e.battle.kasai);
-    const result=battle(e);assert.equal(result.result,'won');assert.equal(result.kasai,true);assert.equal(e.rng,beforeRng);
-    assert(result.challenge.actions.some(action=>action.type==='replace'));assert(result.challenge.actions.every(action=>Rules.normalizeAction(action)));
-    assert.equal(replay.replayChallenge(start.party,seed,result.challenge.actions).won,true);
-    assert.equal(replay.replayChallenge(start.party,seed,[...result.challenge.actions,{type:'move',index:0}]).ok,false,'No commands may follow the actual terminal win');
-    const bad=copy(result.challenge.actions);bad[0].damage=999999;assert.equal(replay.replayChallenge(start.party,seed,bad).ok,false);
+  const variants=[{seed:1,entries:[['fuwari',41]]},{seed:57,entries:[['shizunaria',63],['fuwari',41],['akehomura',82]]},
+    {seed:0xffffffff,entries:[['setsurei',76],['komorizen',45],['akehomura',82],['shizunaria',63],['fuwari',41],['astralith',74]]}];
+  for(const {seed,entries} of variants){
+    const e=game(),start=challenge(e,seed,adminParty(e,entries)),snapshot=JSON.stringify(start),beforeRng=e.rng;assert(e.startKasaiBattle(start).ok);assert(e.isTrainerBattle());
+    assert.deepEqual(copy(e.battle.enemyTeam.map(mon=>[mon.species,mon.level])),entries);assert(e.battle.kasai);assert.equal(e.battle.enemy,e.battle.enemyTeam[0]);
+    const result=battle(e);assert.equal(result.result,'won');assert.equal(result.kasai,true);assert.equal(e.rng,beforeRng);assert.equal(JSON.stringify(start),snapshot,'Battle must never mutate the server snapshot');
+    if(entries.length>1)assert(result.challenge.actions.some(action=>action.type==='replace'));
+    assert(result.challenge.actions.every(action=>Rules.normalizeAction(action)));
+    assert.equal(replay.replayChallenge(start.party,seed,result.challenge.actions,start.opponents).won,true);
+    assert.equal(replay.replayChallenge(start.party,seed,[...result.challenge.actions,{type:'move',index:0}],start.opponents).ok,false,'No commands may follow the actual terminal win');
+    const bad=copy(result.challenge.actions);bad[0].damage=999999;assert.equal(replay.replayChallenge(start.party,seed,bad,start.opponents).ok,false);
+    assert.equal(replay.replayChallenge(start.party,seed,result.challenge.actions).ok,false,'New challenges cannot fall back to the old fixed team');
   }
 });
-test('loss, incomplete play, forbidden actions and malformed challenges cannot form a victory',async()=>{
+test('loss, incomplete play, forbidden actions and malformed opponent snapshots cannot form a victory',async()=>{
   const replay=await import('../server/kasai-replay.mjs'),e=game(5);e.state.party=e.state.party.slice(0,1);const start=challenge(e);assert(e.startKasaiBattle(start).ok);
   const before=JSON.stringify({state:e.state,battle:e.battle});
   for(const type of ['item','resonate','flee','won'])assert.equal(e.action({type,id:'salve',index:0}).ok,false);
   assert.equal(JSON.stringify({state:e.state,battle:e.battle}),before);assert.equal(e.battle.kasaiChallenge.actions.length,0);
-  const result=battle(e);assert.equal(result.result,'lost');assert.equal(replay.replayChallenge(start.party,start.seed,result.challenge.actions).won,false);
-  assert.equal(replay.replayChallenge(start.party,start.seed,[]).won,false);assert.equal(replay.replayChallenge(start.party,-1,[{type:'move',index:0}]).ok,false);
-  const fresh=game();assert.equal(fresh.startKasaiBattle({...challenge(fresh),rulesVersion:'old'}).ok,false);const changed=challenge(fresh);fresh.state.party[0].hp--;assert.equal(fresh.startKasaiBattle(changed).ok,false);assert.equal(fresh.battle,null);
+  const result=battle(e);assert.equal(result.result,'lost');assert.equal(replay.replayChallenge(start.party,start.seed,result.challenge.actions,start.opponents).won,false);
+  assert.equal(replay.replayChallenge(start.party,start.seed,[],start.opponents).won,false);assert.equal(replay.replayChallenge(start.party,-1,[{type:'move',index:0}],start.opponents).ok,false);
+  const fresh=game();assert.equal(fresh.startKasaiBattle({...challenge(fresh),rulesVersion:'old'}).ok,false);
+  for(const opponents of [undefined,null,[],Array.from({length:7},(_,i)=>({...adminParty(fresh)[0],uid:'extra-'+i})),[{...adminParty(fresh)[0],species:'invented'}]]){
+    const invalid={...challenge(fresh),opponents},unchanged=JSON.stringify(fresh.state);assert.equal(fresh.startKasaiBattle(invalid).ok,false);assert.equal(JSON.stringify(fresh.state),unchanged);assert.equal(fresh.battle,null);
+    assert.equal(replay.replayChallenge(invalid.party,invalid.seed,[{type:'move',index:0}],opponents).ok,false);
+  }
+  const changed=challenge(fresh);fresh.state.party[0].hp--;assert.equal(fresh.startKasaiBattle(changed).ok,false);assert.equal(fresh.battle,null);
+});
+test('an actual v56 winning transcript replays only under the explicit legacy rules version',async()=>{
+  const replay=await import('../server/kasai-replay.mjs'),e=game(),party=copy(Rules.normalizeParty(e.state.party));
+  // Recorded against published v56 HEAD, seed 57, before the party-snapshot change.
+  const actions=[{type:'move',index:0},{type:'move',index:0},{type:'replace',index:0},{type:'move',index:0},{type:'replace',index:0},{type:'move',index:0}];
+  assert.equal(Rules.legacyVersion,'kasai-solo-v56');assert.equal(Rules.version,'kasai-solo-v57');
+  assert.equal(replay.replayChallenge(party,57,actions,null,Rules.legacyVersion).won,true);
+  assert.equal(replay.replayChallenge(party,57,actions).ok,false);assert.equal(replay.replayChallenge(party,57,actions,null,'unknown').ok,false);
+  assert(e.startKasaiBattle({id:'legacy-session',token:'legacy-token-12345678',seed:57,rulesVersion:Rules.legacyVersion,party}).ok);
+  assert.deepEqual(copy(e.battle.enemyTeam.map(mon=>[mon.species,mon.level])),[['arvelion',70],['futo',70],['floravelle',70]]);
+  for(const action of actions)assert((action.type==='replace'?e.chooseReplacement(action.index):e.action(action)).ok);
+  assert.equal(e.finishBattle().result,'won');
+});
+test('administrator snapshots preserve individuality, configured Futo moves, ordering and healing without touching the source party',()=>{
+  const e=game(),first=e.makeMonster('komorizen',77),futo=e.makeMonster('futo',80,{hp:1000,atk:300,def:100,spAtk:300,spDef:100,speed:200,accuracy:100,evasion:100},D.species.futo.moves.slice().reverse());
+  Object.assign(first,{uid:'admin-lead',xp:23,hp:1,nickname:'みどり',shiny:true,gender:'female',alloc:{hp:10,atk:30,def:12},bonusPoints:4,moveOrder:[3,1,2,0],heldItem:'learnsash',curse:true,status:'scorch'});
+  Object.assign(futo,{uid:'admin-futo',grantId:'admin-initial:'+player,customStatsLevel:70,futoConfigLevel:80,nickname:'フー',xp:19,hp:1,moveOrder:[1,3,0,2]});
+  for(const mon of [first,futo])mon.pp[Object.keys(mon.pp)[0]]=0;
+  const opponents=copy(Rules.normalizeParty([futo,first])),start=challenge(e,91,opponents),before=JSON.stringify(start);assert(e.startKasaiBattle(start).ok);
+  const retained=mon=>{const {uid,hp,pp,status,...rest}=mon;return rest;};
+  assert.deepEqual(copy(e.battle.enemyTeam.map(retained)),opponents.map(retained));
+  for(const mon of e.battle.enemyTeam){assert.equal(mon.hp,e.stats(mon).hp);for(const move of e.moves(mon))assert.equal(mon.pp[move.id],e.maxPP(move));assert.equal(mon.status,undefined);}
+  assert.equal(e.battle.enemy.species,'futo');assert.equal(e.battle.enemy.customStatsLevel,70);assert.equal(e.battle.enemy.futoConfigLevel,80);
+  assert.equal(e.battle.enemyTeam[1].curse,true);assert.equal(e.battle.enemyTeam[1].gender,'female');assert.equal(e.battle.enemyTeam[1].nickname,'みどり');
+  assert.equal(JSON.stringify(start),before);e.battle.enemy.customMoves[0]='changed';e.battle.enemyTeam[1].alloc.atk=0;
+  assert.equal(JSON.stringify(start),before,'Enemy nested structures must not share the immutable server snapshot');
 });
 test('a reserve full gift fails without mutation even with five empty party slots; explicit retry creates exactly one',()=>{
   const e=game();e.state.party=e.state.party.slice(0,1);e.state.storage=Array.from({length:192},(_,index)=>({...e.makeMonster('fuwari',1),uid:'stored-'+index}));e.markCaught('fuwari');

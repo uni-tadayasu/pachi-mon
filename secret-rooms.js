@@ -21,15 +21,18 @@
   if(!root.document?.createElement||!LT.DATA)return;
 
   let rooms=[],mapKey='',mine=null,kasai=null,current=null,catalog=[],dialog=null,dialogMode='',busy=false,epoch=0,poll=null,polling=null;
-  let editing=null,draft=[],selectedItem='plant',selectedInstance=null,rotation=0,cursor={x:3,y:4},dirty=false;
+  let editing=null,draft=[],selectedItem='plant',selectedInstance=null,rotation=0,cursor={x:3,y:4},dirty=false,relocation=null;
   const bridge=()=>LT.adminBridge;
   const engine=()=>bridge()?.getEngine?.();
   const playing=()=>bridge()?.isPlaying?.()===true;
   const online=()=>root.navigator?.onLine!==false;
   const owner=()=>LT.Admin?.player?.id;
+  const ownsRoom=room=>!!owner()&&room?.id===owner()&&room?.owner?.id===owner();
+  const ownsCurrentRoom=()=>!!owner()&&engine()?.map?.sharedRoom===true&&engine()?.map?.roomOwner===owner();
+  const isKasaiSelf=()=>LT.Admin?.player?.isAdmin===true||ownsCurrentRoom();
   const toast=message=>bridge()?.toast?.(message);
   const api=(path,options)=>LT.Admin.worldRequest(path,options);
-  function available(){return playing()&&!bridge()?.isBusy?.()&&!engine()?.battle&&!LT.onlineActive&&!LT.localTradeActive&&!LT.tradeActive&&!LT.Trade?.isLocked?.();}
+  function available(){return playing()&&!bridge()?.isBusy?.()&&!engine()?.battle&&!LT.KasaiLive?.locked?.()&&!LT.onlineActive&&!LT.localTradeActive&&!LT.tradeActive&&!LT.Trade?.isLocked?.();}
   function operation(){const instance=engine();return {revision:++epoch,instance,map:instance?.state.map,owner:owner()||null};}
   function isCurrent(task){
     if(task.revision!==epoch||task.instance!==engine()||task.map!==engine()?.state.map||!playing())return false;
@@ -39,7 +42,7 @@
     return task.owner===(owner()||null);
   }
   function finish(task){if(task.revision===epoch)setBusy(false);}
-  function resetSession(){epoch++;setBusy(false);rooms=[];mine=null;kasai=null;mapKey='';current=null;editing=null;draft=[];dirty=false;selectedInstance=null;dialog?.close();refreshSoon();}
+  function resetSession(){epoch++;setBusy(false);rooms=[];mine=null;kasai=null;mapKey='';current=null;editing=null;draft=[];dirty=false;relocation=null;selectedInstance=null;dialog?.close();refreshSoon();}
   function error(message){const el=dialog?.querySelector('[data-room-message]');if(el){el.textContent=String(message||'操作できませんでした。');el.classList.add('is-error');}else toast(message);}
   function setBusy(value){
     busy=value;if(!dialog?.open)return;
@@ -67,11 +70,12 @@
     mount();dialogMode=mode;dialog.innerHTML=`<header class="room-dialog-header"><div><span>SECRET ROOM</span><h2 id="secret-room-title">${escape(title)}</h2></div><button type="button" class="btn btn-small" data-room-action="close">閉じる</button></header><div class="room-dialog-content">${body}<p class="room-message" data-room-message role="status" aria-live="polite"></p></div>`;
     if(!dialog.open)dialog.showModal();
   }
-  function roomCard(room,label){return `<button type="button" class="room-visit-card${room.kind==='kasai'?' is-kasai':''}" data-room-action="visit" data-room-owner="${room.id}"><span class="room-door-icon" aria-hidden="true">${room.kind==='kasai'?'◆':'▥'}</span><span><small>${escape(label||room.owner.name)}</small><strong>${escape(room.name)}</strong><em>${room.kind==='kasai'?'カサイの専用ステージ':'誰でも自由に入れます'}</em></span><b aria-hidden="true">→</b></button>`;}
+  function roomCard(room,label){return `<button type="button" class="room-visit-card${room.kind==='kasai'?' is-kasai':''}" data-room-action="visit" data-room-owner="${room.id}"><span class="room-door-icon" aria-hidden="true">${room.kind==='kasai'?'◆':'▥'}</span><span><small>${escape(label||room.owner.name)}</small><strong>${escape(room.name)}</strong><em>${room.kind==='kasai'?(ownsRoom(room)?'自分の専用ステージ · 飾りつけできます':'カサイの専用ステージ'):'誰でも自由に入れます'}</em></span><b aria-hidden="true">→</b></button>`;}
   function renderManager(){
-    const wall=wallAtPlayer(),here=engine()?.map?.sharedRoom,ownHere=here&&engine().map.roomOwner===owner();
-    const mySection=mine?roomCard(mine,'自分の秘密部屋'):`<section class="room-empty"><h3>壁の向こうに、自分だけの場所を。</h3><p>外のフィールドや建物の壁に向かって立つと、秘密部屋を一つ作れます。部屋と飾りつけは保存され、ほかの旅人も自由に出入りできます。</p><label for="room-new-name">部屋の名前</label><input id="room-new-name" maxlength="24" value="${escape(Array.from((bridge()?.getPlayerName?.()||'旅人')+'の秘密部屋').slice(0,24).join(''))}"><button type="button" class="btn btn-primary" data-room-action="create" ${wall?'':'disabled'}>${wall?'この壁に部屋を作る':'壁に向かってから開いてください'}</button></section>`;
-    show(here?engine().map.name:'秘密部屋',`${here?`<div class="room-current-info"><span>${escape(current?.owner?.name||'旅人')}の部屋</span><div>${ownHere?'<button class="btn btn-primary" data-room-action="edit">家具を飾る</button>':''}<button class="btn" data-room-action="leave">フィールドへ戻る</button></div></div>`:''}<section><h3>MY ROOM</h3>${mySection}</section>${kasai&&kasai.id!==mine?.id?`<section><h3>カサイの間</h3>${roomCard(kasai,'謎のトレーナー カサイ')}</section>`:''}<section><div class="room-section-heading"><h3>このエリアの部屋</h3><button class="btn btn-small" data-room-action="refresh">更新</button></div><div class="room-visit-list">${rooms.filter(row=>row.id!==mine?.id&&row.id!==kasai?.id).map(row=>roomCard(row)).join('')||'<p class="room-muted">このエリアには、ほかの秘密部屋がまだありません。</p>'}</div></section><p class="room-note">入口の前で A / E を押しても入れます。部屋の持ち主だけが家具を変更できます。</p>`);
+    const wall=wallAtPlayer(),here=engine()?.map?.sharedRoom,ownHere=ownsCurrentRoom(),ownKasai=mine?.kind==='kasai'&&ownsRoom(mine);
+    const editLabel=ownKasai?'カサイの部屋を飾る':'自分の部屋を飾る',sameDoor=wall&&mine&&wall.map===mine.entrance.map&&wall.x===mine.entrance.x&&wall.y===mine.entrance.y;
+    const mySection=mine?`${roomCard(mine,ownKasai?'運営カサイの部屋':'自分の秘密部屋')}${!ownHere?`<div class="room-owner-actions"><button class="btn btn-primary" data-room-action="edit-own">${editLabel}</button><button class="btn" data-room-action="relocate" ${wall&&!sameDoor?'':'disabled'}>${sameDoor?'この壁に自分の部屋があります':'この壁へ部屋を移転'}</button><p class="room-note">部屋は運営も含め一人一つです。別の壁に向かうと、家具と名前をそのままに入口を移せます。</p></div>`:''}`:`<section class="room-empty"><h3>壁の向こうに、自分だけの場所を。</h3><p>外のフィールドや建物の壁に向かって立つと、秘密部屋を一つ作れます。部屋と飾りつけは保存され、ほかの旅人も自由に出入りできます。</p><label for="room-new-name">部屋の名前</label><input id="room-new-name" maxlength="24" value="${escape(Array.from((bridge()?.getPlayerName?.()||'旅人')+'の秘密部屋').slice(0,24).join(''))}"><button type="button" class="btn btn-primary" data-room-action="create" ${wall?'':'disabled'}>${wall?'この壁に部屋を作る':'壁に向かってから開いてください'}</button></section>`;
+    show(here?engine().map.name:'秘密部屋',`${here?`<div class="room-current-info"><span>${escape(current?.owner?.name||'旅人')}の部屋</span><div>${ownHere?`<button class="btn btn-primary" data-room-action="edit">${ownKasai?'カサイの部屋を飾る':'家具を飾る'}</button>`:''}<button class="btn" data-room-action="leave">フィールドへ戻る</button></div></div>`:''}<section><h3>MY ROOM</h3>${mySection}</section>${kasai&&kasai.id!==mine?.id?`<section><h3>カサイの間</h3>${roomCard(kasai,'謎のトレーナー カサイ')}</section>`:''}<section><div class="room-section-heading"><h3>このエリアの部屋</h3><button class="btn btn-small" data-room-action="refresh">更新</button></div><div class="room-visit-list">${rooms.filter(row=>row.id!==mine?.id&&row.id!==kasai?.id).map(row=>roomCard(row)).join('')||'<p class="room-muted">このエリアには、ほかの秘密部屋がまだありません。</p>'}</div></section>${LT.Admin?.player?.isAdmin!==true&&kasai?.id!==owner()?'<section class="room-reward-check"><button type="button" class="btn" data-room-action="reward">カサイの勝利報酬を確認</button><p class="room-note">ひかえに空きを作った後の受け取りも、ここから確認できます。</p></section>':''}<p class="room-note">入口の前で A / E を押しても入れます。部屋の持ち主だけが家具を変更できます。</p>`);
   }
   async function loadCatalog(){if(catalog.length)return;const data=await api('/world/rooms/catalog');if(!Array.isArray(data.catalog)||!data.catalog.length)throw Error('家具の一覧を読み込めません。');catalog=data.catalog;}
   async function open(){
@@ -94,6 +98,27 @@
     catch(err){if(isCurrent(task))error(err.message);}finally{finish(task);}
     return created&&isCurrent(task)?enter(created):false;
   }
+  function reviewRelocation(){
+    if(busy||!available()||!ownsRoom(mine))return false;
+    const wall=wallAtPlayer();if(!wall){error('移転したい壁に向かって立ってください。');return false;}
+    if(wall.map===mine.entrance.map&&wall.x===mine.entrance.x&&wall.y===mine.entrance.y){error('この壁には、すでに自分の部屋があります。');return false;}
+    relocation={roomId:mine.id,revision:mine.revision,wall,instance:engine(),owner:owner()};
+    show('秘密部屋を移転しますか？',`<div class="room-relocation-review"><strong>${escape(mine.name)}</strong><p>移転先：${escape(engine().map.name)}の、いま向いている壁</p><p>家具と部屋の名前${mine.kind==='kasai'?'、専用ステージ':''}はそのまま引き継がれます。以前の壁の入口はなくなり、新しい入口から出入りできます。</p></div><div class="room-dialog-actions"><button class="btn btn-primary" data-room-action="confirm-relocate">この壁へ移転する</button><button class="btn" data-room-action="cancel-relocate">戻る</button></div>`,'relocate');return true;
+  }
+  async function relocate(){
+    if(busy||!available()||!relocation)return false;
+    const destination=relocation,wall=wallAtPlayer();
+    if(destination.owner!==owner()||destination.instance!==engine()||!wall||JSON.stringify(wall)!==JSON.stringify(destination.wall)){error('移転先の壁が変わりました。いまの場所で秘密部屋を開き直してください。');return false;}
+    const task=operation();setBusy(true);
+    try{
+      if(!await LT.World?.refreshPresence?.())throw Error('フィールドの接続を確認してから、もう一度お試しください。');
+      if(!isCurrent(task)||!available())return false;
+      const data=await api('/world/rooms/'+destination.roomId+'/relocate',{method:'POST',body:{revision:destination.revision,...wall}});
+      if(!isCurrent(task))return false;if(!ownsRoom(data.room))throw Error('移転した部屋を確認できませんでした。');
+      mine=data.room;if(mine.kind==='kasai')kasai=mine;rooms=rooms.filter(room=>room.id!==mine.id);if(mapKey===mine.entrance.map)rooms.push(mine);relocation=null;
+      renderManager();toast('秘密部屋を移転しました。家具と名前はそのままです。');return true;
+    }catch(err){if(isCurrent(task))error(err.message||'移転できませんでした。部屋は一覧から確認できます。');return false;}finally{finish(task);}
+  }
   async function enter(id,expectedKasai=false){
     if(busy||!PLAYER.test(id)||!available()||!online())return false;
     const task=operation();setBusy(true);
@@ -104,7 +129,7 @@
       if(expectedKasai&&room.kind!=='kasai')throw Error('カサイの部屋を確認できません。もう一度話しかけてください。');
       const map=LT.RoomArt.createMap(room),result=bridge().enterSharedRoom(map);
       if(!result?.ok)throw Error(result?.message||'今は部屋へ移動できません。');
-      current=room;if(room.id===owner())mine=room;dialog?.close();toast(room.kind==='kasai'?'カサイのステージへ。奥のカサイに話しかけるとバトルが始まります。':`${room.name}へようこそ。${room.id===owner()?'「秘密部屋」から家具を飾れます。':'出口からフィールドへ戻れます。'}`);return true;
+      current=room;if(room.id===owner())mine=room;dialog?.close();toast(room.kind==='kasai'?(isKasaiSelf()?'自分の専用ステージへ。「秘密部屋」からカサイの部屋を飾れます。':'カサイの部屋へ。対戦は、接続中のカサイ本人に話しかけて申し込めます。'):`${room.name}へようこそ。${room.id===owner()?'「秘密部屋」から家具を飾れます。':'出口からフィールドへ戻れます。'}`);return true;
     }catch(err){if(task.revision===epoch)error(err.message);return false;}finally{finish(task);}
   }
   async function enterKasai(id){
@@ -114,14 +139,21 @@
     try{const data=await api('/world/rooms/kasai');if(!isCurrent(task))return false;if(!data.room){toast('カサイの部屋はまだ準備中です。');return false;}kasai=data.room;target=kasai.id;}catch(err){if(isCurrent(task))toast(err.message);}finally{finish(task);}
     return target&&isCurrent(task)?enter(target,true):false;
   }
-  function leave(){const result=bridge()?.leaveSharedRoom?.();if(result?.ok){current=null;dialog?.close();toast('部屋の入口へ戻りました。');refreshSoon();}else error(result?.message||'今は外へ戻れません。');}
+  async function enterLive(room,session){
+    if(busy||dirty||dialog?.open||!playing()||!room||room.kind!=='kasai'||!PLAYER.test(room.id||'')||room.owner?.id!==room.id||session?.roomId!==room.id)return {ok:false,message:'進行中の操作を終えてから、カサイのステージへ移動できます。'};
+    const task=operation(),result=await bridge()?.stageKasaiLive?.(room,session);
+    if(!result?.ok)return result||{ok:false,message:'対戦ステージを準備できません。'};
+    if(task.revision!==epoch||task.instance!==engine()||task.owner!==(owner()||null))return {ok:false,message:'プレイヤー情報が変わりました。'};
+    current=room;kasai=room;if(ownsRoom(room))mine=room;refreshSoon();return result;
+  }
+  function leave(){if(LT.KasaiLive?.locked?.())return LT.KasaiLive.leave?.();const result=bridge()?.leaveSharedRoom?.();if(result?.ok){current=null;dialog?.close();toast('部屋の入口へ戻りました。');refreshSoon();}else error(result?.message||'今は外へ戻れません。');return result;}
   function showDiscard(){show('飾りつけを保存しますか？','<p>まだ保存していない変更があります。</p><div class="room-dialog-actions"><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="resume">編集を続ける</button><button class="btn" data-room-action="discard">保存せず閉じる</button></div>','discard');}
   function close(){if(!dialog?.open||busy)return false;if(dirty&&(dialogMode==='editor'||dialogMode==='discard')){if(dialogMode==='discard')renderEditor();else showDiscard();return false;}dialog.close();return true;}
   function editor(room){editing=copy(room);draft=copy(room.decorations||[]);dirty=false;selectedInstance=null;cursor={x:3,y:4};rotation=0;renderEditor();}
   function renderEditor(){
     if(!editing)return;
     const catalogHtml=catalog.map(item=>`<button type="button" class="room-item${item.id===selectedItem?' is-selected':''}" data-room-action="item" data-room-item="${item.id}" aria-pressed="${item.id===selectedItem}"><canvas width="64" height="64" data-room-thumbnail="${item.id}" aria-hidden="true"></canvas><span>${escape(item.name)}</span><small>${item.width} × ${item.height}</small></button>`).join('');
-    show('秘密部屋を飾る',`<p class="room-note">家具を選び、部屋の置きたい場所をタップしてください。配置・移動してから「保存する」で反映されます。</p><div class="room-editor"><div class="room-palette" aria-label="家具の一覧">${catalogHtml}</div><div class="room-plan"><canvas id="room-editor-canvas" width="${editing.width*28}" height="${editing.height*28}" tabindex="0" role="img" aria-label="部屋の配置図。矢印キーでも配置位置を選べます。"></canvas><div class="room-position"><label>X <input id="room-x" type="number" min="1" max="${editing.width-2}" value="${cursor.x}"></label><label>Y <input id="room-y" type="number" min="2" max="${editing.height-2}" value="${cursor.y}"></label><button class="btn btn-small" data-room-action="rotate">回転 ${rotation}°</button></div><p class="room-selection" data-room-selection></p><div class="room-editor-actions"><button class="btn btn-primary" data-room-action="place">${selectedInstance?'ここへ移動':'ここに置く'}</button><button class="btn" data-room-action="remove">選んだ家具を片付ける</button></div></div></div><div class="room-save-row"><label>部屋の名前<input id="room-edit-name" maxlength="24" value="${escape(editing.name)}"></label><span data-room-count>${draft.length} / 32 個${dirty?' · 未保存':''}</span><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="reload">保存済みに戻す</button></div>`,'editor');
+    show(editing.kind==='kasai'?'カサイの部屋を飾る':'秘密部屋を飾る',`<p class="room-note">家具を選び、部屋の置きたい場所をタップしてください。配置・移動してから「保存する」で反映されます。${editing.kind==='kasai'?'中央の対戦ステージと通路の両側を飾れます。':''}</p><div class="room-editor"><div class="room-palette" aria-label="家具の一覧">${catalogHtml}</div><div class="room-plan"><canvas id="room-editor-canvas" width="${editing.width*28}" height="${editing.height*28}" tabindex="0" role="img" aria-label="部屋の配置図。矢印キーでも配置位置を選べます。"></canvas><div class="room-position"><label>X <input id="room-x" type="number" min="1" max="${editing.width-2}" value="${cursor.x}"></label><label>Y <input id="room-y" type="number" min="2" max="${editing.height-2}" value="${cursor.y}"></label><button class="btn btn-small" data-room-action="rotate">回転 ${rotation}°</button></div><p class="room-selection" data-room-selection></p><div class="room-editor-actions"><button class="btn btn-primary" data-room-action="place">${selectedInstance?'ここへ移動':'ここに置く'}</button><button class="btn" data-room-action="remove">選んだ家具を片付ける</button></div></div></div><div class="room-save-row"><label>部屋の名前<input id="room-edit-name" maxlength="24" value="${escape(editing.name)}"></label><span data-room-count>${draft.length} / 32 個${dirty?' · 未保存':''}</span><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="reload">保存済みに戻す</button></div>`,'editor');
     for(const canvas of dialog.querySelectorAll('[data-room-thumbnail]'))LT.RoomArt.renderThumbnail(canvas,canvas.dataset.roomThumbnail);
     const canvas=dialog.querySelector('#room-editor-canvas');
     canvas.addEventListener('click',event=>{const rect=canvas.getBoundingClientRect();cursor={x:Math.max(1,Math.min(editing.width-2,Math.floor((event.clientX-rect.left)/rect.width*editing.width))),y:Math.max(2,Math.min(editing.height-2,Math.floor((event.clientY-rect.top)/rect.height*editing.height)))};pickAtCursor();updateCursor();});
@@ -145,20 +177,29 @@
   function place(){const entry={id:selectedInstance||crypto.randomUUID(),itemId:selectedItem,x:cursor.x,y:cursor.y,rotation},problem=placement(editing,catalog,draft,entry);if(problem){error(problem);return;}draft=[...draft.filter(row=>row.id!==entry.id),entry];selectedInstance=entry.id;dirty=true;renderEditor();}
   function remove(){if(!selectedInstance)pickAtCursor();if(!selectedInstance){error('片付ける家具をタップしてください。');return;}draft=draft.filter(row=>row.id!==selectedInstance);selectedInstance=null;dirty=true;renderEditor();}
   async function saveDecor(){
-    if(busy||!editing||editing.owner.id!==owner())return;const task=operation(),roomId=editing.id,body={revision:editing.revision,name:editing.name,decorations:copy(draft)};setBusy(true);
-    try{const data=await api('/world/rooms/'+roomId,{method:'PATCH',body});if(!isCurrent(task)||editing?.id!==roomId)return;if(data.room?.id!==owner())throw Error('保存結果を確認できませんでした。');mine=data.room;current=mine;dirty=false;const map=LT.RoomArt.createMap(mine);bridge().refreshSharedRoom?.(map);editor(mine);toast('飾りつけを保存しました。ほかのプレイヤーにも見えるようになります。');}
+    if(LT.KasaiLive?.locked?.()){error('対戦の待ち合わせ中は飾りつけを変更できません。');return;}if(busy||!editing||editing.owner.id!==owner())return;const task=operation(),roomId=editing.id,body={revision:editing.revision,name:editing.name,decorations:copy(draft)};setBusy(true);
+    try{const data=await api('/world/rooms/'+roomId,{method:'PATCH',body});if(!isCurrent(task)||editing?.id!==roomId)return;if(data.room?.id!==owner())throw Error('保存結果を確認できませんでした。');mine=data.room;if(kasai?.id===mine.id)kasai=mine;rooms=rooms.map(room=>room.id===mine.id?mine:room);dirty=false;if(engine()?.map?.roomOwner===mine.id){current=mine;bridge().refreshSharedRoom?.(LT.RoomArt.createMap(mine));}editor(mine);toast('飾りつけを保存しました。ほかのプレイヤーにも見えるようになります。');}
     catch(err){if(isCurrent(task))error(err.message||'保存できませんでした。変更はこの画面に残っています。');}finally{finish(task);}
   }
   async function loadEditor(reload=false){
-    if(busy||!available())return;const task=operation(),roomId=reload?editing?.id:owner();if(!roomId||roomId!==owner())return;setBusy(true);
-    try{await loadCatalog();if(!isCurrent(task))return;const data=await api(reload?'/world/rooms/'+roomId:'/world/rooms/mine');if(!isCurrent(task))return;if(data.room?.id===owner()&&data.room.owner?.id===owner())editor(data.room);else error('自分の部屋で飾りつけできます。');}
-    catch(err){if(isCurrent(task))error(err.message);}finally{finish(task);}
+    if(busy||!available())return false;const task=operation(),roomId=reload?editing?.id:owner();if(!roomId||roomId!==owner())return false;setBusy(true);
+    try{await loadCatalog();if(!isCurrent(task))return false;const data=await api(reload?'/world/rooms/'+roomId:'/world/rooms/mine');if(!isCurrent(task))return false;if(ownsRoom(data.room)){mine=data.room;editor(data.room);return true;}error('自分の部屋で飾りつけできます。');return false;}
+    catch(err){if(isCurrent(task))error(err.message);return false;}finally{finish(task);}
+  }
+  async function decorateMine(){
+    if(busy||!available())return false;
+    if(!online()){toast('秘密部屋は接続が戻ると利用できます。');return false;}
+    if(dialog?.open&&(dialogMode==='editor'||dialogMode==='discard'))return true;
+    bridge()?.closeModal?.();show('自分の部屋を飾る','<p>部屋の飾りつけを読み込んでいます…</p>');
+    return loadEditor();
   }
   async function action(button){
     switch(button.dataset.roomAction){
       case 'close':close();break;case 'refresh':await open();break;case 'create':await create();break;
+      case 'relocate':reviewRelocation();break;case 'confirm-relocate':await relocate();break;case 'cancel-relocate':relocation=null;await open();break;
       case 'visit':await enter(button.dataset.roomOwner);break;case 'leave':leave();break;
-      case 'edit':await loadEditor();break;
+      case 'edit':case 'edit-own':await decorateMine();break;
+      case 'reward':if(LT.Admin?.player?.isAdmin!==true&&kasai?.id!==owner()){dialog.close();if(LT.KasaiChallenge?.openRewards)await LT.KasaiChallenge.openRewards();else toast('報酬の確認画面を読み込み中です。');}break;
       case 'item':selectedItem=button.dataset.roomItem;selectedInstance=null;updateCursor();break;
       case 'rotate':rotation=(rotation+90)%360;updateCursor();break;case 'place':place();break;case 'remove':remove();break;
       case 'save':await saveDecor();break;case 'resume':renderEditor();break;case 'discard':dirty=false;dialog.close();break;
@@ -175,14 +216,14 @@
   }
   function refreshSoon(delay=80){clearTimeout(poll);poll=setTimeout(()=>{void refresh();},delay);}
   LT.Rooms={
-    open,enter,enterKasai,leave,
+    open,enter,enterKasai,enterLive,leave,decorateMine,
     isDialogOpen:()=>dialog?.open===true,isWorking:()=>busy,closeDialog:close,
     current:()=>current,
     moved(){if(engine()?.state.map!==mapKey)refreshSoon();},
-    hint(){const e=engine(),npc=e?.nearbyNPC?.();if(e?.map.sharedRoom&&npc?.kind==='kasai')return 'カサイ · A / E でバトルに挑戦';const door=doorAhead();if(door)return `${door.name} · A / E で入室`;if(!mine&&wallAtPlayer())return '壁の向こうに秘密部屋 · A / E で作る';return null;},
+    hint(){const liveHint=LT.KasaiLive?.hint?.();if(liveHint)return liveHint;const door=doorAhead();if(door)return `${door.name} · A / E で入室`;if(!mine&&wallAtPlayer())return '壁の向こうに秘密部屋 · A / E で作る';return null;},
     interact(){
+      if(LT.KasaiLive?.canTalk?.()&&!dialog?.open&&!busy){void LT.KasaiLive.talk();return true;}
       if(!available()||dialog?.open||busy)return false;
-      const e=engine(),npc=e.nearbyNPC?.();if(e.map.sharedRoom&&npc?.kind==='kasai'){void LT.KasaiChallenge?.talk?.();return true;}
       const door=doorAhead();if(door){void enter(door.id);return true;}
       if(wallAtPlayer()){void open();return true;}return false;
     },

@@ -111,8 +111,8 @@ test('maximum furnishing cannot seal the exit, arrival, or Kasai interaction pat
     for(let y=1;y<map.height-1;y++)for(const x of kind==='kasai'?[11,12]:[8,9])
       if(!map.npcs.some(n=>n.x===x&&n.y===y))assert(visited.has(`${x},${y}`),`${kind}: protected aisle lost at ${x},${y}`);
     if(kind==='kasai') {
-      assert.equal(map.npcs[0].kind,'kasai');assert.equal(map.npcs[0].facing,'down');assert.equal(map.npcs[0].x,12);assert.equal(map.npcs[0].y,4);
-      assert(visited.has('12,5'),'The challenger cannot approach Kasai');assert(!engine.walkable(map,12,4),'Kasai needs an occupied NPC tile');
+      assert.equal(map.npcs.length,0,'An offline Kasai must not be replaced with a ghost NPC');
+      assert(visited.has('12,5'),'The challenger cannot approach the live Kasai seat');assert(engine.walkable(map,12,4),'The actual administrator must be able to occupy the seat');
     }
   }
 });
@@ -175,21 +175,46 @@ test('door overlays distinguish ordinary and Kasai rooms without changing the ou
 test('shipped world renderer uses room artwork, live revision refresh, and both Kasai participants',async()=>{
   const {runtime}=require('./check-art.cjs'),{LT,engine:liveEngine,imageErrors}=await runtime();assert.equal(imageErrors.length,0);
   if(!LT.RoomArt)attachArt(LT);
-  const original=LT.RoomArt,travellers=LT.TravellerArt,calls={ground:0,dressing:0,furniture:0},actors=[];
+  const original=LT.RoomArt,travellers=LT.TravellerArt,world=LT.World,calls={ground:0,dressing:0,furniture:0},actors=[];
   LT.RoomArt={...original,...Object.fromEntries(Object.keys(calls).map(name=>[name,(...args)=>{const result=original[name](...args);if(result)calls[name]++;return result;}]))};
   LT.TravellerArt={...travellers,get(...args){actors.push(args[0]);return travellers.get(...args);}};
   const liveState=JSON.stringify(liveEngine.state),home=LT.RoomArt.createMap(record('secret',homeDecor)),hall=LT.RoomArt.createMap(record('kasai',hallDecor));
+  LT.World={actors:map=>map===hall.id?[{id:'P0000000000000001',name:'カサイ',isAdmin:true,x:12,y:4,facing:'down',moving:false}]:[]};
   for(const map of [home,hall]) {
     const startGround=calls.ground;actors.length=0;
     const view=canvas.createCanvas(900,760),state={...liveEngine.state,map:map.id,x:map.spawn.x,y:map.spawn.y,facing:'up'};
     LT.Art.world(view,{map,state},0,{dayPhase:'day'});assert.equal(bounds(view).opaque,view.width*view.height);
     assert(calls.ground>startGround&&calls.dressing>0&&calls.furniture>0,'The shipped renderer bypassed RoomArt hooks or reused a different room kind');
     assert(actors.includes('hero'),'The arriving player was omitted');
-    if(map.roomKindTag==='kasai')assert(actors.includes('kasai'),'Kasai is outside the initial camera view');
+    if(map.roomKindTag==='kasai')assert.equal(actors.filter(kind=>kind==='kasai').length,1,'Only the actual administrator appears at the opposite seat');
     save(`room-${map.roomKindTag}-world-v56.png`,view);
   }
+  actors.length=0;LT.World={actors:()=>[]};const emptyHall=canvas.createCanvas(900,760);LT.Art.world(emptyHall,{map:hall,state:{...liveEngine.state,map:hall.id,...hall.spawn}},0);assert(!actors.includes('kasai'),'Offline Kasai still appears as an NPC');
   const beforeCalls=calls.furniture,changed=LT.RoomArt.createMap({...record('secret',[piece('crystal',2,3)]),revision:8}),view=canvas.createCanvas(900,760);
   LT.Art.world(view,{map:changed,state:{...liveEngine.state,map:changed.id,x:9,y:12}},0);
   assert(calls.furniture>beforeCalls,'A new room revision retained stale furniture art in the terrain cache');
-  assert.equal(JSON.stringify(liveEngine.state),liveState,'Room previews changed the active player save');LT.RoomArt=original;LT.TravellerArt=travellers;
+  assert.equal(JSON.stringify(liveEngine.state),liveState,'Room previews changed the active player save');LT.RoomArt=original;LT.TravellerArt=travellers;LT.World=world;
+});
+
+test('both live seats remain visible with the same full-room framing in short mobile viewports',async()=>{
+  const {runtime}=require('./check-art.cjs'),{LT,engine:liveEngine}=await runtime();if(!LT.RoomArt)attachArt(LT);
+  const travellers=LT.TravellerArt,world=LT.World,hall=LT.RoomArt.createMap(record('kasai',[])),markers={};
+  for(const [kind,color] of [['kasai','#ff00ff'],['hero','#00ffff']]){const sprite=canvas.createCanvas(96,128);sprite.getContext('2d').fillStyle=color;sprite.getContext('2d').fillRect(0,0,96,128);markers[kind]=sprite;}
+  LT.TravellerArt={...travellers,get:kind=>markers[kind]||markers.hero};
+  const pixelsOf=(view,color)=>{const data=view.getContext('2d').getImageData(0,0,view.width,view.height).data;let count=0,x=0,y=0;for(let i=0;i<data.length;i+=4)if(color.every((value,c)=>data[i+c]===value)&&data[i+3]===255){count++;x+=(i/4)%view.width;y+=Math.floor(i/4/view.width);}return {count,x:x/count,y:y/count};};
+  try{
+    for(const [width,height] of [[560,140],[844,154],[390,170],[900,760]]){
+      const positions=[];
+      for(const role of ['challenger','kasai']){
+        const owner=role==='kasai',remote={id:'P0000000000000001',name:owner?'挑戦者':'カサイ',isAdmin:!owner,avatar:'male',x:12,y:owner?16:4,facing:owner?'up':'down',moving:false};
+        LT.World={actors:map=>map===hall.id?[remote]:[],localKind:()=>owner?'kasai':'hero'};
+        const view=canvas.createCanvas(width,height),state={...liveEngine.state,map:hall.id,x:12,y:owner?4:16,facing:owner?'down':'up',party:[]};
+        LT.Art.world(view,{map:hall,state},0,{dayPhase:'day'});
+        const kasai=pixelsOf(view,[255,0,255]),challenger=pixelsOf(view,[0,255,255]);
+        assert(kasai.count>8&&challenger.count>8,`${role} at ${width}×${height} clipped the opposite live participant`);
+        assert(kasai.y<challenger.y,'The administrator must remain at the opposite seat above the challenger');positions.push([kasai,challenger]);
+      }
+      for(let person=0;person<2;person++)for(const axis of ['x','y'])assert(Math.abs(positions[0][person][axis]-positions[1][person][axis])<=1,`Changing the local participant moved the ${axis} camera at ${width}×${height}`);
+    }
+  }finally{LT.TravellerArt=travellers;LT.World=world;}
 });

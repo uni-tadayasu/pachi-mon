@@ -82,7 +82,7 @@
     const defaultName=kind==='kasai'?'カサイの特別対戦ホール':`${String(owner.name||'旅人').slice(0,30)}の秘密の部屋`;
     const name=typeof record.name==='string'&&record.name.trim()?record.name.trim().slice(0,40):defaultName;
     return {
-      id:`room:${owner.id}`,name,subtitle:kind==='kasai'?'奥のカサイに話しかけて、特別な一戦に挑もう。':'自分らしい家具を飾って、旅人を迎えよう。',
+      id:`room:${owner.id}`,name,subtitle:kind==='kasai'?(LT.Admin?.player?.id===owner.id?'あなたの専用ステージ。「秘密部屋」から家具を飾ろう。':'カサイ本人と挑戦者を迎える、特別な対戦ステージ。'):'自分らしい家具を飾って、旅人を迎えよう。',
       revision:Number.isSafeInteger(record.revision)?record.revision:0,roomRevision:Number.isSafeInteger(record.revision)?record.revision:0,
       width:layout.width,height:layout.height,spawn:{...layout.spawn,facing:'up'},
       interior:true,sharedRoom:true,roomKind:kind==='kasai'?'kasai':'home',roomType:kind,roomKindTag:kind,roomOwner:owner.id,
@@ -92,8 +92,9 @@
       requiredSeals:0,level:Array.isArray(outside?.level)?outside.level.slice():[1,100],encounters:[],
       tiles:tiles.map(row=>row.join('')),furniture,floorDecorations,decorations,
       protected:layout.protected.map(rect=>({...rect})),entrance:{...entrance},returnPoint,
-      npcs:kind==='kasai'?[{id:`room-kasai:${owner.id}`,name:'謎のトレーナー カサイ',kind:'kasai',x:12,y:4,facing:'down',
-        roomOwner:owner.id,roomId:`room:${owner.id}`,lines:['ここまで来たね。君とパチモンの絆を、見せてもらおう。']}]:[],
+      // Kasai is the connected operator. World presence draws the actual
+      // player; an offline NPC copy must never appear in the same seat.
+      npcs:[],
       exits:[{...layout.exit,to:returnPoint.map,tx:returnPoint.x,ty:returnPoint.y,facing:returnPoint.facing,door:true,label:outside?.name||'フィールドへ戻る'}],
     };
   }

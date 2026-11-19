@@ -1,6 +1,7 @@
 // Pachi Monsters shared ownership and Futo delivery API.
 // ADMIN_CLAIM_KEY is a runtime secret. Never place it in client code or source.
-import {RULES_VERSION as KASAI_RULES_VERSION,MAX_ACTIONS as KASAI_MAX_ACTIONS,KASAI_TEAM,normalizeParty as normalizeKasaiParty,replayChallenge} from './kasai-replay.mjs';
+import {RULES_VERSION as KASAI_RULES_VERSION,LEGACY_RULES_VERSION as KASAI_LEGACY_RULES_VERSION,MAX_ACTIONS as KASAI_MAX_ACTIONS,KASAI_TEAM,normalizeParty as normalizeKasaiParty,replayChallenge} from './kasai-replay.mjs';
+import {createLiveBattle,validateLiveOrders,resolveLiveRound} from './kasai-live-engine.mjs';
 const BASE_ORIGIN = 'https://uni-tadayasu.github.io';
 const encoder = new TextEncoder();
 const DEFAULT_MOVES = ['futo_breaker', 'futo_burst', 'futo_ascend', 'futo_restore'];
@@ -482,6 +483,7 @@ async function roomsRoute(request,env,path,method,player) {
     return {rooms:rows.results.map(roomView),serverTime:now};
   }
   if(path==='/api/world/rooms'&&method==='POST'){
+    await requireNoLiveSession(env,player.id,now);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>!['map','x','y','facing','name'].includes(key)))fail(400,'INVALID_ROOM_ENTRANCE','部屋の入口の指定が正しくありません。');
     const entrance=roomEntrance(body),name=roomName(body.name===undefined?'ひみつの部屋':body.name),existing=await roomRow(env,player.id);
@@ -498,18 +500,42 @@ async function roomsRoute(request,env,path,method,player) {
     if(created.map_id!==entrance.map||created.entrance_x!==entrance.x||created.entrance_y!==entrance.y||created.facing!==entrance.facing)fail(409,'ROOM_ALREADY_EXISTS','別の操作で自分の部屋が作成されました。自分の部屋を開いてください。');
     return {room:roomView(created),serverTime:now};
   }
-  const match=/^\/api\/world\/rooms\/(P[0-9a-f]{16})$/.exec(path);
+  const match=/^\/api\/world\/rooms\/(P[0-9a-f]{16})(?:\/(relocate))?$/.exec(path);
   if(!match)fail(404,'ROOM_NOT_FOUND','この部屋は見つかりません。');
   const id=match[1],row=await roomRow(env,id);
   if(!row)fail(404,'ROOM_NOT_FOUND','この部屋は見つかりません。');
-  if(method==='GET')return {room:roomView(row),serverTime:now};
-  if(method!=='PATCH')fail(405,'METHOD_NOT_ALLOWED','この部屋の操作方法には対応していません。');
+  if(method==='GET'&&!match[2])return {room:roomView(row),serverTime:now};
+  if(match[2]==='relocate'&&method==='POST'){
+    if(id!==player.id)fail(403,'ROOM_OWNER_REQUIRED','部屋の持ち主だけが移転できます。');
+    await requireNoLiveSession(env,player.id,now);
+    const body=await bodyJSON(request);
+    if(Object.keys(body).some(key=>!['revision','map','x','y','facing'].includes(key))||!integer(body.revision,1,1000000000))fail(400,'INVALID_ROOM_UPDATE','移転先と部屋の版番号を確認してください。');
+    const entrance=roomEntrance(body),direction=ROOM_DIRECTIONS[entrance.facing],returnX=entrance.x-direction[0],returnY=entrance.y-direction[1];
+    if(!row.is_admin&&entrance.map==='village'&&ROOM_RESERVED_DOORS.some(cell=>cell.x===entrance.x&&cell.y===entrance.y))fail(409,'ROOM_ENTRANCE_RESERVED','この壁はカサイの部屋用です。別の壁を選んでください。');
+    const presence=await env.DB.prepare('SELECT map_id,x,y,facing,updated_at FROM world_presence WHERE player_id=?').bind(player.id).first();
+    if(!presence||presence.updated_at<=now-WORLD_TTL||presence.map_id!==entrance.map||presence.x!==returnX||presence.y!==returnY||presence.facing!==entrance.facing)fail(409,'ROOM_NOT_NEARBY','移転したい壁の前に立ち、その壁を向いてください。');
+    const changed=await env.DB.prepare(`UPDATE world_rooms SET map_id=?,entrance_x=?,entrance_y=?,facing=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
+      AND NOT EXISTS(SELECT 1 FROM world_rooms other WHERE other.map_id=? AND other.entrance_x=? AND other.entrance_y=? AND other.owner_id<>?)
+      AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=?)
+      AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id)=?)
+      RETURNING owner_id`).bind(entrance.map,entrance.x,entrance.y,entrance.facing,now,player.id,body.revision,entrance.map,entrance.x,entrance.y,player.id,player.id,player.id,row.is_admin?1:0).first();
+    if(!changed){
+      await requireNoLiveSession(env,player.id,now);
+      const occupied=await env.DB.prepare('SELECT owner_id FROM world_rooms WHERE map_id=? AND entrance_x=? AND entrance_y=? AND owner_id<>?').bind(entrance.map,entrance.x,entrance.y,player.id).first();
+      if(occupied)fail(409,'ROOM_ENTRANCE_OCCUPIED','この壁には別の人の部屋があります。');
+      fail(409,'ROOM_CHANGED','部屋が変更されました。最新の部屋を読み込み直してください。');
+    }
+    return {room:roomView(await roomRow(env,player.id)),serverTime:now};
+  }
+  if(method!=='PATCH'||match[2])fail(405,'METHOD_NOT_ALLOWED','この部屋の操作方法には対応していません。');
   if(id!==player.id)fail(403,'ROOM_OWNER_REQUIRED','部屋の持ち主だけが模様替えできます。');
+  await requireNoLiveSession(env,player.id,now);
   const body=await bodyJSON(request);
   if(Object.keys(body).some(key=>!['revision','name','decorations'].includes(key))||!integer(body.revision,1,1000000000)||body.name===undefined&&body.decorations===undefined)fail(400,'INVALID_ROOM_UPDATE','模様替えの内容と版番号を確認してください。');
   const name=body.name===undefined?row.name:roomName(body.name),decorations=body.decorations===undefined?roomView(row).decorations:validateRoomDecorations(body.decorations,row.is_admin?'kasai':'secret');
   await consumeLimit(env,request,`world-room-edit:${player.id}`,60,60000,true);
   const changed=await env.DB.prepare(`UPDATE world_rooms SET name=?,decorations_json=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
+    AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=world_rooms.owner_id)
     AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=p.id)=?) RETURNING owner_id`)
     .bind(name,JSON.stringify(decorations),now,player.id,body.revision,player.id,row.is_admin?1:0).first();
   if(!changed)fail(409,'ROOM_CHANGED','部屋が変更されました。最新の模様替えを読み込み直してください。');
@@ -520,7 +546,16 @@ const KASAI_TTL=30*60*1000;
 function kasaiReceipt(row) {
   return row?{id:row.receipt_id,grantId:row.receipt_id,species:'floravelle',level:70,gender:row.gender,createdAt:row.created_at,ackedAt:row.acked_at,delivered:row.acked_at!==null}:null;
 }
-async function kasaiReward(env,playerId) {return env.DB.prepare('SELECT * FROM kasai_rewards WHERE player_id=?').bind(playerId).first();}
+async function kasaiReward(env,playerId) {return env.DB.prepare('SELECT r.*,COALESCE(c.room_owner_id,l.kasai_id) AS challenge_room_owner_id FROM kasai_rewards r LEFT JOIN kasai_challenges c ON c.id=r.challenge_id LEFT JOIN kasai_live_sessions l ON l.id=r.live_session_id WHERE r.player_id=?').bind(playerId).first();}
+async function requireKasaiChallenger(env,player,roomOwnerId=null) {
+  if(player.is_admin||roomOwnerId===player.id||(await ownerRecord(env))?.player_id===player.id)fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
+}
+async function currentKasaiParty(env) {
+  return env.DB.prepare('SELECT k.* FROM kasai_parties k JOIN admin_owner a ON a.player_id=k.player_id WHERE a.singleton=1').first();
+}
+function kasaiOpponents(row) {
+  return row.opponents_json?JSON.parse(row.opponents_json):row.rules_version===KASAI_LEGACY_RULES_VERSION?KASAI_TEAM:null;
+}
 function kasaiStorage(value) {
   if(!integer(value,0,192))fail(400,'INVALID_KASAI_CAPACITY','ひかえの人数を確認してください。');
   return value;
@@ -532,7 +567,7 @@ async function kasaiToken(env,row) {
 }
 async function kasaiChallengeView(env,row) {
   const token=await kasaiToken(env,row);
-  return {challenge:{id:row.id,roomId:row.room_owner_id,seed:row.seed,rulesVersion:row.rules_version,party:JSON.parse(row.party_json),opponents:KASAI_TEAM,expiresAt:row.expires_at,state:row.state},token};
+  return {challenge:{id:row.id,roomId:row.room_owner_id,seed:row.seed,rulesVersion:row.rules_version,party:JSON.parse(row.party_json),opponents:kasaiOpponents(row),expiresAt:row.expires_at,state:row.state},token};
 }
 async function kasaiOwnedParty(env,party,player) {
   for(const mon of party){
@@ -554,18 +589,51 @@ async function kasaiOwnedParty(env,party,player) {
   }
 }
 async function kasaiRoute(request,env,path,method,player) {
+  if(path==='/api/world/kasai/live'||path.startsWith('/api/world/kasai/live/'))return kasaiLiveRoute(request,env,path,method,player);
   const now=Date.now();
-  if(path==='/api/world/kasai/reward'&&method==='GET')return {receipt:kasaiReceipt(await kasaiReward(env,player.id)),serverTime:now};
+  if(path==='/api/world/kasai/party'&&method==='GET'){
+    const row=await currentKasaiParty(env);
+    return {party:row?JSON.parse(row.party_json):null,playerId:row?.player_id||null,updatedAt:row?.updated_at||null,serverTime:now};
+  }
+  if(path==='/api/world/kasai/party'&&method==='POST'){
+    await requireAdmin(env,player);
+    const body=await bodyJSON(request);
+    if(Object.keys(body).some(key=>key!=='party'))fail(400,'INVALID_KASAI_PARTY','運営の手持ちの情報を確認してください。');
+    let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','運営の手持ちは1〜6体で設定してください。');}
+    await kasaiOwnedParty(env,party,player);
+    const partyJSON=JSON.stringify(party);
+    await consumeLimit(env,request,`world-kasai-party:${player.id}`,120,60000,true);
+    const saved=await env.DB.prepare(`INSERT INTO kasai_parties (player_id,party_json,updated_at)
+      SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+      ON CONFLICT(player_id) DO UPDATE SET party_json=excluded.party_json,updated_at=CASE WHEN kasai_parties.party_json=excluded.party_json THEN kasai_parties.updated_at ELSE excluded.updated_at END
+      RETURNING player_id,party_json,updated_at`).bind(player.id,partyJSON,now,player.id).first();
+    await requireAdmin(env,player);
+    if(!saved)fail(409,'KASAI_PARTY_CHANGED','運営の手持ちが変更されました。もう一度同期してください。');
+    return {party:JSON.parse(saved.party_json),playerId:saved.player_id,updatedAt:saved.updated_at,serverTime:now};
+  }
+  if(path==='/api/world/kasai/reward'&&method==='GET'){
+    const reward=await kasaiReward(env,player.id);
+    await requireKasaiChallenger(env,player,reward?.challenge_room_owner_id);
+    const pending=!reward?await env.DB.prepare("SELECT id FROM kasai_live_sessions WHERE challenger_id=? AND kasai_id<>challenger_id AND state IN ('result','closed') AND json_extract(battle_json,'$.winner')=0 ORDER BY updated_at DESC,id DESC LIMIT 1").bind(player.id).first():null;
+    return {receipt:kasaiReceipt(reward),pendingLiveSessionId:pending?.id||null,serverTime:now};
+  }
   if(path==='/api/world/kasai/reward/ack'&&method==='POST'){
+    const reward=await kasaiReward(env,player.id);
+    await requireKasaiChallenger(env,player,reward?.challenge_room_owner_id);
     const body=await bodyJSON(request),expected=`kasai-reward:${player.id}`;
     if(Object.keys(body).some(key=>key!=='receiptId')||body.receiptId!==expected)fail(400,'INVALID_KASAI_RECEIPT','カサイの報酬の受取記録を確認してください。');
-    const result=await env.DB.prepare('UPDATE kasai_rewards SET acked_at=COALESCE(acked_at,?) WHERE player_id=? AND receipt_id=? RETURNING player_id').bind(now,player.id,expected).first();
+    const result=await env.DB.prepare(`UPDATE kasai_rewards SET acked_at=COALESCE(acked_at,?) WHERE player_id=? AND receipt_id=?
+      AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+      AND (EXISTS(SELECT 1 FROM kasai_challenges c WHERE c.id=kasai_rewards.challenge_id AND c.room_owner_id<>c.player_id) OR EXISTS(SELECT 1 FROM kasai_live_sessions l WHERE l.id=kasai_rewards.live_session_id AND l.challenger_id=kasai_rewards.player_id AND l.kasai_id<>l.challenger_id AND json_extract(l.battle_json,'$.winner')=0))
+      RETURNING player_id`).bind(now,player.id,expected,player.id).first();
+    await requireKasaiChallenger(env,player,reward?.challenge_room_owner_id);
     if(!result)fail(404,'KASAI_REWARD_NOT_FOUND','カサイの報酬はまだ受け取っていません。');
     return {receipt:kasaiReceipt(await kasaiReward(env,player.id)),serverTime:now};
   }
   if(path==='/api/world/kasai/challenges'&&method==='POST'){
     const body=await bodyJSON(request);kasaiStorage(body.storageCount);
     if(Object.keys(body).some(key=>!['requestId','roomId','party','storageCount'].includes(key))||typeof body.requestId!=='string'||!UUID.test(body.requestId)||typeof body.roomId!=='string'||!WORLD_PLAYER_ID.test(body.roomId))fail(400,'INVALID_KASAI_CHALLENGE','カサイへの挑戦情報を確認してください。');
+    await requireKasaiChallenger(env,player,body.roomId);
     let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','挑戦する仲間の情報が正しくありません。');}
     const partyJSON=JSON.stringify(party),requestId=body.requestId.toLowerCase();
     const previous=await env.DB.prepare('SELECT * FROM kasai_challenges WHERE player_id=? AND request_id=?').bind(player.id,requestId).first();
@@ -574,23 +642,7 @@ async function kasaiRoute(request,env,path,method,player) {
       if(previous.state!=='pending'||previous.expires_at<=now)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了しています。もう一度カサイに話しかけてください。');
       return {...await kasaiChallengeView(env,previous),rewardClaimed:!!await kasaiReward(env,player.id),serverTime:now};
     }
-    const room=await roomRow(env,body.roomId),presence=await env.DB.prepare('SELECT map_id,x,y,updated_at FROM world_presence WHERE player_id=?').bind(player.id).first();
-    if(!room?.is_admin)fail(409,'KASAI_ROOM_UNAVAILABLE','現在のカサイの部屋で挑戦してください。');
-    if(!presence||presence.updated_at<=now-WORLD_TTL||presence.map_id!=='room:'+body.roomId||Math.abs(presence.x-12)+Math.abs(presence.y-4)>3)fail(409,'KASAI_NOT_NEARBY','カサイの部屋に入り、近くで話しかけてください。');
-    await kasaiOwnedParty(env,party,player);
-    await consumeLimit(env,request,`world-kasai-start:${player.id}`,30,3600000,true);
-    const row={id:crypto.randomUUID(),player_id:player.id,request_id:requestId,room_owner_id:body.roomId,rules_version:KASAI_RULES_VERSION,party_json:partyJSON,seed:crypto.getRandomValues(new Uint32Array(1))[0],created_at:now,expires_at:now+KASAI_TTL,state:'pending'};
-    const token=await kasaiToken(env,row),tokenHash=await digest(token);
-    await env.DB.batch([
-      env.DB.prepare("UPDATE kasai_challenges SET state='cancelled',completed_at=? WHERE player_id=? AND state='pending' AND NOT EXISTS(SELECT 1 FROM kasai_challenges WHERE player_id=? AND request_id=?)").bind(now,player.id,player.id,requestId),
-      env.DB.prepare(`INSERT OR IGNORE INTO kasai_challenges (id,player_id,request_id,room_owner_id,rules_version,party_json,seed,token_hash,created_at,expires_at)
-        SELECT ?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`).bind(row.id,player.id,requestId,body.roomId,KASAI_RULES_VERSION,partyJSON,row.seed,tokenHash,now,row.expires_at,body.roomId),
-      env.DB.prepare('DELETE FROM kasai_challenges WHERE id IN (SELECT c.id FROM kasai_challenges c WHERE c.expires_at<? AND NOT EXISTS(SELECT 1 FROM kasai_rewards r WHERE r.challenge_id=c.id) LIMIT 32)').bind(now-86400000)
-    ]);
-    const created=await env.DB.prepare('SELECT * FROM kasai_challenges WHERE player_id=? AND request_id=?').bind(player.id,requestId).first();
-    if(!created||created.state!=='pending')fail(409,'KASAI_CHALLENGE_CHANGED','挑戦情報が変わりました。もう一度カサイに話しかけてください。');
-    if(created.room_owner_id!==body.roomId||created.party_json!==partyJSON)fail(409,'KASAI_REQUEST_REUSED','同じ挑戦の識別情報を別の仲間で使うことはできません。');
-    return {...await kasaiChallengeView(env,created),rewardClaimed:!!await kasaiReward(env,player.id),serverTime:now};
+    fail(409,'KASAI_LIVE_REQUIRED','カサイ本人がいるフィールドで話しかけて、本人との対戦を申し込んでください。');
   }
   const match=/^\/api\/world\/kasai\/challenges\/([0-9a-f-]+)\/(complete|cancel)$/.exec(path);
   if(!match||method!=='POST'||!UUID.test(match[1]))fail(404,'KASAI_CHALLENGE_NOT_FOUND','このカサイへの挑戦は見つかりません。');
@@ -601,6 +653,7 @@ async function kasaiRoute(request,env,path,method,player) {
     await env.DB.prepare("UPDATE kasai_challenges SET state='cancelled',completed_at=? WHERE id=? AND player_id=? AND state='pending'").bind(now,id,player.id).run();
     return {cancelled:true,serverTime:now};
   }
+  await requireKasaiChallenger(env,player,row.room_owner_id);
   const storageCount=kasaiStorage(body.storageCount);
   if(!Array.isArray(body.actions)||body.actions.length<1||body.actions.length>KASAI_MAX_ACTIONS)fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を確認してください。');
   const resultHash=await digest(JSON.stringify(body.actions));
@@ -609,19 +662,21 @@ async function kasaiRoute(request,env,path,method,player) {
     if(row.state==='won'&&storageCount>=192)fail(409,'KASAI_STORAGE_FULL','ひかえが192体で満員です。報酬を受け取るには空きを作ってください。');
     return {won:row.state==='won',result:row.state,receipt:row.state==='won'?kasaiReceipt(await kasaiReward(env,player.id)):null,serverTime:now};
   }
-  if(row.state!=='pending'||row.expires_at<=now||row.rules_version!==KASAI_RULES_VERSION)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了、または期限切れです。もう一度カサイに挑戦してください。');
+  const validRules=row.rules_version===KASAI_RULES_VERSION&&!!row.opponents_json||row.rules_version===KASAI_LEGACY_RULES_VERSION&&!row.opponents_json;
+  if(row.state!=='pending'||row.expires_at<=now||!validRules)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了、または期限切れです。もう一度カサイに挑戦してください。');
   await consumeLimit(env,request,`world-kasai-result:${player.id}`,30,60000,true);
-  let replay;try{replay=replayChallenge(JSON.parse(row.party_json),row.seed,body.actions);}catch(_){fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を再現できませんでした。');}
+  let replay;try{replay=replayChallenge(JSON.parse(row.party_json),row.seed,body.actions,row.opponents_json?JSON.parse(row.opponents_json):null,row.rules_version);}catch(_){fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を再現できませんでした。');}
   if(!replay.ok||!['won','lost'].includes(replay.result))fail(400,'INVALID_KASAI_TRANSCRIPT','操作記録から終了したバトルを確認できませんでした。');
   if(replay.won&&storageCount>=192)fail(409,'KASAI_STORAGE_FULL','ひかえが192体で満員です。空きを作り、期限内に自分で受け取りを再試行してください。');
-  const operations=[env.DB.prepare("UPDATE kasai_challenges SET state=?,result_hash=?,completed_at=? WHERE id=? AND player_id=? AND state='pending' AND expires_at>? RETURNING id").bind(replay.won?'won':'lost',resultHash,now,id,player.id,now)];
+  const operations=[env.DB.prepare("UPDATE kasai_challenges SET state=?,result_hash=?,completed_at=? WHERE id=? AND player_id=? AND state='pending' AND expires_at>? AND room_owner_id<>player_id AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?) RETURNING id").bind(replay.won?'won':'lost',resultHash,now,id,player.id,now,player.id)];
   if(replay.won){
     const gender=(crypto.getRandomValues(new Uint8Array(1))[0]&1)?'male':'female';
     operations.push(env.DB.prepare(`INSERT OR IGNORE INTO kasai_rewards (player_id,receipt_id,challenge_id,gender,created_at)
-      SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_challenges WHERE id=? AND player_id=? AND state='won' AND result_hash=?)`)
-      .bind(player.id,`kasai-reward:${player.id}`,id,gender,now,id,player.id,resultHash));
+      SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_challenges WHERE id=? AND player_id=? AND state='won' AND result_hash=? AND room_owner_id<>player_id) AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`)
+      .bind(player.id,`kasai-reward:${player.id}`,id,gender,now,id,player.id,resultHash,player.id));
   }
   await env.DB.batch(operations);
+  await requireKasaiChallenger(env,player,row.room_owner_id);
   const completed=await env.DB.prepare('SELECT state,result_hash FROM kasai_challenges WHERE id=?').bind(id).first();
   if(!completed||completed.state!==(replay.won?'won':'lost')||completed.result_hash!==resultHash)fail(409,'KASAI_CHALLENGE_CHANGED','別の操作で挑戦が終了しました。報酬の受け取り状況を確認してください。');
   return {won:replay.won,result:replay.result,turns:replay.turns,receipt:replay.won?kasaiReceipt(await kasaiReward(env,player.id)):null,serverTime:now};
@@ -657,8 +712,235 @@ async function worldNearby(env,senderId,targetId,now) {
   if(sender.map_id!==target.map_id||Math.abs(sender.x-target.x)+Math.abs(sender.y-target.y)>WORLD_RADIUS)fail(409,'WORLD_TOO_FAR','同じフィールドで相手の近くに移動してください。');
   return {sender,target};
 }
+const KASAI_LIVE_TALK_TTL=60000,KASAI_LIVE_HEARTBEAT_TTL=30000;
+const KASAI_LIVE_SELECT=`SELECT s.*,c.name AS challenger_name,k.name AS kasai_name FROM kasai_live_sessions s
+  JOIN players c ON c.id=s.challenger_id JOIN players k ON k.id=s.kasai_id`;
+const liveSide=(row,playerId)=>row.challenger_id===playerId?0:row.kasai_id===playerId?1:-1;
+async function liveRow(env,id){return env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.id=?').bind(id).first();}
+async function activeLiveRow(env,playerId){return env.DB.prepare(KASAI_LIVE_SELECT+" JOIN kasai_live_members m ON m.session_id=s.id WHERE m.player_id=? AND s.state<>'closed'").bind(playerId).first();}
+async function closeLiveSession(env,row,reason,now){
+  if(!row||row.state==='closed')return row;
+  const token=crypto.randomUUID(),positions=[JSON.parse(row.challenger_return_json),JSON.parse(row.kasai_return_json)],ids=[row.challenger_id,row.kasai_id];
+  const guard=reason==='talk-timeout'?{sql:"state='staging' AND deadline_at<=?",values:[now]}:
+    reason==='disconnected'?{sql:'(challenger_seen<=? OR kasai_seen<=?)',values:[now-KASAI_LIVE_HEARTBEAT_TTL,now-KASAI_LIVE_HEARTBEAT_TTL]}:
+    reason==='kasai-changed'?{sql:'NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)',values:[]}:
+    reason==='declined'?{sql:"state IN ('staging','permission')",values:[]}:
+    reason==='battle-error'?{sql:"state='battle' AND round=? AND revision=?",values:[row.round,row.revision]}:{sql:'1',values:[]};
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE kasai_live_sessions SET state='closed',reason=?,closed_at=?,close_token=?,updated_at=?,revision=revision+1 WHERE id=? AND state<>'closed' AND ${guard.sql}`).bind(reason,now,token,now,row.id,...guard.values),
+    ...ids.map((id,side)=>env.DB.prepare(`UPDATE world_presence SET map_id=?,x=?,y=?,facing=?,status='idle' WHERE player_id=?
+      AND EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND close_token=?)`).bind(positions[side].map,positions[side].x,positions[side].y,positions[side].facing,id,row.id,token)),
+    env.DB.prepare('DELETE FROM kasai_live_members WHERE session_id=? AND EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND close_token=?)').bind(row.id,row.id,token)
+  ]);
+  return liveRow(env,row.id);
+}
+async function sweepLiveSessions(env,now){
+  const active=await env.DB.prepare(KASAI_LIVE_SELECT+" WHERE s.state<>'closed'").all(),owner=(await ownerRecord(env))?.player_id;
+  for(const row of active.results){
+    const reason=row.kasai_id!==owner?'kasai-changed':row.state==='staging'&&row.deadline_at<=now?'talk-timeout':
+      row.challenger_seen<=now-KASAI_LIVE_HEARTBEAT_TTL||row.kasai_seen<=now-KASAI_LIVE_HEARTBEAT_TTL?'disconnected':null;
+    if(reason)await closeLiveSession(env,row,reason,now);
+  }
+}
+async function liveView(env,row,playerId,now){
+  if(!row)return null;
+  const side=liveSide(row,playerId);if(side<0)fail(403,'KASAI_LIVE_PARTICIPANT_REQUIRED','この対戦の参加者ではありません。');
+  const battle=row.battle_json?JSON.parse(row.battle_json):null,orders=await env.DB.prepare('SELECT side FROM kasai_live_orders WHERE session_id=? AND round=?').bind(row.id,row.round).all();
+  const reward=await kasaiReward(env,row.challenger_id),currentOwner=(await ownerRecord(env))?.player_id;
+  return {id:row.id,role:side===0?'challenger':'kasai',state:row.state,roomId:row.room_id,
+    challenger:worldProfile(row.challenger_id,row.challenger_name,false,row.challenger_avatar),kasai:worldProfile(row.kasai_id,row.kasai_name,true,'kasai'),
+    deadlineAt:row.deadline_at,reason:row.reason,returnPosition:JSON.parse(side===0?row.challenger_return_json:row.kasai_return_json),
+    stagePosition:side===0?{map:'room:'+row.room_id,x:12,y:16,facing:'up'}:{map:'room:'+row.room_id,x:12,y:4,facing:'down'},
+    arrived:[!!row.challenger_arrived,!!row.kasai_arrived],battle,round:row.round,submitted:[0,1].map(index=>orders.results.some(order=>order.side===index)),
+    rewardEligible:side===0&&['result','closed'].includes(row.state)&&battle?.winner===0&&currentOwner!==playerId,
+    rewardClaimed:!!reward,rewardDelivered:reward?.acked_at!=null,revision:row.revision,serverTime:now};
+}
+async function heartbeatLive(env,row,playerId,now){
+  if(!row||row.state==='closed')return row;
+  const side=liveSide(row,playerId),column=side===0?'challenger_seen':'kasai_seen';
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE kasai_live_sessions SET ${column}=? WHERE id=? AND state<>'closed'`).bind(now,row.id),
+    env.DB.prepare(`UPDATE world_presence SET updated_at=?,status='busy',map_id=?,x=CASE WHEN ?=1 OR map_id<>? THEN 12 ELSE x END,
+      y=CASE WHEN ?=1 THEN 4 WHEN map_id<>? THEN 16 ELSE y END,facing=CASE WHEN ?=1 THEN 'down' WHEN map_id<>? THEN 'up' ELSE facing END
+      WHERE player_id=? AND EXISTS(SELECT 1 FROM kasai_live_members WHERE session_id=? AND player_id=?)`)
+      .bind(now,'room:'+row.room_id,side,'room:'+row.room_id,side,'room:'+row.room_id,side,'room:'+row.room_id,playerId,row.id,playerId)
+  ]);
+  return liveRow(env,row.id);
+}
+async function requireNoLiveSession(env,playerId,now){
+  await sweepLiveSessions(env,now);
+  if(await activeLiveRow(env,playerId))fail(409,'KASAI_LIVE_BUSY','カサイの対戦が終わり、挑戦者が部屋を出るまでこの操作はできません。');
+}
+async function resolveLiveSession(env,id,now){
+  let row=await liveRow(env,id);if(!row||row.state!=='battle')return row;
+  const state=JSON.parse(row.battle_json);let submitted=(await env.DB.prepare('SELECT side,orders_json FROM kasai_live_orders WHERE session_id=? AND round=?').bind(id,row.round).all()).results;
+  if(submitted.length===1){
+    const other=1-submitted[0].side;
+    if(validateLiveOrders(state,other,[]).ok){
+      await env.DB.prepare(`INSERT OR IGNORE INTO kasai_live_orders (session_id,side,round,request_id,orders_json,created_at)
+        SELECT ?,?,?,?,'[]',? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND state='battle' AND round=?)`)
+        .bind(id,other,row.round,crypto.randomUUID(),now,id,row.round).run();
+      submitted=(await env.DB.prepare('SELECT side,orders_json FROM kasai_live_orders WHERE session_id=? AND round=?').bind(id,row.round).all()).results;
+    }
+  }
+  if(submitted.length!==2)return row;
+  let next;
+  try{next=resolveLiveRound(state,[0,1].map(side=>JSON.parse(submitted.find(order=>order.side===side).orders_json)));}
+  catch(_){await closeLiveSession(env,row,'battle-error',now);fail(409,'KASAI_LIVE_BATTLE_FAILED','対戦の状態を確認できなかったため、元のフィールドへ戻ります。');}
+  if(!next||!Number.isSafeInteger(next.round)||next.round<=row.round||![null,0,1,'draw'].includes(next.winner)){
+    await closeLiveSession(env,row,'battle-error',now);fail(409,'KASAI_LIVE_BATTLE_FAILED','対戦の状態を確認できなかったため、元のフィールドへ戻ります。');
+  }
+  await env.DB.prepare(`UPDATE kasai_live_sessions SET battle_json=?,round=?,state=?,updated_at=?,revision=revision+1
+    WHERE id=? AND state='battle' AND round=? AND revision=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
+    .bind(JSON.stringify(next),next.round,next.winner===null?'battle':'result',now,id,row.round,row.revision).run();
+  return liveRow(env,id);
+}
+async function kasaiLiveRoute(request,env,path,method,player){
+  const now=Date.now();await sweepLiveSessions(env,now);
+  if(path==='/api/world/kasai/live'&&method==='GET'){
+    let row=await activeLiveRow(env,player.id);
+    if(!row){
+      row=await env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.challenger_id=? OR s.kasai_id=? ORDER BY s.created_at DESC,s.id DESC LIMIT 1').bind(player.id,player.id).first();
+      if(row?.state==='closed'&&(liveSide(row,player.id)===0?row.challenger_ack_at:row.kasai_ack_at)!==null)row=null;
+    }
+    if(row&&row.state!=='closed'){row=await heartbeatLive(env,row,player.id,now);row=await resolveLiveSession(env,row.id,now);}
+    return {session:await liveView(env,row,player.id,now),serverTime:now};
+  }
+  if(path==='/api/world/kasai/live'&&method==='POST'){
+    await requireKasaiChallenger(env,player);
+    const body=await bodyJSON(request);kasaiStorage(body.storageCount);
+    if(Object.keys(body).some(key=>!['requestId','party','storageCount','roomId'].includes(key))||typeof body.requestId!=='string'||!UUID.test(body.requestId)||body.roomId!==undefined&&(typeof body.roomId!=='string'||!WORLD_PLAYER_ID.test(body.roomId)))fail(400,'INVALID_KASAI_LIVE_REQUEST','カサイへの対戦のお誘いを確認してください。');
+    let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','対戦する手持ちは1〜6体です。');}
+    await kasaiOwnedParty(env,party,player);
+    const requestId=body.requestId.toLowerCase(),partyJSON=JSON.stringify(party),prior=await env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.challenger_id=? AND s.request_id=?').bind(player.id,requestId).first();
+    if(prior){
+      if(prior.challenger_party_json!==partyJSON||body.roomId&&body.roomId!==prior.room_id)fail(409,'KASAI_LIVE_REQUEST_REUSED','同じ対戦の識別情報で別のお誘いは送れません。');
+      return {session:await liveView(env,prior,player.id,now),serverTime:now};
+    }
+    const owner=await ownerRecord(env);if(!owner)fail(409,'KASAI_LIVE_OFFLINE','カサイがフィールドにいません。');
+    if(owner.player_id===player.id)fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
+    if(body.roomId&&body.roomId!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','現在のカサイに話しかけてください。');
+    if(await activeLiveRow(env,player.id)||await activeLiveRow(env,owner.player_id))fail(409,'KASAI_LIVE_BUSY','カサイは現在ほかの挑戦者と過ごしています。');
+    let positions;try{positions=await worldNearby(env,player.id,owner.player_id,now);}catch(error){if(error instanceof ApiError)fail(409,error.code==='WORLD_PLAYER_OFFLINE'?'KASAI_LIVE_OFFLINE':'KASAI_LIVE_NOT_NEARBY','同じフィールドで、実際のカサイの近くから話しかけてください。');throw error;}
+    if(!Object.hasOwn(WORLD_MAP_BOUNDS,positions.sender.map_id))fail(409,'KASAI_LIVE_NOT_NEARBY','外のフィールドでカサイに話しかけてください。');
+    if(positions.sender.status!=='idle'||positions.target.status!=='idle')fail(409,'KASAI_LIVE_BUSY','どちらかが別の操作中です。冒険に戻ってから話しかけてください。');
+    const room=await ensureKasaiRoom(env,now);if(room?.owner_id!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','カサイの部屋を確認できません。');
+    await consumeLimit(env,request,`world-kasai-live-start:${player.id}`,12,60000,true);
+    const id=crypto.randomUUID(),seed=crypto.getRandomValues(new Uint32Array(1))[0],returns=[positions.sender,positions.target].map(p=>JSON.stringify({map:p.map_id,x:p.x,y:p.y,facing:p.facing}));
+    await env.DB.batch([
+      env.DB.prepare(`INSERT OR IGNORE INTO kasai_live_sessions (id,request_id,challenger_id,kasai_id,room_id,challenger_return_json,kasai_return_json,challenger_party_json,challenger_avatar,challenger_seen,kasai_seen,deadline_at,seed,created_at,updated_at)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)
+        AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id IN (?,?))
+        AND EXISTS(SELECT 1 FROM world_presence c JOIN world_presence k ON k.player_id=? WHERE c.player_id=? AND c.map_id=k.map_id AND c.map_id=? AND c.updated_at>? AND k.updated_at>? AND c.status='idle' AND k.status='idle' AND ABS(c.x-k.x)+ABS(c.y-k.y)<=?)`)
+        .bind(id,requestId,player.id,owner.player_id,room.owner_id,returns[0],returns[1],partyJSON,positions.sender.avatar,now,now,now+KASAI_LIVE_TALK_TTL,seed,now,now,owner.player_id,player.id,owner.player_id,owner.player_id,player.id,positions.sender.map_id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS),
+      ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare('INSERT INTO kasai_live_members (player_id,session_id,side) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=?)').bind(member,id,side,id)),
+      ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare(`UPDATE world_presence SET map_id=?,x=12,y=?,facing=?,status='busy' WHERE player_id=? AND EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=? AND session_id=?)`)
+        .bind('room:'+room.owner_id,side===0?16:4,side===0?'up':'down',member,member,id))
+    ]);
+    const created=await env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.challenger_id=? AND s.request_id=?').bind(player.id,requestId).first();
+    if(!created)fail(409,'KASAI_LIVE_BUSY','カサイの状態が変わりました。近くでもう一度話しかけてください。');
+    return {session:await liveView(env,created,player.id,now),serverTime:now};
+  }
+  const match=/^\/api\/world\/kasai\/live\/([0-9a-f-]+)(?:\/(arrive|talk|answer|actions|leave|ack|claim))?$/.exec(path);
+  if(!match||!UUID.test(match[1]))fail(404,'KASAI_LIVE_NOT_FOUND','このカサイとの対戦は見つかりません。');
+  let row=await liveRow(env,match[1]);if(!row)fail(404,'KASAI_LIVE_NOT_FOUND','このカサイとの対戦は見つかりません。');
+  const side=liveSide(row,player.id);if(side<0)fail(403,'KASAI_LIVE_PARTICIPANT_REQUIRED','この対戦の参加者ではありません。');
+  if(!match[2]&&method==='GET'){
+    if(row.state!=='closed'){row=await heartbeatLive(env,row,player.id,now);row=await resolveLiveSession(env,row.id,now);}
+    return {session:await liveView(env,row,player.id,now),serverTime:now};
+  }
+  if(method!=='POST'||!match[2])fail(405,'METHOD_NOT_ALLOWED','この対戦の操作方法には対応していません。');
+  const body=await bodyJSON(request),operation=match[2],allowed={arrive:['party'],talk:[],answer:['accept'],actions:['round','orders','requestId'],leave:[],ack:[],claim:['storageCount']}[operation];
+  if(Object.keys(body).some(key=>!allowed.includes(key)))fail(400,'INVALID_KASAI_LIVE_REQUEST','対戦の操作内容を確認してください。');
+  const reply=async()=>({session:await liveView(env,await liveRow(env,row.id),player.id,now),serverTime:now});
+  if(operation==='ack'){
+    if(row.state!=='closed')fail(409,'KASAI_LIVE_NOT_CLOSED','挑戦者が退出するまで、対戦の部屋に留まります。');
+    const col=side===0?'challenger_ack_at':'kasai_ack_at';await env.DB.prepare(`UPDATE kasai_live_sessions SET ${col}=COALESCE(${col},?) WHERE id=? AND state='closed'`).bind(now,row.id).run();
+    return {session:null,acknowledged:true,serverTime:now};
+  }
+  if(operation==='leave'){
+    if(row.state!=='closed'&&side!==0)fail(403,'KASAI_LIVE_PINNED','挑戦者が退出するまでカサイは向かいの席で待ちます。');
+    row=await closeLiveSession(env,row,'challenger-left',now);return reply();
+  }
+  if(operation==='claim'){
+    await requireKasaiChallenger(env,player,row.kasai_id);
+    if(side!==0||!['result','closed'].includes(row.state)||!row.battle_json||JSON.parse(row.battle_json).winner!==0)fail(409,'KASAI_LIVE_NOT_WON','カサイ本人との対戦に勝利した挑戦者だけが受け取れます。');
+    if(kasaiStorage(body.storageCount)>=192)fail(409,'KASAI_STORAGE_FULL','ひかえが192体で満員です。空きを作ってから受け取ってください。');
+    const existing=await kasaiReward(env,player.id);if(existing){await requireKasaiChallenger(env,player,existing.challenge_room_owner_id);return {...await reply(),receipt:kasaiReceipt(existing)};}
+    const gender=(crypto.getRandomValues(new Uint8Array(1))[0]&1)?'male':'female';
+    await env.DB.prepare(`INSERT OR IGNORE INTO kasai_rewards (player_id,receipt_id,live_session_id,gender,created_at)
+      SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND challenger_id=? AND kasai_id<>challenger_id AND state IN ('result','closed') AND json_extract(battle_json,'$.winner')=0)
+      AND NOT EXISTS(SELECT 1 FROM admin_owner WHERE player_id=?)`).bind(player.id,'kasai-reward:'+player.id,row.id,gender,now,row.id,player.id,player.id).run();
+    await requireKasaiChallenger(env,player,row.kasai_id);
+    return {...await reply(),receipt:kasaiReceipt(await kasaiReward(env,player.id))};
+  }
+  if(row.state==='closed')return reply();
+  await heartbeatLive(env,row,player.id,now);
+  if(operation==='arrive'){
+    const flag=side===0?'challenger_arrived':'kasai_arrived',column=side===0?'challenger_party_json':'kasai_party_json';
+    let partyJSON=row[column];
+    if(side===1&&body.party===undefined&&!row.kasai_arrived)fail(400,'KASAI_LIVE_PARTY_REQUIRED','カサイ本人の現在の手持ちを送ってください。');
+    if(body.party!==undefined){let party;try{party=normalizeKasaiParty(body.party);}catch(_){fail(400,'INVALID_KASAI_PARTY','対戦する手持ちは1〜6体です。');}await kasaiOwnedParty(env,party,player);partyJSON=JSON.stringify(party);}
+    if(row[flag]){if(partyJSON!==row[column])fail(409,'KASAI_PARTY_CHANGED','入場時の手持ちは対戦が終わるまで変更できません。');return reply();}
+    if(row.state!=='staging')fail(409,'KASAI_LIVE_PHASE_CHANGED','対戦の準備状況が変わりました。');
+    await env.DB.prepare(`UPDATE kasai_live_sessions SET ${flag}=1,${column}=?,updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND ${flag}=0 AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
+      .bind(partyJSON,now,row.id).run();return reply();
+  }
+  if(operation==='talk'){
+    if(side!==0)fail(403,'KASAI_LIVE_CHALLENGER_REQUIRED','挑戦者がカサイに話しかけてください。');
+    if(['permission','battle','result'].includes(row.state))return reply();
+    if(row.state!=='staging'||!row.challenger_arrived||!row.kasai_arrived)fail(409,'KASAI_LIVE_NOT_READY','二人が部屋に入るまでお待ちください。');
+    const presence=await env.DB.prepare('SELECT map_id,x,y FROM world_presence WHERE player_id=?').bind(player.id).first();
+    if(presence?.map_id!=='room:'+row.room_id||Math.abs(presence.x-12)+Math.abs(presence.y-4)>3)fail(409,'KASAI_NOT_NEARBY','向かいのカサイの近くに行って話しかけてください。');
+    await env.DB.prepare("UPDATE kasai_live_sessions SET state='permission',updated_at=?,revision=revision+1 WHERE id=? AND state='staging' AND deadline_at>? AND challenger_arrived=1 AND kasai_arrived=1 AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)").bind(now,row.id,now).run();return reply();
+  }
+  if(operation==='answer'){
+    if(side!==1)fail(403,'ADMIN_REQUIRED','カサイ本人が対戦の許可を選んでください。');
+    if(typeof body.accept!=='boolean')fail(400,'INVALID_KASAI_LIVE_REQUEST','対戦するかどうかを選んでください。');
+    if(!body.accept){if(['staging','permission'].includes(row.state))await closeLiveSession(env,row,'declined',now);return reply();}
+    if(['battle','result'].includes(row.state))return reply();
+    if(row.state!=='permission'||!row.challenger_arrived||!row.kasai_arrived||!row.kasai_party_json)fail(409,'KASAI_LIVE_NOT_READY','挑戦者が話しかけてから対戦を許可してください。');
+    await requireAdmin(env,player);
+    const battle=createLiveBattle(JSON.parse(row.challenger_party_json),JSON.parse(row.kasai_party_json),row.seed,[row.challenger_name,'謎のトレーナー カサイ']);
+    await env.DB.prepare(`UPDATE kasai_live_sessions SET state='battle',battle_json=?,round=?,updated_at=?,revision=revision+1
+      WHERE id=? AND state='permission' AND revision=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id)`)
+      .bind(JSON.stringify(battle),battle.round,now,row.id,row.revision).run();return reply();
+  }
+  if(operation==='actions'){
+    if(!integer(body.round,1,1000)||typeof body.requestId!=='string'||!UUID.test(body.requestId)||!Array.isArray(body.orders))fail(400,'INVALID_KASAI_LIVE_ORDERS','対戦の行動情報を確認してください。');
+    const requestId=body.requestId.toLowerCase(),ordersJSON=JSON.stringify(body.orders),prior=await env.DB.prepare('SELECT round,orders_json FROM kasai_live_orders WHERE session_id=? AND side=? AND request_id=?').bind(row.id,side,requestId).first();
+    if(prior){if(prior.round!==body.round||prior.orders_json!==ordersJSON)fail(409,'KASAI_LIVE_REQUEST_REUSED','確定済みの行動と内容が一致しません。');await resolveLiveSession(env,row.id,now);return reply();}
+    if(row.state!=='battle'||body.round!==row.round)fail(409,'KASAI_LIVE_ROUND_CHANGED','ターンが進みました。最新の対戦状態を確認してください。');
+    const valid=validateLiveOrders(JSON.parse(row.battle_json),side,body.orders);if(!valid.ok)fail(400,'INVALID_KASAI_LIVE_ORDERS',valid.error||'この行動は選べません。');
+    await env.DB.prepare(`INSERT OR IGNORE INTO kasai_live_orders (session_id,side,round,request_id,orders_json,created_at)
+      SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=? AND state='battle' AND round=? AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=kasai_live_sessions.kasai_id))`)
+      .bind(row.id,side,body.round,requestId,ordersJSON,now,row.id,body.round).run();
+    const stored=await env.DB.prepare('SELECT request_id,orders_json FROM kasai_live_orders WHERE session_id=? AND side=? AND round=?').bind(row.id,side,body.round).first();
+    if(!stored||stored.request_id!==requestId||stored.orders_json!==ordersJSON)fail(409,'KASAI_LIVE_ALREADY_SUBMITTED','このターンの行動は既に確定しています。');
+    await resolveLiveSession(env,row.id,now);return reply();
+  }
+  fail(404,'KASAI_LIVE_NOT_FOUND','この対戦の操作はありません。');
+}
+
+async function worldPopulation(env,now) {
+  // Aggregate before projecting: nearby rendering has an 80-actor cap, but
+  // stage totals count every actual, fresh player exactly once (including self).
+  // The persisted room join excludes deleted/invalid dynamic maps without
+  // creating rooms or refreshing presence as a side effect of this read.
+  const result=await env.DB.prepare(`SELECT w.map_id AS map,COUNT(*) AS count,r.name AS room_name,r.owner_id AS room_owner,
+    EXISTS(SELECT 1 FROM admin_owner a WHERE a.player_id=r.owner_id) AS room_admin
+    FROM world_presence w JOIN players p ON p.id=w.player_id
+    LEFT JOIN world_rooms r ON w.map_id='room:'||r.owner_id
+    LEFT JOIN players owner ON owner.id=r.owner_id
+    WHERE w.updated_at>? AND (w.map_id IN (SELECT value FROM json_each(?)) OR owner.id IS NOT NULL)
+    GROUP BY w.map_id,r.name,r.owner_id ORDER BY w.map_id`)
+    .bind(now-WORLD_TTL,JSON.stringify(Object.keys(WORLD_MAP_BOUNDS))).all();
+  const rows=result.results.map(row=>({map:row.map,count:row.count,...(row.room_owner?{name:row.room_name,kind:row.room_admin?'kasai':'secret'}:{})}));
+  return {rows,total:rows.reduce((sum,row)=>sum+row.count,0),serverTime:now,ttlMs:WORLD_TTL};
+}
 async function worldRoute(request,env,path,method,player) {
   const now=Date.now();
+  if(path==='/api/world/population'&&method==='GET')return worldPopulation(env,now);
   if(path==='/api/world/rooms'||path.startsWith('/api/world/rooms/'))return roomsRoute(request,env,path,method,player);
   if(path==='/api/world/kasai'||path.startsWith('/api/world/kasai/'))return kasaiRoute(request,env,path,method,player);
   if((path==='/api/world/trainer-pass'||path==='/api/world/trainer-pass/verify')&&method==='POST') {
@@ -693,13 +975,27 @@ async function worldRoute(request,env,path,method,player) {
     }
   }
   if(path==='/api/world/presence'&&method==='POST') {
-    const body=await validateWorldPresence(env,await bodyJSON(request));
+    await sweepLiveSessions(env,now);
+    const body=await validateWorldPresence(env,await bodyJSON(request)),live=await activeLiveRow(env,player.id);
+    if(live){
+      if(liveSide(live,player.id)===1)Object.assign(body,{map:'room:'+live.room_id,x:12,y:4,facing:'down',status:'busy'});
+      else if(body.map!=='room:'+live.room_id)fail(409,'KASAI_LIVE_LOCKED','カサイの部屋を出るときは対戦の退出を選んでください。');
+      else body.status='busy';
+    }
     // A conditional UPSERT caps writes at four per second per player, including
     // concurrent requests, without sharing limits with players behind one NAT.
-    const accepted=await env.DB.prepare(`INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at) VALUES (?,?,?,?,?,?,?,?)
-      ON CONFLICT(player_id) DO UPDATE SET map_id=excluded.map_id,x=excluded.x,y=excluded.y,facing=excluded.facing,avatar=excluded.avatar,status=excluded.status,updated_at=excluded.updated_at
-      WHERE world_presence.updated_at<=? RETURNING player_id`).bind(player.id,body.map,body.x,body.y,body.facing,body.avatar,body.status,now,now-250).first();
-    if(!accepted)fail(429,'WORLD_UPDATE_TOO_FAST','少し待ってからフィールドを更新してください。');
+    const accepted=await env.DB.prepare(`INSERT INTO world_presence (player_id,map_id,x,y,facing,avatar,status,updated_at,input_at)
+      SELECT ?,?,?,?,?,?,?,?,? WHERE (? IS NULL AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=?))
+        OR EXISTS(SELECT 1 FROM kasai_live_members m JOIN kasai_live_sessions s ON s.id=m.session_id
+          WHERE m.player_id=? AND m.session_id=? AND s.state<>'closed' AND EXISTS(SELECT 1 FROM admin_owner WHERE player_id=s.kasai_id))
+      ON CONFLICT(player_id) DO UPDATE SET map_id=excluded.map_id,x=excluded.x,y=excluded.y,facing=excluded.facing,avatar=excluded.avatar,status=excluded.status,updated_at=excluded.updated_at,input_at=excluded.input_at
+      WHERE world_presence.input_at<=? RETURNING player_id`)
+      .bind(player.id,body.map,body.x,body.y,body.facing,body.avatar,body.status,now,now,live?.id||null,player.id,player.id,live?.id||null,now-250).first();
+    if(!accepted){
+      await sweepLiveSessions(env,now);const current=await activeLiveRow(env,player.id);
+      if((current?.id||null)!==(live?.id||null))fail(409,'KASAI_LIVE_CHANGED','カサイの対戦への入退室が変わりました。最新のフィールドを確認してください。');
+      fail(429,'WORLD_UPDATE_TOO_FAST','少し待ってからフィールドを更新してください。');
+    }
     await env.DB.batch([
       env.DB.prepare("UPDATE world_invitations SET state='expired',updated_at=? WHERE (sender_id=? OR target_id=?) AND state='pending' AND (expires_at<=? OR map_id<>?)").bind(now,player.id,player.id,now,body.map),
       env.DB.prepare('DELETE FROM world_presence WHERE player_id IN (SELECT player_id FROM world_presence WHERE updated_at<? LIMIT 32)').bind(now-WORLD_TTL*4),
@@ -710,8 +1006,11 @@ async function worldRoute(request,env,path,method,player) {
     return worldSnapshot(env,player,body,now);
   }
   if(path==='/api/world/presence'&&method==='DELETE') {
+    await sweepLiveSessions(env,now);
+    const live=await activeLiveRow(env,player.id);
+    if(live){if(liveSide(live,player.id)===1)fail(403,'KASAI_LIVE_PINNED','挑戦者が退出するまでカサイは向かいの席で待ちます。');await closeLiveSession(env,live,'challenger-left',now);}
     await env.DB.batch([
-      env.DB.prepare('DELETE FROM world_presence WHERE player_id=?').bind(player.id),
+      env.DB.prepare('DELETE FROM world_presence WHERE player_id=? AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=world_presence.player_id)').bind(player.id),
       env.DB.prepare("UPDATE world_invitations SET state='cancelled',updated_at=? WHERE (sender_id=? OR target_id=?) AND state='pending'").bind(now,player.id,player.id)
     ]);
     return {left:true,serverTime:now};

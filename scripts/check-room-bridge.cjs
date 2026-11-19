@@ -9,12 +9,12 @@ for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
   vm.runInContext(match[2],model);if(model.LT?.Engine)break;
 }
 vm.runInContext(fs.readFileSync(path.join(root,'room-art.js'),'utf8'),model);
-const {Engine,DATA,RoomArt}=model.LT,copy=value=>JSON.parse(JSON.stringify(value)),OWNER='P0123456789abcdef';
+const {Engine,DATA,RoomArt}=model.LT,copy=value=>JSON.parse(JSON.stringify(value)),OWNER='P0123456789abcdef',VISITOR='Pfedcba9876543210';
 const slice=(first,last)=>{const start=html.indexOf(first),end=html.indexOf(last,start);assert(start>=0&&end>start,first);return html.slice(start,end);};
 const barrier=slice('  let checkedTradeSave=','  function begin(');
 const gifting=slice('  function persistGiftMutation(','  LT.playMoveSound=');
 const trades=slice('  function commitTrade(','  function showCredits(');
-const bridge=slice('  LT.adminBridge={','  LT.portraitHTML=');
+const bridge=slice('  let kasaiLiveStage=null;','  LT.portraitHTML=');
 const controllers=slice('  function fieldDialogOpen()','  document.addEventListener(\'pachi-online-return\'');
 const keyboard=slice('  function walk(dx,dy)','  window.addEventListener(\'keyup\'');
 const menu=slice('  function showMenu()','  function openOnlineFromMenu(');
@@ -22,7 +22,7 @@ const scene=slice('  function updateScene(){','  function sceneOptions()');
 const roomMenuBranch=html.match(/if\(d\.ui==='rooms'\)\{[^\n]+\}/)?.[0];assert(roomMenuBranch,'The menu must have its rooms action');
 const record=(kind='secret',decorations=[])=>({id:OWNER,mapId:'room:'+OWNER,owner:{id:OWNER,name:'旅人',isAdmin:kind==='kasai'},kind,name:'テストの部屋',revision:1,decorations,
   entrance:{map:'village',x:32,y:7,facing:'up',returnX:32,returnY:8}});
-const gift={id:'kasai-reward:'+OWNER,grantId:'kasai-reward:'+OWNER,species:'floravelle',level:70,gender:'female',delivered:false,ackedAt:null};
+const gift={id:'kasai-reward:'+VISITOR,grantId:'kasai-reward:'+VISITOR,species:'floravelle',level:70,gender:'female',delivered:false,ackedAt:null};
 function harness(){
   const engine=new Engine();assert(engine.newGame('komori').ok);
   const initial=engine.serialize(),events={},nodes=new Map(),trace=[];
@@ -39,7 +39,7 @@ function harness(){
     window:{location:{reload(){controls.reloads++;}},addEventListener(name,fn){(events[name]||=[]).push(fn);}},
     closeModal(){node('modal').open=false;trace.push('close-modal');},showDialogue(){},openModal(title,body,pane){controls.menu={title,body,pane};node('modal').open=true;},
     updateAll(){controls.updates++;trace.push('render');},loadStored(){controls.loads++;},resize(){trace.push('resize');},openBattle(){controls.battles++;},
-    LT:{DATA,PlayerIdentity:model.LT.PlayerIdentity,Admin:{player:{id:OWNER,isAdmin:false}},Gamepad:class{constructor(config){controls.pad=config;}},
+    LT:{DATA,RoomArt,PlayerIdentity:model.LT.PlayerIdentity,Admin:{player:{id:VISITOR,isAdmin:false}},Gamepad:class{constructor(config){controls.pad=config;}},
       Trade:{isLocked:()=>controls.locked},World:{moved(){controls.worldMoves++;},isDialogOpen:()=>controls.fieldOpen,closeDialog(){controls.fieldCloses++;controls.fieldOpen=false;return true;}},
       Rooms:{moved(){controls.roomMoves++;},isDialogOpen:()=>controls.roomOpen,isWorking:()=>controls.roomWorking,closeDialog(){controls.roomCloses++;controls.roomOpen=false;return true;},open(){controls.roomMenus++;return true;}},
       KasaiChallenge:{isDialogOpen:()=>controls.kasaiOpen,isWorking:()=>controls.kasaiWorking,closeDialog(){controls.kasaiCloses++;controls.kasaiOpen=false;return true;}}},
@@ -74,11 +74,40 @@ test('entry and Kasai start respect adventure, intro, battle, internet and excha
   const h=harness();assert.equal(h.bridge.startKasaiBattle({}).ok,false);assert.equal(h.controls.battles,0);
 });
 
-test('talking to the mounted Kasai NPC starts the actual solo Engine with its prepared party',()=>{
+test('new Kasai battles cannot use the former CPU path even inside the arena',()=>{
   const h=harness();h.bridge.enterSharedRoom(h.kasai);Object.assign(h.c.engine.state,{x:12,y:5,facing:'up'});
-  const challenge={id:'bridge-test-session',token:'bridge-test-token-12345678',seed:7,rulesVersion:model.LT.KasaiRules.version,party:copy(model.LT.KasaiRules.normalizeParty(h.c.engine.state.party))};
-  assert.equal(h.bridge.startKasaiBattle(challenge).ok,true);assert.equal(h.controls.battles,1);assert.equal(h.c.engine.battle.kasai,true);assert.equal(h.c.engine.battle.enemyTeam.length,3);assert.equal(h.c.engine.battle.kasaiChallenge.id,challenge.id);
-  assert.equal(JSON.parse(h.controls.raw).map,'village');assert.equal(h.c.engine.state.map,h.kasai.id);
+  assert.equal(h.c.engine.map.npcs.length,0);
+  const result=h.bridge.startKasaiBattle({});assert.equal(result.ok,false);assert.match(result.message,/リアルタイム/);assert.equal(h.controls.battles,0);assert.equal(h.c.engine.battle,null);
+});
+
+test('Kasai self challenge is rejected by both administrator status and room ownership before any save or battle',()=>{
+  for(const self of ['admin','room-owner']){
+    const h=harness();assert.equal(h.bridge.enterSharedRoom(h.kasai).ok,true);Object.assign(h.c.engine.state,{x:12,y:5,facing:'up'});
+    if(self==='admin')h.c.LT.Admin.player.isAdmin=true;else h.c.LT.Admin.player.id=OWNER;
+    const before=copy(h.c.engine.state),writes=h.controls.writes;
+    const challenge={id:'self-session',token:'self-token-12345678',seed:17,rulesVersion:model.LT.KasaiRules.version,party:copy(model.LT.KasaiRules.normalizeParty(h.c.engine.state.party)),opponents:copy(model.LT.KasaiRules.normalizeParty([h.c.engine.makeMonster('fuwari',27)]))};
+    const result=h.bridge.startKasaiBattle(challenge);assert.equal(result.ok,false);assert.match(result.message,/自分自身/);assert.equal(h.controls.battles,0);assert.equal(h.c.engine.battle,null);assert.equal(h.controls.writes,writes);assert.deepEqual(copy(h.c.engine.state),before);
+  }
+  const h=harness();h.c.LT.Admin.player.isAdmin=true;assert.equal(h.bridge.receiveKasaiReward(gift).ok,false);assert.equal(h.controls.writes,0);assert(!h.c.engine.state.giftReceipts.includes(gift.id));
+});
+
+test('administrator party synchronization rejects a stale tab, guests and busy or locked sessions',()=>{
+  const h=harness();assert.equal(h.bridge.canSyncKasaiParty(),false);h.c.LT.Admin.player.isAdmin=true;assert.equal(h.bridge.canSyncKasaiParty(),true);
+  const raw=h.controls.raw,disk=new Engine(JSON.parse(raw));disk.state.coins+=1;h.controls.raw=JSON.stringify(disk.serialize());assert.equal(h.bridge.canSyncKasaiParty(),false);h.controls.raw=raw;
+  for(const set of [value=>h.c.busy=value,value=>h.c.introPending=value,value=>h.c.engine.battle=value?{}:null,value=>h.c.LT.onlineActive=value,value=>h.c.LT.localTradeActive=value,value=>h.controls.locked=value]){
+    set(true);assert.equal(h.bridge.canSyncKasaiParty(),false);set(false);assert.equal(h.bridge.canSyncKasaiParty(),true);
+  }
+  h.c.playing=false;assert.equal(h.bridge.canSyncKasaiParty(),false,'Title screen has no stable live party instance to synchronize');h.c.storedSave=null;assert.equal(h.bridge.canSyncKasaiParty(),false);
+});
+
+test('party change events expose the newly committed party and never announce failed saves',()=>{
+  const h=harness(),observed=[];h.c.LT.Admin.player.isAdmin=true;
+  h.c.document.dispatchEvent=event=>{if(event.type==='pachi-party-changed')observed.push({party:copy(h.c.engine.state.party),stored:copy(h.c.storedSave.party),disk:JSON.parse(h.controls.raw).party,canSync:h.bridge.canSyncKasaiParty()});};
+  h.c.engine.state.party.push(h.c.engine.makeMonster('fuwari',28));h.c.engine.markCaught('fuwari');assert.equal(h.c.save(),true);
+  assert.equal(observed.length,1);assert.equal(observed[0].party.length,2);assert.deepEqual(observed[0].party,observed[0].stored);assert.deepEqual(observed[0].party,observed[0].disk);assert.equal(observed[0].canSync,true);
+  h.controls.quota=true;h.c.engine.state.coins++;assert.equal(h.c.save(),false);assert.equal(observed.length,1);h.controls.quota=false;h.c.save();observed.length=0;
+  const entitlement={grantId:'admin-legendary:'+VISITOR,species:'arvelion',level:70};assert.equal(h.bridge.receiveAdminLegendary(entitlement).ok,true);
+  assert.equal(observed.length,1);assert.equal(observed[0].party.at(-1).species,'arvelion');assert.deepEqual(observed[0].party,observed[0].stored);assert.deepEqual(observed[0].party,observed[0].disk);assert.equal(observed[0].canSync,true);
 });
 
 test('room refresh preserves safe position, relocates a blocked tile, and leaves battle maps stable',()=>{
@@ -148,8 +177,8 @@ const actor=(overrides={})=>({id:PEER,name:'旅人',isAdmin:false,avatar:'male',
 const packet=(players=[],overrides={})=>({self:actor({id:SELF,x:1,facing:'right'}),players,serverTime:1000,ttlMs:15000,...overrides});
 const fieldRuntime=vm.runInNewContext(fieldTests.slice(harnessStart,harnessEnd)+'\nruntime',{vm,assert,console,SOURCE:fieldSource,SELF,PEER,OTHER,copy,actor,packet,settle});
 
-test('approaching verified field Kasai routes to the solo room without invitation or PeerJS battle',async()=>{
-  const h=fieldRuntime(),entered=[],online=[];h.players=[actor({isAdmin:true,avatar:'kasai',name:'謎のトレーナー カサイ'})];h.context.LT.Rooms={enterKasai:async id=>{entered.push(id);return true;},isWorking:()=>false};h.context.LT.requestOnline=options=>online.push(options);
+test('approaching verified field Kasai requests the live stage without ordinary invitation or PeerJS battle',async()=>{
+  const h=fieldRuntime(),entered=[],online=[];h.players=[actor({isAdmin:true,avatar:'kasai',name:'謎のトレーナー カサイ'})];h.context.LT.Rooms={isWorking:()=>false};h.context.LT.KasaiLive={request:async id=>{entered.push(id);return true;},locked:()=>false};h.context.LT.requestOnline=options=>online.push(options);
   await h.step(800);assert.equal(h.context.LT.World.interact(),true);h.click('battle');await h.step(300);
   assert.deepEqual(entered,[PEER]);assert.deepEqual(online,[]);assert(!h.calls.some(call=>call.path==='/world/invitations'));
 });
@@ -165,4 +194,51 @@ test('refreshPresence waits for stale in-flight map data and sends a fresh throt
 test('refreshPresence refuses a hidden or disconnected game instead of reporting fresh position',async()=>{
   const h=fieldRuntime();await h.step(800);const count=h.calls.filter(call=>call.method==='POST').length;
   h.doc.hidden=true;assert.equal(await h.context.LT.World.refreshPresence(),false);h.doc.hidden=false;h.context.navigator.onLine=false;assert.equal(await h.context.LT.World.refreshPresence(),false);assert.equal(h.calls.filter(call=>call.method==='POST').length,count);
+});
+
+const liveSession=(role='challenger')=>({id:'test-live-session',roomId:OWNER,role,state:'staging',returnPosition:{map:'village',x:32,y:8,facing:'left'}});
+function liveHarness(role='challenger'){
+  const h=harness(),session=liveSession(role),calls=[];
+  if(role==='kasai')h.c.LT.Admin.player={id:OWNER,isAdmin:true};
+  let active=true;
+  h.c.LT.KasaiLive={isActive:()=>active,session:()=>session,isWorking:()=>false,isDialogOpen:()=>false,leave:()=>{calls.push('leave');},closeDialog:()=>true};
+  return {...h,session,calls,end(){active=false;}};
+}
+test('live arena places both saved players correctly and preserves exact individual return points',()=>{
+  for(const role of ['challenger','kasai']){
+    const h=liveHarness(role);assert.equal(h.bridge.stageKasaiLive(record('kasai'),h.session).ok,true);
+    assert.equal(h.c.engine.state.map,'room:'+OWNER);assert.equal(h.c.engine.state.x,12);assert.equal(h.c.engine.state.y,role==='kasai'?4:16);assert.equal(h.c.engine.state.facing,role==='kasai'?'down':'up');
+    const saved=JSON.parse(h.controls.raw);assert.equal(saved.map,'village');assert.equal(saved.x,32);assert.equal(saved.y,8);
+    assert.equal(h.bridge.leaveKasaiLive(h.session.returnPosition).ok,true);assert.equal(h.c.engine.state.map,'village');assert.equal(h.c.engine.state.x,32);assert.equal(h.c.engine.state.y,8);assert.equal(h.c.engine.state.facing,'left');
+  }
+});
+test('operator is pinned while challenger can approach and exit closes the joint session before movement',()=>{
+  const owner=liveHarness('kasai');assert(owner.bridge.stageKasaiLive(record('kasai'),owner.session).ok);
+  owner.c.walk(0,1);assert.equal(owner.c.engine.state.y,4);assert.equal(owner.c.engine.state.facing,'down');
+  Object.assign(owner.c.engine.state,{x:3,y:3,facing:'left'});owner.bridge.enforceKasaiLive(owner.session);assert.equal(owner.c.engine.state.x,12);assert.equal(owner.c.engine.state.y,4);
+  assert.equal(owner.bridge.leaveSharedRoom().ok,false);assert.equal(owner.bridge.enterSharedRoom(owner.room).ok,false);assert.equal(owner.bridge.canSyncKasaiParty(),false);
+  const guest=liveHarness();assert(guest.bridge.stageKasaiLive(record('kasai'),guest.session).ok);guest.c.walk(0,-1);assert.equal(guest.c.engine.state.y,15);
+  Object.assign(guest.c.engine.state,{x:12,y:5});guest.c.walk(0,-1);assert.equal(guest.c.engine.state.y,5,'The opposite seat stays occupied');
+  Object.assign(guest.c.engine.state,{x:12,y:17});guest.c.walk(0,1);assert.deepEqual(guest.calls,['leave']);assert.equal(guest.c.engine.state.map,'room:'+OWNER);assert.equal(guest.c.engine.state.y,17);
+});
+test('invalid return positions, stale saves and a busy operator never enter or overwrite the adventure',()=>{
+  for(const prepare of [h=>h.session.returnPosition.map='unknown',h=>h.session.returnPosition.x=0,h=>h.c.busy=true,h=>h.controls.raw+=' ',h=>h.controls.quota=true]){
+    const h=liveHarness('kasai');prepare(h);const before=copy(h.c.engine.state),raw=h.controls.raw;
+    assert.equal(h.bridge.stageKasaiLive(record('kasai'),h.session).ok,false);assert.deepEqual(copy(h.c.engine.state),before);assert.equal(h.controls.raw,raw);
+  }
+  const self=liveHarness();self.c.LT.Admin.player.isAdmin=true;assert.equal(self.bridge.stageKasaiLive(record('kasai'),self.session).ok,false);
+  const impersonator=liveHarness('kasai');impersonator.c.LT.Admin.player.isAdmin=false;assert.equal(impersonator.bridge.stageKasaiLive(record('kasai'),impersonator.session).ok,false);
+});
+test('room refresh after relocation retains each existing visitor return point',()=>{
+  const h=liveHarness();assert(h.bridge.stageKasaiLive(record('kasai'),h.session).ok);
+  const moved=RoomArt.createMap({...record('kasai'),revision:2,entrance:{map:'village',x:31,y:7,facing:'up',returnX:31,returnY:8}});
+  assert(h.bridge.refreshSharedRoom(moved).ok);assert.equal(h.c.engine.map.returnPoint.x,32);assert.equal(h.c.engine.map.returnPoint.facing,'left');
+  assert(h.bridge.leaveKasaiLive().ok);assert.equal(h.c.engine.state.x,32);
+});
+test('live party getter reads only a cloned saved party for both roles, including after unsaved edits',()=>{
+  for(const role of ['challenger','kasai']){
+    const h=liveHarness(role),saved=h.bridge.getKasaiLiveParty();assert(saved);const level=saved[0].level;
+    h.c.engine.state.party[0].level+=1;assert.equal(h.bridge.getKasaiLiveParty()[0].level,level);saved[0].level=99;assert.equal(h.bridge.getKasaiLiveParty()[0].level,level);
+    h.controls.raw+=' ';assert.equal(h.bridge.getKasaiLiveParty(),null);
+  }
 });

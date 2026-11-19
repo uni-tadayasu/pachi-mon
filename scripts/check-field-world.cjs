@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const {WorldPresence}=require('../field-world.js');
+const {WorldPresence,populationData}=require('../field-world.js');
 const SOURCE=fs.readFileSync(require.resolve('../field-world.js'),'utf8');
 const SELF='P0000000000000001',PEER='P0000000000000002',OTHER='P0000000000000003';
 const copy=value=>JSON.parse(JSON.stringify(value));
@@ -52,6 +52,13 @@ test('presence caps rendering at eighty actors and nearby eligibility uses serve
  assert.equal(p.actors('village')[0].x,7);assert.equal(p.nearby({map:'village',x:0,y:0,facing:'right'},2).length,1,'A freshly arrived actor uses its server tile for invitation range');
 });
 
+test('population accepts only exact positive server aggregates with unique valid stage IDs',()=>{
+ const packet={rows:[{map:'village',count:91},{map:'room:'+PEER,count:3,name:'星の私室',kind:'secret'}],total:94,serverTime:1000,ttlMs:15000};
+ assert.equal(populationData(packet).total,94);assert.equal(populationData(packet).rows[0].count,91,'Population must not inherit the nearby rendering cap');
+ for(const patch of [{total:95},{rows:[...packet.rows,packet.rows[0]],total:185},{rows:[{map:'village',count:-1}],total:0},{rows:[{map:'village',count:1.5}],total:1.5},{rows:[{map:'room:forged',count:1}],total:1},{rows:[{map:'village',count:0}],total:0},{serverTime:NaN}])assert.throws(()=>populationData({...packet,...patch}));
+ assert.deepEqual(populationData({rows:[],total:0,serverTime:1000}).rows,[],'No online users is a valid server result');
+});
+
 // Runtime tests use the real client, a small DOM and controlled promises. They
 // never contact the service or create invitations for real player identities.
 function runtime({handle,stored=[]}={}){
@@ -59,11 +66,12 @@ function runtime({handle,stored=[]}={}){
  const state={started:true,map:'village',x:1,y:1,facing:'right',avatar:'female'},engine={state,battle:null};
  const doc={hidden:false,nodes:[],addEventListener(name,fn){(events[name]||=[]).push(fn);},dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);return true;},body:{append(node){doc.nodes.push(node);}},querySelector(selector){if(selector==='.game-stage')return stage;if(selector==='dialog[open]')return doc.nodes.find(node=>node.tag==='dialog'&&node.open)||null;return null;}};
  class Element{
-  constructor(tag,attrs=''){this.tag=tag;this.dataset={};this.children=[];this.listeners={};this.open=false;this.disabled=/\sdisabled(?:\s|$)/.test(attrs);this.hidden=false;this.textContent='';this.id='';
+  constructor(tag,attrs=''){this.tag=tag;this.dataset={};this.children=[];this.listeners={};this.open=false;this.disabled=/\sdisabled(?:\s|$)/.test(attrs);this.hidden=false;this.textContent='';this.id='';this.value='';this.parent=null;
    for(const m of attrs.matchAll(/([\w-]+)="([^"]*)"/g)){const [,key,value]=m;if(key.startsWith('data-'))this.dataset[key.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=value;else this[key==='class'?'className':key]=value;}
    for(const m of attrs.matchAll(/\b(data-[\w-]+)(?=\s|$)/g))this.dataset[m[1].slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]??='';
   }
-  append(node){this.children.push(node);}
+  append(node){this.children.push(node);node.parent=this;}
+  before(node){assert(this.parent,'Missing parent for outside-canvas control bar');const siblings=this.parent.children;siblings.splice(siblings.indexOf(this),0,node);node.parent=this.parent;}
   setAttribute(name,value){this[name]=value;}
   addEventListener(name,fn){(this.listeners[name]||=[]).push(fn);}
   emit(name,event={}){for(const fn of this.listeners[name]||[])fn(event);}
@@ -73,18 +81,19 @@ function runtime({handle,stored=[]}={}){
   closest(selector){return this.matches(selector)?this:null;}
   querySelectorAll(selector){return this.children.filter(node=>node.matches(selector));}
   querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
-  set innerHTML(html){this.html=html;this.children=[];for(const match of html.matchAll(/<(button|section|div|span|canvas|p|h2)\b([^>]*)>/g))this.children.push(new Element(match[1],match[2]));}
+  set innerHTML(html){this.html=html;this.children=[];for(const match of html.matchAll(/<(button|section|div|span|canvas|p|h2|input|label|ul|li|strong|small)\b([^>]*)>/g))this.children.push(new Element(match[1],match[2]));}
   get innerHTML(){return this.html||'';}
  }
- doc.createElement=tag=>new Element(tag);const stage=new Element('div');
+ doc.createElement=tag=>new Element(tag);const stage=new Element('div'),screen=new Element('div');screen.append(stage);
  const trade={active:false,connected:false,state:null,cancels:0,failCleanup:false};
  const context=vm.createContext({console,Date:class extends Date{static now(){return now;}},document:doc,navigator:{onLine:true},crypto:{randomUUID:()=>`00000000-0000-4000-8000-${String(++requestId).padStart(12,'0')}`},
   localStorage:{getItem:key=>memory.get(key)||null,setItem:(key,value)=>memory.set(key,value)},
   setTimeout(fn,delay){const id=++nextTimer;timers.set(id,{at:now+Math.max(0,Number(delay)||0),fn});return id;},clearTimeout:id=>timers.delete(id),
   addEventListener(name,fn){(globalEvents[name]||=[]).push(fn);},
-  LT:{DATA:{maps:{village:{},forest:{}}},Admin:{player:{id:SELF,name:'自分',isAdmin:false},worldRequest:async(path,options={})=>{
+  LT:{DATA:{maps:{village:{name:'風待ちの里'},forest:{name:'深緑の森'}}},Admin:{player:{id:SELF,name:'自分',isAdmin:false},worldRequest:async(path,options={})=>{
    calls.push({path,...copy(options),at:now});const supplied=handle?handle(path,options,h):undefined;if(supplied!==undefined)return supplied;
    if(path==='/world/presence'&&options.method==='POST')return h.snapshot(options.body.map);
+   if(path==='/world/population')return h.populationPacket();
    if(path==='/world/invitations')return {invitation:{id:'offer-'+requestId,state:'pending',expiresAt:now+60000,roomCode:options.body.roomCode}};
    return {ok:true};
   }},adminBridge:{getEngine:()=>engine,isPlaying:()=>h.playing,isBusy:()=>false,refresh(){h.refreshes++;},toast:message=>messages.push(message)},Art:{traveller(){}},
@@ -93,7 +102,12 @@ function runtime({handle,stored=[]}={}){
    try{if(options.autoHost)await options.onRoomReady('ABC234');return true;}catch(_){return false;}
   }}
  }});
- const h={context,doc,stage,state,engine,trade,calls,messages,notices,opens,playing:true,refreshes:0,serverOffset:0,players:[actor()],invitations:[],
+ const h={context,doc,stage,screen,state,engine,trade,calls,messages,notices,opens,playing:true,refreshes:0,serverOffset:0,players:[actor()],invitations:[],populationRows:[{map:'village',count:2}],
+  populationPacket(){return {rows:copy(this.populationRows),total:this.populationRows.reduce((sum,row)=>sum+row.count,0),serverTime:now+this.serverOffset,ttlMs:15000};},
+  bar(){return screen.children.find(node=>node.className==='world-network-bar');},
+  populationSummary(){return this.dialog()?.querySelector('[data-world-population-summary]')?.textContent;},
+  populationList(){return this.dialog()?.querySelector('[data-world-population-list]')?.innerHTML;},
+  searchPopulation(value){const input=this.dialog().querySelector('#world-population-search');input.value=value;input.emit('input',{target:input});},
   snapshot(map=state.map){return packet(this.players.map(person=>({...person,map:person.map,updatedAt:now+this.serverOffset})),{self:actor({id:SELF,map,x:state.x,y:state.y}),serverTime:now+this.serverOffset,invitations:copy(this.invitations)});},
   async step(ms=0){now+=ms;for(let i=0;i<100;i++){const due=[...timers.entries()].filter(([,timer])=>timer.at<=now).sort((a,b)=>a[1].at-b[1].at)[0];if(!due)break;timers.delete(due[0]);due[1].fn();await settle();if(i===99)assert.fail('Runtime timer loop did not settle');}await settle();},
   event(type,values={}){doc.dispatchEvent({type,...values});},globalEvent(type,values={}){for(const fn of globalEvents[type]||[])fn({type,...values});},
@@ -153,4 +167,87 @@ test('a declined invitation retries conditional cleanup if a trade poll is busy'
  await h.step(500);assert.equal(h.trade.cancels,1);assert.equal(h.trade.active,true);
  h.trade.failCleanup=false;await h.step(500);assert.equal(h.trade.cancels,2);assert.equal(h.trade.active,false);
  await h.step(300);assert(h.context.LT.World.interact(),'Retry cleanup should release the interaction lock');
+});
+
+test('the compact social bar is outside the canvas and the online list uses exact self-inclusive stage counts',async()=>{
+ const h=runtime();h.populationRows=[{map:'village',count:2},{map:'forest',count:4},{map:'room:'+PEER,count:1,name:'星の私室 <特別>',kind:'secret'}];h.context.LT.DATA.maps.desert={name:'砂の道'};
+ await h.step(800);const bar=h.bar();assert(bar);assert(!h.stage.children.includes(bar));assert(h.screen.children.indexOf(bar)<h.screen.children.indexOf(h.stage));
+ assert.equal(bar.querySelector('[data-world-status]').textContent,'接続中');assert.equal(h.calls.filter(call=>call.path==='/world/population').length,0,'Hidden details must not poll population');
+ assert(h.context.LT.World.openPopulation());await settle();assert.equal(h.context.LT.World.isDialogOpen(),true);
+ assert.equal(h.populationSummary(),'世界全体 7人 · このステージ 2人（自分を含む）');assert.match(h.populationList(),/aria-current="location"/);assert.match(h.populationList(),/星の私室 &lt;特別&gt;/);assert.doesNotMatch(h.populationList(),/砂の道/);
+ assert.doesNotMatch(h.populationList(),/<button|data-world-action=/,'Population rows never teleport or invite a player');
+ h.click('population-filter');assert.match(h.populationList(),/砂の道/);assert.match(h.populationList(),/>0<small>人/);
+ h.searchPopulation('私室');assert.match(h.populationList(),/星の私室/);assert.doesNotMatch(h.populationList(),/風待ちの里|深緑の森/);
+ assert(h.context.LT.World.closeDialog());assert.equal(h.context.LT.World.isDialogOpen(),false);
+});
+
+test('population refreshes about every five seconds only while its list is open',async()=>{
+ const h=runtime();await h.step(800);h.context.LT.World.openPopulation();await settle();const reads=()=>h.calls.filter(call=>call.path==='/world/population').length;
+ assert.equal(reads(),1);for(let i=0;i<9;i++)await h.step(500);assert.equal(reads(),1);
+ h.populationRows=[{map:'village',count:5}];await h.step(1800);assert.equal(reads(),2);assert.match(h.populationSummary(),/世界全体 5人/);
+ h.click('close');await h.step(20000);assert.equal(reads(),2);assert.equal(h.context.LT.World.isDialogOpen(),false);
+});
+
+test('failed refreshes expire old population instead of inventing zero users, despite server clock offsets',async()=>{
+ let requests=0;const h=runtime({handle:path=>path==='/world/population'&&++requests>1?Promise.reject(Error('Disconnected')):undefined});h.serverOffset=900000000;
+ await h.step(800);h.context.LT.World.openPopulation();await settle();assert.match(h.populationSummary(),/世界全体 2人/);
+ await h.step(6000);assert.match(h.populationSummary(),/世界全体 2人/);assert.match(h.dialog().querySelector('[data-world-population-updated]').textContent,/更新できません/);
+ await h.step(10000);assert.doesNotMatch(h.populationSummary(),/\d+人/);assert.match(h.populationSummary(),/取得できません/);assert.match(h.populationList(),/確認中/);
+ h.context.navigator.onLine=false;h.globalEvent('offline');await settle();assert.match(h.populationSummary(),/接続が戻る/);assert.doesNotMatch(h.populationSummary(),/0人/);
+});
+
+test('closing or changing identity ignores a pending population response without reopening the list',async()=>{
+ const old=deferred();let requests=0;const h=runtime({handle:path=>path==='/world/population'&&++requests===1?old.promise:undefined});
+ await h.step(800);h.context.LT.World.openPopulation();await settle();h.click('close');assert.equal(h.context.LT.World.isDialogOpen(),false,'Close remains available while the read is pending');
+ h.context.LT.World.openPopulation();await settle();assert.match(h.populationSummary(),/世界全体 2人/);
+ old.resolve({rows:[{map:'village',count:99}],total:99,serverTime:h.now(),ttlMs:15000});await settle();assert.match(h.populationSummary(),/世界全体 2人/);
+ const pending=deferred(),changed=runtime({handle:path=>path==='/world/population'?pending.promise:undefined});await changed.step(800);changed.context.LT.World.openPopulation();await settle();
+ changed.context.LT.Admin.player={id:OTHER,name:'別の人',isAdmin:false};changed.globalEvent('storage',{key:'pachi-player-identity-v1'});assert.equal(changed.context.LT.World.isDialogOpen(),false);
+ pending.resolve({rows:[{map:'village',count:77}],total:77,serverTime:changed.now(),ttlMs:15000});await settle();assert.equal(changed.context.LT.World.isDialogOpen(),false);
+});
+
+test('travelling during a population read discards the old map and refreshes the current stage highlight',async()=>{
+ const old=deferred();let requests=0;const h=runtime({handle:path=>path==='/world/population'&&++requests===1?old.promise:undefined});
+ await h.step(800);h.context.LT.World.openPopulation();await settle();h.state.map='forest';h.populationRows=[{map:'forest',count:4}];h.context.LT.World.moved();await settle();
+ assert.equal(h.populationSummary(),'世界全体 4人 · このステージ 4人（自分を含む）');assert.match(h.populationList(),/aria-current="location"[^]*深緑の森/);
+ old.resolve({rows:[{map:'village',count:99}],total:99,serverTime:h.now(),ttlMs:15000});await settle();assert.equal(h.populationSummary(),'世界全体 4人 · このステージ 4人（自分を含む）');
+});
+
+test('busy or hidden sessions cannot open population and a hidden tab clears its displayed counts',async()=>{
+ const h=runtime();await h.step(800);h.context.LT.adminBridge.isBusy=()=>true;assert.equal(h.context.LT.World.openPopulation(),false);assert.equal(h.calls.filter(call=>call.path==='/world/population').length,0);
+ h.context.LT.adminBridge.isBusy=()=>false;h.context.LT.World.openPopulation();await settle();assert.match(h.populationSummary(),/世界全体 2人/);
+ h.doc.hidden=true;h.event('visibilitychange');await settle();assert.match(h.populationSummary(),/接続が戻る/);assert.equal(h.context.LT.World.openPopulation(),true,'An open list can still be closed while hidden');assert.equal(h.context.LT.World.openPopulation(),false);
+});
+
+test('requesting the connected Kasai starts the live ceremony instead of a CPU room or ordinary peer invitation',async()=>{
+ const h=runtime(),requests=[],oldRooms=[];h.players=[actor({isAdmin:true,avatar:'kasai',name:'謎のトレーナー カサイ'})];
+ h.context.LT.KasaiLive={request:async id=>{requests.push(id);return {ok:true};},locked:()=>false,isWorking:()=>false};h.context.LT.Rooms={enterKasai:async id=>oldRooms.push(id)};
+ await h.step(800);assert.equal(h.context.LT.World.interact(),true);assert.match(h.dialog().innerHTML,/カサイ本人と専用ステージ/);assert.match(h.dialog().innerHTML,/60秒以内/);h.click('battle');await h.step(300);
+ assert.deepEqual(requests,[PEER]);assert.deepEqual(oldRooms,[]);assert(!h.calls.some(call=>call.path==='/world/invitations'));assert.equal(h.context.LT.World.isDialogOpen(),false);
+});
+
+test('a failed Kasai request reports its returned error after the encounter dialog closes',async()=>{
+ const h=runtime(),message='カサイがフィールドを離れました。';h.players=[actor({isAdmin:true,avatar:'kasai'})];
+ h.context.LT.KasaiLive={request:async()=>({ok:false,message}),locked:()=>false,isWorking:()=>false};
+ await h.step(800);assert.equal(h.context.LT.World.interact(),true);h.click('battle');await settle();
+ assert.equal(h.context.LT.World.isDialogOpen(),false);assert.deepEqual(h.messages,[message]);assert.equal(h.state.map,'village');
+ assert(!h.calls.some(call=>call.path==='/world/invitations'),'A failed live request must not fall back to another battle type');
+});
+
+test('a busy Kasai and the operator identity cannot start a self or simultaneous live request',async()=>{
+ for(const mode of ['busy','self']){
+  const h=runtime(),requests=[];h.players=[actor({isAdmin:true,avatar:'kasai',status:mode==='busy'?'busy':'idle'})];h.context.LT.KasaiLive={request:async id=>requests.push(id)};
+  if(mode==='self')h.context.LT.Admin.player.isAdmin=true;
+  await h.step(800);assert.equal(h.context.LT.World.interact(),true);h.click('battle');await settle();assert.deepEqual(requests,[]);
+ }
+ const h=runtime();await h.step(800);h.context.LT.KasaiLive={locked:()=>true};assert.equal(h.context.LT.World.interact(),false);assert.equal(h.context.LT.World.openNearby(),false);assert.equal(h.context.LT.World.openPopulation(),true,'Readonly stage counts remain available while live movement and invitations are locked');await settle();assert.match(h.populationSummary(),/世界全体 2人/);
+});
+
+test('live request preparation publishes eligible idle presence, then the active ceremony becomes busy',async()=>{
+ const h=runtime();await h.step(800);let preparing=true,active=false;
+ h.context.LT.KasaiLive={isRequesting:()=>preparing,isWorking:()=>preparing,locked:()=>active};
+ const pending=h.context.LT.World.refreshPresence();await settle();await h.step(300);assert.equal(await pending,true);
+ assert.equal(h.calls.filter(call=>call.path==='/world/presence'&&call.method==='POST').at(-1).body.status,'idle','The request preparation itself must not make the sender fail the server idle guard');
+ preparing=false;active=true;const joined=h.context.LT.World.refreshPresence();await settle();await h.step(300);assert.equal(await joined,true);
+ assert.equal(h.calls.filter(call=>call.path==='/world/presence'&&call.method==='POST').at(-1).body.status,'busy','An active ceremony cannot receive another ordinary invitation');
 });
