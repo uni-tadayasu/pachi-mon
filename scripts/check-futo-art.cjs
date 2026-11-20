@@ -40,7 +40,7 @@ async function runtime(mode='normal',expire=true){
 }
 function hashes(art){return [false,true].map(back=>imageStats(art.get('futo',back)).hash);}
 async function main(){
- assert(fs.readFileSync(path.join(root,'admin-console.js'),'utf8').includes('assets/futo-front-v2.png'),'Admin preview uses the same revised front');
+ assert(fs.readFileSync(path.join(root,'admin-console.js'),'utf8').includes('assets/dex/futo.webp?v=20261120-bold-pixels-v66'),'Admin preview uses the same bold public front treatment');
  const normal=await runtime(),art=normal.art;
  assert.equal(art.status().futoFrontLoaded,true);assert.equal(art.status().futoBackLoaded,true);assert.equal(art.supportsBack('futo'),true);
  assert(!normal.requests.includes('assets/futo.png'),'Successful new images must not download the unused original');

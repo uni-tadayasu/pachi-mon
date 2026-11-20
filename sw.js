@@ -91,6 +91,8 @@
  * v64: restorable Lv.100 trained reserve teams for all three operator roles.
  * v65: Stone type and off-dex leader Galdoras, separate supplied front/authored
  *   rear portraits, dedicated moves, shared battle rules and owned online roster.
+ * v66: every creature uses bolder contour and motif shading on a coarser
+ *   112px grid; matching public portraits and their versioned URLs refresh.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

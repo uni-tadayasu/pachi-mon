@@ -10,7 +10,7 @@
  * It also mirrors the home page's visible FAQ into FAQPage structured data.
  * Usage: node scripts/build-seo-pages.cjs   (SEO_DATE=YYYY-MM-DD to pin lastmod)
  * Use --only=monsters/floravelle.html,guide/index.html,index.html for targeted updates.
- * Sprites come from scripts/build-dex-sprites.py (assets/dex/<id>.webp). */
+ * Sprites come from scripts/build-dex-sprites.cjs (assets/dex/<id>.webp). */
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const ROOT = path.resolve(__dirname, '..');
 const SITE = 'https://www.kasai-solutions-inc.com';
@@ -23,7 +23,7 @@ function write(file,contents){
   if(fs.existsSync(file)&&fs.readFileSync(file,'utf8')===contents)return;
   fs.writeFileSync(file,contents);written.push(relative);
 }
-const dexSprite = id => `assets/dex/${id}.webp?v=20261119-fine-pixels-v52`;
+const dexSprite = id => `assets/dex/${id}.webp?v=20261120-bold-pixels-v66`;
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const context = vm.createContext({ console });
