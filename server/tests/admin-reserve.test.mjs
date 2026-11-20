@@ -32,13 +32,14 @@ function setup(){
   };
   return {env,call,register,appoint,actors};
 }
-function expectedTeam(playerId,role){return {version:1,playerId,role,members:[starters[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
+function expectedTeam(playerId,role){return {version:1,playerId,role,members:[starters[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99,battleGrowth:99}))};}
 function expectedAddition(playerId,role){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function partyFor(bundle){
   const LT=createReplayRuntime(),engine=new LT.Engine();
   return bundle.members.map((member,index)=>{
     const mon=engine.makeMonster(member.species,100);
     Object.assign(mon,{grantId:member.grantId,gender:member.gender,heldItem:'trainband',bonusPoints:99,xp:0});
+    if(member.battleGrowth!==undefined)mon.battleGrowth=member.battleGrowth;
     if(member.gender==='none')delete mon.gender;
     mon.uid=`reserve-${bundle.role}-${index}`;
     return mon;
@@ -97,8 +98,37 @@ test('all six trained members can be saved for live admin battles with later all
     assert.equal(result.status,200,JSON.stringify(result));assert.equal(result.party.length,6);
     assert.deepEqual(result.party.map(mon=>mon.grantId),team.members.map(member=>member.grantId));
     assert.deepEqual(result.party[0].alloc,party[0].alloc);assert.equal(result.party[0].heldItem,undefined);
-    assert.equal(result.party[0].nickname,'そだてた');assert(result.party.every(mon=>mon.level===100&&mon.bonusPoints===99&&mon.gender===(role==='sub'?'female':'male')));
+    assert.equal(result.party[0].nickname,'そだてた');assert(result.party.every(mon=>mon.level===100&&mon.bonusPoints===99&&mon.battleGrowth===99&&mon.gender===(role==='sub'?'female':'male')));
   }
+});
+
+test('legacy six-member records regain full direct growth without replacing identity or spent allocation',async()=>{
+ const h=setup(),actors=await h.actors();
+ for(const role of ['main','sub','sub-sub']){
+  const team=(await h.call('/me',actors[role])).adminReserveTeam,party=partyFor(team);
+  for(const [index,mon] of party.entries()){if(index%2)mon.battleGrowth=0;else delete mon.battleGrowth;mon.nickname='育ち'+index;mon.moveOrder=[3,1,0,2];mon.alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};mon.hp=index===5?0:Math.max(1,mon.hp-11);}
+  const original=copy(party),result=await h.call('/world/kasai/party',actors[role],'POST',{party});
+  assert.equal(result.status,200,JSON.stringify(result));assert(result.party.every(mon=>mon.battleGrowth===99&&mon.bonusPoints===99));
+  for(let index=0;index<party.length;index++){
+   for(const key of ['uid','grantId','nickname','moveOrder','alloc','pp'])assert.deepEqual(result.party[index][key],original[index][key]);
+   assert.equal(result.party[index].hp,original[index].hp>0?original[index].hp+198:0,'HP keeps the same damage and fainted members stay fainted');
+  }
+  assert(result.party.every(mon=>Object.values(mon.alloc).reduce((sum,value)=>sum+value,0)===297),'Direct growth does not add allocation points');
+  const saved=copy(result.party);
+  for(const battleGrowth of [-1,.5,100,null,'99']){const invalid=copy(original);invalid[0].battleGrowth=battleGrowth;assert.equal((await h.call('/world/kasai/party',actors[role],'POST',{party:invalid})).status,400);}
+  assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,saved);
+  assert.equal((await h.call('/me',actors[role])).adminReserveAddition.members[0].battleGrowth,undefined,'The separate hidden leader does not receive the six-member upgrade');
+ }
+});
+
+test('stored legacy admin parties are exposed with restored growth without rewriting their historical database record',async()=>{
+ const h=setup(),actors=await h.actors();
+ for(const role of ['main','sub','sub-sub']){
+  const party=partyFor(expectedTeam(actors[role].id,role));for(const mon of party)delete mon.battleGrowth;
+  const serialized=JSON.stringify(party);h.env.DB.sqlite.prepare('INSERT INTO kasai_parties (player_id,party_json,updated_at) VALUES (?,?,?)').run(actors[role].id,serialized,12345);
+  const result=await h.call('/world/kasai/party',actors[role]);assert.equal(result.status,200);assert(result.party.every(mon=>mon.battleGrowth===99));assert.deepEqual(result.party.map(mon=>mon.uid),party.map(mon=>mon.uid));
+  assert.equal(result.updatedAt,12345);assert.equal(h.env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(actors[role].id).party_json,serialized);
+ }
 });
 
 test('trained members cannot be submitted by another player or with another registered role',async()=>{

@@ -4,6 +4,7 @@
   const root=globalThis,LT=root.LT=root.LT||{},PLAYER=/^P[0-9a-f]{16}$/,UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const KEY='pachi-ranked-recovery-v78:',copy=value=>JSON.parse(JSON.stringify(value)),fail=message=>({ok:false,message});
   const info=rules=>typeof rules.info==='function'?rules.info():rules.info;
+  const supportsVersion=(rules,version)=>typeof rules.supportsVersion==='function'?rules.supportsVersion(version):(info(rules).compatibleVersions||[info(rules).version]).includes(version);
   const reasonText=reason=>({battle:'決着',forfeit:'降参',turn_timeout:'行動の時間切れ',disconnect:'接続切れ',double_disconnect:'双方の接続切れ',double_timeout:'双方の時間切れ',rules_changed:'対戦ルールの更新',turn_limit:'規定ターン到達',void:'無効試合'}[reason]||'対戦終了');
   class RankedBattleController {
     constructor({request,identify,getIdentity,getEngine,canEnter,canResume=canEnter,setScene,rules=LT.RankedRules,storage,enabled=()=>true,uuid=()=>root.crypto.randomUUID(),clock=()=>Date.now(),changed=()=>{},notify=()=>{}}){
@@ -46,11 +47,11 @@
       return copy(this.rules.normalizeTeam(value));
     }
     validateStatus(data){
-      if(!data||data.rulesVersion!==info(this.rules).version||data.profile?.playerId!==this.owner)throw Error('ランクバトルの情報を確認できません。ページを更新してください。');
+      if(!data||!supportsVersion(this.rules,data.rulesVersion)||data.profile?.playerId!==this.owner)throw Error('ランクバトルの情報を確認できません。ページを更新してください。');
       if(!Number.isFinite(data.serverTime)||!Number.isSafeInteger(data.profile.rating)||data.profile.rating<0)throw Error('ランクの更新を確認できません。');
       if(data.queue){const q=data.queue;if(!UUID.test(q.id||'')||!UUID.test(q.requestId||'')||q.state!=='waiting'||!Number.isFinite(q.expiresAt)||!Number.isFinite(q.joinedAt))throw Error('待機中の情報を確認できません。');this.team(q.team);}
       if(data.match){
-        const m=data.match;if(!UUID.test(m.id||'')||m.rulesVersion!==info(this.rules).version||!['battle','result'].includes(m.state)||![0,1].includes(m.side)||!Array.isArray(m.players)||m.players.length!==2||m.players[m.side]?.id!==this.owner||m.players.some(player=>!PLAYER.test(player?.id||'')||typeof player.name!=='string')||!Number.isSafeInteger(m.revision)||m.revision<0||!Number.isSafeInteger(m.round)||!Array.isArray(m.submitted)||m.submitted.length!==2||m.submitted.some(value=>typeof value!=='boolean'))throw Error('対戦相手と進行状況を確認できません。');
+        const m=data.match;if(!UUID.test(m.id||'')||m.rulesVersion!==data.rulesVersion||m.battle?.rankedVersion!==m.rulesVersion||!['battle','result'].includes(m.state)||![0,1].includes(m.side)||!Array.isArray(m.players)||m.players.length!==2||m.players[m.side]?.id!==this.owner||m.players.some(player=>!PLAYER.test(player?.id||'')||typeof player.name!=='string')||!Number.isSafeInteger(m.revision)||m.revision<0||!Number.isSafeInteger(m.round)||!Array.isArray(m.submitted)||m.submitted.length!==2||m.submitted.some(value=>typeof value!=='boolean'))throw Error('対戦相手と進行状況を確認できません。');
         this.rules.hydrate(m.battle);if(m.round!==m.battle.round)throw Error('対戦のターンを確認できません。');
         if(m.state==='result'&&(!m.result||!['win','loss','draw','void'].includes(m.result.outcome)||!Array.isArray(m.result.ratingAfter)||m.result.ratingAfter.length!==2||m.result.ratingAfter.some(value=>!Number.isSafeInteger(value)||value<0)))throw Error('対戦結果を確認できません。');
       }
@@ -116,7 +117,7 @@
         if(this.queueIntent&&JSON.stringify(this.queueIntent.team)!==teamKey)throw Error('先の参加結果を確認してください。同じチームで再確認するか、待機を取り消せます。');
         this.queueIntent??={requestId:this.uuid(),team,phase:'joining'};this.queueIntent.phase='joining';this.saveRecovery();this.signal();
         const epoch=this.epoch,stamp=++this.ticket,requestId=this.queueIntent.requestId;
-        const data=await this.request('/world/ranked/queue',{method:'POST',body:{requestId,team:copy(team)}});
+        const data=await this.request('/world/ranked/queue',{method:'POST',body:{requestId,team:copy(team),rulesVersion:info(this.rules).version}});
         if(!this.valid(epoch,owner)||this.busy!==token)return {ok:false,stale:true};this.apply(data,stamp,epoch,owner);return {ok:true};
       });
     }
@@ -217,8 +218,8 @@
   }
   function memberDetails(row,index){
     if(!row?.preview)return `<p class="ranked-note">${esc(row?.error||'仲間を選んでください。')}</p>`;
-    const mon=row.preview,held=LT.DATA.heldItems?.[mon.heldItem],moves=rules.moves(mon),allocation=Object.entries(mon.alloc||{}).filter(([,points])=>points>0).map(([key,points])=>`${statNames[key]||key}+${points}`).join(' / ');
-    return `<details class="ranked-mon-details" data-ranked-details="${index}"><summary aria-label="${esc(name(mon))}の能力・持ち物・技を確認">詳細</summary><p>Lv.${row.mon.level} → 対戦 Lv.50</p><dl class="ranked-mon-stats">${Object.entries(statNames).map(([key,title])=>`<dt>${title}</dt><dd>${mon.stats[key]??'—'}</dd>`).join('')}</dl><p>振り分け：${esc(allocation||'なし')}</p><p>持ち物：${esc(held?.name||'なし')}</p><ol>${moves.map(move=>`<li>${esc(move.name)}<br>PP ${move.maxPP}${move.power?' · 威力 '+move.power:''}</li>`).join('')}</ol><p>体力・PPは全回復。冒険の育成・持ち物・技順を反映します。</p></details>`;
+    const mon=row.preview,held=LT.DATA.heldItems?.[mon.heldItem],moves=rules.moves(mon),allocation=Object.entries(mon.alloc||{}).filter(([,points])=>points>0).map(([key,points])=>`${statNames[key]||key}+${points}`).join(' / '),growth=mon.battleGrowth||0;
+    return `<details class="ranked-mon-details" data-ranked-details="${index}"><summary aria-label="${esc(name(mon))}の能力・持ち物・技を確認">詳細</summary><p>Lv.${row.mon.level} → 対戦 Lv.50</p><dl class="ranked-mon-stats">${Object.entries(statNames).map(([key,title])=>`<dt>${title}</dt><dd>${mon.stats[key]??'—'}</dd>`).join('')}</dl><p>振り分け：${esc(allocation||'なし')}</p><p>実戦成長：${growth}回${growth?`（HP+${growth*2}、攻撃・防御・特攻・特防・素早さ 各+${growth}）`:''}。Lv.50でも全累積分を反映。</p><p>持ち物：${esc(held?.name||'なし')}</p><ol>${moves.map(move=>`<li>${esc(move.name)}<br>PP ${move.maxPP}${move.power?' · 威力 '+move.power:''}</li>`).join('')}</ol><p>体力・PPは全回復。冒険の育成・実戦成長・持ち物・技順を反映します。</p></details>`;
   }
   function ratingMarkup(){
     const profile=controller.profile,rating=profile?.rating??info(rules).initialRating,tier=rules.rankForRating(rating);

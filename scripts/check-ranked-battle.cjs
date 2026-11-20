@@ -17,11 +17,11 @@ async function loadRules(){
 async function fixture(){
   const loaded=await loadRules(),e=new loaded.LT.Engine();e.newGame('komori');
   const team=['komori','fuwari','akehomura'].map((species,index)=>e.makeMonster(species,[24,71,60][index]));
-  Object.assign(team[0],{nickname:'育てた仲間',alloc:{hp:6,atk:5},heldItem:'trainband',moveOrder:[3,1,0,2],gender:'male',shiny:true,hp:0});team[1].heldItem='trainband';
+  Object.assign(team[0],{nickname:'育てた仲間',alloc:{hp:6,atk:5},heldItem:'trainband',moveOrder:[3,1,0,2],gender:'male',shiny:true,hp:0,battleGrowth:23});team[1].heldItem='trainband';
   e.state.party=[copy(team[0])];e.state.storage=copy(team.slice(1));
   const h={e,team,loaded,now:NOW,player:{id:SELF,name:'自分の登録名'},calls:[],scenes:[],notes:[],records:new Map(),allowed:true,sceneResult:true,queue:null,match:null,intents:new Map(),nextUUID:1000,handler:null};
   h.profile=()=>({playerId:h.player.id,name:h.player.name,rating:1000,wins:0,losses:0,draws:0,games:0,tier:loaded.rules.rankForRating(1000)});
-  h.reply=extra=>({rulesVersion:loaded.rules.info().version,profile:h.profile(),queue:copy(h.queue),match:copy(h.match),serverTime:h.now,pollAfterMs:2000,...extra});
+  h.reply=extra=>({rulesVersion:h.match?.rulesVersion||loaded.rules.info().version,profile:h.profile(),queue:copy(h.queue),match:copy(h.match),serverTime:h.now,pollAfterMs:2000,...extra});
   h.begin=(side=0)=>{
     const players=side===0?[{id:SELF,name:'自分の登録名',ratingBefore:1000},{id:PEER,name:'相手の登録名',ratingBefore:1000}]:[{id:PEER,name:'相手の登録名',ratingBefore:1000},{id:SELF,name:'自分の登録名',ratingBefore:1000}];
     h.queue=null;h.match={id:uuid(900),rulesVersion:loaded.rules.info().version,state:'battle',side,players,revision:0,round:1,submitted:[false,false],deadlineAt:h.now+90000,battle:copy(loaded.rules.create(team,team,78,players.map(player=>player.name))),result:null,createdAt:h.now,updatedAt:h.now};return h.match;
@@ -44,7 +44,7 @@ async function fixture(){
     }
     if(route.endsWith('/actions')){if(h.match.state==='battle'){const check=loaded.rules.validate(h.match.battle,h.match.side,options.body.orders);assert(check.ok,check.error);h.match.submitted[h.match.side]=true;h.match.revision++;}return h.reply();}
     if(route.endsWith('/forfeit')){h.finish('loss','forfeit');return h.reply();}
-    if(route.endsWith('/ack')){h.match=null;return h.reply();}
+    if(route.endsWith('/ack')){const version=h.match.rulesVersion;h.match=null;return h.reply({rulesVersion:version});}
     throw Error('Unexpected test route '+route);
   };
   h.request=async(route,options={})=>{h.calls.push({route,...copy(options)});const custom=h.handler?.(route,options);return custom===undefined?h.respond(route,options):custom;};
@@ -58,9 +58,18 @@ async function fixture(){
 test('enrollment sends three owned original-level records with training, items, appearance and move order intact',async()=>{
   const h=await fixture(),adventure=JSON.stringify(h.e.state);assert((await h.c.join(h.team)).ok);
   const post=h.calls.find(call=>call.method==='POST');assert.equal(post.route,'/world/ranked/queue');assert.deepEqual(post.body.team,copy(h.loaded.rules.normalizeTeam(h.team)));
+  assert.equal(post.body.rulesVersion,'ranked-v79-growth');assert.equal(post.body.team[0].battleGrowth,23);
   assert.deepEqual(post.body.team.map(mon=>mon.level),[24,71,60]);assert.equal(post.body.team[0].uid,h.team[0].uid);assert.deepEqual(post.body.team[0].alloc,{hp:6,atk:5});assert.deepEqual(post.body.team[0].moveOrder,[3,1,0,2]);assert.equal(post.body.team[0].nickname,'育てた仲間');assert.equal(post.body.team[0].shiny,true);assert.equal(post.body.team[0].gender,'male');assert.equal(post.body.team[1].heldItem,'trainband');
   assert(h.c.locked());assert(h.c.queued());assert.equal(h.scenes.length,0);assert.equal(JSON.stringify(h.e.state),adventure,'Ranked enrollment must not heal or edit the adventure save');
   assert(!h.calls.some(call=>call.route.includes('/actions')||call.route.includes('/accept')));
+});
+
+test('existing v78 matches recover, accept actions and acknowledge with their unchanged version',async()=>{
+  const h=await fixture();delete h.team[0].battleGrowth;h.begin();h.match.rulesVersion='ranked-v78';h.match.battle.rankedVersion='ranked-v78';const before=copy(h.match.battle);
+  assert((await h.c.refresh()).ok);assert.equal(h.c.match.rulesVersion,'ranked-v78');assert.deepEqual(h.scenes[0].snapshot,before);
+  const orders=copy(h.loaded.rules.hydrate(h.match.battle).legalOrders(h.match.side));assert((await h.c.submit(orders)).ok);assert.equal(h.c.match.rulesVersion,'ranked-v78');
+  h.finish('win');assert((await h.c.refresh()).ok);assert((await h.c.acknowledge()).ok);assert(!h.c.locked());assert.equal(h.c.match,null);assert.equal(h.scenes.at(-1).snapshot,null);
+  assert((await h.c.refresh()).ok);assert((await h.c.join(h.team)).ok);assert.equal(h.calls.filter(call=>call.route==='/world/ranked/queue'&&call.method==='POST').at(-1).body.rulesVersion,'ranked-v79-growth');
 });
 
 test('invalid or duplicate individuals and species never create a queue request',async()=>{
@@ -181,6 +190,7 @@ async function browserFixture(){
 test('owned lobby includes party and storage choices, actual Lv50 stats and readable details',async()=>{
   const h=await browserFixture();assert((await h.ui.open()).ok);const html=h.dialog().innerHTML,preview=h.loaded.rules.previewMember(h.team[0]);assert(h.dialog().open);assert.match(html,/data-ranked-team="0"/);assert.match(html,/data-ranked-team="2"/);assert.match(html,/ひかえ/);assert.match(html,/育てた仲間/);assert.match(html,/Lv.24 → 対戦 Lv.50/);assert.match(html,new RegExp('<dt>こうげき</dt><dd>'+preview.stats.atk+'</dd>'));assert.match(html,/<summary aria-label="育てた仲間の能力・持ち物・技を確認">詳細<\/summary>/);assert.match(html,/振り分け：体力\+6 \/ こうげき\+5/);assert(!/レンタル|受け入れる|対戦を承認/.test(html));
   assert(h.events.some(event=>event.type==='pachi-ranked-state'&&event.detail.isOpen));await h.click('queue');assert(h.ui.isLocked());assert.match(h.dialog().innerHTML,/待機を取り消す/);assert.match(h.dialog().innerHTML,/data-ranked-team="0"[^>]*disabled/);
+  assert.match(html,/実戦成長：23回（HP\+46、攻撃・防御・特攻・特防・素早さ 各\+23）/);assert.match(html,/Lv\.50でも全累積分を反映/);
 });
 
 test('matched UI opens automatically, but moves and forfeit still require explicit player choices',async()=>{

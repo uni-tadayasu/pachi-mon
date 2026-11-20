@@ -80,6 +80,31 @@ test('offer uses immutable local snapshot and expected room revision',async()=>{
  h.engine.state.party[0].hp=3;assert.equal(call.body.monster.hp,40);
 });
 
+test('growth snapshots retain the earned count and reject malformed or out-of-level values',()=>{
+ assert.equal(snapshot({...mon(),battleGrowth:7}).battleGrowth,7);
+ assert.deepEqual(snapshot({...mon(),battleGrowth:0}),snapshot(mon()),'Zero and missing use the same legacy wire view');
+ for(const battleGrowth of [-1,.5,10,99,100,null,'1',false]){
+  assert.throws(()=>snapshot({...mon(),battleGrowth}),/育った能力/);
+  assert.equal(eligible({...mon(),battleGrowth},DATA),false);
+ }
+});
+
+test('growth changes or a legacy echo that omits growth stop confirmation before consent',async()=>{
+ const h=make({stored:pending()});h.c.trade=room();h.engine.state.party[0].battleGrowth=4;
+ assert(!(await h.c.confirm()).ok);assert.match(h.c.error,/状態が変わ/);assert.equal(h.calls.length,0);
+ h.c.trade.host.monster.battleGrowth=3;assert(!(await h.c.confirm()).ok);assert.equal(h.calls.length,0);
+});
+
+test('a grown offer advertises support at confirmation and survives the durable receipt boundary',async()=>{
+ const r=room();r.host.monster.battleGrowth=4;r.guest.monster.battleGrowth=2;
+ let checked;
+ const h=make({stored:pending(),handle:()=>({trade:r}),check:receipt=>{checked=clone(receipt);return {ok:true};}});
+ h.c.trade=r;h.engine.state.party[0].battleGrowth=4;
+ assert((await h.c.confirm()).ok);assert.equal(h.calls[0].body.supportsBattleGrowth,true);
+ assert.equal(checked.outgoing.battleGrowth,4);assert.equal(checked.incoming.battleGrowth,2);
+ const old=make({stored:pending(),handle:()=>({trade:room()})});old.c.trade=room();assert((await old.c.confirm()).ok);assert.equal(old.calls[0].body.supportsBattleGrowth,undefined);
+});
+
 test('confirmation requires current unchanged offer and living-party safety',async()=>{
  const h=make({stored:pending()});h.c.trade=room();h.engine.state.party[0].hp--;
  assert(!(await h.c.confirm()).ok);assert.equal(h.calls.length,0);

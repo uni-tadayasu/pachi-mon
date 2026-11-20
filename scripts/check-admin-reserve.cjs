@@ -28,9 +28,9 @@ test('all three six-member grants match actual Lv1-to-100 training and go exclus
       const simulated=fresh(),trained=simulated.makeMonster(mon.species,1),events=[];
       trained.heldItem='trainband';trained.gender=role==='sub'?'female':'male';
       const earned=Array.from({length:99},(_,i)=>simulated.xpToNext(i+1)).reduce((a,b)=>a+b,0);
-      simulated.giveXP(trained,earned,events);
+      simulated.giveXP(trained,earned,events,{battleParticipation:true});
       assert.equal(events.filter(event=>event.kind==='level').length,99);
-      for(const field of ['level','xp','hp','heldItem','bonusPoints'])assert.equal(mon[field],trained[field],`${role}/${mon.species}/${field}`);
+      for(const field of ['level','xp','hp','heldItem','bonusPoints','battleGrowth'])assert.equal(mon[field],trained[field],`${role}/${mon.species}/${field}`);
       assert.deepEqual(copy(engine.stats(mon)),copy(simulated.stats(trained)));
       assert.deepEqual(copy(mon.pp),copy(trained.pp));
       assert.equal(engine.allocationInfo(mon).total,297);assert.equal(engine.allocationInfo(mon).free,297);
@@ -40,7 +40,7 @@ test('all three six-member grants match actual Lv1-to-100 training and go exclus
       assert(engine.state.seen.includes(mon.species));assert(engine.state.caught.includes(mon.species));
     }
     const roundtrip=new Engine(engine.serialize());
-    assert.deepEqual(copy(roundtrip.state),copy(engine.state));
+    assert.deepEqual(copy(roundtrip.state),copy(engine.serialize()));
     for(const mon of roundtrip.state.storage)assert.equal(roundtrip.genderOf(mon),role==='sub'?'female':'male');
   }
 });
@@ -67,7 +67,7 @@ test('repeated delivery or restore preserves each existing individual and its cu
     assert(engine.receiveAdminReserveTeam(grant,options).alreadyReceived);
     assert.equal(JSON.stringify(engine.state),before);
   }
-  const roundtrip=new Engine(engine.serialize());assert.deepEqual(copy(roundtrip.state),copy(engine.state));
+  const roundtrip=new Engine(engine.serialize());assert.deepEqual(copy(roundtrip.state),copy(engine.serialize()));
 });
 
 test('manual restoration replaces only missing received members and does not consume another receipt',()=>{
@@ -141,15 +141,16 @@ test('all assigned training points survive level50 battle scaling',()=>{
   for(const mon of duel.state.teams[0].monsters){assert.equal(mon.level,50);assert.deepEqual(copy(mon.stats),copy(engine.stats({species:mon.species,level:50,alloc})));assert.equal(Object.values(mon.alloc).reduce((a,b)=>a+b),297);}
 });
 
-function bridgeHarness({playing=true}={}){
-  const engine=fresh(),initial=engine.serialize(),control={raw:JSON.stringify(initial),fail:false,writes:0,events:0,reloads:0,remembered:0};
-  const ctx=vm.createContext({Engine,engine,playing,busy:false,storedSave:copy(initial),SAVE_KEY:'save',lastSave:0,
-    LT:{Admin:{player:{id:PLAYER,isAdmin:true,adminRole:'main'}}},tradeLocked:()=>false,performance:{now:()=>10},updateAll(){},loadStored(){},
-    localStorage:{getItem(){return control.raw;},setItem(key,value){if(control.fail)throw Error('quota');assert.equal(engine.state.storage.length,0,'durable write precedes live adoption');new Engine(JSON.parse(value));control.raw=value;control.writes++;}},
+function bridgeHarness({playing=true,initialSave=null,role='main'}={}){
+  const empty=fresh(),initial=initialSave?copy(initialSave):empty.serialize(),engine=playing?new Engine(initial):empty;
+  const normalized=new Engine(initial).serialize(),control={raw:JSON.stringify(initial),fail:false,writes:0,events:0,reloads:0,remembered:0,liveBeforeWrite:JSON.stringify(engine.state)};
+  const ctx=vm.createContext({Engine,engine,playing,busy:false,storedSave:copy(normalized),SAVE_KEY:'save',lastSave:0,
+    LT:{Admin:{player:{id:PLAYER,isAdmin:true,adminRole:role}}},tradeLocked:()=>false,rankedLocked:()=>false,performance:{now:()=>10},updateAll(){},loadStored(){},
+    localStorage:{getItem(){return control.raw;},setItem(key,value){if(control.fail)throw Error('quota');assert.equal(JSON.stringify(engine.state),control.liveBeforeWrite,'durable write precedes live adoption');new Engine(JSON.parse(value));control.raw=value;control.writes++;}},
     rememberTradeSave(){control.remembered++;},CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},document:{dispatchEvent(){control.events++;}}});
   const begin=html.indexOf('  function persistGiftMutation(method,...args){'),end=html.indexOf('  LT.playMoveSound=',begin);
   vm.runInContext(html.slice(begin,end),ctx);
-  return {ctx,engine,control,initial,receive:(grant=bundle(),options)=>ctx.persistGiftMutation('receiveAdminReserveTeam',grant,options)};
+  return {ctx,engine,control,initial,receive:(grant=bundle(),options)=>{control.liveBeforeWrite=JSON.stringify(engine.state);return ctx.persistGiftMutation('receiveAdminReserveTeam',grant,options);}};
 }
 
 test('bridge checks live role/identity and refuses stale-disk or communication-state writes',()=>{
@@ -211,7 +212,7 @@ test('the separate Lunaxion grant trains one genderless member per role and leav
     assert.equal(engine.genderOf(mon),'none');assert.equal(engine.allocationInfo(mon).free,297);
     assert.equal(mon.gender,undefined);assert.equal(mon.shiny,false);assert.equal(mon.customStats,undefined);
     assert.equal(new Set(all(engine).map(mon=>mon.uid)).size,all(engine).length);
-    assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
+    assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.serialize()));
     if(role==='sub')assert(existing.every(member=>member.gender==='female'));
   }
 });
@@ -223,7 +224,7 @@ test('Lunaxion retry preserves its UID and build; explicit recovery restores onl
   assert(engine.exchange(-1,6).ok);
   const before=JSON.stringify(engine.state);
   for(const options of [{},{restore:true}]){assert(engine.receiveAdminReserveTeam(grant,options).alreadyReceived);assert.equal(JSON.stringify(engine.state),before);}
-  assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
+  assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.serialize()));
   assert(engine.exchange(1,0).ok); // Put the added monster back into reserve.
   const at=engine.state.storage.findIndex(member=>member.grantId===mon.grantId);assert(at>=0);
   assert(engine.release(at).ok);
@@ -361,5 +362,131 @@ test('all four historical species retain individual data and spent PP when saved
     mon=>delete mon.pp.galdoras_mend
   ]){
     const invalid=copy(before);mutate(invalid.party[1]);assert.throws(()=>new Engine(invalid),'Migration must not weaken exact PP validation');
+  }
+});
+
+const COMBAT_PER_LEVEL={hp:2,atk:1,def:1,spAtk:1,spDef:1,speed:1};
+function assertFullReserveGrowth(engine,mon){
+  assert.equal(mon.battleGrowth,99);assert.equal(mon.bonusPoints,99);assert.equal(engine.allocationInfo(mon).total,297);
+  const base=engine.stats({...copy(mon),battleGrowth:0}),actual=engine.stats(mon);
+  for(const [key,increment]of Object.entries(COMBAT_PER_LEVEL))assert.equal(actual[key]-base[key],increment*99,mon.species+'/'+key);
+  assert.equal(actual.accuracy,base.accuracy);assert.equal(actual.evasion,base.evasion);
+}
+function oldReserveSave(role,counts=Array(6).fill(undefined)){
+  const engine=fresh(),grant=bundle(role);assert.equal(engine.receiveAdminReserveTeam(grant).added,6);assert(engine.exchange(-1,0).ok);
+  const raw=engine.serialize();raw.version=4;
+  grant.members.forEach((member,index)=>{
+    const mon=[...raw.party,...raw.storage].find(owned=>owned.grantId===member.grantId),count=counts[index];
+    mon.nickname='仲間'+index;mon.shiny=index%2===1;mon.moveOrder=[3,1,0,2];mon.alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};
+    mon.pp=Object.fromEntries(Object.keys(mon.pp).map((id,slot)=>[id,slot]));
+    if(index%2)delete mon.heldItem;else mon.heldItem='powerband';
+    if(count===undefined)delete mon.battleGrowth;else mon.battleGrowth=count;
+    mon.hp=index===0?0:engine.stats(mon).hp-(index*3+1);
+  });
+  return {raw,grant};
+}
+function assertMigratedReserve(before,engine){
+  const originals=[...before.party,...before.storage].filter(mon=>mon.grantId?.startsWith('admin-trained-v64:'));
+  assert.equal(originals.length,6);
+  for(const old of originals){
+    const mon=all(engine).find(owned=>owned.uid===old.uid),expected={...copy(old),battleGrowth:99,hp:old.hp===0?0:old.hp+2*(99-(old.battleGrowth||0))};
+    assert.deepEqual(copy(mon),expected,'Migration preserves UID, PP, allocation, identity, gender, equipment and existing damage');assertFullReserveGrowth(engine,mon);
+    assert.equal(engine.genderOf(mon),old.gender);assert.equal(engine.allocationInfo(mon).used,297);
+  }
+  assert.deepEqual(copy(engine.state.giftReceipts),copy(before.giftReceipts));assert.equal(engine.serialize().version,5);
+}
+
+test('v79 canonicalizes old six-member entitlements and grants all eighteen role members with combatGrowth99 and full HP',()=>{
+  for(const role of Object.keys(roles))for(const oldGrowth of [undefined,0,99]){
+    const grant=bundle(role);if(oldGrowth!==undefined)grant.members.forEach(mon=>mon.battleGrowth=oldGrowth);
+    const original=copy(grant),canonical=rules.normalizeBundle(grant);
+    assert.deepEqual(copy(grant),original,'Normalization does not mutate a pending legacy response');
+    assert.deepEqual(copy(canonical.members.map(mon=>mon.battleGrowth)),[99,99,99,99,99,99]);
+    const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(grant).added,6);assert.equal(engine.state.party.length,1);
+    for(const mon of engine.state.storage){
+      assertFullReserveGrowth(engine,mon);assert.equal(mon.hp,engine.stats(mon).hp);assert.equal(mon.heldItem,'trainband');assert.equal(mon.gender,role==='sub'?'female':'male');assert.equal(engine.allocationInfo(mon).free,297);
+    }
+    const before=JSON.stringify(engine.state);for(const options of [{},{restore:true}]){assert(engine.receiveAdminReserveTeam(grant,options).alreadyReceived);assert.equal(JSON.stringify(engine.state),before);}
+    assert.equal(engine.state.giftReceipts.filter(id=>id.startsWith('admin-trained-v64:')).length,6);
+  }
+});
+
+test('old saved v64 members with missing or zero combat growth migrate once without changing their builds or reviving fainted members',()=>{
+  for(const role of Object.keys(roles))for(const count of [undefined,0]){
+    const {raw,grant}=oldReserveSave(role,Array(6).fill(count)),input=copy(raw),engine=new Engine(raw);assertMigratedReserve(input,engine);assert.deepEqual(copy(raw),input,'Loading leaves the original raw save unchanged');
+    const once=copy(engine.serialize()),restored=new Engine(once);assert.deepEqual(copy(restored.serialize()),once,'Loading a migrated save never adds the HP correction twice');
+    for(const options of [{},{restore:true}]){assert(restored.receiveAdminReserveTeam(grant,options).alreadyReceived);assert.deepEqual(copy(restored.serialize()),once);}
+    const fallen=all(restored).find(mon=>mon.uid===input.party[1].uid);assert.equal(fallen.hp,0);
+  }
+});
+
+test('partial combat growth upgrades only the missing portion and neither repeat loading nor repeat delivery heals existing damage twice',()=>{
+  for(const role of Object.keys(roles)){
+    const {raw,grant}=oldReserveSave(role,[1,13,25,49,77,99]);raw.version=5;const engine=new Engine(raw);assertMigratedReserve(raw,engine);
+    const once=copy(engine.serialize());assert.deepEqual(copy(new Engine(once).serialize()),once);assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.serialize()),once);
+    for(const mon of all(engine).filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')))assert.equal(mon.battleGrowth,99);
+  }
+});
+
+test('already-loaded legacy members can upgrade in place without adding individuals or consuming duplicate receipts',()=>{
+  for(const role of Object.keys(roles)){
+    const {raw,grant}=oldReserveSave(role,[undefined,0,12,33,70,98]),engine=fresh();engine.state=copy(raw);
+    const result=engine.receiveAdminReserveTeam(grant);assert(result.ok);assert.equal(result.added,0);assert.equal(result.updated,6);assert.equal(result.restored,0);assert.equal(all(engine).length,7);assertMigratedReserve(raw,engine);
+    const once=JSON.stringify(engine.state);assert(engine.receiveAdminReserveTeam(grant,{restore:true}).alreadyReceived);assert.equal(JSON.stringify(engine.state),once);
+  }
+});
+
+test('manual recovery gives every role a fresh full-growth missing member while preserving the five surviving builds',()=>{
+  for(const role of Object.keys(roles)){
+    const engine=fresh(),grant=bundle(role);engine.receiveAdminReserveTeam(grant);
+    const missing=copy(engine.state.storage[2]);assert(engine.release(2).ok);const kept=copy(engine.state.storage),receipts=copy(engine.state.giftReceipts);
+    assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.equal(engine.state.storage.length,5);
+    const restored=engine.receiveAdminReserveTeam(grant,{restore:true});assert.equal(restored.added,1);assert.equal(restored.restored,1);assert.deepEqual(copy(engine.state.storage.slice(0,5)),kept);assert.deepEqual(copy(engine.state.giftReceipts),receipts);
+    const mon=engine.state.storage.at(-1);assert.notEqual(mon.uid,missing.uid);assert.equal(mon.grantId,missing.grantId);assertFullReserveGrowth(engine,mon);assert.equal(mon.hp,engine.stats(mon).hp);assert.equal(mon.gender,role==='sub'?'female':'male');assert.equal(mon.heldItem,'trainband');
+    assert.deepEqual(copy(mon.pp),Object.fromEntries(engine.moves(mon).map(move=>[move.id,engine.maxPP(move)])));
+  }
+});
+
+test('all eighteen operator members retain HP198 and five stats99 from combat growth in level50 ranked battles',()=>{
+  if(!context.LT.Duel)vm.runInContext(scripts.find(script=>script[2].includes('deterministic, save-independent rental-team duels'))[2],context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../ranked-rules.js'),'utf8'),context);
+  for(const role of Object.keys(roles)){
+    const engine=fresh();engine.receiveAdminReserveTeam(bundle(role));
+    for(const mon of engine.state.storage)engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
+    const before=JSON.stringify(engine.state),battle=context.LT.RankedRules.create(copy(engine.state.storage.slice(0,3)),copy(engine.state.storage.slice(3)),7,['甲','乙']);
+    const rendered=context.LT.RankedRules.hydrate(battle).snapshot();
+    for(const team of rendered.teams)for(const mon of team.monsters){
+      assert.equal(mon.level,50);assert.equal(mon.sourceLevel,100);assert.equal(mon.battleGrowth,99);assert.equal(Object.values(mon.alloc).reduce((sum,value)=>sum+value,0),297);
+      const baseline=engine.stats({...copy(mon),battleGrowth:0});for(const [key,perLevel]of Object.entries(COMBAT_PER_LEVEL))assert.equal(mon.stats[key]-baseline[key],99*perLevel,role+'/'+mon.species+'/'+key);
+      assert.equal(mon.stats.accuracy,baseline.accuracy);assert.equal(mon.stats.evasion,baseline.evasion);assert.equal(mon.hp,mon.maxHp);assert.equal(mon.maxHp,mon.stats.hp);
+    }
+    assert.equal(JSON.stringify(engine.state),before,'A battle preview cannot change the Lv100 owned records');
+  }
+});
+
+test('the separate v68 Lunaxion entitlement never acquires the six-member growth migration',()=>{
+  for(const role of Object.keys(roles)){
+    const engine=fresh();engine.receiveAdminReserveTeam(bundle(role));const grant=addition(role);engine.receiveAdminReserveTeam(grant);const mon=engine.state.storage.at(-1);
+    assert.equal(mon.battleGrowth||0,0);const before=copy(mon),loaded=new Engine(engine.serialize()),saved=loaded.state.storage.find(member=>member.uid===mon.uid);assert.deepEqual(copy(saved),before);
+    const at=loaded.state.storage.findIndex(member=>member.uid===mon.uid);assert(loaded.release(at).ok);assert.equal(loaded.receiveAdminReserveTeam(grant,{restore:true}).added,1);assert.equal(loaded.state.storage.at(-1).battleGrowth||0,0);
+    assert(loaded.state.storage.filter(member=>member.grantId.startsWith('admin-trained-v64:')).every(member=>member.battleGrowth===99));
+  }
+});
+
+test('invalid combat-growth histories are rejected before v64 migration can replace them with99',()=>{
+  for(const value of [-1,.5,100,'99',null,{},[]]){
+    const grant=bundle();grant.members[0].battleGrowth=value;assert.throws(()=>rules.normalizeBundle(grant));
+    const {raw}=oldReserveSave('main');raw.party[1].battleGrowth=value;assert.throws(()=>new Engine(raw));
+  }
+});
+
+test('the bridge durably saves migrated already-received six-member records once and retries quota failure without a second correction',()=>{
+  for(const role of Object.keys(roles))for(const playing of [true,false]){
+    const {raw,grant}=oldReserveSave(role),h=bridgeHarness({playing,initialSave:raw,role}),before=JSON.stringify(h.engine.state),expected=new Engine(raw).serialize();
+    h.control.fail=true;assert(h.receive(grant).pending);assert.equal(h.control.raw,JSON.stringify(raw));assert.equal(JSON.stringify(h.engine.state),before);assert.equal(h.control.writes,0);
+    h.control.fail=false;const result=h.receive(grant);assert(result.ok,JSON.stringify({role,playing,result}));assert.equal(result.added,0);assert.equal(h.control.writes,1);assert.equal(h.control.remembered,1);
+    assert.deepEqual(JSON.parse(h.control.raw),copy(expected));assert.deepEqual(copy(h.ctx.storedSave),copy(expected));
+    const once=h.control.raw;assert(h.receive(grant).alreadyReceived);assert.equal(h.control.writes,1);assert.equal(h.control.raw,once);
+    if(playing)assertMigratedReserve(raw,h.engine);else assert.equal(JSON.stringify(h.engine.state),before,'The title screen keeps the inactive live engine untouched');
   }
 });

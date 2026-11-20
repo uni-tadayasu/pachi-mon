@@ -1,11 +1,13 @@
 // Ranked matches own their snapshots, locks and ratings on the server. Only
 // original owned-mon enrollment records and battle commands come from clients.
-import {RANKED_RULES_VERSION,rankedRulesInfo,normalizeRankedTeam,createRankedBattle,validateRankedOrders,resolveRankedRound,rankForRating} from './ranked-engine.mjs';
+import {RANKED_RULES_VERSION,RANKED_COMPATIBLE_VERSIONS,rankedRulesInfo,normalizeRankedTeam,createRankedBattle,validateRankedOrders,resolveRankedRound,rankForRating} from './ranked-engine.mjs';
 
 export const RANKED_QUEUE_TTL=45000;
 export const RANKED_HEARTBEAT_TTL=60000;
 export const RANKED_ROUND_TTL=90000;
 const INITIAL_RATING=1000,K_FACTOR=32;
+const COMPATIBLE_VERSIONS=RANKED_COMPATIBLE_VERSIONS;
+const supportsVersion=version=>COMPATIBLE_VERSIONS.includes(version);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MATCH_SELECT=`SELECT m.*,p0.name AS name0,p1.name AS name1 FROM ranked_matches m JOIN players p0 ON p0.id=m.player0_id JOIN players p1 ON p1.id=m.player1_id`;
 const PROFILE_SELECT=`SELECT r.*,p.name FROM ranked_profiles r JOIN players p ON p.id=r.player_id`;
@@ -87,7 +89,7 @@ async function advanceMatch(env,row,now){
   // Completed, accepted commands resolve before timeouts. A worker crash after
   // accepting the second command cannot discard a legitimately completed turn.
   for(let attempt=0;attempt<6&&row?.state==='battle';attempt++){
-    if(row.rules_version!==RANKED_RULES_VERSION)return settleMatch(env,row,null,'rules_changed',now);
+    if(!supportsVersion(row.rules_version))return settleMatch(env,row,null,'rules_changed',now);
     row=await addAutomaticOrders(env,row,now);
     if(row.state!=='battle')break;
     const orders=await ordersFor(env,row);
@@ -150,7 +152,7 @@ async function tryMatch(env,queueId,now){
     if(await matchRow(env,id))return;
   }
 }
-async function status(env,player,now,intent=null){
+async function status(env,player,now,intent=null,responseVersion=RANKED_RULES_VERSION){
   // Read membership and its queue in one SQLite snapshot. Pairing may commit
   // between separate reads; that must never produce a false idle response.
   const member=await env.DB.prepare(`SELECT m.*,q.state AS queue_state,q.request_id,q.team_json,q.joined_at,q.seen_at
@@ -160,13 +162,15 @@ async function status(env,player,now,intent=null){
   if(member?.queue_id&&member.queue_state==='waiting'){
     queue={id:member.queue_id,requestId:member.request_id,state:'waiting',team:JSON.parse(member.team_json),joinedAt:member.joined_at,expiresAt:member.seen_at+RANKED_QUEUE_TTL};
   }else if(member?.match_id)match=await matchView(env,await matchRow(env,member.match_id),player.id);
-  const reply={rulesVersion:RANKED_RULES_VERSION,profile:profileView(profile),queue,match,serverTime:now,pollAfterMs:2000};
+  // A match keeps its rules until acknowledged. This also lets an already-open
+  // v78 client finish and acknowledge its match during the v79 deployment.
+  const reply={rulesVersion:match?.rulesVersion||responseVersion,profile:profileView(profile),queue,match,serverTime:now,pollAfterMs:2000};
   if(intent)reply.intent={requestId:intent.request_id,state:intent.state};
   return reply;
 }
 async function sweepMatches(env,now){
-  const rows=await env.DB.prepare(MATCH_SELECT+" WHERE m.state='battle' AND (m.rules_version<>? OR m.deadline_at<=? OR m.seen0_at<=? OR m.seen1_at<=?) LIMIT 20")
-    .bind(RANKED_RULES_VERSION,now,now-RANKED_HEARTBEAT_TTL,now-RANKED_HEARTBEAT_TTL).all();
+  const rows=await env.DB.prepare(MATCH_SELECT+` WHERE m.state='battle' AND (m.rules_version NOT IN (${COMPATIBLE_VERSIONS.map(()=>'?').join(',')}) OR m.deadline_at<=? OR m.seen0_at<=? OR m.seen1_at<=?) LIMIT 20`)
+    .bind(...COMPATIBLE_VERSIONS,now,now-RANKED_HEARTBEAT_TTL,now-RANKED_HEARTBEAT_TTL).all();
   for(const row of rows.results)await advanceMatch(env,row,now);
 }
 function exactFields(body,fields,fail){if(Object.keys(body).some(key=>!fields.includes(key)))fail(400,'INVALID_RANKED_REQUEST','ランク対戦の送信内容を確認してください。');}
@@ -197,7 +201,7 @@ export async function rankedRoute(request,env,path,method,player,{fail,bodyJSON,
     return {players:rows.results.map((row,index)=>({...profileView(row),rank:index+1})),serverTime:now};
   }
   if(path==='/api/world/ranked/queue'&&['POST','DELETE'].includes(method)){
-    const body=await bodyJSON(request);exactFields(body,method==='POST'?['requestId','team']:['requestId'],fail);
+    const body=await bodyJSON(request);exactFields(body,method==='POST'?['requestId','team','rulesVersion']:['requestId'],fail);
     const requestId=requestIdOf(body.requestId,fail);
     await refreshMember(env,player.id,now,{touch:false,match:false});
     if(method==='DELETE'){
@@ -209,6 +213,9 @@ export async function rankedRoute(request,env,path,method,player,{fail,bodyJSON,
       ]);
       return status(env,player,now,await queueIntent(env,player.id,requestId));
     }
+    // Old waiting intents expire on deployment. A fresh enrollment must prove
+    // that its client can read and render the direct-growth rules before pairing.
+    if(body.rulesVersion!==RANKED_RULES_VERSION)fail(409,'RANKED_RULES_UPDATED','ランク対戦のルールが更新されました。ページを更新してから参加してください。進行中の対戦はそのまま続けられます。');
     let team;try{team=normalizeRankedTeam(body.team);}catch(error){fail(400,'INVALID_RANKED_TEAM',error?.message||'所持パチモンから異なる3体を選んでください。');}
     await validateOwned(env,team,player);
     const teamJSON=serialize(team),prior=await queueIntent(env,player.id,requestId);
@@ -253,7 +260,7 @@ export async function rankedRoute(request,env,path,method,player,{fail,bodyJSON,
         env.DB.prepare(`UPDATE ranked_matches SET acked${side}_at=COALESCE(acked${side}_at,?) WHERE id=? AND state='result'`).bind(now,row.id),
         env.DB.prepare('DELETE FROM ranked_members WHERE player_id=? AND match_id=?').bind(player.id,row.id)
       ]);
-      return status(env,player,now);
+      return status(env,player,now,null,supportsVersion(row.rules_version)?row.rules_version:RANKED_RULES_VERSION);
     }
     if(operation==='forfeit'){
       exactFields(body,[],fail);
@@ -278,7 +285,7 @@ export async function rankedRoute(request,env,path,method,player,{fail,bodyJSON,
     await env.DB.batch([
       env.DB.prepare(`INSERT OR IGNORE INTO ranked_orders (match_id,round,side,request_id,orders_json,write_token,created_at)
         SELECT id,round,?,?,?,?,? FROM ranked_matches WHERE id=? AND state='battle' AND round=? AND rules_version=? AND deadline_at>? AND seen0_at>? AND seen1_at>?`)
-        .bind(side,requestId,ordersJSON,token,now,row.id,body.round,RANKED_RULES_VERSION,now,now-RANKED_HEARTBEAT_TTL,now-RANKED_HEARTBEAT_TTL),
+        .bind(side,requestId,ordersJSON,token,now,row.id,body.round,row.rules_version,now,now-RANKED_HEARTBEAT_TTL,now-RANKED_HEARTBEAT_TTL),
       env.DB.prepare(`UPDATE ranked_matches SET revision=revision+1,seen${side}_at=?,updated_at=? WHERE id=? AND state='battle' AND round=?
         AND EXISTS(SELECT 1 FROM ranked_orders WHERE match_id=? AND round=? AND side=? AND write_token=?)`).bind(now,now,row.id,body.round,row.id,body.round,side,token)
     ]);

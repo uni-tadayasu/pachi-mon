@@ -74,12 +74,12 @@ const c = vm.createContext({
   console, Engine, DATA, LT: model.LT, engine, playing: true, activePane: '',
   escape: s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
   portrait: () => '<canvas></canvas>', creatureView: () => '<div class="creature-view"><canvas></canvas></div>',
-  nameOf: mon => model.LT.displayName(mon), shinyBadge: () => '', typeBadge: () => '', creatureDescription: s => s.description || '',
+  nameOf: mon => model.LT.displayName(mon), shinyBadge: () => '', typeBadge: () => '', speciesBadges: () => '', abilityPanel: () => '', creatureDescription: s => s.description || '',
   hpBar: mon => `<div class="hp-track"><span class="hp-fill" data-hp="${mon.hp}"></span></div>`, ico: () => '',
   openModal(title, markup, pane) { counts.open += 1; c.activePane = pane; content = parse(markup); modal.open = true; },
   $: id => (id === 'modal' ? modal : id === 'modal-content' ? content : null),
   toast: message => toasts.push(message), save: () => { counts.save += 1; }, updateAll: () => { counts.updateAll += 1; },
-  sound: { fx: kind => fx.push(kind) }, tradeLocked: () => false,
+  sound: { fx: kind => fx.push(kind) }, tradeLocked: () => false, rankedLocked: () => false,
   setTimeout: (fn, ms) => { const id = nextTimer++; timers.set(id, { fn, at: now + ms }); return id; },
   clearTimeout: id => { timers.delete(id); },
   performance: { now: () => now },
@@ -174,4 +174,30 @@ engine.battle = {}; const toastCount = toasts.length; click(q('[data-alloc="0:de
 assert.equal(value('def'), '1'); assert.equal(toasts.length, toastCount + 1); assert.match(toasts.at(-1), /バトル中/);
 engine.battle = null;
 
-console.log(JSON.stringify({ ok: true, checks: ['in-place taps', 'deferred single save', 'HP line', 'press-and-hold', 'release click', 'drag-off/cancel/blur', 'run-out focus', 'reset/auto', 'close commit', 'fallback', 'battle guard'] }));
+// Direct battle growth changes abilities without creating allocation points.
+const veteran = engine.makeMonster('komorizen', 1); veteran.heldItem = 'trainband';
+engine.state.party = [veteran]; engine.markCaught(veteran.species);
+const growth = [], earnedXP = Array.from({ length: 99 }, (_, i) => engine.xpToNext(i + 1)).reduce((sum, value) => sum + value, 0);
+engine.giveXP(veteran, earnedXP, growth, { battleParticipation: true });
+assert.equal(veteran.level, 100); assert.equal(veteran.bonusPoints, 99); assert.equal(veteran.battleGrowth, 99);
+assert.equal(engine.allocationInfo(veteran).total, 297); assert.equal(growth.filter(event => event.kind === 'level').length, 99);
+c.showParty(0); const grownOpenCount = counts.open;
+assert.equal(free(), 297); assert.equal(q('[data-alloc-auto="0"]').disabled, false);
+assert(q('.battle-growth-summary'), 'the individual detail identifies accumulated direct battle growth');
+click(q('[data-alloc-auto="0"]'));
+assert.equal(counts.open, grownOpenCount, 'allocation refreshes the existing detail');
+assert.equal(engine.allocationInfo(veteran).used, 297); assert.equal(free(), 0);
+assert.equal(q('[data-alloc-auto="0"]').disabled, true);
+const beforeReset = engine.stats(veteran), allocated = { ...veteran.alloc };
+click(q('[data-alloc-reset="0"]'));
+assert.equal(free(), 297); assert.equal(veteran.battleGrowth, 99, 'resetting allocation does not erase earned direct growth');
+const afterReset = engine.stats(veteran), ordinary = engine.stats({ ...veteran, battleGrowth: 0 });
+for (const key of DATA.allocation.keys) {
+  assert.equal(beforeReset[key] - afterReset[key], (allocated[key] || 0) * (key === 'hp' ? 2 : 1));
+  assert.equal(afterReset[key] - ordinary[key], key === 'hp' ? 198 : 99);
+}
+const restored = new Engine(engine.serialize()), restoredMon = restored.state.party[0];
+assert.equal(restoredMon.battleGrowth, 99); assert.equal(restored.allocationInfo(restoredMon).total, 297);
+assert.deepEqual(JSON.parse(JSON.stringify(restored.stats(restoredMon))), JSON.parse(JSON.stringify(afterReset)));
+
+console.log(JSON.stringify({ ok: true, checks: ['in-place taps', 'deferred single save', 'HP line', 'press-and-hold', 'release click', 'drag-off/cancel/blur', 'run-out focus', 'reset/auto', 'close commit', 'fallback', 'battle guard', 'direct growth shown separately from 297 allocation points', 'allocation reset preserves direct growth', 'direct stats survive reload'] }));

@@ -18,7 +18,7 @@ function setup(){
  }
  async function register(name='旅人'){const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');const r=await call('/register',{method:'POST',body:{name,token}});assert.equal(r.status,200);return {token,...r.player};}
  async function create(player,requestId=crypto.randomUUID()){const r=await call('/trades',{token:player.token,method:'POST',body:{requestId}});assert.equal(r.status,200);return {requestId,trade:r.trade};}
- async function ready(){const a=await register('甲'),b=await register('乙');let {trade}=await create(a);trade=(await call('/trades/join',{token:b.token,method:'POST',body:{code:trade.code}})).trade;trade=(await call('/trades/'+trade.id+'/offer',{token:a.token,method:'POST',body:{revision:trade.revision,monster:mon('komori','alpha')}})).trade;trade=(await call('/trades/'+trade.id+'/offer',{token:b.token,method:'POST',body:{revision:trade.revision,monster:mon('shizuku','beta')}})).trade;return {a,b,trade};}
+ async function ready(hostMonster=mon('komori','alpha'),guestMonster=mon('shizuku','beta')){const a=await register('甲'),b=await register('乙');let {trade}=await create(a);trade=(await call('/trades/join',{token:b.token,method:'POST',body:{code:trade.code}})).trade;trade=(await call('/trades/'+trade.id+'/offer',{token:a.token,method:'POST',body:{revision:trade.revision,monster:hostMonster}})).trade;trade=(await call('/trades/'+trade.id+'/offer',{token:b.token,method:'POST',body:{revision:trade.revision,monster:guestMonster}})).trade;return {a,b,trade};}
  return {env,call,register,create,ready};
 }
 let DATA,Engine;
@@ -40,6 +40,44 @@ test('trade catalog matches every ordinary species and preserves all legal snaps
  assert.equal(validateTradeMonster(mon('arvelion')).species,'arvelion');
  const absent=mon();delete absent.shiny;delete absent.nickname;assert.equal(validateTradeMonster(absent).shiny,false);assert(!('nickname'in validateTradeMonster(absent)));
  assert.equal(validateTradeMonster({...mon(),nickname:'👨‍👩‍👧‍👦🌸'}).nickname,'👨‍👩‍👧‍👦🌸');
+});
+
+test('battle growth survives the trade envelope and extends HP only within its original-level bound',()=>{
+ const base=mon(),plain=validateTradeMonster(base);
+ assert.deepEqual(validateTradeMonster({...base,battleGrowth:0}),plain,'Zero retains the legacy envelope');
+ for(const battleGrowth of [1,7,19]){
+  const grown={...base,battleGrowth};grown.hp=new Engine().stats({...grown,pp:undefined}).hp;
+  const checked=validateTradeMonster(grown);assert.equal(checked.battleGrowth,battleGrowth);assert.equal(checked.hp,grown.hp);
+  assert.throws(()=>validateTradeMonster({...grown,hp:grown.hp+1}));
+ }
+ for(const battleGrowth of [-1,.5,20,99,100,'1',null,false])assert.throws(()=>validateTradeMonster({...base,battleGrowth}),String(battleGrowth));
+ const max={...base,level:100,xp:0,battleGrowth:99};assert.equal(validateTradeMonster(max).battleGrowth,99);
+ const first={...base,level:1,xp:0,hp:1,battleGrowth:0};assert.equal(validateTradeMonster(first).battleGrowth,undefined);assert.throws(()=>validateTradeMonster({...first,battleGrowth:1}));
+});
+
+test('grown offers require both clients to support growth before committing and retain it in recoverable receipts',async()=>{
+ const h=setup(),{a,b,trade}=await h.ready({...mon('komori','alpha'),battleGrowth:7},{...mon('shizuku','beta'),battleGrowth:3});
+ const confirm=(actor,supportsBattleGrowth)=>h.call('/trades/'+trade.id+'/confirm',{token:actor.token,method:'POST',body:{revision:trade.revision,...(supportsBattleGrowth===undefined?{}:{supportsBattleGrowth})}});
+ for(const supported of [undefined,false,1,'true']){const rejected=await confirm(a,supported);assert.equal(rejected.status,409);assert.equal(rejected.error.code,'TRADE_CLIENT_UPDATE_REQUIRED');}
+ let row=h.env.DB.sqlite.prepare('SELECT * FROM trades WHERE id=?').get(trade.id);assert.equal(row.state,'open');assert.equal(row.host_confirm,null);assert.equal(row.guest_confirm,null);
+ assert.equal((await confirm(a,true)).trade.state,'open');
+ assert.equal((await confirm(b)).error.code,'TRADE_CLIENT_UPDATE_REQUIRED');
+ const done=await confirm(b,true);assert.equal(done.trade.state,'committed');assert.equal(done.trade.receipt.incoming.battleGrowth,7);assert.equal(done.trade.receipt.outgoing.battleGrowth,3);
+ const other=await h.call('/trades/'+trade.id,{token:a.token});assert.equal(other.trade.receipt.incoming.battleGrowth,3);assert.equal(other.trade.receipt.outgoing.battleGrowth,7);
+ assert.deepEqual((await confirm(b,true)).trade.receipt,done.trade.receipt,'A retried consent does not change earned growth');
+ assert.deepEqual((await h.call('/trades/'+trade.id+'/ack',{token:a.token,method:'POST',body:{}})).trade.receipt,other.trade.receipt);
+ row=h.env.DB.sqlite.prepare('SELECT * FROM trades WHERE id=?').get(trade.id);assert.equal(JSON.parse(row.host_offer).battleGrowth,7);assert.equal(JSON.parse(row.guest_offer).battleGrowth,3);
+});
+
+test('invalid or changed battle growth cannot overwrite or confirm an earlier offered individual',async()=>{
+ const h=setup(),{a,b,trade}=await h.ready({...mon('komori','alpha'),battleGrowth:7});
+ const offer=monster=>h.call('/trades/'+trade.id+'/offer',{token:a.token,method:'POST',body:{revision:trade.revision,monster}});
+ const before=h.env.DB.sqlite.prepare('SELECT host_offer,revision FROM trades WHERE id=?').get(trade.id);
+ for(const battleGrowth of [-1,1.5,100,20,null,'7'])assert.equal((await offer({...mon('komori','alpha'),battleGrowth})).status,400);
+ assert.deepEqual(h.env.DB.sqlite.prepare('SELECT host_offer,revision FROM trades WHERE id=?').get(trade.id),before);
+ await h.call('/trades/'+trade.id+'/confirm',{token:b.token,method:'POST',body:{revision:trade.revision,supportsBattleGrowth:true}});
+ const changed=await offer({...mon('komori','alpha'),battleGrowth:8});assert.equal(changed.trade.revision,trade.revision+1);assert.equal(changed.trade.guest.confirmed,false);
+ assert.equal((await h.call('/trades/'+trade.id+'/confirm',{token:b.token,method:'POST',body:{revision:trade.revision,supportsBattleGrowth:true}})).error.code,'TRADE_CHANGED');
 });
 
 test('create/join is authenticated, six-code, idempotent and has one active room per player',async()=>{

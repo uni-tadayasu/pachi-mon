@@ -1,7 +1,7 @@
 /* Pachi Monsters: link-battle teams (online and local) from the player's own monsters.
  * Arvelion, Floravelle and Futo join like every other species: fixed Lv.50 stats
  * from their species data, their species moves, the individual's allocation
- * points, look, held item, move-slot order and permanent curse. Other conditions,
+ * points, direct battle growth, look, held item, move-slot order and permanent curse. Other conditions,
  * HP and PP start fresh; duel changes never write back to the adventure.
  * Futo's adventure stats are set by the operator and
  * take no allocation points, so in link battles it brings an even spread of the
@@ -45,6 +45,7 @@
   const firstOf = id => ownedList().find(mon => mon.species === id) || null;
   const appearanceFor = ids => ids.map(id => lookOf(firstOf(id)));
   const allocationFor = ids => ids.map(id => allocationOf(id, firstOf(id)));
+  const growthOf = mon => mon ? LT.BattleGrowth.count({level:mon.level??Duel.rules.level,battleGrowth:mon.battleGrowth}) : 0;
   const moveOrderOf = mon => LT.MoveOrder.normalize(mon?.moveOrder);
   const moveOrdersFor = ids => ids.map(id => moveOrderOf(firstOf(id)));
   const curseOf = mon => mon?.curse === true && !LT.ConditionRules.isImmune(mon);
@@ -114,8 +115,8 @@
   }
   class LinkSession extends BaseSession {
     _validTeam(team) {
-      if (!plain(team) || !validAppearance(team) || !validAllocation(team) || !validItems(team) || !Duel.validateMoveOrders(team.moveOrders, team.ids?.length).ok || !Duel.validateCurses(team.curses, team.ids?.length).ok) return false;
-      const clean = { ...team }; delete clean.appearance; delete clean.allocation; delete clean.items; delete clean.moveOrders; delete clean.curses;
+      if (!plain(team) || !validAppearance(team) || !validAllocation(team) || !validItems(team) || !Duel.validateMoveOrders(team.moveOrders, team.ids?.length).ok || !Duel.validateCurses(team.curses, team.ids?.length).ok || !Duel.validateBattleGrowth(team.battleGrowth, team.sourceLevels, team.ids?.length).ok) return false;
+      const clean = { ...team }; delete clean.appearance; delete clean.allocation; delete clean.items; delete clean.moveOrders; delete clean.curses; delete clean.battleGrowth; delete clean.sourceLevels;
       return super._validTeam(clean) && Duel.validateTeam(team.ids, this.mode).ok;
     }
     async setTeam(input = {}) {
@@ -132,13 +133,18 @@
       if(members?.list.some(mon=>mon.species==='floravelle'&&!isMythicalMember(mon)))return fail('受け取り情報を確認できるキラシードを選んでください。');
       const list = members?.list || null, items = itemsFor(input, list);
       if (!items.ok) return fail(items.error);
-      let moveOrders;
+      let moveOrders, battleGrowth, sourceLevels;
       try { moveOrders = list ? list.map(moveOrderOf) : moveOrdersFor(input.ids); }
       catch (_) { return fail('技の並びが正しくありません。仲間の技を並べ直してください。'); }
+      try {
+        const chosen = list || input.ids.map(firstOf);
+        battleGrowth = chosen.map(growthOf); sourceLevels = chosen.map(mon => mon?.level ?? Duel.rules.level);
+      } catch (_) { return fail('実戦成長の情報を確認できません。仲間のデータを確認してください。'); }
       const team = { name: cleanName(input.name) || `プレイヤー${this.role + 1}`, ids: input.ids.slice(),
         appearance: list ? list.map(lookOf) : appearanceFor(input.ids), allocation: list ? list.map((mon, i) => allocationOf(input.ids[i], mon)) : allocationFor(input.ids), moveOrders,
         curses: list ? list.map(curseOf) : cursesFor(input.ids) };
       if (items.items.some(Boolean)) team.items = items.items;
+      if (battleGrowth.some(Boolean)) { team.battleGrowth = battleGrowth; team.sourceLevels = sourceLevels; }
       if (!this._validTeam(team)) return fail('異なる種類のパチモンでチームを編成してください。');
       this._teams[this.role] = team; this._phase = 'ready'; this._message = '編成を確定しました。対戦相手の準備を待っています。';
       this._arm(180000, '対戦相手の編成が時間内に完了しなかったため、中断しました。');
@@ -149,14 +155,14 @@
       if (this.duel || !this._teams.every(Boolean)) return;
       try {
         this.duel = createDuel({ mode: this.mode, teams: this._teams.map(team => team.ids), names: this._teams.map(team => team.name), seed: this.seed,
-          appearance: this._teams.map(team => team.appearance), allocation: this._teams.map(team => team.allocation || null), items: this._teams.map(team => team.items || null), moveOrders: this._teams.map(team => team.moveOrders), curses: this._teams.map(team => team.curses) });
+          appearance: this._teams.map(team => team.appearance), allocation: this._teams.map(team => team.allocation || null), items: this._teams.map(team => team.items || null), moveOrders: this._teams.map(team => team.moveOrders), curses: this._teams.map(team => team.curses), battleGrowth: this._teams.map(team => team.battleGrowth), sourceLevels: this._teams.map(team => team.sourceLevels) });
         this._beginSync(0);
       } catch (_) { this._fail('チームを準備できませんでした。部屋を作り直してください。'); }
     }
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68:galdoras-single-form-v70:lunar-super-genderless-v74';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v10-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68:galdoras-single-form-v70:lunar-super-genderless-v74:owned-battle-growth-source-level-v79';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 15 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, growthOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 16 };
 })();

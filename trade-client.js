@@ -6,16 +6,19 @@
   const copy=value=>JSON.parse(JSON.stringify(value));
   function parsePending(raw){const p=JSON.parse(raw);if(!p||p.version!==1||typeof p.ownerId!=='string'||(!p.roomId&&!['create','join'].includes(p.action)))throw Error('Invalid pending trade');return p;}
   const stable=value=>JSON.stringify(value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(key=>[key,JSON.parse(stable(value[key]))])):Array.isArray(value)?value.map(item=>JSON.parse(stable(item))):value);
+  const validGrowth=mon=>mon?.battleGrowth===undefined||(Number.isSafeInteger(mon.battleGrowth)&&mon.battleGrowth>=0&&mon.battleGrowth<=99&&Number.isSafeInteger(mon.level)&&mon.level>=1&&mon.level<=100&&mon.battleGrowth<mon.level);
   function snapshot(mon,engine){
     if(!mon)return null;
+    if(!validGrowth(mon))throw Error('戦闘で育った能力の情報を確認してください。');
     // PP goes out in the exchange server's catalog; an echo of our own offer is already in it.
     const pp=typeof engine?.tradeWirePP==='function'?engine.tradeWirePP(mon):LT.TradeRules?.wirePP?LT.TradeRules.wirePP(mon):copy(mon.pp||{});
     const value={uid:mon.uid,species:mon.species,level:mon.level,xp:mon.xp,hp:mon.hp,pp:copy(pp||{}),nickname:mon.nickname||'',shiny:mon.shiny===true};
+    if(mon.battleGrowth>0)value.battleGrowth=mon.battleGrowth;
     return value;
   }
   function eligible(mon,data=LT.DATA){
     const species=data?.species?.[mon?.species];
-    return !!species&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&mon.heldItem===undefined&&(mon.curse===undefined||mon.curse===false)&&
+    return !!species&&validGrowth(mon)&&!species.specialOnly&&!species.adminOnly&&mon.species!=='futo'&&mon.species!=='floravelle'&&mon.heldItem===undefined&&(mon.curse===undefined||mon.curse===false)&&
       !['grantId','customStats','customMoves','customStatsLevel','futoConfigLevel'].some(key=>mon[key]!==undefined);
   }
   class TradeController {
@@ -158,7 +161,8 @@
         const checked=await this.check(receipt);
         if(!checked?.ok)throw Error(checked?.message||'交換内容を冒険記録に反映できません。内容を確認してからやり直してください。');
       }
-      const result=await this.request('/trades/'+trade.id+'/confirm',{method:'POST',body:{revision:trade.revision}});
+      const hasGrowth=[this.own(trade)?.monster,this.other(trade)?.monster].some(mon=>mon?.battleGrowth>0);
+      const result=await this.request('/trades/'+trade.id+'/confirm',{method:'POST',body:{revision:trade.revision,...(hasGrowth?{supportsBattleGrowth:true}:{})}});
       await this.accept(result.trade,owner);
     });}
     cancel({waitingOnly=false}={}){return this.run(async()=>{

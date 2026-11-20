@@ -150,7 +150,7 @@ async function combatScenarios(env) {
   assert.equal(doubleDuel.fingerprint(), doubles.sessions[1].duel.fingerprint());
   doubles.close();
   // Peers on other rules are turned away before choosing teams.
-  for(const oldRules of ['previous-rules',LT.Duel.rulesFingerprint().replace(':lunar-super-genderless-v74','')]){
+  for(const oldRules of ['previous-rules',LT.Duel.rulesFingerprint().replace(':lunar-super-genderless-v74',''),LT.Duel.rulesFingerprint().replace(':owned-battle-growth-source-level-v79','')]){
     const mismatch = env.pair(); mismatch.sessions.forEach(s => s.start());
     mismatch.queue.forEach(item => { item.message.rules = oldRules; }); await mismatch.flush();
     assert(mismatch.sessions.every(s => s.snapshot().phase === 'error'));
@@ -167,7 +167,7 @@ async function combatScenarios(env) {
     assert(LT.Duel.validateTeam(['futo', ...normal.slice(0, 2)], 'single').ok, 'Special species battle like any other');
     assert(LT.Duel.validateTeam(['floravelle', 'arvelion', 'futo'], 'single').ok);
     assert(!LT.Duel.validateTeam(['missing', ...normal.slice(0, 2)], 'single').ok);
-    assert.equal(LT.Duel.rules.version, 11); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/); assert.match(LT.Duel.rulesFingerprint(), /:lunar-super-genderless-v74$/);
+    assert.equal(LT.Duel.rules.version, 11); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/); assert.match(LT.Duel.rulesFingerprint(), /:lunar-super-genderless-v74:/); assert.match(LT.Duel.rulesFingerprint(), /:owned-battle-growth-source-level-v79$/);
     assert(LT.OnlineFuto.rosterIds(normal).includes('futo'), 'A received Futo is selectable');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'), 'Unowned legendary is not a free rental');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('floravelle'), 'Unowned mythical is not offered');

@@ -1,5 +1,14 @@
 # パチモンの通信交換API
 
+## 実戦成長と経験値の対象（v79）
+
+個体の `battleGrowth` は実戦でレベルアップした回数です。未指定は0、整数0〜99かつ元レベル−1以下で検証し、HPへ回数×2、攻撃・防御・特攻・特防・素早さへ回数×1を直接加算します。命中・回避は不変。経験値はその相手との戦いに出場した個体だけが獲得し、未出場の手持ち・ひかえ・捕獲直後の個体には配りません。振り分けポイントは従来の2／鍛錬の帯で3です。
+
+新規ランク参加は `rulesVersion: "ranked-v79-growth"` を指定します。Lv.50補正後も元レベルの成長回数を保持し、既存 `ranked-v78` の進行中試合は当時の能力で完走できます。旧待機は失効させ、旧クライアントの新規参加には更新を案内します。互換版の定数は遅延初期化を保つ静的exportです。
+
+v64の運営6体は新規・復元・既存個体とも `battleGrowth:99`。元のUID・配分・性別・技を維持し、未反映分だけHPを補正します。v68の追加ルナクシオンはこの変更の対象外です。交換は成長回数を保存し、成長のある個体を含む確定要求では `supportsBattleGrowth:true` を必要とします。旧版どうしの成長0の交換は継続できます。
+
+
 ## 所持パチモンのランク対戦（v78）
 
 `drizzle/0010_ranked.sql` がプロフィール、待機要求、対戦、参加ロック、各ターンの行動を追加します。Sitesのジャーナルは連番10です。既存の登録トークンで全APIを認証します。対戦相手・ランキングの名前は `players.name` の実名表示を使い、運営の別名・役職・バッジを返しません。
@@ -7,7 +16,7 @@
 | 操作 | API | 送信内容・応答 |
 | --- | --- | --- |
 | 現在の参加状態 | `GET /api/world/ranked` | `{rulesVersion,profile,queue,match,serverTime,pollAfterMs}` |
-| 対戦相手を探す | `POST /api/world/ranked/queue` | `{requestId,team}`。`team` は元レベルを保つ所持個体の保存レコード3件 |
+| 対戦相手を探す | `POST /api/world/ranked/queue` | `{requestId,team,rulesVersion}`。`team` は元レベルを保つ所持個体の保存レコード3件 |
 | 待機を取り消す | `DELETE /api/world/ranked/queue` | `{requestId}`。参加要求がまだ届いていなくても取り消しを記録 |
 | 行動 | `POST /api/world/ranked/matches/:id/actions` | `{round,orders,requestId}` |
 | 降参 | `POST /api/world/ranked/matches/:id/forfeit` | `{}` |

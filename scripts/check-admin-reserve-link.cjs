@@ -176,13 +176,15 @@ async function checkBattle(left, right, mode, indexes) {
       for (const [index, source] of chosen.entries()) {
         assert.deepEqual(ready.appearance[index], appearanceOf(source));
         assert.equal(Object.values(ready.allocation[index]).reduce((a, b) => a + b, 0), 297);
+        assert.equal(ready.battleGrowth[index],source.battleGrowth||0);assert.equal(ready.sourceLevels[index],100);
         for (const duel of duels) {
           const mon = duel.state.teams[side].monsters[index];
           assert.equal(mon.level, 50); assert.equal(mon.gender, source.gender); assert.equal(mon.grantId, source.grantId);
           if(source.gender === undefined)assert.equal(Object.hasOwn(mon, 'gender'), false, 'genderless battle individuals omit the gender field');
           assert.equal(mon.nickname, source.nickname); assert.equal(mon.shiny, false);
           assert.deepEqual(copy(mon.alloc), copy(peer.LT.Duel.normalizeAllocation(source.alloc)));
-          assert.deepEqual(copy(mon.stats), copy(peer.engine.stats({ species: source.species, level: 50, alloc: source.alloc })));
+          assert.equal(mon.battleGrowth||0,source.battleGrowth||0);if(source.battleGrowth)assert.equal(mon.sourceLevel,100);
+          assert.deepEqual(copy(mon.stats), copy(peer.engine.stats({ species: source.species, level: 50, sourceLevel: source.level, alloc: source.alloc, battleGrowth: source.battleGrowth })));
           assert.equal(mon.hp, mon.stats.hp, 'duel HP starts fresh');
           assert.deepEqual(copy(mon.moveOrder), copy(source.moveOrder));
         }
@@ -210,7 +212,7 @@ async function checkBattle(left, right, mode, indexes) {
   console.log(JSON.stringify({ ok: true, roles, members: 21, peerMatches: 6, checks: [
     'all seven reserve UIDs selectable per role', 'legacy Lv70 and trained Lv100 mythical both listed',
     'duplicate species and held items still excluded', 'exact role gender/grant appearance validated',
-    'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50',
+    'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50', 'six v64 members keep growth99 and original source level; lunar addition stays unchanged',
     'single and double peers synchronized after a full turn', 'adventure saves unchanged'
   ] }));
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { for (const timer of timers) clearTimeout(timer); });

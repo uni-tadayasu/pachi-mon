@@ -176,7 +176,7 @@ async function adminReserveTeam(env, playerId) {
   // reading or restoring it never creates another Futo distribution batch.
   const gender=role==='sub'?'female':'male';
   return {version:1,playerId,role,members:[ADMIN_RESERVE_STARTERS[role],...ADMIN_RESERVE_COMMON].map(species=>({
-    grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender,heldItem:'trainband',bonusPoints:99
+    grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender,heldItem:'trainband',bonusPoints:99,battleGrowth:99
   }))};
 }
 async function adminReserveAddition(env, playerId) {
@@ -237,16 +237,22 @@ const TRADE_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const tradeNicknameSegments = new Intl.Segmenter('ja', {granularity:'grapheme'});
 export function validateTradeMonster(input) {
-  const allowed = new Set(['uid','species','level','xp','hp','pp','shiny','nickname']);
+  const allowed = new Set(['uid','species','level','xp','hp','pp','shiny','nickname','battleGrowth']);
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !allowed.has(key)) ||
       !Object.hasOwn(TRADE_SPECIES, input.species) || typeof input.uid !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(input.uid))
     fail(400, 'INVALID_TRADE_MONSTER', 'このパチモンは交換できません。運営専用・配布個体は対象外です。');
   const species = TRADE_SPECIES[input.species];
-  if (!integer(input.level,1,100) || !integer(input.xp,0,input.level===100?0:23+input.level*12) || !integer(input.hp,0,species.hp+input.level*5) ||
+  const battleGrowth=input.battleGrowth===undefined?0:input.battleGrowth;
+  if(!integer(input.level,1,100)||!integer(battleGrowth,0,Math.min(99,input.level-1)))
+    fail(400,'INVALID_TRADE_MONSTER','交換するパチモンの戦闘で育った能力を確認してください。');
+  if (!integer(input.xp,0,input.level===100?0:23+input.level*12) || !integer(input.hp,0,species.hp+input.level*5+battleGrowth*2) ||
       (input.shiny!==undefined && typeof input.shiny!=='boolean') || !input.pp || typeof input.pp!=='object' || Array.isArray(input.pp) ||
       Object.keys(input.pp).length!==Object.keys(species.pp).length || Object.entries(input.pp).some(([key,value]) => !Object.hasOwn(species.pp,key)||!integer(value,0,species.pp[key])))
     fail(400,'INVALID_TRADE_MONSTER','交換するパチモンのレベル・体力・経験値・PPを確認してください。');
   const mon = {uid:input.uid,species:input.species,level:input.level,xp:input.xp,hp:input.hp,pp:Object.fromEntries(Object.keys(species.pp).map(id=>[id,input.pp[id]])),shiny:input.shiny===true};
+  // Omit the zero default so unchanged individuals remain compatible with
+  // legacy trade envelopes, while positive earned growth survives receipts.
+  if(battleGrowth)mon.battleGrowth=battleGrowth;
   if(input.nickname!==undefined){
     if(typeof input.nickname!=='string'||input.nickname.length>160||/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(input.nickname))fail(400,'INVALID_TRADE_MONSTER','ニックネームを確認してください。');
     const name=input.nickname.normalize('NFC').trim();
@@ -385,6 +391,8 @@ async function tradeRoute(request,env,path,method,player){
     openTrade(row);
     if(!row.host_offer||!row.guest_offer||!row.guest_id)fail(409,'TRADE_INCOMPLETE','お互いのパチモンがそろうまで待ってください。');
     if(row.revision!==revision)fail(409,'TRADE_CHANGED','交換内容が変わりました。両方のパチモンを再確認してください。');
+    if([row.host_offer,row.guest_offer].some(offer=>JSON.parse(offer).battleGrowth>0)&&body.supportsBattleGrowth!==true)
+      fail(409,'TRADE_CLIENT_UPDATE_REQUIRED','戦闘で育った能力を保って交換するため、両方の端末でページを更新してから確認してください。');
     await env.DB.batch([
       env.DB.prepare(`UPDATE trades SET ${side}_confirm=revision WHERE id=? AND revision=? AND state='open' AND expires_at>?`).bind(id,revision,Date.now()),
       env.DB.prepare("UPDATE trades SET state='committed',committed_at=? WHERE id=? AND state='open' AND expires_at>? AND guest_id IS NOT NULL AND host_offer IS NOT NULL AND guest_offer IS NOT NULL AND host_confirm=revision AND guest_confirm=revision").bind(Date.now(),id,Date.now())
@@ -699,6 +707,8 @@ async function kasaiChallengeView(env,row) {
 async function kasaiOwnedParty(env,party,player) {
   let reserve,addition;
   for(const mon of party){
+    if(mon.battleGrowth!==undefined&&(!integer(mon.level,1,100)||!integer(mon.battleGrowth,0,Math.min(99,mon.level-1))))
+      fail(400,'INVALID_KASAI_PARTY','戦闘で育った能力の記録を確認してください。');
     if(!mon.grantId){
       if(mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_NOT_OWNED','特別な能力を持つフートの受け取り記録を確認できません。');
       continue;
@@ -718,7 +728,9 @@ async function kasaiOwnedParty(env,party,player) {
       const member=(isAddition?addition:reserve)?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
       if(!player.is_admin||!member)fail(403,'KASAI_PARTY_NOT_OWNED','この育成済みメンバーは、登録された運営本人だけが使用できます。');
       const genderMatches=member.gender==='none'?member.species==='lunaxion'&&mon.species==='lunaxion'&&mon.gender===undefined:mon.gender===member.gender;
-      if(mon.level!==member.level||!genderMatches||mon.bonusPoints!==member.bonusPoints||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
+      if(mon.level!==member.level||!genderMatches||mon.bonusPoints!==member.bonusPoints||(!isAddition&&mon.battleGrowth!==member.battleGrowth)||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
+      // The original six have their authoritative Lv1-to-100 growth restored
+      // by normalizeKasaiParty, including records issued before that field existed.
       // HP, PP, nickname, allocated points and held items may legitimately
       // change after delivery. normalizeKasaiParty enforces their game limits.
     }else if(player.is_admin&&['arvelion','floravelle'].includes(mon.species)&&mon.grantId===`admin-${mon.species==='arvelion'?'legendary':'mythical'}:${player.id}`){

@@ -280,10 +280,10 @@
   class LocalTradeSession {
     constructor({ role, send, getEngine, commit, check = null, onChange = () => {}, uuid = () => globalThis.crypto.randomUUID() }) {
       Object.assign(this, { role, sendRaw: send, getEngine, commit, check, onChange, tradeId: role === 0 ? uuid() : null, mine: null, theirs: null, myRevision: 0, theirRevision: 0,
-        myConfirm: null, theirConfirm: null, phase: 'hello', message: '', result: null, partnerName: '' });
+        myConfirm: null, theirConfirm: null, phase: 'hello', message: '', result: null, partnerName: '', partnerGrowth: false });
     }
     send(message) { if (this.sendRaw(message) === false) this.fail('送信できませんでした。'); }
-    start(name) { this.send({ t: 'hello', v: 1, name: String(name || '').slice(0, 16), ...(this.role === 0 ? { tradeId: this.tradeId } : {}) }); if (this.role === 1 && this.tradeId) this.phase = 'choose'; this.onChange(); }
+    start(name) { this.send({ t: 'hello', v: 1, supportsBattleGrowth: true, name: String(name || '').slice(0, 16), ...(this.role === 0 ? { tradeId: this.tradeId } : {}) }); if (this.role === 1 && this.tradeId) this.phase = 'choose'; this.onChange(); }
     fail(message) { if (this.phase === 'done') return; this.phase = 'error'; this.message = message; this.onChange(); }
     ready() { return this.phase === 'review' && !!this.myConfirm && !!this.theirConfirm && this.myConfirm.mine === this.myRevision && this.myConfirm.theirs === this.theirRevision && this.theirConfirm.mine === this.theirRevision && this.theirConfirm.theirs === this.myRevision; }
     apply() {
@@ -297,11 +297,13 @@
       if (!['choose', 'review'].includes(this.phase)) return { ok: false, message: 'いまは選べません。' };
       let wire;
       try { wire = this.getEngine().toTradeWire(mon); } catch (error) { return { ok: false, message: error.message || 'このパチモンは交換できません。' }; }
+      if(wire.battleGrowth>0&&!this.partnerGrowth)return {ok:false,message:'戦闘で育った能力を保って交換するため、相手の端末でページを更新してから接続し直してください。'};
       this.mine = wire; this.myRevision += 1; this.myConfirm = null; this.theirConfirm = null; this.phase = this.theirs ? 'review' : 'choose';
       this.send({ t: 'offer', revision: this.myRevision, monster: wire }); this.onChange(); return { ok: true };
     }
     confirm() {
       if (this.phase !== 'review' || !this.mine || !this.theirs) return { ok: false, message: 'お互いのパチモンが決まってから確認してください。' };
+      if((this.mine.battleGrowth>0||this.theirs.battleGrowth>0)&&!this.partnerGrowth)return {ok:false,message:'戦闘で育った能力に対応するため、両方の端末でページを更新してから接続し直してください。'};
       // Both sides confirm only when the receipt would apply to their own save, so neither commits alone.
       const preflight = this.check?.(this.receipt());
       if (preflight && !preflight.ok) return { ok: false, message: preflight.message || 'この内容では交換できません。' };
@@ -318,12 +320,14 @@
         if (!message || typeof message !== 'object' || typeof message.t !== 'string') throw new Error('format');
         if (message.t === 'hello') {
           if (message.v !== 1) throw new Error('相手の版が違います。両方の端末でページを更新してください。');
+          this.partnerGrowth=message.supportsBattleGrowth===true;
           this.partnerName = String(message.name || '').slice(0, 16);
           if (this.role === 1) { if (typeof message.tradeId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(message.tradeId)) throw new Error('format'); this.tradeId = message.tradeId; }
           if (this.phase === 'hello') this.phase = 'choose';
         } else if (message.t === 'offer') {
           if (this.phase === 'done' || this.phase === 'error') return;
           if (!['choose', 'review'].includes(this.phase) || !Number.isSafeInteger(message.revision) || message.revision <= this.theirRevision) throw new Error('revision');
+          if(message.monster?.battleGrowth>0&&!this.partnerGrowth)throw new Error('相手の成長情報に対応するため、両方の端末でページを更新してから接続し直してください。');
           const engine = this.getEngine(); engine.tradeMonster(engine.fromTradeWire(message.monster)); // validates
           this.theirs = message.monster; this.theirRevision = message.revision; this.myConfirm = null; this.theirConfirm = null;
           if (this.mine) this.phase = 'review';

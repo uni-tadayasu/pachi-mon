@@ -40,7 +40,7 @@ function setup(t,{ranked=true}={}){
     const data=await response.json();assert(!JSON.stringify(data).includes(SECRET));assert(!JSON.stringify(data).includes(SIGNING));return {status:response.status,...data};
   };
   const register=async(name='旅人')=>{const token=Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),result=ok(await call('/register',null,'POST',{name,token}));return {token,...result.player};};
-  const queue=(actor,roster=team(),requestId=crypto.randomUUID())=>call('/world/ranked/queue',actor,'POST',{requestId,team:roster});
+  const queue=(actor,roster=team(),requestId=crypto.randomUUID())=>call('/world/ranked/queue',actor,'POST',{requestId,team:roster,rulesVersion:RANKED_RULES_VERSION});
   const cancel=(actor,requestId)=>call('/world/ranked/queue',actor,'DELETE',{requestId});
   const status=actor=>call('/world/ranked',actor);
   const match=(actor,id,action,body={})=>call('/world/ranked/matches/'+id+'/'+action,actor,'POST',body);
@@ -82,13 +82,14 @@ test('ranked endpoints require a verified identity and reject forged result/iden
 
 test('owned enrollment validates original records, saves no battle changes, and normalizes Lv50 with training/equipment/moves intact',async t=>{
   const h=setup(t),a=await h.register('草原の人'),b=await h.register('港の人'),roster=team();
-  Object.assign(roster[0],{nickname:'こも',shiny:true,alloc:{hp:20,atk:16,def:0,spAtk:0,spDef:0,speed:5},heldItem:'powerband',moveOrder:[2,0,3,1],hp:0});
+  Object.assign(roster[0],{nickname:'こも',shiny:true,alloc:{hp:20,atk:16,def:0,spAtk:0,spDef:0,speed:5},heldItem:'powerband',moveOrder:[2,0,3,1],hp:0,battleGrowth:69});
   roster[0].pp[Object.keys(roster[0].pp)[0]]=0;const original=copy(roster);
   ok(await h.presence(a,{map:'meadow'}));ok(await h.presence(b,{map:'harbor'}));
   const match=await h.pair(a,b,roster,team(undefined,1));
   assert.deepEqual(roster,original);assert.equal(match.side,0);assert.equal(match.state,'battle');assert.equal(match.players[0].name,'草原の人');assert.equal(match.players[1].name,'港の人');
   const mon=match.battle.teams[0].monsters[0],expected=rankedPreviewMember(original[0]);
   assert.equal(mon.level,50);assert.equal(mon.sourceLevel,70);assert.deepEqual(mon.stats,expected.stats);assert.equal(mon.hp,mon.maxHp);assert.equal(mon.nickname,'こも');assert.equal(mon.shiny,true);assert.equal(mon.item,'powerband');assert.deepEqual(mon.alloc,normalizeRankedTeam(original)[0].alloc);assert.deepEqual(mon.moveOrder,[2,0,3,1]);assert(Object.values(mon.pp).every(pp=>pp>0));
+  assert.equal(mon.battleGrowth,69);const base=engine.stats({...mon,battleGrowth:0});for(const key of Object.keys(base))assert.equal(mon.stats[key]-base[key],key==='hp'?138:['atk','def','spAtk','spDef','speed'].includes(key)?69:0,key);
   assert(match.battle.teams[1].monsters.every(member=>member.level===50&&member.sourceLevel===1));
   const saved=JSON.parse(h.env.DB.sqlite.prepare('SELECT team_json FROM ranked_queue WHERE player_id=?').get(a.id).team_json);assert.equal(saved[0].level,70);assert.equal(saved[0].pp[Object.keys(original[0].pp)[0]],0);assert.equal(saved[0].hp,1,'Only the enrollment validator heals a fainted saved member to its minimum valid HP');
   assert.equal(h.env.DB.sqlite.prepare('SELECT map_id FROM world_presence WHERE player_id=?').get(a.id).map_id,'meadow');
@@ -102,6 +103,7 @@ test('team validation rejects duplicates, illegal saved fields and inflated orig
     const result=await h.queue(a,invalid);assert.equal(result.status,400,JSON.stringify(result));assert.equal(result.error.code,'INVALID_RANKED_TEAM');
   }
   assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM ranked_members').get().n,0);
+  for(const battleGrowth of [-1,70,100,1.5,'1',null]){const invalid=copy(base);invalid[0].battleGrowth=battleGrowth;assert.equal((await h.queue(a,invalid)).error.code,'INVALID_RANKED_TEAM');}
 });
 
 test('queue requests are stable, cancellation wins before delayed enqueue, and old intents cannot cancel newer queues',async t=>{
@@ -247,7 +249,7 @@ test('round deadlines forfeit a missing command and void a turn where neither pl
   h.advance(30000);const neither=ok(await h.status(a));assert.equal(neither.match.id,next.id);assert.equal(neither.match.result.reason,'double_timeout');assert.equal(neither.match.result.outcome,'void');assert.deepEqual(neither.match.result.ratingDelta,[0,0]);
 });
 
-test('rules changes expire waiting intents and void active matches without replay or rating changes',async t=>{
+test('unsupported rules expire waiting intents and void active matches without replay or rating changes',async t=>{
   const h=setup(t),a=await h.register(),b=await h.register(),queued=ok(await h.queue(a));
   h.env.DB.sqlite.prepare('UPDATE ranked_queue SET rules_version=? WHERE id=?').run('ranked-old',queued.queue.id);
   assert.equal(ok(await h.status(a)).queue,null);assert.equal(ok(await h.queue(a,team(),queued.queue.requestId)).intent.state,'expired');
@@ -255,10 +257,46 @@ test('rules changes expire waiting intents and void active matches without repla
   const changed=ok(await h.status(a));assert.equal(changed.match.result.reason,'rules_changed');assert.equal(changed.match.result.outcome,'void');assert.deepEqual(changed.match.result.ratingDelta,[0,0]);assert.equal(changed.profile.games,0);
 });
 
+test('new queue intents require current growth rules and expired v78 waiting intents cannot restart',async t=>{
+  const h=setup(t),a=await h.register(),requestId=crypto.randomUUID();
+  for(const rulesVersion of [undefined,'ranked-v78','ranked-v999']){
+    const reply=await h.call('/world/ranked/queue',a,'POST',{requestId,team:team(),...(rulesVersion===undefined?{}:{rulesVersion})});
+    assert.equal(reply.status,409);assert.equal(reply.error.code,'RANKED_RULES_UPDATED');assert.match(reply.error.message,/更新/);
+  }
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM ranked_queue').get().n,0);assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM ranked_members').get().n,0);
+  const waiting=ok(await h.queue(a));h.env.DB.sqlite.prepare('UPDATE ranked_queue SET rules_version=? WHERE id=?').run('ranked-v78',waiting.queue.id);
+  const refreshed=ok(await h.status(a));assert.equal(refreshed.queue,null);assert.equal(refreshed.match,null);assert.equal(refreshed.profile.rating,1000);
+  assert.equal(ok(await h.queue(a,waiting.queue.team,waiting.queue.requestId)).intent.state,'expired');
+  assert(ok(await h.queue(a)).queue);
+});
+
+test('already-started v78 matches finish under their original rules with compatible status and acknowledgement responses',async t=>{
+  const h=setup(t),a=await h.register('旧画面'),b=await h.register('更新画面'),original=await h.pair(a,b),legacy=copy(original.battle);legacy.rankedVersion='ranked-v78';
+  h.env.DB.sqlite.prepare('UPDATE ranked_matches SET rules_version=?,battle_json=? WHERE id=?').run('ranked-v78',JSON.stringify(legacy),original.id);
+  const recovered=ok(await h.status(a));assert.equal(recovered.rulesVersion,'ranked-v78');assert.equal(recovered.match.rulesVersion,'ranked-v78');assert.equal(recovered.match.state,'battle');assert.deepEqual(recovered.match.battle,legacy);assert.equal(recovered.profile.games,0);
+  ok(await h.call('/world/ranked/leaderboard',a));assert.equal(ok(await h.status(b)).match.state,'battle','the sweep must not void supported legacy matches');
+  const result=await finish(h,a,b,recovered.match);assert.equal(result.rulesVersion,'ranked-v78');assert.equal(result.battle.rankedVersion,'ranked-v78');assert.equal(result.result.reason,'battle');
+  assert(result.battle.teams.every(roster=>roster.monsters.every(mon=>!mon.battleGrowth)));
+  const profiles=h.env.DB.sqlite.prepare('SELECT * FROM ranked_profiles').all();assert(profiles.every(profile=>profile.games===1));assert.equal(profiles.reduce((sum,profile)=>sum+profile.rating,0),2000);
+  for(const actor of [a,b]){const ack=ok(await h.match(actor,original.id,'ack'));assert.equal(ack.rulesVersion,'ranked-v78');assert.equal(ack.match,null);assert.equal(ok(await h.status(actor)).rulesVersion,RANKED_RULES_VERSION);}
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM ranked_members').get().n,0);
+});
+
 test('all operator roles use actual player names and original special-grant entitlements before normalizing Lv100 gifts',async t=>{
   const h=setup(t),{main,sub,third}=await h.operators();
   for(const actor of [main,sub,third]){
     const me=ok(await h.call('/me',actor)),member=me.adminReserveAddition.members[0],mon=engine.makeMonster(member.species,100);
+    assert.equal(me.adminReserveTeam.members.length,6);const rival=await h.register(),reserves=me.adminReserveTeam.members.map(gift=>Object.assign(engine.makeMonster(gift.species,100),copy(gift),{alloc:{hp:64,atk:64,def:64,spAtk:64,spDef:41}})),saved=copy(reserves);
+    for(const selected of [reserves.slice(0,3),reserves.slice(3)]){
+      assert(selected.every(mon=>mon.battleGrowth===99&&mon.bonusPoints===99));
+      const battle=await h.pair(actor,rival,selected);
+      for(const grown of battle.battle.teams[0].monsters){
+        assert.equal(grown.level,50);assert.equal(grown.sourceLevel,100);assert.equal(grown.battleGrowth,99);assert.equal(Object.values(grown.alloc).reduce((sum,value)=>sum+value,0),297);
+        const base=engine.stats({...grown,battleGrowth:0});for(const key of Object.keys(base))assert.equal(grown.stats[key]-base[key],key==='hp'?198:['atk','def','spAtk','spDef','speed'].includes(key)?99:0,key);
+      }
+      ok(await h.match(actor,battle.id,'forfeit'));ok(await h.match(actor,battle.id,'ack'));ok(await h.match(rival,battle.id,'ack'));
+    }
+    assert.deepEqual(reserves,saved);
     Object.assign(mon,{grantId:member.grantId,bonusPoints:99,heldItem:'trainband'});delete mon.gender;
     const roster=[mon,...team().slice(1)],response=ok(await h.queue(actor,roster));
     assert.equal(response.profile.name,actor.name);assert.equal('adminRole'in response.profile,false);assert.equal('isAdmin'in response.profile,false);
