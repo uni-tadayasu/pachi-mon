@@ -150,7 +150,7 @@ async function combatScenarios(env) {
   assert.equal(doubleDuel.fingerprint(), doubles.sessions[1].duel.fingerprint());
   doubles.close();
   // Peers on other rules are turned away before choosing teams.
-  for(const oldRules of ['previous-rules',LT.Duel.rulesFingerprint().replace(':galdoras-lineage-v71','')]){
+  for(const oldRules of ['previous-rules',LT.Duel.rulesFingerprint().replace(':lunar-super-genderless-v74','')]){
     const mismatch = env.pair(); mismatch.sessions.forEach(s => s.start());
     mismatch.queue.forEach(item => { item.message.rules = oldRules; }); await mismatch.flush();
     assert(mismatch.sessions.every(s => s.snapshot().phase === 'error'));
@@ -167,7 +167,7 @@ async function combatScenarios(env) {
     assert(LT.Duel.validateTeam(['futo', ...normal.slice(0, 2)], 'single').ok, 'Special species battle like any other');
     assert(LT.Duel.validateTeam(['floravelle', 'arvelion', 'futo'], 'single').ok);
     assert(!LT.Duel.validateTeam(['missing', ...normal.slice(0, 2)], 'single').ok);
-    assert.equal(LT.Duel.rules.version, 11); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/); assert.match(LT.Duel.rulesFingerprint(), /:galdoras-lineage-v71$/);
+    assert.equal(LT.Duel.rules.version, 11); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/); assert.match(LT.Duel.rulesFingerprint(), /:lunar-super-genderless-v74$/);
     assert(LT.OnlineFuto.rosterIds(normal).includes('futo'), 'A received Futo is selectable');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'), 'Unowned legendary is not a free rental');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('floravelle'), 'Unowned mythical is not offered');
@@ -239,9 +239,9 @@ async function combatScenarios(env) {
     assert.equal(JSON.stringify(state), hiddenSave); hidden.close(); state.storage = [];
     assert(hiddenIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)), 'Released/evolved-away forms do not remain selectable');
 
-    // Each of the eight other off-dex forms and the three stone-lineage forms follows ownership rules independently
+    // Each of the eight other off-dex forms and the two lunar-lineage forms follows ownership rules independently
     // of the Null lineage. Verify actual peer setup, moves and a synchronized turn.
-    const addedIds = [...LT.DATA.offDexLines.ids, ...LT.DATA.offDexLeaders.ids]; assert.equal(addedIds.length, 11);
+    const addedIds = [...LT.DATA.offDexLines.ids, ...LT.DATA.offDexLeaders.ids]; assert.equal(addedIds.length, 10);
     assert(addedIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)));
     const addedUnowned = env.pair(); await addedUnowned.start();
     for (const id of addedIds) assert(!(await addedUnowned.sessions[0].setTeam({ ids: [id, ...normal.slice(0, 2)] })).ok);
@@ -321,6 +321,6 @@ async function combatScenarios(env) {
     const combat = await combatScenarios(env);
     assert.equal(env.serverCalls, 0, 'No server was asked for anything');
     console.log(JSON.stringify({ ok: true, combat, scenarios: ['every species accepted by the duel, special ones offered only to owners', 'ordinary teams with looks', 'unowned special monsters refused before sending',
-      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'owned Null line with full points and synchronized peers', 'all 11 off-dex line and leader forms: ownership, full points, appearance, ability, ordinary curse, synchronized turn, release', 'no server calls', 'adventure save untouched'] }));
+      'Arvelion at standard stats with its own points', 'Futo at standard stats with the even spread and species moves', 'Floravelle with Futo, singles and doubles', 'owned Null line with full points and synchronized peers', 'all 10 off-dex line and leader forms: ownership, full points, appearance, ability, ordinary curse, synchronized turn, release', 'no server calls', 'adventure save untouched'] }));
   } finally { env.dispose(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

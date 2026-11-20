@@ -53,8 +53,8 @@ test('the exact eight source filenames form three separate off-dex evolution fam
 });
 
 test('public dex, collection goals and ordinary encounter pools remain unchanged',()=>{
-  assert.equal(Object.keys(D.species).length,270);assert.equal(D.content.playableSpecies,270);
-  assert.equal(D.content.hiddenSpecies,14);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
+  assert.equal(Object.keys(D.species).length,269);assert.equal(D.content.playableSpecies,269);
+  assert.equal(D.content.hiddenSpecies,13);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
   assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
   const e=hero(),progress=()=>plain(e.quests().map(({id,target,progress,complete})=>({id,target,progress,complete}))),before=progress();
   for(const id of ids){

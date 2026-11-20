@@ -165,9 +165,9 @@ test('thunder, ice and soil have distinct bounded sounds with one hit cue and ex
   assert.equal(signatures.size,3,'Shared note seeds still produce three different elemental sounds');
 });
 
-test('the stone leader renders its four techniques on desktop and phone without falling back to an unrelated element',()=>{
-  const expectedStyles=['impact','impact','shield','healing'],before=JSON.stringify(D);
-  assert.notDeepEqual(copy(V.palettes.stone),copy(V.palettes.earth),'Stone has a separate gray/gold palette');
+test('the lunar leader renders its four super techniques on desktop and phone',()=>{
+  const expectedStyles=['astral-rend','beam','shield','healing'],before=JSON.stringify(D);
+  assert.notDeepEqual(copy(V.palettes.super),copy(V.palettes.void),'Super has its own gold/purple palette');
   for(const [index,id]of D.offDexLeaders.moves.entries())for(const width of [390,960])for(const quality of ['low','high']){
     const move=D.moves[id],kind=move.kind==='attack'?'damage':move.kind;
     const effect=V.fromEvent({kind,move:id,side:width===390?'ally':1,slot:0,target:0,amount:38},null,100);
@@ -183,15 +183,15 @@ test('the stone leader renders its four techniques on desktop and phone without 
   assert.equal(JSON.stringify(D),before,'Visual effects leave combat and saved data unchanged');
 });
 
-test('the new stone impact uses its own bounded dry sound and preserves the common hit cue and mute behavior',()=>{
-  const move=D.moves.galdoras_crown,event={kind:'damage',amount:38,effectiveness:1.5,side:'ally'},timing={duration:1180,releaseAt:.14,impactAt:.43};
+test('the super technique uses a bounded choir sound and preserves the common hit cue and mute behavior',()=>{
+  const move=D.moves.lunax_crescent,event={kind:'damage',amount:38,effectiveness:1.5,side:'ally'},timing={duration:1180,releaseAt:.14,impactAt:.43};
   const high=audioSpy(),low=audioSpy('low'),soil=audioSpy();
   high.audio.move(move,event,timing);low.audio.move(move,event,timing);soil.audio.move({...move,element:'earth'},event,timing);
   assert.equal(high.impacts.length,1);assert.equal(low.impacts.length,1);assert.equal(high.ducks.length,1);
-  assert(Math.abs(high.impacts[0][1]-(10.008+1.18*.43))<1e-9,'The stone hit aligns with its visual contact');
+  assert(Math.abs(high.impacts[0][1]-(10.008+1.18*.43))<1e-9,'The super hit aligns with its visual contact');
   assert(high.calls.length<=10);assert(low.calls.length<high.calls.length);
-  assert(high.calls.some(call=>call.method==='instrument'&&call.args[1]==='mallet'));
+  assert(high.calls.some(call=>call.method==='instrument'&&call.args[1]==='choir'));
   assert(!high.calls.some(call=>call.method==='instrument'&&call.args[1]==='bell'));
-  assert.notEqual(JSON.stringify(high.calls),JSON.stringify(soil.calls),'Stone does not sound like the earth type');
+  assert.notEqual(JSON.stringify(high.calls),JSON.stringify(soil.calls),'Super does not sound like the earth type');
   for(const state of ['muted','suspended']){const h=audioSpy();if(state==='muted')h.audio.enabled=false;else h.audio.ctx.state='suspended';h.audio.move(move,event,timing);assert.equal(h.calls.length,0);assert.equal(h.impacts.length,0);}
 });

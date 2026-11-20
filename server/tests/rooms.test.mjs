@@ -70,7 +70,7 @@ function setup(t){
     return call('/world/rooms',{token:player.token,method:'POST',body:{...entrance,...extra}});
   }
   async function challenge(player,room,extra={}){
-    // Fixtures model already-issued v57 sessions. Production no longer creates
+    // Fixtures model already-issued current-rule sessions. Production no longer creates
     // CPU challenges; only their pre-update result/recovery path is retained.
     const result=await presence(player,room.mapId,12,5);assert.equal(result.status,200);
     if(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get()?.player_id===player.id)return call('/world/kasai/challenges',{token:player.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:room.id,party:team(),storageCount:0,...extra}});
@@ -402,4 +402,62 @@ test('real legacy challenge rules remain replayable only for a pre-v57 row witho
   const won=await complete(a,legacy,actions);assert.equal(won.status,200);assert.equal(won.won,true);
   const invalid=await challenge(a,room);env.DB.sqlite.prepare('UPDATE kasai_challenges SET opponents_json=NULL WHERE id=?').run(invalid.challenge.id);
   assert.equal((await complete(a,invalid,actions)).error.code,'KASAI_CHALLENGE_FINISHED');
+});
+
+test('retired v57 challenge recovery and completion expire the old snapshot before any new-rule replay',async t=>{
+  const h=setup(t),{env,call,register,admin,challenge,complete,presence}=h,a=await register(),owner=await admin();
+  assert.equal(RULES_VERSION,'kasai-solo-v74');
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room;
+  const fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v73-retired-line-save.json',import.meta.url),'utf8'));
+  const originalParty=JSON.stringify([fixture.party.find(mon=>mon.species==='galdoras')]);
+  const originalOpponents=JSON.stringify(fixture.party);
+  for(const operation of ['recover','complete']){
+    const start=await challenge(a,room),row=env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(start.challenge.id);
+    const payload=new TextEncoder().encode(JSON.stringify({kind:'kasai-challenge',v:1,id:row.id,playerId:a.id,seed:row.seed,rulesVersion:'kasai-solo-v57',expiresAt:row.expires_at}));
+    const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(SIGNING),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const token=Buffer.from(await crypto.subtle.sign('HMAC',key,payload)).toString('base64url');
+    const hash=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+    env.DB.sqlite.prepare('UPDATE kasai_challenges SET rules_version=?,party_json=?,opponents_json=?,token_hash=? WHERE id=?').run('kasai-solo-v57',originalParty,originalOpponents,hash,row.id);
+    const old={...start,token};
+    if(operation==='complete'){
+      const forged=await complete(a,{...old,token:'A'.repeat(43)},[{type:'struggle'}]);
+      assert.equal(forged.error.code,'INVALID_KASAI_TOKEN');
+      assert.equal(env.DB.sqlite.prepare('SELECT state FROM kasai_challenges WHERE id=?').get(row.id).state,'pending','An invalid token cannot expire another record');
+    }
+    const result=operation==='recover'
+      ? await call('/world/kasai/challenges',{token:a.token,method:'POST',body:{requestId:row.request_id,roomId:room.id,party:JSON.parse(originalParty),storageCount:0}})
+      : await complete(a,old,[{type:'struggle'}]);
+    assert.equal(result.status,409,JSON.stringify(result));assert.equal(result.error.code,'KASAI_CHALLENGE_FINISHED');
+    assert.match(result.error.message,/ルールが更新.*新しい対戦/);
+    const expired=env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(row.id);
+    assert.equal(expired.state,'expired');assert.equal(expired.completed_at,Date.now());
+    assert.equal(expired.party_json,originalParty);assert.equal(expired.opponents_json,originalOpponents);
+    assert.equal(expired.rules_version,'kasai-solo-v57');assert.equal(expired.token_hash,hash);
+    assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards').get().n,0);
+  }
+  // CPU challenges have been retired. Old pending records never occupy a live
+  // session slot, so the player can invite the nearby administrator immediately.
+  env.DB.sqlite.prepare("UPDATE kasai_challenges SET state='pending',completed_at=NULL WHERE player_id=? AND rules_version='kasai-solo-v57'").run(a.id);
+  await presence(owner,'village',22,17,'left');await presence(a,'village',21,17,'right');
+  const invited=await call('/world/kasai/live',{token:a.token,method:'POST',body:{requestId:crypto.randomUUID(),roomId:owner.id,party:team(),storageCount:0}});
+  assert.equal(invited.status,200,JSON.stringify(invited));assert.equal(invited.session.state,'staging');
+  assert.equal(env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM kasai_challenges WHERE player_id=? AND state='pending' AND expires_at>?").get(a.id,Date.now()).n,2,'Unvisited old challenges do not block a fresh live invitation');
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_live_members').get().n,2);
+});
+
+test('a completed old-version challenge keeps its receipt and idempotent result without replaying',async t=>{
+  const {env,call,register,admin,challenge,complete}=setup(t),a=await register();await admin();
+  const room=(await call('/world/rooms/kasai',{token:a.token})).room,start=await challenge(a,room);
+  const actions=play({...start.challenge,token:start.token}),won=await complete(a,start,actions);assert.equal(won.status,200);assert.equal(won.won,true);
+  const row=env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(start.challenge.id);
+  const payload=new TextEncoder().encode(JSON.stringify({kind:'kasai-challenge',v:1,id:row.id,playerId:a.id,seed:row.seed,rulesVersion:'kasai-solo-v57',expiresAt:row.expires_at}));
+  const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(SIGNING),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  const token=Buffer.from(await crypto.subtle.sign('HMAC',key,payload)).toString('base64url');
+  const hash=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))).toString('hex');
+  env.DB.sqlite.prepare('UPDATE kasai_challenges SET rules_version=?,token_hash=? WHERE id=?').run('kasai-solo-v57',hash,row.id);
+  const settled=env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(row.id);
+  const recovered=await complete(a,{...start,token},actions);assert.equal(recovered.status,200);assert.equal(recovered.won,true);
+  assert.deepEqual(recovered.receipt,won.receipt);assert.deepEqual((await call('/world/kasai/reward',{token:a.token})).receipt,won.receipt);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM kasai_challenges WHERE id=?').get(row.id),settled);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_rewards').get().n,1);
 });

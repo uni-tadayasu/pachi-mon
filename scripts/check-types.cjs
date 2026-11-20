@@ -18,7 +18,7 @@ function runtime(){
   return {context,LT:context.LT,close(){for(const timer of timers)clearTimeout(timer);}};
 }
 const env=runtime(),{LT}=env,{DATA:D,TypeSystem:T,Engine,Duel}=LT;
-const ORDER=['leaf','tide','ember','wind','crystal','thunder','ice','earth','stone','void'];
+const ORDER=['leaf','tide','ember','wind','crystal','thunder','ice','earth','stone','void','super'];
 const EXPECTED=[
   [.8,1.5,.7,1,1,1,.7,1.5,1.5,1],
   [.7,.8,1.5,1,1,.7,1,1.5,1.5,1],
@@ -31,7 +31,9 @@ const EXPECTED=[
   [.7,.7,1,1.5,1,1,1.5,1,.8,1],
   [1,1,1,1,1,1,1,1,1,1]
 ];
-assert.deepEqual(copy(T.order),ORDER);assert.equal(D.content.elements,9);assert.equal(Object.keys(D.elements).length,10);
+for(const row of EXPECTED)row.push(.75);EXPECTED.push([...Array(10).fill(1.5),1]);
+assert.deepEqual(copy(T.order),ORDER);assert.equal(D.content.elements,9);assert.equal(D.content.totalElements,11);assert.equal(Object.keys(D.elements).length,11);
+assert.equal(D.elements.super.name,'超');assert.equal(D.elements.super.hiddenDex,true);assert.equal(D.elements.super.statusImmune,undefined);
 assert.deepEqual(['thunder','ice','earth','stone'].map(type=>D.elements[type].name),['雷','氷','土','石']);
 for(const [i,attack]of ORDER.entries())for(const [j,defense]of ORDER.entries()){
   assert.equal(T.chart[attack][defense],EXPECTED[i][j],`${attack} → ${defense}: declared chart`);
@@ -39,13 +41,13 @@ for(const [i,attack]of ORDER.entries())for(const [j,defense]of ORDER.entries()){
   assert.equal(new Engine().effectiveness(attack,defense),EXPECTED[i][j]);
 }
 // Stone extends the chart without moving any of the original eight matchups.
-const legacyTypes=ORDER.filter(type=>!['void','stone'].includes(type));
+const legacyTypes=ORDER.filter(type=>!['void','stone','super'].includes(type));
 for(const type of legacyTypes){
   assert.equal(legacyTypes.filter(defense=>T.chart[type][defense]===1.5).length,2,`${type}: old strengths changed`);
   assert.equal(legacyTypes.filter(attack=>T.chart[attack][type]===1.5).length,2,`${type}: old weaknesses changed`);
 }
 assert.deepEqual(ORDER.filter(type=>T.chart.stone[type]===1.5),['wind','ice']);
-assert.deepEqual(ORDER.filter(type=>T.chart[type].stone===1.5),['leaf','tide']);
+assert.deepEqual(ORDER.filter(type=>T.chart[type].stone===1.5),['leaf','tide','super']);
 assert(Object.isFrozen(T)&&Object.isFrozen(T.chart)&&ORDER.every(type=>Object.isFrozen(T.chart[type])));
 const typeCoverage=Object.fromEntries(ORDER.map(type=>[type,0]));let dualSpecies=0;
 for(const species of Object.values(D.species)){
@@ -58,7 +60,7 @@ for(const species of Object.values(D.species)){
   for(const type of species.types)typeCoverage[type]++;
   assert(species.moves.some(id=>D.moves[id].kind==='attack'&&T.has(species,D.moves[id].element)),`${species.id}: no matching attack after reclassification`);
 }
-assert(dualSpecies>0);assert(ORDER.every(type=>typeCoverage[type]>0),'A registered type has no species');
+assert(dualSpecies>0);assert(ORDER.filter(type=>type!=='stone').every(type=>typeCoverage[type]>0),'An active type has no species');assert.equal(typeCoverage.stone,0,'The legacy stone chart is retained after its sole lineage is removed');assert.equal(typeCoverage.super,2);assert.deepEqual(Object.values(D.species).filter(s=>s.types.includes('super')).map(s=>s.id),['lunax','lunaxion']);
 assert.deepEqual(copy(T.of(['tide','wind','wind'])),['tide','wind']);
 assert.deepEqual(copy(T.of(['void','leaf'])),['void']);
 assert.deepEqual(copy(T.of(['leaf','void'])),['leaf']);
@@ -67,7 +69,8 @@ assert.deepEqual(copy(T.of({species:'missing',types:['void'],element:'void'})),[
 assert.equal(T.effectiveness(null,['tide','wind']),1);assert.equal(T.effectiveness('unknown','leaf'),1);
 assert.equal(T.effectiveness('thunder',['tide','wind']),2.25);assert.equal(T.effectiveness('thunder',['crystal','earth']),.49);
 assert.equal(T.effectiveness('thunder',['tide','earth']),1.05);assert.equal(T.effectiveness('thunder',['tide','tide']),1.5);
-for(const type of ORDER){assert.equal(T.effectiveness('void',[type,'leaf']),1);assert.equal(T.effectiveness(type,'void'),1);}
+for(const type of ORDER){assert.equal(T.effectiveness('void',[type,'leaf']),type==='super'?.75:1);assert.equal(T.effectiveness(type,'void'),type==='super'?1.5:1);}
+assert.deepEqual(copy(T.of(['super','leaf'])),['super']);assert.deepEqual(copy(T.of(['leaf','super'])),['leaf']);assert.equal(T.immune('super'),false);
 
 // Species data is authoritative; do not trust an individual's imported types.
 const actorId='type_probe_actor',targetId='type_probe_target';
@@ -188,6 +191,6 @@ async function handshake(remote){
 }
 async function main(){
   const remote=runtime();try{const s=remote.LT.DATA.species.komori;remote.LT.DATA.species.komori={...s,types:[s.element,s.element==='thunder'?'ice':'thunder']};await handshake(remote);}finally{remote.close();}
-  console.log(JSON.stringify({ok:true,publicTypes:9,hiddenTypes:1,dualSpecies,typeCoverage,legacyChartPreserved:true,legacyStrengths:2,legacyWeaknesses:2,stoneStrengths:['wind','ice'],stoneWeaknesses:['leaf','tide'],battleCases,dualRange:[.49,2.25],bothTypeStab:true,secondaryStatusResistance:true,saveVersions:[1,2,3,4],saveIdentityAndPPPreserved:true,individualTypeSpoofRejected:true,adventureAndDuelAI:true,mismatchedTypeHandshakeRejected:true},null,2));
+  console.log(JSON.stringify({ok:true,publicTypes:9,hiddenTypes:2,dualSpecies,typeCoverage,legacyChartPreserved:true,legacyStrengths:2,legacyWeaknesses:2,stoneStrengths:['wind','ice'],stoneWeaknesses:['leaf','tide'],battleCases,dualRange:[.49,2.25],bothTypeStab:true,secondaryStatusResistance:true,saveVersions:[1,2,3,4],saveIdentityAndPPPreserved:true,individualTypeSpoofRejected:true,adventureAndDuelAI:true,mismatchedTypeHandshakeRejected:true},null,2));
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;}).finally(()=>env.close());

@@ -267,13 +267,13 @@
       }
     },
     {
-      "id": "sovereign_carapace",
-      "name": "巌王の甲殻",
-      "description": "物理攻撃技で受けるダメージを20%減らす。特殊攻撃や状態異常のダメージは減らさない。",
-      "kind": "defense",
+      "id": "lunar_sovereignty",
+      "name": "超月の覇気",
+      "description": "特殊攻撃技のダメージが1.2倍になる。",
+      "kind": "offense",
       "params": {
-        "category": "physical",
-        "mul": 0.8
+        "category": "special",
+        "mul": 1.2
       }
     }
   ],
@@ -545,8 +545,7 @@
     "hyogald": "powerful_limbs",
     "rurikoro": "steady_core",
     "rurigorm": "steady_core",
-    "galdoras": "sovereign_carapace",
-    "galdo": "sovereign_carapace",
-    "galdoran": "sovereign_carapace"
+    "lunax": "lunar_sovereignty",
+    "lunaxion": "lunar_sovereignty"
   }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* 96 public moves: 75 across eight types, 6 neutral, 12 special, 3 starter signatures.
- * The Null lineage and the stone leader lineage each keep four hidden moves.
+ * The Null lineage and the lunar lineage each keep four hidden moves.
  * Every move is learned by someone; old saves, trades with the exchange
  * server and saved Futo settings keep working. */
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
@@ -19,7 +19,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const publicMoves = Object.values(M).filter(move => !move.hiddenDex), hiddenMoves = Object.values(M).filter(move => move.hiddenDex);
 assert.equal(Object.keys(M).length, 104); assert.equal(publicMoves.length, 96); assert.equal(hiddenMoves.length, 8);
 assert.equal(D.content.moves, 96); assert.equal(D.moveRoster.total, 96); assert.equal(D.content.hiddenMoves, 8); assert.equal(D.content.totalMoves, 104);
-assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch', 'galdoras_crown', 'galdoras_fault', 'galdoras_bastion', 'galdoras_mend']);
+assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch', 'lunax_crescent', 'lunax_nova', 'lunax_aegis', 'lunax_renew']);
 assert.deepEqual(copy(D.hiddenMoves), ['null_restore', 'null_curse', 'null_ray', 'null_scorch'], 'The Null-line compatibility contract stays at four moves');
 assert.deepEqual(copy(D.allHiddenMoves), hiddenMoves.map(move => move.id));
 const byElement = {}; for (const m of publicMoves) { const key = m.role === 'special' ? 'special' : m.role === 'signature' ? 'signature' : m.element || 'neutral'; byElement[key] = (byElement[key] || 0) + 1; }
@@ -49,7 +49,7 @@ for (const s of Object.values(D.species)) {
   for (const id of s.moves) { assert(M[id], `${s.id}: ${id}`); uses.set(id, uses.get(id) + 1); }
 }
 for (const [id, n] of uses) assert(n > 0, `${id} is learned by no monster`);
-for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['galdo', 'galdoran', 'galdoras']);
+for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['lunax', 'lunaxion']);
 assert.deepEqual(copy(D.signatureMoves), { sig_leaf: 'komorizen', sig_tide: 'shizunaria', sig_ember: 'akehomura' });
 for (const [move, owner] of Object.entries(D.signatureMoves)) {
   assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(move)).map(s => s.id), [owner]);

@@ -183,7 +183,7 @@ async function adminReserveAddition(env, playerId) {
   if(!role)return null;
   // A separate receipt never reissues or rewrites the six v64 members.
   // Keep the historical v68 entitlement ID so old receipts suppress a second delivery.
-  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};
+  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};
 }
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
@@ -606,6 +606,14 @@ async function currentKasaiParty(env, playerId = null) {
 function kasaiOpponents(row) {
   return row.opponents_json?JSON.parse(row.opponents_json):row.rules_version===KASAI_LEGACY_RULES_VERSION?KASAI_TEAM:null;
 }
+function kasaiRulesSupported(row) {
+  return row.rules_version===KASAI_RULES_VERSION&&!!row.opponents_json||row.rules_version===KASAI_LEGACY_RULES_VERSION&&!row.opponents_json;
+}
+async function requireKasaiChallengeRules(env,row,now) {
+  if(kasaiRulesSupported(row))return;
+  await env.DB.prepare("UPDATE kasai_challenges SET state='expired',completed_at=? WHERE id=? AND player_id=? AND state='pending'").bind(now,row.id,row.player_id).run();
+  fail(409,'KASAI_CHALLENGE_FINISHED','対戦ルールが更新されました。フィールドのカサイ本人にもう一度話しかけて、新しい対戦を始めてください。');
+}
 function kasaiStorage(value) {
   if(!integer(value,0,192))fail(400,'INVALID_KASAI_CAPACITY','ひかえの人数を確認してください。');
   return value;
@@ -640,7 +648,8 @@ async function kasaiOwnedParty(env,party,player) {
       else if(reserve===undefined)reserve=await adminReserveTeam(env,player.id);
       const member=(isAddition?addition:reserve)?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
       if(!player.is_admin||!member)fail(403,'KASAI_PARTY_NOT_OWNED','この育成済みメンバーは、登録された運営本人だけが使用できます。');
-      if(mon.level!==member.level||mon.gender!==member.gender||mon.bonusPoints!==member.bonusPoints||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
+      const genderMatches=member.gender==='none'?member.species==='lunaxion'&&mon.species==='lunaxion'&&mon.gender===undefined:mon.gender===member.gender;
+      if(mon.level!==member.level||!genderMatches||mon.bonusPoints!==member.bonusPoints||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
       // HP, PP, nickname, allocated points and held items may legitimately
       // change after delivery. normalizeKasaiParty enforces their game limits.
     }else if(player.is_admin&&['arvelion','floravelle'].includes(mon.species)&&mon.grantId===`admin-${mon.species==='arvelion'?'legendary':'mythical'}:${player.id}`){
@@ -700,6 +709,7 @@ async function kasaiRoute(request,env,path,method,player) {
     const partyJSON=JSON.stringify(party),requestId=body.requestId.toLowerCase();
     const previous=await env.DB.prepare('SELECT * FROM kasai_challenges WHERE player_id=? AND request_id=?').bind(player.id,requestId).first();
     if(previous){
+      if(previous.state==='pending')await requireKasaiChallengeRules(env,previous,now);
       if(previous.room_owner_id!==body.roomId||previous.party_json!==partyJSON)fail(409,'KASAI_REQUEST_REUSED','同じ挑戦の識別情報を別の仲間で使うことはできません。');
       if(previous.state!=='pending'||previous.expires_at<=now)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了しています。もう一度カサイに話しかけてください。');
       return {...await kasaiChallengeView(env,previous),rewardClaimed:!!await kasaiReward(env,player.id),serverTime:now};
@@ -716,6 +726,7 @@ async function kasaiRoute(request,env,path,method,player) {
     return {cancelled:true,serverTime:now};
   }
   await requireKasaiChallenger(env,player,row.room_owner_id);
+  if(row.state==='pending')await requireKasaiChallengeRules(env,row,now);
   const storageCount=kasaiStorage(body.storageCount);
   if(!Array.isArray(body.actions)||body.actions.length<1||body.actions.length>KASAI_MAX_ACTIONS)fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を確認してください。');
   const resultHash=await digest(JSON.stringify(body.actions));
@@ -724,8 +735,7 @@ async function kasaiRoute(request,env,path,method,player) {
     if(row.state==='won'&&storageCount>=192)fail(409,'KASAI_STORAGE_FULL','ひかえが192体で満員です。報酬を受け取るには空きを作ってください。');
     return {won:row.state==='won',result:row.state,receipt:row.state==='won'?kasaiReceipt(await kasaiReward(env,player.id)):null,serverTime:now};
   }
-  const validRules=row.rules_version===KASAI_RULES_VERSION&&!!row.opponents_json||row.rules_version===KASAI_LEGACY_RULES_VERSION&&!row.opponents_json;
-  if(row.state!=='pending'||row.expires_at<=now||!validRules)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了、または期限切れです。もう一度カサイに挑戦してください。');
+  if(row.state!=='pending'||row.expires_at<=now)fail(409,'KASAI_CHALLENGE_FINISHED','この挑戦は終了、または期限切れです。もう一度カサイに挑戦してください。');
   await consumeLimit(env,request,`world-kasai-result:${player.id}`,30,60000,true);
   let replay;try{replay=replayChallenge(JSON.parse(row.party_json),row.seed,body.actions,row.opponents_json?JSON.parse(row.opponents_json):null,row.rules_version);}catch(_){fail(400,'INVALID_KASAI_TRANSCRIPT','バトルの操作記録を再現できませんでした。');}
   if(!replay.ok||!['won','lost'].includes(replay.result))fail(400,'INVALID_KASAI_TRANSCRIPT','操作記録から終了したバトルを確認できませんでした。');

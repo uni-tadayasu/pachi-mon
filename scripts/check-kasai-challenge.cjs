@@ -24,6 +24,7 @@ function battle(e){
 
 test('the live Engine uses the captured administrator party and the literal server replay agrees',async()=>{
   const replay=await import('../server/kasai-replay.mjs');
+  assert.equal(replay.RULES_VERSION,Rules.version,'Server replay and browser must share the current rule tag');
   const variants=[{seed:1,entries:[['fuwari',41]]},{seed:57,entries:[['shizunaria',63],['fuwari',41],['akehomura',82]]},
     {seed:0xffffffff,entries:[['setsurei',76],['komorizen',45],['akehomura',82],['shizunaria',63],['fuwari',41],['astralith',74]]}];
   for(const {seed,entries} of variants){
@@ -45,7 +46,11 @@ test('loss, incomplete play, forbidden actions and malformed opponent snapshots 
   assert.equal(JSON.stringify({state:e.state,battle:e.battle}),before);assert.equal(e.battle.kasaiChallenge.actions.length,0);
   const result=battle(e);assert.equal(result.result,'lost');assert.equal(replay.replayChallenge(start.party,start.seed,result.challenge.actions,start.opponents).won,false);
   assert.equal(replay.replayChallenge(start.party,start.seed,[],start.opponents).won,false);assert.equal(replay.replayChallenge(start.party,-1,[{type:'move',index:0}],start.opponents).ok,false);
-  const fresh=game();assert.equal(fresh.startKasaiBattle({...challenge(fresh),rulesVersion:'old'}).ok,false);
+  const fresh=game();for(const rulesVersion of ['old','kasai-solo-v57']){
+    const stale={...challenge(fresh),rulesVersion},state=JSON.stringify(fresh.state);
+    assert.equal(fresh.startKasaiBattle(stale).ok,false);assert.equal(JSON.stringify(fresh.state),state);assert.equal(fresh.battle,null);
+    assert.equal(replay.replayChallenge(stale.party,stale.seed,[{type:'move',index:0}],stale.opponents,rulesVersion).ok,false,'A pre-replacement transcript cannot run under the new lunar rules');
+  }
   for(const opponents of [undefined,null,[],Array.from({length:7},(_,i)=>({...adminParty(fresh)[0],uid:'extra-'+i})),[{...adminParty(fresh)[0],species:'invented'}]]){
     const invalid={...challenge(fresh),opponents},unchanged=JSON.stringify(fresh.state);assert.equal(fresh.startKasaiBattle(invalid).ok,false);assert.equal(JSON.stringify(fresh.state),unchanged);assert.equal(fresh.battle,null);
     assert.equal(replay.replayChallenge(invalid.party,invalid.seed,[{type:'move',index:0}],opponents).ok,false);
@@ -56,7 +61,7 @@ test('an actual v56 winning transcript replays only under the explicit legacy ru
   const replay=await import('../server/kasai-replay.mjs'),e=game(),party=copy(Rules.normalizeParty(e.state.party));
   // Recorded against published v56 HEAD, seed 57, before the party-snapshot change.
   const actions=[{type:'move',index:0},{type:'move',index:0},{type:'replace',index:0},{type:'move',index:0},{type:'replace',index:0},{type:'move',index:0}];
-  assert.equal(Rules.legacyVersion,'kasai-solo-v56');assert.equal(Rules.version,'kasai-solo-v57');
+  assert.equal(Rules.legacyVersion,'kasai-solo-v56');assert.equal(Rules.version,'kasai-solo-v74');
   assert.equal(replay.replayChallenge(party,57,actions,null,Rules.legacyVersion).won,true);
   assert.equal(replay.replayChallenge(party,57,actions).ok,false);assert.equal(replay.replayChallenge(party,57,actions,null,'unknown').ok,false);
   assert(e.startKasaiBattle({id:'legacy-session',token:'legacy-token-12345678',seed:57,rulesVersion:Rules.legacyVersion,party}).ok);

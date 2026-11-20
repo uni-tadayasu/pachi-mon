@@ -1,0 +1,170 @@
+{
+  "version": 4,
+  "started": true,
+  "map": "village",
+  "x": 21,
+  "y": 17,
+  "facing": "down",
+  "avatar": "female",
+  "playerName": "移行確認",
+  "party": [
+    {
+      "uid": "v73-retired-galdo",
+      "species": "galdo",
+      "level": 30,
+      "xp": 192,
+      "hp": 0,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 1,
+        "galdoras_fault": 0,
+        "galdoras_bastion": 3,
+        "galdoras_mend": 2
+      },
+      "nickname": "旧初期",
+      "gender": "male",
+      "bonusPoints": 7,
+      "heldItem": "trainband",
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 6,
+        "spAtk": 10
+      }
+    },
+    {
+      "uid": "v73-retired-galdoran",
+      "species": "galdoran",
+      "level": 49,
+      "xp": 306,
+      "hp": 294,
+      "shiny": false,
+      "pp": {
+        "galdoras_crown": 1,
+        "galdoras_fault": 0,
+        "galdoras_bastion": 3,
+        "galdoras_mend": 2
+      },
+      "nickname": "旧中間",
+      "gender": "female",
+      "bonusPoints": 7,
+      "heldItem": "trainband",
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 6,
+        "spAtk": 10
+      }
+    },
+    {
+      "uid": "v73-retired-galdoras",
+      "species": "galdoras",
+      "level": 77,
+      "xp": 474,
+      "hp": 450,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 1,
+        "galdoras_fault": 0,
+        "galdoras_bastion": 3,
+        "galdoras_mend": 2
+      },
+      "nickname": "旧最終",
+      "gender": "male",
+      "bonusPoints": 7,
+      "heldItem": "trainband",
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 6,
+        "spAtk": 10
+      }
+    }
+  ],
+  "storage": [
+    {
+      "uid": "v69-ordinary-1",
+      "species": "galdogran",
+      "level": 70,
+      "xp": 11,
+      "hp": 77,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 2,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "nickname": "引継1",
+      "gender": "female",
+      "heldItem": "everpebble",
+      "bonusPoints": 99,
+      "alloc": {
+        "hp": 20,
+        "atk": 10,
+        "speed": 6
+      },
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "curse": true
+    }
+  ],
+  "giftReceipts": [],
+  "tradeReceipts": [],
+  "inventory": {
+    "salve": 5,
+    "tonic": 2,
+    "chime": 8,
+    "remedy": 2
+  },
+  "held": {},
+  "coins": 120,
+  "seals": [],
+  "leagueWins": [],
+  "seen": [
+    "komori",
+    "galdo",
+    "galdoran",
+    "galdoras",
+    "galdogran"
+  ],
+  "caught": [
+    "komori",
+    "galdo",
+    "galdoran",
+    "galdoras",
+    "galdogran"
+  ],
+  "flags": {},
+  "steps": 0,
+  "playSeconds": 0,
+  "visited": [
+    "village"
+  ],
+  "questsClaimed": [],
+  "stats": {
+    "wins": 0,
+    "captures": 0,
+    "towerBest": 0,
+    "rivalWins": 0,
+    "evolutions": 0
+  },
+  "secrets": [],
+  "tricks": []
+}

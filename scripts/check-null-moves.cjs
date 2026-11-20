@@ -58,7 +58,7 @@ test('the three stages share four fixed moves with the requested types, PP, effe
     assert.equal(m.accuracy, 100); if (effect) assert.equal(m.effect, effect); else assert(!m.effect);
   }
   for (const id of LINE) assert.deepEqual(copy(D.species[id].moves), IDS);
-  assert.equal(Object.keys(D.moves).length, 100);
+  assert.equal(Object.keys(D.moves).length, 104);
   assert.equal(Object.keys(D.statuses).length, 5, 'Curse is independent of the existing single-condition slot');
   for (const id of IDS) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(id)).map(s => s.id).sort(), [...LINE].sort());
 });

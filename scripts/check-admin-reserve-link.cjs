@@ -17,6 +17,8 @@ const roles = ['main', 'sub', 'sub-sub'];
 const starters = { main: 'komorizen', sub: 'shizunaria', 'sub-sub': 'akehomura' };
 const common = ['floravelle', 'zeroveil', 'pearlseria', 'hyogald', 'rurigorm'];
 const statKeys = ['hp', 'atk', 'def', 'spAtk', 'spDef', 'speed'];
+const appearanceOf = mon => ({ nickname: mon.nickname, shiny: mon.shiny === true, grantId: mon.grantId,
+  ...(mon.gender === undefined ? {} : { gender: mon.gender }) });
 
 function section(start, end) {
   const a = html.indexOf(start), b = html.indexOf(end, a);
@@ -50,7 +52,7 @@ function makePeer(role, roleIndex) {
   })) };
   assert.equal(engine.receiveAdminReserveTeam(bundle).added, 6);
   assert.equal(engine.receiveAdminReserveTeam({version:2,playerId,role,members:[{
-    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99
+    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99
   }]}).added,1);
   const members = engine.state.storage.slice();
   members.forEach((mon, index) => {
@@ -102,12 +104,13 @@ function checkAppearance(peer) {
   try {
     for (const mon of peer.members) {
       const team = { name: '育成チーム', ids: [mon.species, 'komori', 'hibana'], appearance: [
-        { nickname: mon.nickname, shiny: mon.shiny === true, grantId: mon.grantId, gender: mon.gender },
+        appearanceOf(mon),
         { nickname: '', shiny: false }, { nickname: '', shiny: false }
       ] };
       assert(session._validTeam(team), `${peer.role}/${mon.species}: canonical appearance`);
       const mutations = [
         look => { look.gender = mon.gender === 'male' ? 'female' : 'male'; },
+        ...(mon.gender === undefined ? [look => { look.gender = 'female'; }] : []),
         look => { look.gender = 'none'; },
         look => { look.grantId = look.grantId.replace(`:${peer.role}:`, ':unknown:'); },
         look => { look.grantId = look.grantId.replace(/:P[0-9a-f]{16}:/, ':Pbad:'); },
@@ -171,11 +174,12 @@ async function checkBattle(left, right, mode, indexes) {
       const ready = p.packets.find(packet => packet.from === side && packet.message.t === 'ready').message.team;
       assert.deepEqual(ready.ids, chosen.map(mon => mon.species));
       for (const [index, source] of chosen.entries()) {
-        assert.deepEqual(ready.appearance[index], { nickname: source.nickname, shiny: false, grantId: source.grantId, gender: source.gender });
+        assert.deepEqual(ready.appearance[index], appearanceOf(source));
         assert.equal(Object.values(ready.allocation[index]).reduce((a, b) => a + b, 0), 297);
         for (const duel of duels) {
           const mon = duel.state.teams[side].monsters[index];
           assert.equal(mon.level, 50); assert.equal(mon.gender, source.gender); assert.equal(mon.grantId, source.grantId);
+          if(source.gender === undefined)assert.equal(Object.hasOwn(mon, 'gender'), false, 'genderless battle individuals omit the gender field');
           assert.equal(mon.nickname, source.nickname); assert.equal(mon.shiny, false);
           assert.deepEqual(copy(mon.alloc), copy(peer.LT.Duel.normalizeAllocation(source.alloc)));
           assert.deepEqual(copy(mon.stats), copy(peer.engine.stats({ species: source.species, level: 50, alloc: source.alloc })));

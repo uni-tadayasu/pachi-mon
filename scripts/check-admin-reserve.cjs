@@ -14,7 +14,7 @@ const PLAYER='P0123456789abcdef',OTHER='Pfedcba9876543210';
 const roles={main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'};
 const common=['floravelle','zeroveil','pearlseria','hyogald','rurigorm'];
 function bundle(role='main',playerId=PLAYER){return {version:1,playerId,role,members:[roles[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
-function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};}
+function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function fresh(){const engine=new Engine();assert(engine.newGame('komori').ok);return engine;}
 const all=engine=>[...engine.state.party,...engine.state.storage];
 
@@ -192,7 +192,7 @@ test('a normalized older save can receive the reserve team without a false stale
   const outcome=h.receive();assert.equal(outcome.added,6,JSON.stringify(outcome));assert.equal(h.control.writes,1);
 });
 
-test('the separate Galdoras grant trains one male per role and leaves every v64 individual unchanged',()=>{
+test('the separate Lunaxion grant trains one genderless member per role and leaves every v64 individual unchanged',()=>{
   for(const role of Object.keys(roles)){
     const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     engine.state.storage[0].nickname='相棒';engine.state.storage[1].moveOrder=[3,2,1,0];
@@ -202,21 +202,21 @@ test('the separate Galdoras grant trains one male per role and leaves every v64 
     assert.equal(engine.adminReserveTeamStatus(grant).total,1);
     assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
     assert.deepEqual(copy(engine.state.storage.slice(0,6)),existing);assert.deepEqual(copy(engine.state.party),party);
-    const mon=engine.state.storage[6],simulated=fresh(),trained=simulated.makeMonster('galdoras',1),events=[];
-    trained.heldItem='trainband';trained.gender='male';
+    const mon=engine.state.storage[6],simulated=fresh(),trained=simulated.makeMonster('lunaxion',1),events=[];
+    trained.heldItem='trainband';
     simulated.giveXP(trained,Array.from({length:99},(_,i)=>simulated.xpToNext(i+1)).reduce((a,b)=>a+b,0),events);
     assert.equal(events.filter(event=>event.kind==='level').length,99);
     for(const field of ['level','xp','hp','heldItem','bonusPoints'])assert.equal(mon[field],trained[field],`${role}/${field}`);
     assert.deepEqual(copy(engine.stats(mon)),copy(simulated.stats(trained)));assert.deepEqual(copy(mon.pp),copy(trained.pp));
-    assert.equal(engine.genderOf(mon),'male');assert.equal(engine.allocationInfo(mon).free,297);
-    assert.equal(mon.gender,'male');assert.equal(mon.shiny,false);assert.equal(mon.customStats,undefined);
+    assert.equal(engine.genderOf(mon),'none');assert.equal(engine.allocationInfo(mon).free,297);
+    assert.equal(mon.gender,undefined);assert.equal(mon.shiny,false);assert.equal(mon.customStats,undefined);
     assert.equal(new Set(all(engine).map(mon=>mon.uid)).size,all(engine).length);
     assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
     if(role==='sub')assert(existing.every(member=>member.gender==='female'));
   }
 });
 
-test('Galdoras retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
+test('Lunaxion retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
   const engine=fresh(),grant=addition('sub');engine.receiveAdminReserveTeam(bundle('sub'));engine.receiveAdminReserveTeam(grant);
   const mon=engine.state.storage[6];mon.nickname='いわ';mon.moveOrder=[3,1,0,2];mon.heldItem='everpebble';
   engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
@@ -235,11 +235,11 @@ test('Galdoras retry preserves its UID and build; explicit recovery restores onl
   assert.deepEqual(copy(engine.state.giftReceipts),receipts);assert.deepEqual(copy(engine.state.storage.slice(0,-1)),kept.storage);
   assert.deepEqual(copy(engine.state.party),kept.party);
   const replacement=engine.state.storage.at(-1);assert.equal(replacement.grantId,mon.grantId);assert.notEqual(replacement.uid,mon.uid);
-  assert.equal(replacement.gender,'male');assert.equal(replacement.heldItem,'trainband');assert.equal(engine.allocationInfo(replacement).free,297);
+  assert.equal(replacement.gender,undefined);assert.equal(engine.genderOf(replacement),'none');assert.equal(replacement.heldItem,'trainband');assert.equal(engine.allocationInfo(replacement).free,297);
   assert.equal(engine.adminReserveTeamStatus(bundle('sub')).missingCount,1);
 });
 
-test('Galdoras delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
+test('Lunaxion delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
   for(const condition of ['full','battle','unstarted','receipts']){
     const engine=condition==='unstarted'?new Engine():fresh();
     if(condition==='full')for(let i=0;i<192;i++)engine.state.storage.push(engine.makeMonster('komori',1));
@@ -250,19 +250,23 @@ test('Galdoras delivery remains atomic under full reserve, battle, unopened save
   }
 });
 
-test('Galdoras grants and saves reject another species, duplicate receipt, female or altered growth',()=>{
-  for(const mutate of [g=>g.version=1,g=>g.members.push(copy(g.members[0])),g=>g.members[0].species='komori',g=>g.members[0].gender='female',g=>g.members[0].level=99,g=>g.members[0].bonusPoints=100,g=>g.members[0].heldItem='everstone',g=>g.members[0].grantId=g.members[0].grantId.replace('v68','v64'),g=>g.members[0].grantId=g.members[0].grantId.replace(':main:',':sub:')]){
+test('Lunaxion grants reject a sex assignment and saves reject another species, duplicate receipt or altered growth',()=>{
+  for(const mutate of [g=>g.version=1,g=>g.members.push(copy(g.members[0])),g=>g.members[0].species='komori',g=>g.members[0].gender='female',g=>g.members[0].gender='male',g=>g.members[0].level=99,g=>g.members[0].bonusPoints=100,g=>g.members[0].heldItem='everstone',g=>g.members[0].grantId=g.members[0].grantId.replace('v68','v64'),g=>g.members[0].grantId=g.members[0].grantId.replace(':main:',':sub:')]){
     const engine=fresh(),grant=addition(),before=JSON.stringify(engine.state);mutate(grant);
     assert.throws(()=>rules.normalizeBundle(grant));assert.equal(engine.receiveAdminReserveTeam(grant).ok,false);assert.equal(JSON.stringify(engine.state),before);
   }
   const engine=fresh();engine.receiveAdminReserveTeam(addition());const raw=engine.serialize();
-  for(const mutate of [m=>m.gender='female',m=>m.level=99,m=>m.bonusPoints=98,m=>m.species='komori',m=>m.grantId=m.grantId.replace(':galdogran',':futo')]){
+  for(const mutate of [m=>m.level=99,m=>m.bonusPoints=98,m=>m.species='komori',m=>m.grantId=m.grantId.replace(':galdogran',':futo')]){
     const bad=copy(raw);mutate(bad.storage[0]);assert.throws(()=>new Engine(bad));
   }
   const duplicate=copy(raw);duplicate.storage.push({...copy(duplicate.storage[0]),uid:'another-galdogran'});assert.throws(()=>new Engine(duplicate));
+  for(const gender of ['male','female','none']){
+    const historical=copy(raw);historical.storage[0].gender=gender;
+    const normalized=new Engine(historical).state.storage[0];assert.equal(normalized.gender,undefined);assert.equal(engine.genderOf(normalized),'none');
+  }
 });
 
-test('the Galdoras bridge retains durable-write ordering, role checks, battle and cross-tab barriers',()=>{
+test('the Lunaxion bridge retains durable-write ordering, role checks, battle and cross-tab barriers',()=>{
   for(const blocked of ['nonadmin','wrong-role','wrong-player','online','trade','live','battle','stale-disk']){
     const h=bridgeHarness(),owner=h.ctx.LT.Admin.player;
     if(blocked==='nonadmin')owner.isAdmin=false;if(blocked==='wrong-role')owner.adminRole='sub';if(blocked==='wrong-player')owner.id=OTHER;
@@ -275,18 +279,18 @@ test('the Galdoras bridge retains durable-write ordering, role checks, battle an
     const h=bridgeHarness({playing});h.control.fail=true;assert(h.receive(addition()).pending);assert.equal(h.control.writes,0);
     h.control.fail=false;assert.equal(h.receive(addition()).added,1);assert.equal(h.control.writes,1);assert.equal(h.control.remembered,1);
     assert(h.receive(addition()).alreadyReceived);assert.equal(h.control.writes,1);
-    assert.equal(h.ctx.storedSave.storage[0].species,'galdoras');
+    assert.equal(h.ctx.storedSave.storage[0].species,'lunaxion');
   }
 });
 
 
 const legacySave=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/v69-stone-leader-save.json'),'utf8'));
-test('v68/v69 received forms and unchanged entitlement IDs suppress duplicate delivery for every role',()=>{
-  for(const role of Object.keys(roles))for(const removeReceipts of [false,true]){
+test('v68 through v73 received forms and unchanged entitlement IDs suppress duplicate delivery for every role',()=>{
+  for(const role of Object.keys(roles))for(const removeReceipts of [false,true])for(const retired of ['galdogran','galdoras'])for(const gender of ['male','female']){
     const raw=copy(legacySave);if(removeReceipts)raw.giftReceipts=[];
-    const engine=new Engine(raw),grant=addition(role),oldPayload=copy(grant);oldPayload.members[0].species='galdogran';
+    const engine=new Engine(raw),grant=addition(role),oldPayload=copy(grant);oldPayload.members[0].species=retired;oldPayload.members[0].gender=gender;
     const member=all(engine).find(mon=>mon.grantId===grant.members[0].grantId),before=copy(engine.state);
-    assert.equal(member.species,'galdoras');assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
+    assert.equal(member.species,'lunaxion');assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
     assert.deepEqual(copy(rules.normalizeBundle(oldPayload)),grant,'A pending old-backend payload receives the same canonical entitlement');
     for(const payload of [grant,oldPayload])for(const options of [{},{restore:true}]){
       const result=engine.receiveAdminReserveTeam(payload,options);assert(result.alreadyReceived);assert.equal(result.added,0);
@@ -297,15 +301,15 @@ test('v68/v69 received forms and unchanged entitlement IDs suppress duplicate de
   }
 });
 
-test('an old receipt restores only its missing canonical Galdoras and keeps the original six intact',()=>{
+test('an old receipt restores only its missing canonical Lunaxion and keeps the original six intact',()=>{
   for(const role of Object.keys(roles)){
     const raw=copy(legacySave),grant=addition(role),at=raw.storage.findIndex(mon=>mon.grantId===grant.members[0].grantId),missing=raw.storage.splice(at,1)[0];
     const engine=new Engine(raw);assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     const before=copy(engine.state);assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.state),before);
     assert.equal(engine.adminReserveTeamStatus(grant).restorableCount,1);
     const result=engine.receiveAdminReserveTeam(grant,{restore:true});assert.equal(result.added,1);assert.equal(result.restored,1);
-    const restored=engine.state.storage.at(-1);assert.equal(restored.species,'galdoras');assert.equal(restored.grantId,missing.grantId);assert.notEqual(restored.uid,missing.uid);
-    assert.equal(restored.level,100);assert.equal(restored.gender,'male');assert.equal(restored.heldItem,'trainband');assert.equal(engine.allocationInfo(restored).free,297);
+    const restored=engine.state.storage.at(-1);assert.equal(restored.species,'lunaxion');assert.equal(restored.grantId,missing.grantId);assert.notEqual(restored.uid,missing.uid);
+    assert.equal(restored.level,100);assert.equal(restored.gender,undefined);assert.equal(engine.genderOf(restored),'none');assert.equal(restored.heldItem,'trainband');assert.equal(engine.allocationInfo(restored).free,297);
     assert.deepEqual(copy(engine.state.storage.slice(0,-1)),before.storage);assert.deepEqual(copy(engine.state.party),before.party);
     assert.deepEqual(copy(engine.state.giftReceipts),before.giftReceipts);
     if(role==='sub')assert(engine.state.storage.filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')).every(mon=>mon.gender==='female'));
@@ -320,15 +324,42 @@ test('changing the historical entitlement prefix or final species ID cannot crea
 });
 
 
-test('the new earlier forms cannot reuse the final-form gift and all three role entitlements stay Galdoras',()=>{
+test('normal and retired earlier forms cannot reuse the final-form gift and all three role entitlements stay Lunaxion',()=>{
   for(const role of Object.keys(roles)){
     const engine=fresh(),grant=addition(role);assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
-    const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'galdoras');
+    const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'lunaxion');
     const events=[];engine.giveXP(final,1,events);assert.deepEqual(copy(final),before);assert(!events.some(event=>event.kind==='evolve'));
-    for(const species of ['galdo','galdoran']){
+    for(const species of ['lunax','galdo','galdoran']){
       const invalid=copy(grant);invalid.members[0].species=species;assert.throws(()=>rules.normalizeBundle(invalid));
       const raw=engine.serialize();raw.storage[0].species=species;raw.storage[0].hp=1;assert.throws(()=>new Engine(raw));
     }
-    assert.equal(engine.allocationInfo(final).free,297);assert.equal(final.heldItem,'trainband');assert.equal(final.gender,'male');
+    assert.equal(engine.allocationInfo(final).free,297);assert.equal(final.heldItem,'trainband');assert.equal(final.gender,undefined);assert.equal(engine.genderOf(final),'none');
+  }
+});
+
+test('all four historical species retain individual data and spent PP when saved as the new two-form lineage',()=>{
+  const raw=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/v73-retired-line-save.json'),'utf8'));
+  const former=[...raw.party,...raw.storage],before=copy(raw),engine=new Engine(raw);
+  const expectedSpecies={galdo:'lunax',galdoran:'lunax',galdoras:'lunaxion',galdogran:'lunaxion'};
+  const aliases={galdoras_crown:'lunax_crescent',galdoras_fault:'lunax_nova',galdoras_bastion:'lunax_aegis',galdoras_mend:'lunax_renew'};
+  assert.deepEqual(former.map(mon=>mon.species),['galdo','galdoran','galdoras','galdogran']);
+  for(const old of former){
+    const mon=all(engine).find(member=>member.uid===old.uid),expected={...copy(old),species:expectedSpecies[old.species],
+      pp:Object.fromEntries(Object.entries(old.pp).map(([id,value])=>[aliases[id],value]))};
+    delete expected.gender;
+    expected.hp=Math.min(old.hp,engine.stats(expected).hp);
+    assert.deepEqual(copy(mon),expected,old.species+': UID, HP, XP, name, shiny, allocations, item and move order survive');
+    assert.equal(engine.genderOf(mon),'none','Every retired gender is replaced by the new genderless identity');
+  }
+  assert.equal(engine.state.party[0].hp,0);assert.equal(engine.state.party[1].species,'lunax');assert.equal(engine.state.party[1].level,49,'Loading a historical earlier form does not grant an automatic evolution');
+  assert.deepEqual(copy(raw),before,'The historical fixture is not mutated');
+  const stored=engine.serialize();assert.deepEqual(copy(new Engine(stored).state),copy(engine.state));
+  for(const mutate of [
+    mon=>mon.pp.lunax_crescent=mon.pp.galdoras_crown,
+    mon=>mon.pp.galdoras_crown=-1,
+    mon=>mon.pp.galdoras_fault=6,
+    mon=>delete mon.pp.galdoras_mend
+  ]){
+    const invalid=copy(before);mutate(invalid.party[1]);assert.throws(()=>new Engine(invalid),'Migration must not weaken exact PP validation');
   }
 });

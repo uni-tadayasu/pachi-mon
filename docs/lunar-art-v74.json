@@ -1,0 +1,38 @@
+{
+  "version": 74,
+  "purpose": "User-supplied 001 normal / 002 evolved replacement for the removed stone lineage",
+  "tool": "image_gen.imagegen (built-in)",
+  "layout": {
+    "rows": 1,
+    "columns": 2,
+    "front": "left; faces screen-right",
+    "rear": "right; faces screen-left",
+    "sourceDimensions": [
+      1774,
+      887
+    ],
+    "transparent": true
+  },
+  "forms": [
+    {
+      "id": "lunax",
+      "name": "ルナクス",
+      "input": "001.png",
+      "output": "assets/lunax-user-v74.png",
+      "prompt": "Use case: precise-object-edit. Asset type: a production RPG monster front-and-back sprite atlas, one row of two equal square cells on a wide 2:1 canvas. Edit target: attached 001.png is the definitive normal-form creature. Preserve its exact recognizable design: large swept golden crescent/flame head, pale cream brow markings above narrow purple eyes, small closed smile, short squat golden two-legged body, broad brown shoulder mantle, pointed brown forearm armor, short rounded golden fingers, cream diamond chest, broad golden feet. LEFT half: faithful full-body front three-quarter view facing screen-right, matching the attached image's pose and proportions. RIGHT half: an independently drawn full-body rear three-quarter view facing screen-left, with the back of the head, brown mantle and golden back visible; do not simply mirror the front, do not show a face or chest on the rear. Crisp detailed 2D pixel-RPG sprite rendering with tidy dark edge definition and gold/cream/brown shading; preserve the reference silhouette and anatomy exactly. Keep equal apparent heights, center each figure within its own half, leave a clear empty center gutter and 7% transparent margins all around each figure, no overlap or clipping. The background is genuinely transparent alpha. No text, labels, panels, watermark, floor, cast shadow, checkerboard, effects, extra horns, wings, tail, or extra limbs. Exactly two views of the same normal form."
+    },
+    {
+      "id": "lunaxion",
+      "name": "ルナクシオン",
+      "input": "002.png",
+      "output": "assets/lunaxion-user-v74.png",
+      "prompt": "Use case: precise-object-edit. Asset type: a production RPG monster front-and-back sprite atlas, one row of two equal square cells on a wide 2:1 canvas. Edit target: attached 002.png is the definitive evolved creature. Preserve its exact recognizable design: tall golden crescent/flame head with deep curved notch and swept tip, pale cream brow markings above narrow purple eyes, small closed smile, floating tall tapered golden torso ending in one pointed curved tip instead of legs, big curved brown shoulder mantle with open collar, brown sides and pointed brown forearm armor, long slender golden arms with short rounded fingers, long cream diamond chest. LEFT half: faithful full-body front three-quarter view facing screen-right, matching the attached image's pose and proportions. RIGHT half: an independently drawn full-body rear three-quarter view facing screen-left, with back of head, brown shoulder mantle, back surface and curved floating tip visible; do not simply mirror the front, do not show face or chest on rear. Crisp detailed 2D pixel-RPG sprite rendering with tidy dark edge definition and gold/cream/brown shading; preserve the reference silhouette and anatomy exactly. Keep equal apparent heights, center each figure within its own half, leave clear empty center gutter and 7% transparent margins all around each figure, no overlap or clipping. The background is genuinely transparent alpha. No text, labels, panels, watermark, floor, cast shadow, checkerboard, effects, extra horns, wings, legs, or extra limbs. Exactly two views of the same evolved form."
+    }
+  ],
+  "invariants": [
+    "Gold crescent-shaped head, pale brow and chest markings, purple eyes, brown shoulder and forearm armour.",
+    "001 retains two short legs and broad feet; 002 retains its tall floating tapered body without legs.",
+    "The rear is a separate illustration, not a mirrored front.",
+    "Source PNGs retain the generated alpha unchanged. Production uses the game's shared 112-pixel rendering grid."
+  ]
+}

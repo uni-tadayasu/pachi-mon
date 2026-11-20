@@ -1,5 +1,5 @@
 {
- "version": "2026-11-20-v71",
+ "version": "2026-11-20",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -222,24 +222,20 @@
    "bytes": 889974
   },
   {
-   "url": "assets/galdo-user-v71.png",
-   "bytes": 1128784
-  },
-  {
-   "url": "assets/galdoran-user-v71.png",
-   "bytes": 1412268
-  },
-  {
-   "url": "assets/galdoras-user-v70.png",
-   "bytes": 1614698
-  },
-  {
    "url": "assets/kasai-overworld-v55.json",
    "bytes": 2452
   },
   {
    "url": "assets/kasai-overworld-v55.png",
    "bytes": 1204302
+  },
+  {
+   "url": "assets/lunax-user-v74.png",
+   "bytes": 1078922
+  },
+  {
+   "url": "assets/lunaxion-user-v74.png",
+   "bytes": 714773
   },
   {
    "url": "assets/offdex-v54-07.png",
@@ -298,11 +294,10 @@
   "assets/environment-props-v33.png",
   "assets/environment-terrain-v33.png",
   "assets/environment-trees-v33.png",
-  "assets/galdo-user-v71.png",
-  "assets/galdoran-user-v71.png",
-  "assets/galdoras-user-v70.png",
   "assets/kasai-overworld-v55.json",
   "assets/kasai-overworld-v55.png",
+  "assets/lunax-user-v74.png",
+  "assets/lunaxion-user-v74.png",
   "assets/offdex-v54-07.png",
   "assets/offdex-v54-08.png",
   "assets/original-futo-v67.png",
@@ -316,6 +311,6 @@
   "assets/traveller-hero-v33.png",
   "assets/traveller-npcs-v33.png"
  ],
- "totalBytes": 75270544,
- "coreBytes": 36992821
+ "totalBytes": 72908489,
+ "coreBytes": 34630766
 }

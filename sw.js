@@ -3,6 +3,7 @@
  * v70: the supplied Galdoras artwork and non-evolving roster replace old forms.
  * v71: Galdo and Galdoran join the off-dex line leading to final-form Galdoras.
  * v72: full-size controls, bottom party layout and saved drag ordering refresh together.
+ * v74: exclusive Super lineage, genderless operator reserves and lunar sprite atlases.
  * v73: visible START/SELECT buttons and the desktop side party refresh together.
  * The page, its code and the core art are stored at install, so the game starts
  * without a connection. Pages are fetched network-first (updates arrive whenever
@@ -116,7 +117,7 @@ function retiredArt(url) {
   const u = new URL(url), base = scope();
   if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) return false;
   const path = u.pathname.slice(base.pathname.length);
-  return /^assets\/(?:galdoras-(?:front|back)-v65|original-(?:galdoras-v67|galdogran-v68)|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
+  return /^assets\/(?:galdoras-(?:front|back)-v65|original-(?:galdoras-v67|galdogran-v68)|galdoras-user-v70|(?:galdo|galdoran)-user-v71|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
     || (path === 'assets/dex/futo.webp' && u.searchParams.get('v') !== '20261120-originality-v67');
 }
 

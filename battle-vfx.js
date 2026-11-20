@@ -18,7 +18,8 @@
     earth: ['#edd3a4', '#b58b57', '#63503d', '#fff0cb'],
     stone: ['#f3deb2', '#b7a489', '#62596c', '#fff0ce'],
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff'],
-    void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0']
+    void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0'],
+    super: ['#fff5ca', '#f4c343', '#704085', '#fffbea']
   };
   // Exactly 24 move effects. Every move maps to one, by its role in the type's
   // roster (or a named exception); colours come from the move or its type.
@@ -41,7 +42,8 @@
   const NAMED_EFFECTS = {nudge:'impact',pulse:'ripples',dawnstep:'impact',dew:'ripples',struggle:'impact',
     futo_breaker:'impact',futo_burst:'beam',arvelion_rend:'astral-rend',arvelion_nova:'creation-nova',
     verdant_lance:'seed',forest_crown:'petals',genesis_bloom:'roots',root_drain:'healing',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova',
-    null_curse:'astral-rend',null_ray:'beam',null_scorch:'flame'};
+    null_curse:'astral-rend',null_ray:'beam',null_scorch:'flame',
+    lunax_crescent:'astral-rend',lunax_nova:'beam'};
   // ID-based variations keep Kiraseed's four techniques within the existing
   // material families; these same cue points drive their sound and HP timing.
   const KIRASEED_CUES={verdant_lance:{duration:1180,impactAt:.43},forest_crown:{duration:1100,impactAt:.45},
@@ -238,6 +240,7 @@
     if(NAMED_EFFECTS[move.id])return NAMED_EFFECTS[move.id];
     if(move.element==='thunder')return 'lightning';
     if(move.element==='ice')return 'ice';
+    if(move.element==='super')return 'star-rings';
     if(move.element==='earth'||move.element==='stone')return move.category==='special'?'crystals':'impact';
     const byRole=ROLE_EFFECTS[move.role]?.[move.element];if(byRole)return byRole;
     return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
@@ -683,7 +686,7 @@
       // materials instead of stars or gems. The gameplay clock stays .43.
       const floor=Math.min(h-8*s,cy+54*s),unfurl=ease(phase(t,.14,.43)),decay=1-smooth(phase(t,.68,.98));
       const impact=smooth(phase(t,.38,.47))*decay,scatter=ease(phase(t,.43,.96));
-      const pierce=e.move==='atlas_leaf_7'||e.move==='galdoras_crown',drain=e.move==='atlas_crystal_5';
+      const pierce=e.move==='atlas_leaf_7',drain=e.move==='atlas_crystal_5';
       if(pierce){
         for(let i=0,n=low?3:5;i<n;i++){
           const x=cx+(i-(n-1)/2)*23*s,rise=smooth(phase(t,.19+i*.022,.43+i*.022));
