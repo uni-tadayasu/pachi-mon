@@ -5,7 +5,8 @@
   const KEY='pachi-kasai-challenge-v56:',PLAYER=/^P[0-9a-f]{16}$/;
   const copy=value=>JSON.parse(JSON.stringify(value));
   const fullMessage='ひかえが満員です（192体）。空きを作ってから、秘密部屋の「カサイの勝利報酬を確認」で「報酬を受け取る」を選んでください。自動では受け取りません。';
-  const selfMessage='運営カサイは自分自身と対戦できません。「飾りつけ」で自分の部屋をデコレーションできます。';
+  const operatorName=person=>person?.adminRole==='sub'?'サカイ':person?.adminRole==='sub-sub'?'イサカ':'カサイ';
+  const selfMessage=person=>`運営${operatorName(person)}は自分自身と対戦できません。「飾りつけ」で自分の部屋をデコレーションできます。`;
   const fail=(message,code)=>({ok:false,message,...(code?{code}:{})});
   class KasaiChallengeController {
     constructor({storage,request,identify,getEngine,startBattle,commit,refreshPresence=async()=>{},rules=LT.KasaiRules,uuid=()=>crypto.randomUUID(),clock=()=>Date.now(),changed=()=>{}}){
@@ -15,12 +16,12 @@
     async identity(){
       const owner=await this.identify();if(!PLAYER.test(owner?.id||''))throw Error('プレイヤー情報を確認できません。');
       if(this.owner?.id!==owner.id){this.pending=null;this.receipt=null;this.pendingLiveSessionId=null;}
-      this.owner={id:owner.id,isAdmin:owner.isAdmin===true};
+      this.owner={id:owner.id,isAdmin:owner.isAdmin===true,adminRole:owner.adminRole};
       this.assertChallenger();this.load();this.assertChallenger(this.pending?.challenge.roomId);
       return this.owner.id;
     }
     assertChallenger(roomId){
-      if(this.owner?.isAdmin===true||roomId&&roomId===this.owner?.id)throw Object.assign(Error(selfMessage),{code:'KASAI_SELF_BATTLE'});
+      if(this.owner?.isAdmin===true||roomId&&roomId===this.owner?.id)throw Object.assign(Error(selfMessage(this.owner)),{code:'KASAI_SELF_BATTLE'});
     }
     async sameOwner(id,roomId){if(await this.identity()!==id)throw Error('プレイヤーが切り替わりました。元のプレイヤーで結果を確認してください。');this.assertChallenger(roomId);}
     load(){
@@ -42,7 +43,7 @@
       if(this.busy)return fail('挑戦の確認中です。');
       this.busy=true;this.error='';this.errorCode='';this.changed(this);
       try{return await action();}
-      catch(error){this.errorCode=error?.code||'';this.error=error?.code==='KASAI_SELF_BATTLE'?selfMessage:error?.code==='KASAI_STORAGE_FULL'?fullMessage:error?.message||'通信を確認してください。勝利報酬はカサイに話しかけて再確認できます。';return fail(this.error,this.errorCode);}
+      catch(error){this.errorCode=error?.code||'';this.error=error?.code==='KASAI_SELF_BATTLE'?selfMessage(this.owner):error?.code==='KASAI_STORAGE_FULL'?fullMessage:error?.message||'通信を確認してください。勝利報酬はカサイに話しかけて再確認できます。';return fail(this.error,this.errorCode);}
       finally{this.busy=false;this.changed(this);}
     }
     inspect(){return this.run(async()=>{
@@ -135,7 +136,7 @@
     });}
   }
   LT.KasaiChallengeController=KasaiChallengeController;
-  if(typeof module!=='undefined'&&module.exports)module.exports={KasaiChallengeController,KEY,fullMessage,selfMessage};
+  if(typeof module!=='undefined'&&module.exports)module.exports={KasaiChallengeController,KEY,fullMessage,selfMessage:selfMessage()};
   if(!root.document?.createElement||!LT.KasaiRules)return;
 
   const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -157,12 +158,18 @@
   }
   function render(){
     makeDialog();const state=controller.state(),disabled=state.busy?'disabled':'';
-    if(localSelf()||state.selfChallenge){dialog.innerHTML=`<header><div><p>MY ROOM</p><h2 id="kasai-dialog-title">カサイのひみつ部屋</h2></div><button type="button" class="btn btn-small" data-kasai-action="close" ${disabled}>閉じる</button></header><div class="world-dialog-body"><p>${selfMessage}</p><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-kasai-action="decorate" ${disabled}>飾りつけ</button></div></div>`;return;}
+    if(localSelf()||state.selfChallenge){const person=localOperator();dialog.innerHTML=`<header><div><p>MY ROOM</p><h2 id="kasai-dialog-title">${operatorName(person)}のひみつ部屋</h2></div><button type="button" class="btn btn-small" data-kasai-action="close" ${disabled}>閉じる</button></header><div class="world-dialog-body"><p>${selfMessage(person)}</p><div class="world-dialog-actions"><button type="button" class="btn btn-primary" data-kasai-action="decorate" ${disabled}>飾りつけ</button></div></div>`;return;}
     dialog.innerHTML=`<header><div><p>KASAI VICTORY REWARD</p><h2 id="kasai-dialog-title">謎の調律士 カサイ</h2></div><button type="button" class="btn btn-small" data-kasai-action="close" ${disabled}>閉じる</button></header><div class="world-dialog-body"><section class="world-trainer-card is-kasai"><canvas width="150" height="160" data-kasai-portrait aria-label="カサイの姿"></canvas><div><span class="world-trainer-role">MYSTERY TRAINER</span><h3>「君の仲間の力を見せてくれ。」</h3><p>フィールドにいるカサイ本人と、専用ステージでリアルタイム対戦。相手の許可後に、双方が技と交代を選びます。</p></div></section><p>初めて勝利したプレイヤーに、Lv.70のキラシードを1体。性別は♂・♀からランダムに決まります。</p>${state.delivered?'<p class="notice">このプレイヤーの勝利報酬は受け取り済みです。再戦は何度でも楽しめます。</p>':state.expired&&state.canClaim?'<p class="notice">前の挑戦の確認期限を過ぎています。「報酬を受け取る」で結果を確認すると、未受け取りの報酬を復旧するか、新しい挑戦に進めます。</p>':state.storageFull?`<p class="notice">${fullMessage}</p>`:state.canClaim?'<p class="notice">受け取りを確認できる勝利記録があります。「報酬を受け取る」を選んでください。</p>':'<p>手持ちに空きがあっても、ひかえが満員のときは受け取れません。</p>'}<div class="world-dialog-actions">${state.canClaim?`<button type="button" class="btn btn-primary" data-kasai-action="claim" ${disabled}>報酬を受け取る</button>`:'<p>新しい対戦は、外のフィールドにいるカサイに話しかけて申し込んでください。</p>'}</div><p role="status" aria-live="polite">${escape(state.busy?'確認しています…':controller.error||note)}</p></div>`;
     const canvas=dialog.querySelector('[data-kasai-portrait]');if(canvas)LT.Art?.traveller?.(canvas,{kind:'kasai',size:150,facing:'down'});
   }
   function show(message=''){note=message;render();if(!dialog.open)dialog.showModal();}
   function localSelf(){const player=LT.Admin?.player,map=controller.getEngine()?.map;return player?.isAdmin===true||!!(player?.id&&map?.roomKindTag==='kasai'&&map.roomOwner===player.id);}
+  function localOperator(){
+    const player=LT.Admin?.player,identified=controller.owner,map=controller.getEngine()?.map;
+    if(player?.isAdmin)return player;
+    if(identified?.isAdmin&&identified.id===player?.id)return identified;
+    return map?.roomOwner===player?.id?map.owner:player;
+  }
   async function decorate(){dialog?.close();if(LT.Rooms?.decorateMine)return LT.Rooms.decorateMine();return LT.Rooms?.open?.();}
   function talk(){
     const engine=controller.getEngine();
@@ -170,12 +177,12 @@
     if(localSelf()){void decorate();return true;}
     show();void controller.inspect().then(result=>{if(result.code==='KASAI_SELF_BATTLE')void decorate();});return true;
   }
-  async function start(){if(localSelf()){await decorate();return fail(selfMessage,'KASAI_SELF_BATTLE');}dialog?.close();if(LT.KasaiLive?.isActive?.())return LT.KasaiLive.talk();const peer=controller.getEngine()?.map?.roomOwner;if(peer&&LT.KasaiLive?.request)return LT.KasaiLive.request(peer);return fail('外のフィールドにいる運営カサイに話しかけて、対戦を申し込んでください。','KASAI_LIVE_REQUIRED');}
+  async function start(){if(localSelf()){await decorate();return fail(selfMessage(localOperator()),'KASAI_SELF_BATTLE');}dialog?.close();if(LT.KasaiLive?.isActive?.())return LT.KasaiLive.talk();const peer=controller.getEngine()?.map?.roomOwner;if(peer&&LT.KasaiLive?.request)return LT.KasaiLive.request(peer);return fail('外のフィールドにいる運営カサイに話しかけて、対戦を申し込んでください。','KASAI_LIVE_REQUIRED');}
   function openRewards(){if(localSelf()){void decorate();return false;}show();void controller.inspect();return true;}
-  async function claim(){if(localSelf()){await decorate();return fail(selfMessage,'KASAI_SELF_BATTLE');}const result=await controller.claim();if(result.code==='KASAI_SELF_BATTLE'){await decorate();return result;}note=result.message||'';render();if(result.ok)LT.adminBridge?.toast?.(note||'報酬の受け取りを確認しました。');return result;}
+  async function claim(){if(localSelf()){await decorate();return fail(selfMessage(localOperator()),'KASAI_SELF_BATTLE');}const result=await controller.claim();if(result.code==='KASAI_SELF_BATTLE'){await decorate();return result;}note=result.message||'';render();if(result.ok)LT.adminBridge?.toast?.(note||'報酬の受け取りを確認しました。');return result;}
   async function complete(result){
     const saved=await controller.finish(result);
-    if(saved.code==='KASAI_SELF_BATTLE'){dialog?.close();LT.adminBridge?.toast?.(selfMessage);}
+    if(saved.code==='KASAI_SELF_BATTLE'){dialog?.close();LT.adminBridge?.toast?.(selfMessage(localOperator()));}
     else if(result?.kasai&&result.result==='won')show(saved.message||'カサイに勝利しました。');
     return saved;
   }

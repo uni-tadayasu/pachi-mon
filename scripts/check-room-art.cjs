@@ -85,6 +85,33 @@ test('room catalog and geometry exactly match the deployed service contract',asy
   }
 });
 
+test('operator room map and door names follow each role while preserving custom names',()=>{
+  const names={main:'カサイ',sub:'サカイ','sub-sub':'イサカ'};
+  function doorText(source,options={}){
+    const cv=canvas.createCanvas(192,128),ctx=cv.getContext('2d'),labels=[],fillText=ctx.fillText.bind(ctx);
+    ctx.fillText=(text,...args)=>{labels.push(text);return fillText(text,...args);};
+    assert(art.drawDoor(ctx,{...source,entrance:{...source.entrance,x:0,y:1}},options));
+    return labels;
+  }
+  for(const [adminRole,name]of Object.entries(names)){
+    const source={...record('kasai'),owner:{...record('kasai').owner,adminRole}},before=JSON.stringify(source),map=art.createMap(source);
+    assert.equal(map.name,`${name}の特別対戦ホール`);
+    assert.equal(map.subtitle,`${name}本人と挑戦者を迎える、特別な対戦ステージ。`);
+    assert.equal(map.owner.adminRole,adminRole,'Map conversion discarded the role needed for later labels');
+    assert.deepEqual(doorText(source),[`${name}の部屋`]);
+    assert.deepEqual(doorText({...map,name:undefined}),[`${name}の部屋`],'A converted map lost the owner-specific door label');
+    const custom={...source,name:'  星あかりの読書室  '};
+    assert.equal(art.createMap(custom).name,'星あかりの読書室');assert.deepEqual(doorText(custom),['星あかりの読書室']);
+    assert.deepEqual(doorText(custom,{active:true}),['A / E で入室']);
+    assert.deepEqual(doorText(custom,{label:'受付はこちら',active:true}),['受付はこちら']);
+    assert.deepEqual(doorText(custom,{label:false}),[]);
+    assert.equal(JSON.stringify(source),before,'Naming changed the persisted room record');
+  }
+  assert.equal(art.createMap(record('kasai')).name,'カサイの特別対戦ホール','Legacy rooms without a role retain the main-operator fallback');
+  assert.equal(art.createMap(record('secret')).name,'みどりの秘密の部屋');assert.deepEqual(doorText(record('secret')),['みどりの部屋']);
+  const ordinary={...record('secret'),name:'みんなの休憩室'};assert.equal(art.createMap(ordinary).name,ordinary.name);assert.deepEqual(doorText(ordinary),[ordinary.name]);
+});
+
 test('operator templates have matching server floor masks, connected floors and preserved stage routes',async()=>{
   const {ROOM_TEMPLATES}=await backend,counts={hall:396,sanctum:320,wings:276};
   assert.deepEqual(Array.from(art.templates,template=>template.id),['hall','sanctum','wings']);

@@ -79,6 +79,9 @@
       stage:'#b48757',stageInner:'#d6b588',stageLight:'#f0d9ac',stageSeam:'#ad8358',felt:'#537e65',seal:'#bcdbad',sealDark:'#3f6c53'})
   });
   const templateOf=m=>m?.roomKind==='kasai'&&Object.hasOwn(roomPalettes,m.templateId)?m.templateId:'hall';
+  const operatorNames=Object.freeze({main:'カサイ',sub:'サカイ','sub-sub':'イサカ'});
+  const operatorRole=owner=>typeof owner?.adminRole==='string'&&Object.hasOwn(operatorNames,owner.adminRole)?owner.adminRole:null;
+  const operatorName=owner=>operatorNames[operatorRole(owner)]||operatorNames.main;
   const opposite = {up:'down',down:'up',left:'right',right:'left'};
   const integer = n => Number.isInteger(n) && Number.isFinite(n);
   const getItem = id => items.get(String(id)) || null;
@@ -126,15 +129,16 @@
       if(item.solid)for(let y=f.y;y<f.y+f.h;y++)for(let x=f.x;x<f.x+f.w;x++)tiles[y][x]='B';
     }
     tiles[layout.exit.y][layout.exit.x]='D';
-    const defaultName=kind==='kasai'?'カサイの特別対戦ホール':`${String(owner.name||'旅人').slice(0,30)}の秘密の部屋`;
+    const trainerName=operatorName(owner),role=operatorRole(owner);
+    const defaultName=kind==='kasai'?`${trainerName}の特別対戦ホール`:`${String(owner.name||'旅人').slice(0,30)}の秘密の部屋`;
     const name=typeof record.name==='string'&&record.name.trim()?record.name.trim().slice(0,40):defaultName;
     return {
-      id:`room:${owner.id}`,name,subtitle:kind==='kasai'?(LT.Admin?.player?.id===owner.id?'あなたの専用ステージ。「秘密部屋」から家具を飾ろう。':'カサイ本人と挑戦者を迎える、特別な対戦ステージ。'):'自分らしい家具を飾って、旅人を迎えよう。',
+      id:`room:${owner.id}`,name,subtitle:kind==='kasai'?(LT.Admin?.player?.id===owner.id?'あなたの専用ステージ。「秘密部屋」から家具を飾ろう。':`${trainerName}本人と挑戦者を迎える、特別な対戦ステージ。`):'自分らしい家具を飾って、旅人を迎えよう。',
       revision:Number.isSafeInteger(record.revision)?record.revision:0,roomRevision:Number.isSafeInteger(record.revision)?record.revision:0,
       width:layout.width,height:layout.height,spawn:{...layout.spawn,facing:'up'},
       templateId:layout.templateId,floorMask:layout.floorMask,wallMask:layout.wallMask,
       interior:true,sharedRoom:true,roomKind:kind==='kasai'?'kasai':'home',roomType:kind,roomKindTag:kind,roomOwner:owner.id,
-      owner:{id:owner.id,name:String(owner.name||'旅人'),isAdmin:owner.isAdmin===true},
+      owner:{id:owner.id,name:String(owner.name||'旅人'),isAdmin:owner.isAdmin===true,...(role?{adminRole:role}:{})},
       theme:'village',biome:'town',music:kind==='kasai'?'gym':'inn',parentMap:entrance.map,
       region:outside?.region||'星環本土',stage:outside?.stage||1,district:outside?.district,continent:outside?.continent||1,
       requiredSeals:0,level:Array.isArray(outside?.level)?outside.level.slice():[1,100],encounters:[],
@@ -472,7 +476,8 @@
     if(active){for(const [x,y] of [[0,0],[28,0],[0,28],[28,28]]){r(c,x,y,4,1,P.white);r(c,x,y,1,4,P.white);}}
     c.restore();
     if(options.label!==false) {
-      const raw=kasai?'カサイの部屋':`${String(room.owner?.name||'旅人').slice(0,10)}の部屋`;
+      const fallback=kasai?`${operatorName(room.owner)}の部屋`:`${String(room.owner?.name||'旅人').slice(0,10)}の部屋`;
+      const raw=typeof room.name==='string'&&room.name.trim()?room.name.trim().slice(0,40):fallback;
       const label=typeof options.label==='string'?options.label:active?'A / E で入室':raw;
       c.save();c.font='bold 13px sans-serif';c.textAlign='center';c.textBaseline='middle';
       const w=Math.min(174,Math.ceil(c.measureText(label).width)+14),x=e.x*t+t/2,y=e.y*t-11;

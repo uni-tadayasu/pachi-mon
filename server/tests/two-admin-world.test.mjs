@@ -85,11 +85,11 @@ function setup(t){
     advance(300);
     return call('/world/presence',actor,'POST',{map:'village',x:21,y:17,facing:'up',avatar:'male',status:'idle',...position});
   };
-  const createRoom=async(actor,map='village',index=0)=>{
+  const createRoom=async(actor,map='village',index=0,extra={})=>{
     const wall=worldRoomWalls(map)[index],facing=wall.facings[0];
     const [dx,dy]={up:[0,-1],right:[1,0],down:[0,1],left:[-1,0]}[facing];
     ok(await presence(actor,{map,x:wall.x-dx,y:wall.y-dy,facing}));
-    return ok(await call('/world/rooms',actor,'POST',{map,x:wall.x,y:wall.y,facing})).room;
+    return ok(await call('/world/rooms',actor,'POST',{map,x:wall.x,y:wall.y,facing,...extra})).room;
   };
   const revoke=async(actor,target)=>{
     const current=ok(await call('/admin/devices',actor)).devices.find(row=>row.playerId===target.id);
@@ -526,6 +526,58 @@ test('all three operator roles can persist each room template while ordinary own
       assert.equal(h.env.DB.sqlite.prepare('SELECT template_id FROM world_rooms WHERE owner_id=?').get(actor.id).template_id,template.id);
     }
     for(const other of [visitor,hosts[(index+1)%3]])assert.equal((await h.call('/world/rooms/'+actor.id,other,'PATCH',{revision:room.revision,templateId:'hall',decorations:[]})).error.code,'ROOM_OWNER_REQUIRED');
+  }
+});
+
+test('old clients creating every operator room with the Kasai default receive the current role name',async t=>{
+  const h=setup(t),{main,sub,third}=await h.threeAdmins(),hosts=[main,sub,third],names=['カサイのひみつ部屋','サカイのひみつ部屋','イサカのひみつ部屋'];
+  for(const [index,actor] of hosts.entries()){
+    const room=await h.createRoom(actor,['village','meadow','forest'][index],0,{name:'カサイのひみつ部屋'});
+    assert.equal(room.name,names[index]);
+    assert.equal(h.env.DB.sqlite.prepare('SELECT name FROM world_rooms WHERE owner_id=?').get(actor.id).name,names[index]);
+    assert.equal(ok(await h.call('/world/rooms/mine',actor)).room.name,names[index]);
+  }
+  const ordinary=await h.register('一般の旅人'),room=await h.createRoom(ordinary,'harbor',0,{name:'カサイのひみつ部屋'});
+  assert.equal(room.kind,'secret');assert.equal(room.name,'カサイのひみつ部屋','The operator-only alias does not rename an ordinary player room');
+});
+
+test('existing wrong generated names are repaired consistently in read views without mutating saved rooms',async t=>{
+  const h=setup(t),{main,sub,third}=await h.threeAdmins(),hosts=[main,sub,third],visitor=await h.register('旧部屋の見学'),maps=['village','meadow','forest'],expected=[];
+  for(const [index,actor] of hosts.entries()){
+    let room=await h.createRoom(actor,maps[index]);
+    room=ok(await h.call('/world/rooms/'+actor.id,actor,'PATCH',{revision:room.revision,templateId:ROOM_TEMPLATES[index].id,decorations:[{id:'kept-plant',itemId:'plant',x:3,y:10,rotation:0}]})).room;
+    expected.push(room);
+    h.env.DB.sqlite.prepare('UPDATE world_rooms SET name=? WHERE owner_id=?').run('カサイのひみつ部屋',actor.id);
+    ok(await h.presence(actor,{map:room.mapId,x:12,y:16}));
+  }
+  const stored=h.env.DB.sqlite.prepare('SELECT * FROM world_rooms ORDER BY owner_id').all(),changes=h.env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n;
+  for(const [index,actor] of hosts.entries()){
+    const room=expected[index];
+    assert.deepEqual(ok(await h.call('/world/rooms/'+actor.id,visitor)).room,room);
+    assert.deepEqual(ok(await h.call('/world/rooms/mine',actor)).room,room);
+    assert.deepEqual(ok(await h.call('/world/rooms/kasai?playerId='+actor.id,visitor)).room,room);
+    assert.deepEqual(ok(await h.call('/world/rooms?map='+maps[index],visitor)).rooms,[room]);
+  }
+  assert.deepEqual(ok(await h.call('/world/rooms?kind=kasai',visitor)).rooms,expected);
+  const population=ok(await h.call('/world/population',visitor));
+  for(const room of expected)assert.deepEqual(population.rows.find(row=>row.map===room.mapId),{map:room.mapId,count:1,name:room.name,kind:'kasai'});
+  assert.deepEqual(h.env.DB.sqlite.prepare('SELECT * FROM world_rooms ORDER BY owner_id').all(),stored,'Names, templates, furniture, revisions, timestamps and entrances remain untouched by reads');
+  assert.equal(h.env.DB.sqlite.prepare('SELECT total_changes() AS n').get().n,changes);
+});
+
+test('creation and rename preserve every custom title except the one exact old operator default',async t=>{
+  const h=setup(t),{main,sub,third}=await h.threeAdmins(),hosts=[main,sub,third],visitor=await h.register('名前の見学');
+  const custom=['カサイとの練習室','カサイのひみつ部屋・別館','カサイの部屋','カサイの特別対戦ホール','サカイのひみつ部屋','イサカのひみつ部屋','星と海の部屋'];
+  for(const [index,actor] of hosts.entries()){
+    let room=await h.createRoom(actor,['village','meadow','forest'][index],0,{name:custom[index]});assert.equal(room.name,custom[index]);
+    for(const name of custom){
+      room=ok(await h.call('/world/rooms/'+actor.id,actor,'PATCH',{revision:room.revision,name})).room;
+      assert.equal(room.name,name);assert.equal(ok(await h.call('/world/rooms/'+actor.id,visitor)).room.name,name);
+      assert.equal(h.env.DB.sqlite.prepare('SELECT name FROM world_rooms WHERE owner_id=?').get(actor.id).name,name);
+    }
+    const canonical=['カサイのひみつ部屋','サカイのひみつ部屋','イサカのひみつ部屋'][index];
+    room=ok(await h.call('/world/rooms/'+actor.id,actor,'PATCH',{revision:room.revision,name:'カサイのひみつ部屋'})).room;
+    assert.equal(room.name,canonical);assert.equal(h.env.DB.sqlite.prepare('SELECT name FROM world_rooms WHERE owner_id=?').get(actor.id).name,canonical);
   }
 });
 

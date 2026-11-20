@@ -143,6 +143,29 @@ test('owner dialogue opens decoration instead of battle or reward controls',asyn
   assert.equal(ui.LT.KasaiChallenge.talk(),true);await Promise.resolve();assert.equal(decorations,1);assert.equal(createdDialogs,0);
   assert.equal((await ui.LT.KasaiChallenge.start()).code,'KASAI_SELF_BATTLE');assert.equal(decorations,2);assert.equal(h.calls.length,0);
 });
+test('a fresh operator identity names its own fallback room correctly without enabling rewards',async()=>{
+  const h=await fixture(),before=JSON.stringify(h.e.state),source=fs.readFileSync(path.join(__dirname,'../kasai-challenge.js'),'utf8');
+  for(const [adminRole,name] of [['main','カサイ'],['sub','サカイ'],['sub-sub','イサカ']]){
+    let decorations=0;const dialogs=[],listeners={};
+    const dialog={open:false,innerHTML:'',setAttribute(){},addEventListener(type,listener){listeners[type]=listener;},querySelector(){return null;},showModal(){this.open=true;},close(){this.open=false;}};
+    const ui=vm.createContext({console,crypto:{randomUUID:()=> 'unused'},localStorage:h.storage,
+      document:{createElement(tag){assert.equal(tag,'dialog');return dialog;},body:{append(node){dialogs.push(node);}}},
+      LT:{KasaiRules:rules,Admin:{player:{id:OWNER,isAdmin:false},worldRequest:h.request,tradeIdentity:async()=>({id:OWNER,isAdmin:true,adminRole})},
+        Rooms:{decorateMine:async()=>{decorations++;return true;}},adminBridge:{getEngine:()=>h.e,startKasaiBattle:()=>{throw Error('Self battle started');},receiveKasaiReward:()=>{throw Error('Self reward applied');}}}
+    });
+    vm.runInContext(source,ui);
+    assert.equal(ui.LT.KasaiChallenge.openRewards(),true,'The cached ordinary profile opens the reward dialog before its fresh identity arrives');
+    for(let turn=0;turn<12;turn++)await Promise.resolve();
+    assert.equal(dialogs.length,1);assert.equal(dialog.open,true);
+    assert(dialog.innerHTML.includes(`<h2 id="kasai-dialog-title">${name}のひみつ部屋</h2>`),`${adminRole}: wrong fallback room name`);
+    assert(dialog.innerHTML.includes(`運営${name}は自分自身と対戦できません。`),`${adminRole}: wrong self-challenge explanation`);
+    if(adminRole!=='main')assert.doesNotMatch(dialog.innerHTML,/カサイ/);
+    const state=ui.LT.KasaiChallenge.status();assert.equal(state.selfChallenge,true);assert.equal(state.canClaim,false);assert.match(state.error,new RegExp(`運営${name}`));
+    assert.equal(h.calls.length,0);assert.equal(h.commits,0);assert.equal(JSON.stringify(h.e.state),before);
+    listeners.click({target:{closest:()=>({dataset:{kasaiAction:'decorate'}})}});await Promise.resolve();
+    assert.equal(decorations,1);assert.equal(dialog.open,false);assert.equal(h.calls.length,0);
+  }
+});
 test('a live victory remains explicitly claimable after leaving, reload and a full reserve without a CPU transcript',async()=>{
   const h=await fixture();h.liveWin='00000000-0000-4000-8000-000000000058';h.e.state.storage=Array.from({length:192},(_,i)=>({...h.e.makeMonster('fuwari',1),uid:'live-full-'+i}));h.e.markCaught('fuwari');
   const reloaded=h.controller();assert((await reloaded.inspect()).ok);assert(reloaded.state().canClaim);assert.equal(reloaded.pending,null);assert.equal(h.commits,0);

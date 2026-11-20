@@ -416,3 +416,33 @@ test('template furniture migration is deterministic, keeps IDs and rotations, an
   assert.equal(crowded.length,32);const preserved=copy(crowded),failure=rearrangeDecorations(target,catalog,crowded);
   assert.equal(failure.ok,false);assert.match(failure.message,/すべての家具/);assert.deepEqual(crowded,preserved);assert(!failure.decorations);
 });
+
+test('creation forms send the matching main, deputy and third operator room names',async()=>{
+  for(const [role,name] of [['main','カサイ'],['sub','サカイ'],['sub-sub','イサカ']]){
+    const h=runtime({others:false});h.identity(KASAI);Object.assign(h.LT.Admin.player,{isAdmin:true,adminRole:role});h.faceWall();
+    assert.equal(h.LT.Rooms.interact(),true);await settle();
+    assert.equal(h.dialog().querySelector('#room-new-name').value,`${name}のひみつ部屋`);
+    assert(h.dialog().innerHTML.includes(`専用の対戦ステージがある、${name}の部屋`));
+    h.click('create');await settle();const sent=h.calls.find(call=>call.path==='/world/rooms'&&call.method==='POST');
+    assert.equal(sent.body.name,`${name}のひみつ部屋`);
+  }
+});
+
+test('the featured operator room uses its actual owner when a deputy room is returned first',async()=>{
+  for(const [role,name] of [['sub','サカイ'],['sub-sub','イサカ']]){
+    const h=runtime({others:false}),room=makeRoom(KASAI);room.owner={...room.owner,name,adminRole:role};room.name=`${name}のひみつ部屋`;h.store.set(KASAI,room);
+    assert(await h.LT.Rooms.open());assert(h.dialog().innerHTML.includes(`<h3>${name}の間</h3>`));
+    assert(!h.dialog().innerHTML.includes('カサイの間'));assert(!h.dialog().innerHTML.includes('謎のトレーナー カサイ'));
+    h.click('visit',{roomOwner:KASAI});await settle();assert.equal(h.engine.map.name,room.name);assert.equal(h.engine.map.owner.adminRole,role);
+    assert(h.messages.some(message=>message.startsWith(`${name}の部屋へ。`)));
+  }
+});
+
+test('a same-revision server name correction and role update refresh an already visited room',async()=>{
+  const h=runtime();assert(await h.LT.Rooms.enter(KASAI));const previous=copy(h.store.get(KASAI)),revision=previous.revision;
+  const corrected={...previous,name:'サカイのひみつ部屋',owner:{...previous.owner,name:'サカイ',adminRole:'sub'}};h.store.set(KASAI,corrected);
+  await h.step(1200);assert.equal(h.engine.map.roomRevision,revision);assert.equal(h.engine.map.name,corrected.name);assert.equal(h.engine.map.owner.adminRole,'sub');
+  assert.match(h.engine.map.subtitle,/サカイ本人/);assert.equal(h.refreshed.length,1);
+  const promoted={...corrected,owner:{...corrected.owner,name:'イサカ',adminRole:'sub-sub'}};h.store.set(KASAI,promoted);
+  await h.step(5000);assert.equal(h.engine.map.name,corrected.name,'An explicit room name must survive a role-only refresh');assert.equal(h.engine.map.owner.adminRole,'sub-sub');assert.match(h.engine.map.subtitle,/イサカ本人/);
+});

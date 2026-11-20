@@ -500,6 +500,12 @@ function roomName(value) {
   if(!name)fail(400,'INVALID_ROOM_NAME','部屋の名前を1〜32文字で入力してください。');
   return name;
 }
+const ROOM_DEFAULT_NAMES=Object.freeze({1:'カサイのひみつ部屋',2:'サカイのひみつ部屋',3:'イサカのひみつ部屋'});
+function effectiveRoomName(name,seat) {
+  // Older clients submitted this exact generated name for every operator.
+  // Repair only that alias; all other explicit names remain player-authored.
+  return (seat===2||seat===3)&&name===ROOM_DEFAULT_NAMES[1]?ROOM_DEFAULT_NAMES[seat]:name;
+}
 export function validateRoomDecorations(input,kind='secret',templateId='hall') {
   const layout=roomTemplateLayout(kind,templateId);
   if(!layout||!Array.isArray(input)||input.length>32)fail(400,'INVALID_ROOM_DECORATIONS','模様替えアイテムは32個まで配置できます。');
@@ -529,7 +535,7 @@ function roomView(row) {
   for(const item of JSON.parse(row.decorations_json)){
     try{validateRoomDecorations([...decorations,item],kind,layout.templateId);decorations.push(item);}catch(_){}
   }
-  return {id:row.owner_id,mapId:'room:'+row.owner_id,owner:worldProfile(row.owner_id,row.owner_name,row.is_admin,'male'),kind,name:row.name,
+  return {id:row.owner_id,mapId:'room:'+row.owner_id,owner:worldProfile(row.owner_id,row.owner_name,row.is_admin,'male'),kind,name:effectiveRoomName(row.name,row.is_admin),
     entrance:{map:row.map_id,x:row.entrance_x,y:row.entrance_y,facing:row.facing,returnX:row.entrance_x-direction[0],returnY:row.entrance_y-direction[1]},
     ...layout,decorations,revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at};
 }
@@ -592,7 +598,7 @@ async function roomsRoute(request,env,path,method,player) {
     await requireNoLiveSession(env,player.id,now);
     const body=await bodyJSON(request);
     if(Object.keys(body).some(key=>!['map','x','y','facing','name'].includes(key)))fail(400,'INVALID_ROOM_ENTRANCE','部屋の入口の指定が正しくありません。');
-    const entrance=roomEntrance(body),name=roomName(body.name===undefined?(player.is_admin?`${player.is_admin===1?'カサイ':adminDisplayName(player.name,player.is_admin)}のひみつ部屋`:'ひみつの部屋'):body.name),existing=await roomRow(env,player.id);
+    const entrance=roomEntrance(body),name=effectiveRoomName(roomName(body.name===undefined?(ROOM_DEFAULT_NAMES[player.is_admin]||'ひみつの部屋'):body.name),player.is_admin),existing=await roomRow(env,player.id);
     if(existing){
       if(existing.map_id!==entrance.map||existing.entrance_x!==entrance.x||existing.entrance_y!==entrance.y||existing.facing!==entrance.facing)fail(409,'ROOM_ALREADY_EXISTS','ひみつの部屋はひとり一つです。別の壁へ移すときは移転してください。');
       return {room:roomView(existing),serverTime:now};
@@ -638,7 +644,7 @@ async function roomsRoute(request,env,path,method,player) {
   if(Object.keys(body).some(key=>!['revision','name','decorations','templateId'].includes(key))||!integer(body.revision,1,1000000000)||body.name===undefined&&body.decorations===undefined&&body.templateId===undefined)fail(400,'INVALID_ROOM_UPDATE','模様替えの内容と版番号を確認してください。');
   if(body.templateId!==undefined&&!row.is_admin)fail(403,'ROOM_TEMPLATE_ADMIN_REQUIRED','部屋の形を変更できるのは、現在登録されている運営本人だけです。');
   const templateId=body.templateId===undefined?row.template_id:roomTemplateId(body.templateId);
-  const name=body.name===undefined?row.name:roomName(body.name),decorations=roomDecorationUpdate(row,body.decorations,templateId);
+  const name=body.name===undefined?row.name:effectiveRoomName(roomName(body.name),row.is_admin),decorations=roomDecorationUpdate(row,body.decorations,templateId);
   await consumeLimit(env,request,`world-room-edit:${player.id}`,60,60000,true);
   const changed=await env.DB.prepare(`UPDATE world_rooms SET name=?,decorations_json=?,template_id=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
     AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=world_rooms.owner_id)
@@ -1062,14 +1068,14 @@ async function worldPopulation(env,now) {
   // The persisted room join excludes deleted/invalid dynamic maps without
   // creating rooms or refreshing presence as a side effect of this read.
   const result=await env.DB.prepare(`SELECT w.map_id AS map,COUNT(*) AS count,r.name AS room_name,r.owner_id AS room_owner,
-    EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=r.owner_id) AS room_admin
+    (SELECT a.singleton FROM admin_members a WHERE a.player_id=r.owner_id) AS room_admin
     FROM world_presence w JOIN players p ON p.id=w.player_id
     LEFT JOIN world_rooms r ON w.map_id='room:'||r.owner_id
     LEFT JOIN players owner ON owner.id=r.owner_id
     WHERE w.updated_at>? AND (w.map_id IN (SELECT value FROM json_each(?)) OR owner.id IS NOT NULL)
     GROUP BY w.map_id,r.name,r.owner_id ORDER BY w.map_id`)
     .bind(now-WORLD_TTL,JSON.stringify(Object.keys(WORLD_MAP_BOUNDS))).all();
-  const rows=result.results.map(row=>({map:row.map,count:row.count,...(row.room_owner?{name:row.room_name,kind:row.room_admin?'kasai':'secret'}:{})}));
+  const rows=result.results.map(row=>({map:row.map,count:row.count,...(row.room_owner?{name:effectiveRoomName(row.room_name,row.room_admin),kind:row.room_admin?'kasai':'secret'}:{})}));
   return {rows,total:rows.reduce((sum,row)=>sum+row.count,0),serverTime:now,ttlMs:WORLD_TTL};
 }
 async function worldRoute(request,env,path,method,player) {
