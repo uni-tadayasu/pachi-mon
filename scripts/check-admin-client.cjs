@@ -774,7 +774,7 @@ function reserveRules(){
 function reserveBundle(role='main',id=PLAYER_A.id){
   return {version:1,playerId:id,role,members:[{main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'}[role],'floravelle','zeroveil','pearlseria','hyogald','rurigorm'].map(species=>({grantId:`admin-trained-v64:${role}:${id}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};
 }
-function reserveAddition(role='main',id=PLAYER_A.id){return {version:2,playerId:id,role,members:[{grantId:`admin-galdogran-v68:${role}:${id}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
+function reserveAddition(role='main',id=PLAYER_A.id){return {version:2,playerId:id,role,members:[{grantId:`admin-galdogran-v68:${role}:${id}:galdogran`,species:'vernix',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function enableReserve(h){h.ctx.LT.AdminReserveRules=reserveRules();return h;}
 
 function initialPayload(owner){return {player:owner,adminExists:true,
@@ -973,7 +973,7 @@ test('a newer role heartbeat prevents an older reserve bundle from being deliver
   assert.equal(applied.length,0);assert.equal(h.ctx.LT.Admin.player.adminRole,'sub');assert.equal(h.api.reserveTeam,null);
 });
 
-test('main and sub-sub receive the Lunaxion addition independently of the old six and only once across pages',async()=>{
+test('main and sub-sub receive the Vernix addition independently of the old six and only once across pages',async()=>{
   for(const role of ['main','sub-sub']){
     const owner={...PLAYER_A,adminRole:role},applied=[];
     const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle(role),adminReserveAddition:reserveAddition(role),grants:[],nextCursor:c.search.includes('cursor=')?null:7}):null,
@@ -981,14 +981,14 @@ test('main and sub-sub receive the Lunaxion addition independently of the old si
     adopt(h,TOKEN_A,owner);await h.api.sync();
     assert.equal(applied.length,2);assert.equal(applied[0].value.version,1);assert.equal(applied[1].value.version,2);
     assert.equal(applied[0].value.members.length,6);assert.equal(applied[1].value.members.length,1);
-    assert.equal(applied[1].value.members[0].gender,'none');assert.equal(applied[1].value.members[0].species,'lunaxion');
+    assert.equal(applied[1].value.members[0].gender,'none');assert.equal(applied[1].value.members[0].species,'vernix');
     assert(applied[0].value.members.every(member=>member.gender==='male'));
     assert(applied.every(entry=>entry.options===undefined));assert.equal(h.ctx.LT.Admin.pending,0);
     assert(h.toasts.some(message=>message.includes('1体をひかえに追加')));
   }
 });
 
-test('Lunaxion pending state counts one and retries without turning the old six into restoration',async()=>{
+test('Vernix pending state counts one and retries without turning the old six into restoration',async()=>{
   const owner={...PLAYER_A,adminRole:'sub-sub'},applied=[];let blocked=true;
   const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle('sub-sub'),adminReserveAddition:reserveAddition('sub-sub'),grants:[]}):null,
     bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({version:value.version,options});return value.version===1?{ok:true,alreadyReceived:true}:blocked?{ok:false,pending:true}:{ok:true,added:1};},adminReserveTeamStatus:()=>({newCount:1})}}));
@@ -1009,7 +1009,7 @@ test('invalid addition payloads cannot borrow the old bundle, another role, anot
   }
 });
 
-test('dedicated Lunaxion restore refreshes authorization, shares the operation lock, and never restores v64',async()=>{
+test('dedicated Vernix restore refreshes authorization, shares the operation lock, and never restores v64',async()=>{
   const owner={...PLAYER_A,adminRole:'sub-sub'},pending=deferred(),applied=[];
   const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,
     bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:1,restored:1,message:'1体を復元しました。'};}}}));
@@ -1022,12 +1022,12 @@ test('dedicated Lunaxion restore refreshes authorization, shares the operation l
   const boxes={'#pachi-admin-reserve':{innerHTML:''},'#pachi-admin-reserve-addition':{innerHTML:''}};
   h.api.attachConsole({open:true,querySelector:selector=>boxes[selector]||null});h.api.renderAdminReserveTeam();
   assert.match(boxes['#pachi-admin-reserve'].innerHTML,/全員Lv\.100・オス/);
-  assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/ルナクシオン · Lv\.100・性別なし/);
+  assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/ヴェルニクス · Lv\.100・性別なし/);
   assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/data-admin-action="restore-reserve-addition"/);
   assert(!boxes['#pachi-admin-reserve-addition'].innerHTML.includes('data-admin-action="restore-reserve"'));
 });
 
-test('Lunaxion restore rejects delayed identities, a revoked role and a newer conflicting heartbeat',async()=>{
+test('Vernix restore rejects delayed identities, a revoked role and a newer conflicting heartbeat',async()=>{
   const owner={...PLAYER_A,adminRole:'main'},applied=[];
   for(const change of ['identity','revoked','heartbeat']){
     const pending=deferred();
@@ -1043,12 +1043,12 @@ test('Lunaxion restore rejects delayed identities, a revoked role and a newer co
 
 
 test('delayed old-backend addition payloads keep the same receipt while normalizing their species before delivery',async()=>{
-  for(const role of ['main','sub-sub'])for(const retired of ['galdogran','galdoras'])for(const gender of ['male','female']){
+  for(const role of ['main','sub-sub'])for(const retired of ['galdogran','galdoras','lunaxion'])for(const gender of ['male','female','none']){
     const owner={...PLAYER_A,adminRole:role},legacy=reserveAddition(role),applied=[];legacy.members[0].species=retired;legacy.members[0].gender=gender;
     const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveAddition:legacy,grants:[]}):null,
       bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,alreadyReceived:true,added:0};}}}));
     adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(applied.length,1);
-    assert.equal(applied[0].members[0].species,'lunaxion');assert.equal(applied[0].members[0].grantId,legacy.members[0].grantId);
+    assert.equal(applied[0].members[0].species,'vernix');assert.equal(applied[0].members[0].grantId,legacy.members[0].grantId);
     assert.equal(applied[0].members[0].gender,'none');
     assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(h.toasts.length,0);
   }

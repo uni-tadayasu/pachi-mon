@@ -60,7 +60,7 @@ for(const species of Object.values(D.species)){
   for(const type of species.types)typeCoverage[type]++;
   assert(species.moves.some(id=>D.moves[id].kind==='attack'&&T.has(species,D.moves[id].element)),`${species.id}: no matching attack after reclassification`);
 }
-assert(dualSpecies>0);assert(ORDER.filter(type=>type!=='stone').every(type=>typeCoverage[type]>0),'An active type has no species');assert.equal(typeCoverage.stone,0,'The legacy stone chart is retained after its sole lineage is removed');assert.equal(typeCoverage.super,2);assert.deepEqual(Object.values(D.species).filter(s=>s.types.includes('super')).map(s=>s.id),['lunax','lunaxion']);
+assert(dualSpecies>0);assert(ORDER.filter(type=>type!=='stone').every(type=>typeCoverage[type]>0),'An active type has no species');assert.equal(typeCoverage.stone,0,'The legacy stone chart is retained after its sole lineage is removed');assert.equal(typeCoverage.super,3);assert.deepEqual(Object.values(D.species).filter(s=>s.types.includes('super')).map(s=>s.id),['verny','vernion','vernix']);
 assert.deepEqual(copy(T.of(['tide','wind','wind'])),['tide','wind']);
 assert.deepEqual(copy(T.of(['void','leaf'])),['void']);
 assert.deepEqual(copy(T.of(['leaf','void'])),['leaf']);

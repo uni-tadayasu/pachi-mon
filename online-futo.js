@@ -26,7 +26,7 @@
   const reserveLook = mon => {
     const member=LT.AdminReserveRules?.member?.(mon);
     if(!member)return false;
-    return member.gender==='none' ? mon.species==='lunaxion'&&!Object.hasOwn(mon,'gender') : mon.gender===member.gender;
+    return member.gender==='none' ? mon.species==='vernix'&&!Object.hasOwn(mon,'gender') : mon.gender===member.gender;
   };
   const isMythicalMember = mon => mon?.species === 'floravelle' && (/^admin-mythical:[a-zA-Z0-9_.:-]+$/.test(mon.grantId || '') || LT.KasaiRules?.isReward(mon) || reserveLook(mon));
   function ownedMythical() { return ownedList().find(isMythicalMember) || null; }
@@ -162,7 +162,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v10-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68:galdoras-single-form-v70:lunar-super-genderless-v74:owned-battle-growth-source-level-v79';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v10-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68:galdoras-single-form-v70:lunar-super-genderless-v74:owned-battle-growth-source-level-v79:vernix-three-form-moves-v83';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, growthOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 16 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, growthOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 17 };
 })();

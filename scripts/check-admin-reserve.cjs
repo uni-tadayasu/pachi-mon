@@ -15,7 +15,7 @@ const roles={main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'};
 const entitledRoles=['main','sub-sub'];
 const common=['floravelle','zeroveil','pearlseria','hyogald','rurigorm'];
 function bundle(role='main',playerId=PLAYER){return {version:1,playerId,role,members:[roles[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
-function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
+function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'vernix',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function fresh(){const engine=new Engine();assert(engine.newGame('komori').ok);return engine;}
 const all=engine=>[...engine.state.party,...engine.state.storage];
 function assertDisabled(result){
@@ -214,7 +214,7 @@ test('a normalized older save can receive the reserve team without a false stale
   const outcome=h.receive();assert.equal(outcome.added,6,JSON.stringify(outcome));assert.equal(h.control.writes,1);
 });
 
-test('the separate Lunaxion grant trains one genderless member per entitled role and leaves every v64 individual unchanged',()=>{
+test('the separate Vernix grant trains one genderless member per entitled role and leaves every v64 individual unchanged',()=>{
   for(const role of entitledRoles){
     const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     engine.state.storage[0].nickname='相棒';engine.state.storage[1].moveOrder=[3,2,1,0];
@@ -224,7 +224,7 @@ test('the separate Lunaxion grant trains one genderless member per entitled role
     assert.equal(engine.adminReserveTeamStatus(grant).total,1);
     assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
     assert.deepEqual(copy(engine.state.storage.slice(0,6)),existing);assert.deepEqual(copy(engine.state.party),party);
-    const mon=engine.state.storage[6],simulated=fresh(),trained=simulated.makeMonster('lunaxion',1),events=[];
+    const mon=engine.state.storage[6],simulated=fresh(),trained=simulated.makeMonster('vernix',1),events=[];
     trained.heldItem='trainband';
     simulated.giveXP(trained,Array.from({length:99},(_,i)=>simulated.xpToNext(i+1)).reduce((a,b)=>a+b,0),events);
     assert.equal(events.filter(event=>event.kind==='level').length,99);
@@ -237,7 +237,7 @@ test('the separate Lunaxion grant trains one genderless member per entitled role
   }
 });
 
-test('Lunaxion retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
+test('Vernix retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
   const engine=fresh(),grant=addition('sub-sub');engine.receiveAdminReserveTeam(bundle('sub-sub'));engine.receiveAdminReserveTeam(grant);
   const mon=engine.state.storage[6];mon.nickname='いわ';mon.moveOrder=[3,1,0,2];mon.heldItem='everpebble';
   engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
@@ -260,7 +260,7 @@ test('Lunaxion retry preserves its UID and build; explicit recovery restores onl
   assert.equal(engine.adminReserveTeamStatus(bundle('sub-sub')).missingCount,1);
 });
 
-test('Lunaxion delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
+test('Vernix delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
   for(const condition of ['full','battle','unstarted','receipts']){
     const engine=condition==='unstarted'?new Engine():fresh();
     if(condition==='full')for(let i=0;i<192;i++)engine.state.storage.push(engine.makeMonster('komori',1));
@@ -271,7 +271,7 @@ test('Lunaxion delivery remains atomic under full reserve, battle, unopened save
   }
 });
 
-test('Lunaxion grants reject a sex assignment and saves reject another species, duplicate receipt or altered growth',()=>{
+test('Vernix grants reject a sex assignment and saves reject another species, duplicate receipt or altered growth',()=>{
   for(const mutate of [g=>g.version=1,g=>g.members.push(copy(g.members[0])),g=>g.members[0].species='komori',g=>g.members[0].gender='female',g=>g.members[0].gender='male',g=>g.members[0].level=99,g=>g.members[0].bonusPoints=100,g=>g.members[0].heldItem='everstone',g=>g.members[0].grantId=g.members[0].grantId.replace('v68','v64'),g=>g.members[0].grantId=g.members[0].grantId.replace(':main:',':sub:')]){
     const engine=fresh(),grant=addition(),before=JSON.stringify(engine.state);mutate(grant);
     assert.throws(()=>rules.normalizeBundle(grant));assert.equal(engine.receiveAdminReserveTeam(grant).ok,false);assert.equal(JSON.stringify(engine.state),before);
@@ -287,7 +287,7 @@ test('Lunaxion grants reject a sex assignment and saves reject another species, 
   }
 });
 
-test('the Lunaxion bridge retains durable-write ordering, role checks, battle and cross-tab barriers',()=>{
+test('the Vernix bridge retains durable-write ordering, role checks, battle and cross-tab barriers',()=>{
   for(const blocked of ['nonadmin','wrong-role','wrong-player','online','trade','live','battle','stale-disk']){
     const h=bridgeHarness(),owner=h.ctx.LT.Admin.player;
     if(blocked==='nonadmin')owner.isAdmin=false;if(blocked==='wrong-role')owner.adminRole='sub';if(blocked==='wrong-player')owner.id=OTHER;
@@ -300,7 +300,7 @@ test('the Lunaxion bridge retains durable-write ordering, role checks, battle an
     const h=bridgeHarness({playing});h.control.fail=true;assert(h.receive(addition()).pending);assert.equal(h.control.writes,0);
     h.control.fail=false;assert.equal(h.receive(addition()).added,1);assert.equal(h.control.writes,1);assert.equal(h.control.remembered,1);
     assert(h.receive(addition()).alreadyReceived);assert.equal(h.control.writes,1);
-    assert.equal(h.ctx.storedSave.storage[0].species,'lunaxion');
+    assert.equal(h.ctx.storedSave.storage[0].species,'vernix');
   }
 });
 
@@ -311,7 +311,7 @@ test('v68 through v73 received forms and unchanged entitlement IDs suppress dupl
     const raw=copy(legacySave);if(removeReceipts)raw.giftReceipts=[];
     const engine=new Engine(raw),grant=addition(role),oldPayload=copy(grant);oldPayload.members[0].species=retired;oldPayload.members[0].gender=gender;
     const member=all(engine).find(mon=>mon.grantId===grant.members[0].grantId),before=copy(engine.state);
-    assert.equal(member.species,'lunaxion');if(role==='sub')assertDisabled(engine.adminReserveTeamStatus(grant));else assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
+    assert.equal(member.species,'vernix');if(role==='sub')assertDisabled(engine.adminReserveTeamStatus(grant));else assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
     assert.deepEqual(copy(rules.normalizeBundle(oldPayload)),grant,'A pending old-backend payload receives the same canonical entitlement');
     for(const payload of [grant,oldPayload])for(const options of [{},{restore:true}]){
       const result=engine.receiveAdminReserveTeam(payload,options);if(role==='sub')assertDisabled(result);else{assert(result.alreadyReceived);assert.equal(result.added,0);}
@@ -322,14 +322,14 @@ test('v68 through v73 received forms and unchanged entitlement IDs suppress dupl
   }
 });
 
-test('an old receipt restores only its missing canonical Lunaxion and keeps the original six intact',()=>{
+test('an old receipt restores only its missing canonical Vernix and keeps the original six intact',()=>{
   for(const role of entitledRoles){
     const raw=copy(legacySave),grant=addition(role),at=raw.storage.findIndex(mon=>mon.grantId===grant.members[0].grantId),missing=raw.storage.splice(at,1)[0];
     const engine=new Engine(raw);assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     const before=copy(engine.state);assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.state),before);
     assert.equal(engine.adminReserveTeamStatus(grant).restorableCount,1);
     const result=engine.receiveAdminReserveTeam(grant,{restore:true});assert.equal(result.added,1);assert.equal(result.restored,1);
-    const restored=engine.state.storage.at(-1);assert.equal(restored.species,'lunaxion');assert.equal(restored.grantId,missing.grantId);assert.notEqual(restored.uid,missing.uid);
+    const restored=engine.state.storage.at(-1);assert.equal(restored.species,'vernix');assert.equal(restored.grantId,missing.grantId);assert.notEqual(restored.uid,missing.uid);
     assert.equal(restored.level,100);assert.equal(restored.gender,undefined);assert.equal(engine.genderOf(restored),'none');assert.equal(restored.heldItem,'trainband');assert.equal(engine.allocationInfo(restored).free,297);
     assert.deepEqual(copy(engine.state.storage.slice(0,-1)),before.storage);assert.deepEqual(copy(engine.state.party),before.party);
     assert.deepEqual(copy(engine.state.giftReceipts),before.giftReceipts);
@@ -344,12 +344,12 @@ test('changing the historical entitlement prefix or final species ID cannot crea
 });
 
 
-test('normal and retired earlier forms cannot reuse the final-form gift and all three role entitlements stay Lunaxion',()=>{
+test('normal and retired earlier forms cannot reuse the final-form gift and all three role entitlements stay Vernix',()=>{
   for(const role of Object.keys(roles)){
     const engine=fresh(),grant=addition(role);if(role==='sub')seedHistoricalReserve(engine,grant);else assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
-    const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'lunaxion');
+    const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'vernix');
     const events=[];engine.giveXP(final,1,events);assert.deepEqual(copy(final),before);assert(!events.some(event=>event.kind==='evolve'));
-    for(const species of ['lunax','galdo','galdoran']){
+    for(const species of ['verny','vernion','lunax','galdo','galdoran']){
       const invalid=copy(grant);invalid.members[0].species=species;assert.throws(()=>rules.normalizeBundle(invalid));
       const raw=engine.serialize();raw.storage[0].species=species;raw.storage[0].hp=1;assert.throws(()=>new Engine(raw));
     }
@@ -357,31 +357,81 @@ test('normal and retired earlier forms cannot reuse the final-form gift and all 
   }
 });
 
-test('all four historical species retain individual data and spent PP when saved as the new two-form lineage',()=>{
+test('all four historical species retain individual data and spent PP when saved as the new three-form lineage',()=>{
   const raw=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/v73-retired-line-save.json'),'utf8'));
   const former=[...raw.party,...raw.storage],before=copy(raw),engine=new Engine(raw);
-  const expectedSpecies={galdo:'lunax',galdoran:'lunax',galdoras:'lunaxion',galdogran:'lunaxion'};
-  const aliases={galdoras_crown:'lunax_crescent',galdoras_fault:'lunax_nova',galdoras_bastion:'lunax_aegis',galdoras_mend:'lunax_renew'};
+  const expectedSpecies={galdo:'verny',galdoran:'vernion',galdoras:'vernix',galdogran:'vernix'};
+  const aliases={galdoras_crown:'vernix_psycho',galdoras_fault:'vernix_frost',galdoras_bastion:'vernix_thunder',galdoras_mend:'vernix_renew'};
   assert.deepEqual(former.map(mon=>mon.species),['galdo','galdoran','galdoras','galdogran']);
   for(const old of former){
     const mon=all(engine).find(member=>member.uid===old.uid),expected={...copy(old),species:expectedSpecies[old.species],
-      pp:Object.fromEntries(Object.entries(old.pp).map(([id,value])=>[aliases[id],value]))};
+      pp:Object.fromEntries(Object.entries(old.pp).map(([id,value])=>[aliases[id],aliases[id]==='vernix_renew'?Math.min(5,value):value]))};
     delete expected.gender;
     expected.hp=Math.min(old.hp,engine.stats(expected).hp);
     assert.deepEqual(copy(mon),expected,old.species+': UID, HP, XP, name, shiny, allocations, item and move order survive');
     assert.equal(engine.genderOf(mon),'none','Every retired gender is replaced by the new genderless identity');
   }
-  assert.equal(engine.state.party[0].hp,0);assert.equal(engine.state.party[1].species,'lunax');assert.equal(engine.state.party[1].level,49,'Loading a historical earlier form does not grant an automatic evolution');
+  assert.equal(engine.state.party[0].hp,0);assert.equal(engine.state.party[1].species,'vernion');assert.equal(engine.state.party[1].level,49,'Loading a historical earlier form does not grant an automatic evolution');
   assert.deepEqual(copy(raw),before,'The historical fixture is not mutated');
   const stored=engine.serialize();assert.deepEqual(copy(new Engine(stored).state),copy(engine.state));
   for(const mutate of [
-    mon=>mon.pp.lunax_crescent=mon.pp.galdoras_crown,
+    mon=>mon.pp.vernix_psycho=mon.pp.galdoras_crown,
     mon=>mon.pp.galdoras_crown=-1,
     mon=>mon.pp.galdoras_fault=6,
     mon=>delete mon.pp.galdoras_mend
   ]){
     const invalid=copy(before);mutate(invalid.party[1]);assert.throws(()=>new Engine(invalid),'Migration must not weaken exact PP validation');
   }
+});
+
+const lunarSave=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/v82-lunar-leader-save.json'),'utf8'));
+test('actual v82 lunar saves migrate to Verny and Vernix with stable receipts, progress, growth and clamped healing PP',()=>{
+  const before=copy(lunarSave),engine=new Engine(lunarSave),aliases={lunax_crescent:'vernix_psycho',lunax_nova:'vernix_frost',lunax_aegis:'vernix_thunder',lunax_renew:'vernix_renew'};
+  for(const old of [...before.party,...before.storage]){
+    const mon=all(engine).find(member=>member.uid===old.uid),expected={...copy(old),species:old.species==='lunax'?'verny':'vernix',
+      pp:Object.fromEntries(Object.entries(old.pp).map(([id,value])=>[aliases[id],id==='lunax_renew'?Math.min(5,value):value]))};
+    delete expected.gender;expected.hp=Math.min(expected.hp,engine.stats(expected).hp);
+    assert.deepEqual(copy(mon),expected,'Old individual data survives without healing or resetting the build');
+  }
+  assert.equal(engine.state.party[0].hp,0);assert.equal(engine.state.party[0].level,23);
+  assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
+  assert.deepEqual(copy(lunarSave),before);
+  for(const role of Object.keys(roles)){
+    const canonical=addition(role),stale=copy(canonical);stale.members[0].species='lunaxion';
+    assert.deepEqual(copy(rules.normalizeBundle(stale)),canonical);
+    const state=copy(engine.state);
+    for(const packet of [stale,canonical])for(const options of [{},{restore:true}]){
+      const result=engine.receiveAdminReserveTeam(packet,options);
+      if(role==='sub')assertDisabled(result);else{assert(result.alreadyReceived);assert.equal(result.added,0);}
+      assert.deepEqual(copy(engine.state),state,'Version2 old/new packets resolve to one already-owned entitlement');
+    }
+    const id=canonical.members[0].grantId;assert.equal(engine.state.giftReceipts.filter(value=>value===id).length,1);assert.equal(all(engine).filter(mon=>mon.grantId===id).length,1);
+  }
+});
+
+test('a delayed v82 entitlement delivers or restores only canonical Vernix while sub stays disabled',()=>{
+  for(const role of Object.keys(roles)){
+    const engine=fresh(),canonical=addition(role),stale=copy(canonical);stale.members[0].species='lunaxion';
+    const result=engine.receiveAdminReserveTeam(stale);
+    if(role==='sub'){assertDisabled(result);assert.equal(engine.state.storage.length,0);continue;}
+    assert.equal(result.added,1);const delivered=engine.state.storage[0];
+    assert.equal(delivered.species,'vernix');assert.equal(delivered.grantId,canonical.members[0].grantId);assert.equal(delivered.battleGrowth||0,0);
+    assert.equal(engine.receiveAdminReserveTeam(canonical).alreadyReceived,true);
+    assert(engine.release(0).ok);assert.equal(engine.receiveAdminReserveTeam(stale).alreadyReceived,true);assert.equal(engine.state.storage.length,0);
+    assert.equal(engine.receiveAdminReserveTeam(stale,{restore:true}).restored,1);
+    assert.equal(engine.state.storage[0].species,'vernix');assert.notEqual(engine.state.storage[0].uid,delivered.uid);assert.equal(engine.state.storage[0].grantId,delivered.grantId);
+    assert.equal(engine.state.giftReceipts.filter(id=>id===delivered.grantId).length,1);assert.equal(engine.state.storage[0].battleGrowth||0,0);
+  }
+});
+
+test('v82 migration validates the old PP budget before clamping and rejects duplicate alias keys or forged stable gifts',()=>{
+  for(const mutate of [
+    mon=>mon.pp.lunax_renew=7,
+    mon=>mon.pp.lunax_nova=6,
+    mon=>mon.pp.vernix_renew=mon.pp.lunax_renew,
+    mon=>delete mon.pp.lunax_aegis,
+    mon=>mon.grantId=mon.grantId.replace(/:galdogran$/,':vernix')
+  ]){const bad=copy(lunarSave);mutate(bad.storage[0]);assert.throws(()=>new Engine(bad));}
 });
 
 const COMBAT_PER_LEVEL={hp:2,atk:1,def:1,spAtk:1,spDef:1,speed:1};
@@ -483,7 +533,7 @@ test('all eighteen operator members retain HP198 and five stats99 from combat gr
   }
 });
 
-test('the separate v68 Lunaxion entitlement never acquires the six-member growth migration',()=>{
+test('the separate v68 Vernix entitlement never acquires the six-member growth migration',()=>{
   for(const role of Object.keys(roles)){
     const engine=fresh(),grant=addition(role);seedHistoricalReserve(engine,bundle(role));seedHistoricalReserve(engine,grant);const mon=engine.state.storage.at(-1);
     assert.equal(mon.battleGrowth||0,0);const before=copy(mon),loaded=new Engine(engine.serialize()),saved=loaded.state.storage.find(member=>member.uid===mon.uid);assert.deepEqual(copy(saved),before);
@@ -605,7 +655,7 @@ test('historically owned sub initial gifts and receipts survive loading and bloc
   assert.deepEqual(copy(h.engine.serialize()),before);assert.equal(h.control.raw,JSON.stringify(save));assert.equal(h.control.writes,0);
   assert(!all(h.engine).some(mon=>mon.uid===released.uid));assert(h.engine.state.giftReceipts.includes(released.grantId));
   assert(all(h.engine).filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')).every(mon=>mon.battleGrowth===99&&mon.gender==='female'));
-  assert.equal(all(h.engine).find(mon=>mon.species==='lunaxion').battleGrowth||0,0);assert.equal(h.engine.state.party[1].hp,0);
+  assert.equal(all(h.engine).find(mon=>mon.species==='vernix').battleGrowth||0,0);assert.equal(h.engine.state.party[1].hp,0);
   const previous=copy(all(h.engine).find(mon=>mon.grantId===initial.grantId)),config={...initial,stats:{...initial.stats,atk:333}};
   assert(h.mutate('updateOwnedFuto',initial.grantId,config).ok);const updated=all(h.engine).find(mon=>mon.grantId===initial.grantId);
   assert.equal(updated.uid,previous.uid);assert.equal(updated.nickname,previous.nickname);assert.equal(updated.customStats.atk,333);assert.equal(h.engine.state.giftReceipts.length,save.giftReceipts.length);

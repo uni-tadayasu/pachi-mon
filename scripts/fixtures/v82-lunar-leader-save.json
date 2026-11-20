@@ -1,0 +1,207 @@
+{
+  "version": 5,
+  "started": true,
+  "map": "village",
+  "x": 21,
+  "y": 17,
+  "facing": "down",
+  "avatar": "male",
+  "playerName": "旧月保存",
+  "party": [
+    {
+      "uid": "v82-owned-lunax",
+      "species": "lunax",
+      "level": 23,
+      "xp": 0,
+      "hp": 0,
+      "shiny": false,
+      "pp": {
+        "lunax_crescent": 1,
+        "lunax_nova": 0,
+        "lunax_aegis": 3,
+        "lunax_renew": 6
+      },
+      "nickname": "旧通常",
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "heldItem": "trainband",
+      "bonusPoints": 11,
+      "battleGrowth": 7,
+      "alloc": {
+        "hp": 16,
+        "atk": 10,
+        "spAtk": 5
+      }
+    },
+    {
+      "uid": "v82-owned-lunaxion",
+      "species": "lunaxion",
+      "level": 79,
+      "xp": 0,
+      "hp": 570,
+      "shiny": true,
+      "pp": {
+        "lunax_crescent": 1,
+        "lunax_nova": 0,
+        "lunax_aegis": 3,
+        "lunax_renew": 6
+      },
+      "nickname": "旧最終",
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "heldItem": "trainband",
+      "bonusPoints": 11,
+      "battleGrowth": 20,
+      "alloc": {
+        "hp": 16,
+        "atk": 10,
+        "spAtk": 5
+      }
+    }
+  ],
+  "storage": [
+    {
+      "uid": "v82-gift-main",
+      "species": "lunaxion",
+      "level": 100,
+      "xp": 0,
+      "hp": 729,
+      "shiny": false,
+      "pp": {
+        "lunax_crescent": 1,
+        "lunax_nova": 0,
+        "lunax_aegis": 3,
+        "lunax_renew": 6
+      },
+      "nickname": "旧配布0",
+      "grantId": "admin-galdogran-v68:main:P0123456789abcdef:galdogran",
+      "heldItem": "trainband",
+      "bonusPoints": 99,
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 64,
+        "atk": 64,
+        "def": 64,
+        "spAtk": 64,
+        "spDef": 41
+      }
+    },
+    {
+      "uid": "v82-gift-sub",
+      "species": "lunaxion",
+      "level": 100,
+      "xp": 0,
+      "hp": 729,
+      "shiny": false,
+      "pp": {
+        "lunax_crescent": 1,
+        "lunax_nova": 0,
+        "lunax_aegis": 3,
+        "lunax_renew": 6
+      },
+      "nickname": "旧配布1",
+      "grantId": "admin-galdogran-v68:sub:P0123456789abcdef:galdogran",
+      "heldItem": "trainband",
+      "bonusPoints": 99,
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 64,
+        "atk": 64,
+        "def": 64,
+        "spAtk": 64,
+        "spDef": 41
+      }
+    },
+    {
+      "uid": "v82-gift-sub-sub",
+      "species": "lunaxion",
+      "level": 100,
+      "xp": 0,
+      "hp": 729,
+      "shiny": false,
+      "pp": {
+        "lunax_crescent": 1,
+        "lunax_nova": 0,
+        "lunax_aegis": 3,
+        "lunax_renew": 6
+      },
+      "nickname": "旧配布2",
+      "grantId": "admin-galdogran-v68:sub-sub:P0123456789abcdef:galdogran",
+      "heldItem": "trainband",
+      "bonusPoints": 99,
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "alloc": {
+        "hp": 64,
+        "atk": 64,
+        "def": 64,
+        "spAtk": 64,
+        "spDef": 41
+      }
+    }
+  ],
+  "giftReceipts": [
+    "admin-galdogran-v68:main:P0123456789abcdef:galdogran",
+    "admin-galdogran-v68:sub:P0123456789abcdef:galdogran",
+    "admin-galdogran-v68:sub-sub:P0123456789abcdef:galdogran"
+  ],
+  "tradeReceipts": [],
+  "inventory": {
+    "salve": 5,
+    "tonic": 2,
+    "chime": 8,
+    "remedy": 2
+  },
+  "held": {},
+  "coins": 120,
+  "seals": [],
+  "leagueWins": [],
+  "seen": [
+    "komori",
+    "lunax",
+    "lunaxion"
+  ],
+  "caught": [
+    "komori",
+    "lunax",
+    "lunaxion"
+  ],
+  "flags": {},
+  "steps": 0,
+  "playSeconds": 0,
+  "visited": [
+    "village"
+  ],
+  "questsClaimed": [],
+  "stats": {
+    "wins": 0,
+    "captures": 0,
+    "towerBest": 0,
+    "rivalWins": 0,
+    "evolutions": 0
+  },
+  "secrets": [],
+  "tricks": []
+}

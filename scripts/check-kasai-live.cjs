@@ -9,7 +9,7 @@ let runtime;
 async function rules(){
   if(runtime)return runtime;const {createReplayRuntime}=await import('../server/kasai-replay.mjs'),LT=createReplayRuntime();
   const html=fs.readFileSync(require.resolve('../index.html'),'utf8'),source=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].find(match=>match[1].includes('deterministic, save-independent rental-team duels'))[1];
-  const context=vm.createContext({LT,console});vm.runInContext(source,context);vm.runInContext(fs.readFileSync(require.resolve('../kasai-live-model.js'),'utf8'),context);return runtime={LT,rules:context.LT.KasaiLiveRules};
+  const context=vm.createContext({LT,console});vm.runInContext(source,context);vm.runInContext(fs.readFileSync(require.resolve('../legacy-battle-v82.js'),'utf8'),context);vm.runInContext(fs.readFileSync(require.resolve('../kasai-live-model.js'),'utf8'),context);return runtime={LT,rules:context.LT.KasaiLiveRules};
 }
 async function fixture(role='challenger'){
   const loaded=await rules(),e=new loaded.LT.Engine();e.newGame('komori');
@@ -118,9 +118,23 @@ test('live permission and battle UI require separate explicit approval and comma
   const h=await browserFixture('kasai');h.offer();h.s.state='permission';h.s.arrived=[true,true];assert((await h.ui.refresh()).ok);
   assert(h.dialog().open);assert.match(h.dialog().innerHTML,/data-kasai-live="accept"/);assert.match(h.dialog().innerHTML,/data-kasai-live="decline"/);assert.equal(h.scenes.length,0,'Discovery must not clear or start unrelated online battle scenes');assert(!h.calls.some(call=>call.path.endsWith('/answer')));
   await h.click('accept');assert.equal(h.ui.session().state,'battle');assert.match(h.dialog().innerHTML,/kasai-live-canvas/);assert.match(h.dialog().innerHTML,/data-kasai-live="move"/);assert.match(h.dialog().innerHTML,/data-kasai-live="submit" disabled/);assert(!h.calls.some(call=>call.path.endsWith('/actions')));
-  await h.click('move',0);assert(!h.calls.some(call=>call.path.endsWith('/actions')));await h.click('submit');assert.equal(h.calls.filter(call=>call.path.endsWith('/actions')).length,1);assert.equal(h.scenes.at(-1).liveVersion,'kasai-live-v58');
+  await h.click('move',0);assert(!h.calls.some(call=>call.path.endsWith('/actions')));await h.click('submit');assert.equal(h.calls.filter(call=>call.path.endsWith('/actions')).length,1);assert.equal(h.scenes.at(-1).liveVersion,'kasai-live-v83-vernix');
 });
 test('closing the result UI returns to the stage while Kasai remains pinned until the challenger leaves',async()=>{
   const h=await browserFixture('kasai');h.battle();h.s.state='result';h.s.battle.winner=1;assert((await h.ui.refresh()).ok);
   assert(h.dialog().open);assert.match(h.dialog().innerHTML,/ステージに戻る/);await h.click('dismiss');assert.equal(h.dialog().open,false);assert.equal(h.scenes.at(-1),null);assert(h.ui.isActive());assert(h.ui.locked());assert.equal(h.e.state.y,4);assert.equal(h.restores.length,0);assert(!h.banner().innerHTML.includes('data-kasai-live="leave"'));
+});
+
+test('an in-progress v82 live match renders original names and skills while preserving the authoritative battle',async()=>{
+  const h=await browserFixture('challenger'),loaded=await rules(),legacy=loaded.LT.LegacyBattles,lunar=JSON.parse(fs.readFileSync(require.resolve('./fixtures/v82-lunar-leader-save.json'),'utf8'));
+  const party=lunar.party.map(mon=>{const member=copy(mon);delete member.nickname;member.hp=Math.max(1,member.hp);return member;});
+  h.battle();h.s.battle=copy(legacy.live().create(party,[party[1],party[0]],83));h.s.round=h.s.battle.round;
+  const before=JSON.stringify(h.s.battle),catalog=JSON.stringify(loaded.LT.DATA);
+  assert((await h.ui.refresh()).ok);const html=h.dialog().innerHTML;
+  assert.match(html,/ルナクス/);assert.match(html,/ルナクシオン/);
+  for(const id of ['lunax_crescent','lunax_nova','lunax_aegis','lunax_renew'])assert(html.includes(legacy.move(id).name),id+' keeps its archived move label');
+  assert.equal(JSON.stringify(h.s.battle),before);assert.equal(JSON.stringify(h.scenes.at(-1)),before);
+  assert.equal(JSON.stringify(loaded.LT.DATA),catalog);assert.equal(loaded.LT.DATA.species.lunaxion,undefined);assert.equal(loaded.LT.DATA.moves.lunax_nova,undefined);
+  h.s.battle.teams[0].monsters[0].nickname='<A>';assert((await h.ui.refresh()).ok);assert.match(h.dialog().innerHTML,/&lt;A&gt;/);
+  await h.click('move',0);await h.click('submit');assert.equal(h.calls.filter(call=>call.path.endsWith('/actions')).length,1);assert.equal(h.ui.session().battle.liveVersion,'kasai-live-v58');
 });

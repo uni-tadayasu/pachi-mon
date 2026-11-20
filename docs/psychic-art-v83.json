@@ -1,0 +1,136 @@
+{
+  "version": 83,
+  "purpose": "Replace the retired lunar leader artwork with the user's three-stage psychic lineage, preserving the order 0001 → 0002 → 0003.",
+  "tool": "image_gen.imagegen (built-in), three separate precise-object-edit calls using the corresponding uploaded reference.",
+  "generatedDate": "2026-11-20",
+  "layout": {
+    "rows": 1,
+    "columns": 2,
+    "sourceDimensions": [
+      1774,
+      887
+    ],
+    "cellDimensions": [
+      887,
+      887
+    ],
+    "front": "left cell",
+    "rear": "right cell; independently authored rear three-quarter view",
+    "transparent": true,
+    "directionConvention": "+1 faces screen-right; -1 faces screen-left. Metadata records the observed authored direction rather than assuming the prompt's requested direction."
+  },
+  "forms": [
+    {
+      "id": "verny",
+      "name": "ヴェルニィ",
+      "stage": 0,
+      "sourceReference": "0001.png",
+      "sourceReferenceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceReferenceSha256": "83df65692d2d1a107f110338f308fa0ca53942fc1a649e865d97ccda97ce92a1",
+      "output": "assets/verny-user-v83.png",
+      "outputSha256": "0f1baf54bae798b9316b0bb68bc3ccb198ebc2e765bf482d800eaab7efc6ced4",
+      "outputBytes": 934846,
+      "frontDirection": -1,
+      "backDirection": -1,
+      "armCount": 2,
+      "visibleAlphaBoundsByCell": [
+        [
+          139,
+          55,
+          793,
+          838
+        ],
+        [
+          114,
+          55,
+          757,
+          832
+        ]
+      ],
+      "prompt": "PRECISE OBJECT EDIT / PRODUCTION GAME SPRITE ASSET. Use the attached character as the exact canonical character reference. Create ONE transparent PNG sprite atlas in a WIDE 2:1 layout with one row and exactly TWO equal SQUARE cells: LEFT cell is a faithful full-body FRONT three-quarter view, subtly facing screen-right; RIGHT cell is a newly authored full-body REAR three-quarter view of the SAME creature, subtly facing screen-left. The rear must show its back and back of head, NOT a mirrored front and NOT the ivory chest or full face. Character identity and anatomy are mandatory: initial small cute stage, broad angular magenta/purple spotted crest and head, teal-green eyes and inner crest highlights, ivory smiling muzzle, compact purple body, ONE simple ivory chest patch, exactly TWO ARMS total with small fists and ivory claws, two short sturdy legs, thick curved tail ending in a flattened magenta spotted tip. Preserve all reference proportions, colors, recognizable silhouette, spots, armor shapes, claw shapes and teal accents as closely as possible. DO NOT evolve, enlarge, or redesign the creature. Match reference hand-crafted crisp pixel-art RPG aesthetic with dark pixel edges and clean stepped silhouettes, no smoothing, no blur. Both poses at matching apparent height and grounded baseline, centered in their respective cells. Leave minimum 7 percent completely transparent padding around each silhouette and a clear completely transparent central gutter; no clipping or overlap. True alpha transparency across all background and empty space. No checkerboard, no white background, no labels, no text, no panels, no borders, no extra creatures, no props, no light effects, no floor, no cast shadow. Output ONLY the two-view atlas."
+    },
+    {
+      "id": "vernion",
+      "name": "ヴェルニオン",
+      "stage": 1,
+      "sourceReference": "0002.png",
+      "sourceReferenceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceReferenceSha256": "0951b1a1927618081514f44bdb60405c5b19cd745ec70a3fca22109041b8a252",
+      "output": "assets/vernion-user-v83.png",
+      "outputSha256": "baf2c8257d82b587a765471a980690cc336d40e264cc1a857f88ff0f11ccbf47",
+      "outputBytes": 1048009,
+      "frontDirection": -1,
+      "backDirection": 1,
+      "armCount": 4,
+      "visibleAlphaBoundsByCell": [
+        [
+          130,
+          74,
+          793,
+          826
+        ],
+        [
+          96,
+          72,
+          755,
+          821
+        ]
+      ],
+      "prompt": "PRECISE OBJECT EDIT / PRODUCTION GAME SPRITE ASSET. Use the attached character as the exact canonical character reference. Create ONE transparent PNG sprite atlas in a WIDE 2:1 layout with one row and exactly TWO equal SQUARE cells: LEFT cell is a faithful full-body FRONT three-quarter view, subtly facing screen-right; RIGHT cell is a newly authored full-body REAR three-quarter view of the SAME creature, subtly facing screen-left. The rear must show its back and back of head, NOT a mirrored front and NOT the ivory chest or full face. Character identity and anatomy are mandatory: middle evolution, lean tall athletic purple/magenta spotted carapace creature with broad swept angular crest, teal-green eyes and crest highlights, ivory muzzle, split ivory chest plates, long central purple torso, teal waist/forearm accents, exactly FOUR ARMS total arranged as TWO LARGE UPPER armored fists each with three ivory claws plus TWO SMALL LOWER clawed arms, two sturdy clawed legs, thick curved tail ending in a flattened spotted paddle tip. Preserve reference proportions, colors, spotted surface patterns, recognizable silhouette, shoulder shells, claw shapes, and teal accents very closely. DO NOT replace anatomy with two arms, add more arms, add wings, or turn this medium stage into the bulky final armor stage. Match reference hand-crafted crisp pixel-art RPG aesthetic with dark pixel edges and clean stepped silhouettes, no smoothing, no blur. Both poses at matching apparent height and grounded baseline, centered in their respective cells. Leave minimum 7 percent completely transparent padding around each silhouette and a clear completely transparent central gutter; no clipping or overlap. True alpha transparency across all background and empty space. No checkerboard, no white background, no labels, no text, no panels, no borders, no extra creatures, no props, no light effects, no floor, no cast shadow. Output ONLY the two-view atlas."
+    },
+    {
+      "id": "vernix",
+      "name": "ヴェルニクス",
+      "stage": 2,
+      "sourceReference": "0003.png",
+      "sourceReferenceDimensions": [
+        1254,
+        1254
+      ],
+      "sourceReferenceSha256": "0535c90973157e0b32ee4b93aa4ed974616d126da6d6e7f372d1e9095356f054",
+      "output": "assets/vernix-user-v83.png",
+      "outputSha256": "9346e5773431c115c05f3376b16a8c693ccdae0ba427afffbe10d2153874f6ea",
+      "outputBytes": 1464127,
+      "frontDirection": -1,
+      "backDirection": 1,
+      "armCount": 4,
+      "visibleAlphaBoundsByCell": [
+        [
+          44,
+          54,
+          838,
+          840
+        ],
+        [
+          52,
+          55,
+          838,
+          834
+        ]
+      ],
+      "prompt": "PRECISE OBJECT EDIT / PRODUCTION GAME SPRITE ASSET. Use the attached character as the exact canonical character reference. Create ONE transparent PNG sprite atlas in a WIDE 2:1 layout with one row and exactly TWO equal SQUARE cells: LEFT cell is a faithful full-body FRONT three-quarter view, subtly facing screen-right; RIGHT cell is a newly authored full-body REAR three-quarter view of the SAME creature, subtly facing screen-left. The rear must show its back and back of head, NOT a mirrored front and NOT the ivory chest or full face. Character identity and anatomy are mandatory: FINAL powerful bulky armored evolution, purple/magenta spotted carapace monster, broad swept angular armored crest, teal-green eyes and crest accents, ivory angular smiling muzzle, huge split ivory chest plates and layered purple collar, broad heavy rounded SHOULDER armor and layered THIGH armor, exactly FOUR ARMS total arranged as TWO MASSIVE UPPER armored fists each with three prominent ivory claws plus TWO SMALL LOWER clawed arms, heavy clawed legs, thick long curved tail ending in a flattened spotted armored paddle tip. Preserve reference proportions, colors, spotted surface patterns, teal forearm/waist/crest accents, all heavy armor shapes, and recognizable silhouette extremely closely. DO NOT simplify it to the smaller middle evolution, do not remove the small lower arms, add more arms, add horns/wings/weapons, or redesign it. Match reference hand-crafted crisp pixel-art RPG aesthetic with dark pixel edges and clean stepped silhouettes, no smoothing, no blur. Both poses at matching apparent height and grounded baseline, centered in their respective cells. Leave minimum 7 percent completely transparent padding around each silhouette and a clear completely transparent central gutter; no clipping or overlap. True alpha transparency across all background and empty space. No checkerboard, no white background, no labels, no text, no panels, no borders, no extra creatures, no props, no light effects, no floor, no cast shadow. Output ONLY the two-view atlas."
+    }
+  ],
+  "invariants": [
+    "User-provided reference identity: purple/magenta spotted carapace, teal eyes and accents, ivory muzzle/chest/claws, angular head crest, and flattened spotted tail tip.",
+    "0001 has exactly two arms. 0002 and 0003 have exactly four arms; 0003 retains its heavier shoulder and thigh armor.",
+    "The rear images show the independently authored back of the creature rather than a mirrored front image.",
+    "Generated PNG bytes and alpha are copied unchanged into the repository. No background removal, manual redrawing, mirroring, or resampling is applied to the source files.",
+    "Each rendered view is bounded within its own atlas cell, then uses the existing shared 112-pixel display grid and bounded canvas cache.",
+    "All three entries remain outside IndividualArtCatalog and the public dex.",
+    "The retired lunax/lunaxion assets remain on disk for older clients but no active artwork mapping requests them."
+  ],
+  "verification": {
+    "sourceTransparency": "RGBA alpha range 0..255 for every atlas; all cell corners transparent. Visible silhouette bounds use the existing alpha >12 threshold, so the generator's nearly transparent fringe is preserved without influencing framing.",
+    "runtimeChecks": [
+      "scripts/check-original-art.cjs",
+      "scripts/check-monster-pixels.cjs"
+    ]
+  }
+}

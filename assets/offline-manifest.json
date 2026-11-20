@@ -230,14 +230,6 @@
    "bytes": 1204302
   },
   {
-   "url": "assets/lunax-user-v74.png",
-   "bytes": 1078922
-  },
-  {
-   "url": "assets/lunaxion-user-v74.png",
-   "bytes": 714773
-  },
-  {
    "url": "assets/offdex-v54-07.png",
    "bytes": 942610
   },
@@ -284,6 +276,18 @@
   {
    "url": "assets/traveller-npcs-v33.png",
    "bytes": 1764301
+  },
+  {
+   "url": "assets/vernion-user-v83.png",
+   "bytes": 1048009
+  },
+  {
+   "url": "assets/vernix-user-v83.png",
+   "bytes": 1464127
+  },
+  {
+   "url": "assets/verny-user-v83.png",
+   "bytes": 934846
   }
  ],
  "core": [
@@ -296,8 +300,6 @@
   "assets/environment-trees-v33.png",
   "assets/kasai-overworld-v55.json",
   "assets/kasai-overworld-v55.png",
-  "assets/lunax-user-v74.png",
-  "assets/lunaxion-user-v74.png",
   "assets/offdex-v54-07.png",
   "assets/offdex-v54-08.png",
   "assets/original-futo-v67.png",
@@ -309,8 +311,11 @@
   "assets/sub-sub-admin-overworld-v62.png",
   "assets/traveller-female-v33.png",
   "assets/traveller-hero-v33.png",
-  "assets/traveller-npcs-v33.png"
+  "assets/traveller-npcs-v33.png",
+  "assets/vernion-user-v83.png",
+  "assets/vernix-user-v83.png",
+  "assets/verny-user-v83.png"
  ],
- "totalBytes": 72908489,
- "coreBytes": 34630766
+ "totalBytes": 74561776,
+ "coreBytes": 36284053
 }

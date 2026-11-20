@@ -9,6 +9,7 @@ const LT=createReplayRuntime(),engine=new LT.Engine(),copy=value=>JSON.parse(JSO
 const html=fs.readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const duel=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].find(match=>match[1].includes('deterministic, save-independent rental-team duels'))[1];
 const browser=vm.createContext({LT,console});vm.runInContext(duel,browser);
+vm.runInContext(fs.readFileSync(new URL('../../legacy-battle-v82.js',import.meta.url),'utf8'),browser);
 vm.runInContext(fs.readFileSync(new URL('../../ranked-rules.js',import.meta.url),'utf8'),browser);
 const rules=browser.LT.RankedRules;
 const team=(suffix='a',levels=[80,5,100])=>['komorizen','shizunaria','akehomura'].map((id,i)=>({...engine.makeMonster(id,levels[i]),uid:`rank-${suffix}-${i}`}));
@@ -124,7 +125,7 @@ test('browser and server resolve the complete same owned battle without save wri
 
 test('released v78 snapshots continue unchanged while rejecting injected growth and unsupported versions',()=>{
   const current=createRankedBattle(team(),team('legacy-opponent'),78),legacy=copy(current);legacy.rankedVersion='ranked-v78';
-  assert.equal(RANKED_RULES_VERSION,'ranked-v79-growth');assert(rankedRulesInfo().compatibleVersions.includes('ranked-v78'));
+  assert.equal(RANKED_RULES_VERSION,'ranked-v83-vernix');assert(rankedRulesInfo().compatibleVersions.includes('ranked-v78'));assert(rankedRulesInfo().compatibleVersions.includes('ranked-v79-growth'));
   assert.deepEqual(copy(rules.hydrate(legacy).snapshot()),legacy);
   const duel=rules.hydrate(legacy),orders=[duel.legalOrders(0),duel.legalOrders(1)].map(copy);
   assert.equal(validateRankedOrders(legacy,0,orders[0]).ok,true);

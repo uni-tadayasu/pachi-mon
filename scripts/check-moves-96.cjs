@@ -19,7 +19,7 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const publicMoves = Object.values(M).filter(move => !move.hiddenDex), hiddenMoves = Object.values(M).filter(move => move.hiddenDex);
 assert.equal(Object.keys(M).length, 104); assert.equal(publicMoves.length, 96); assert.equal(hiddenMoves.length, 8);
 assert.equal(D.content.moves, 96); assert.equal(D.moveRoster.total, 96); assert.equal(D.content.hiddenMoves, 8); assert.equal(D.content.totalMoves, 104);
-assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch', 'lunax_crescent', 'lunax_nova', 'lunax_aegis', 'lunax_renew']);
+assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch', 'vernix_renew', 'vernix_frost', 'vernix_psycho', 'vernix_thunder']);
 assert.deepEqual(copy(D.hiddenMoves), ['null_restore', 'null_curse', 'null_ray', 'null_scorch'], 'The Null-line compatibility contract stays at four moves');
 assert.deepEqual(copy(D.allHiddenMoves), hiddenMoves.map(move => move.id));
 const byElement = {}; for (const m of publicMoves) { const key = m.role === 'special' ? 'special' : m.role === 'signature' ? 'signature' : m.element || 'neutral'; byElement[key] = (byElement[key] || 0) + 1; }
@@ -49,7 +49,7 @@ for (const s of Object.values(D.species)) {
   for (const id of s.moves) { assert(M[id], `${s.id}: ${id}`); uses.set(id, uses.get(id) + 1); }
 }
 for (const [id, n] of uses) assert(n > 0, `${id} is learned by no monster`);
-for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['lunax', 'lunaxion']);
+for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['vernion', 'vernix', 'verny']);
 assert.deepEqual(copy(D.signatureMoves), { sig_leaf: 'komorizen', sig_tide: 'shizunaria', sig_ember: 'akehomura' });
 for (const [move, owner] of Object.entries(D.signatureMoves)) {
   assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(move)).map(s => s.id), [owner]);

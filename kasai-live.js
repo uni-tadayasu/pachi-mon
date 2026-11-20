@@ -169,7 +169,10 @@
     enabled:()=>bridge().isPlaying?.()&&!document.hidden&&root.navigator?.onLine!==false,
     changed:()=>render(),notify:message=>bridge().toast?.(message)
   });
-  const name=mon=>LT.displayName?.(mon)||mon?.nickname||LT.DATA?.species?.[mon?.species]?.name||'パチモン';
+  const name=mon=>{
+    const legacy=!LT.DATA?.species?.[mon?.species]&&LT.LegacyBattles?.species?.(mon?.species);
+    return mon?.nickname||legacy?.name||LT.displayName?.(mon)||LT.DATA?.species?.[mon?.species]?.name||'パチモン';
+  };
   function mount(){
     if(!banner){const stage=document.querySelector('.game-stage');if(stage){banner=document.createElement('section');banner.id='kasai-live-banner';banner.className='kasai-live-banner';banner.hidden=true;banner.setAttribute('aria-label','運営の対戦ステージ');stage.before(banner);banner.addEventListener('click',click);}}
     if(dialog)return;dialog=document.createElement('dialog');dialog.id='kasai-live-dialog';dialog.className='kasai-live-dialog';dialog.setAttribute('aria-labelledby','kasai-live-title');document.body.append(dialog);

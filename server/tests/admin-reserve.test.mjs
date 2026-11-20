@@ -33,7 +33,7 @@ function setup(){
   return {env,call,register,appoint,actors};
 }
 function expectedTeam(playerId,role){return {version:1,playerId,role,members:[starters[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99,battleGrowth:99}))};}
-function expectedAddition(playerId,role){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
+function expectedAddition(playerId,role){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'vernix',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function partyFor(bundle){
   const LT=createReplayRuntime(),engine=new LT.Engine();
   return bundle.members.map((member,index)=>{
@@ -45,12 +45,12 @@ function partyFor(bundle){
     return mon;
   });
 }
-const retiredForms={galdo:'lunax',galdoran:'lunax',galdoras:'lunaxion',galdogran:'lunaxion'};
-const retiredMoves={galdoras_crown:'lunax_crescent',galdoras_fault:'lunax_nova',galdoras_bastion:'lunax_aegis',galdoras_mend:'lunax_renew'};
+const retiredForms={galdo:'verny',galdoran:'vernion',galdoras:'vernix',galdogran:'vernix',lunax:'verny',lunaxion:'vernix'};
+const retiredMoves={galdoras_crown:'vernix_psycho',galdoras_fault:'vernix_frost',galdoras_bastion:'vernix_thunder',galdoras_mend:'vernix_renew',lunax_crescent:'vernix_psycho',lunax_nova:'vernix_frost',lunax_aegis:'vernix_thunder',lunax_renew:'vernix_renew'};
 function expectedMigrated(mon){
   const next={...copy(mon),species:retiredForms[mon.species]||mon.species,
-    pp:Object.fromEntries(Object.entries(mon.pp).map(([id,value])=>[retiredMoves[id]||id,value]))};
-  if(['lunax','lunaxion'].includes(next.species))delete next.gender;
+    pp:Object.fromEntries(Object.entries(mon.pp).map(([id,value])=>[retiredMoves[id]||id,(retiredMoves[id]||id)==='vernix_renew'?Math.min(5,value):value]))};
+  if(['verny','vernion','vernix'].includes(next.species))delete next.gender;
   next.hp=Math.min(next.hp,new (createReplayRuntime().Engine)().stats(next).hp);
   return next;
 }
@@ -157,7 +157,7 @@ test('trained members cannot be submitted by another player or with another regi
   else assert([400,403].includes(normalized.status),JSON.stringify(normalized));
 });
 
-test('the Lunaxion delivery is separate and private for main and third, and remains disabled for sub',async()=>{
+test('the Vernix delivery is separate and private for main and third, and remains disabled for sub',async()=>{
   const h=setup(),actors=await h.actors(),before=Object.fromEntries(['grants','grant_batches','kasai_parties'].map(table=>[table,h.env.DB.sqlite.prepare('SELECT * FROM '+table).all()]));
   for(const role of ['main','sub','sub-sub'])for(const path of ['/me','/me?limit=1','/me?limit=1&cursor=9999']){
     const result=await h.call(path,actors[role]);assert.equal(result.status,200);
@@ -176,7 +176,7 @@ test('the Lunaxion delivery is separate and private for main and third, and rema
   assert.equal((await h.call('/me',actors.sub)).adminReserveAddition,null);
 });
 
-test('already-owned Lunaxion can enter every roles saved battle party alongside old members',async()=>{
+test('already-owned Vernix can enter every roles saved battle party alongside old members',async()=>{
   const h=setup(),actors=await h.actors();
   for(const role of ['main','sub','sub-sub']){
     const party=partyFor(expectedAddition(actors[role].id,role));
@@ -184,14 +184,14 @@ test('already-owned Lunaxion can enter every roles saved battle party alongside 
     party[0].alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};
     party.push(...partyFor(expectedTeam(actors[role].id,role)).slice(0,5));
     const result=await h.call('/world/kasai/party',actors[role],'POST',{party});assert.equal(result.status,200,JSON.stringify(result));
-    assert.equal(result.party[0].species,'lunaxion');assert.equal(result.party[0].gender,undefined);assert.equal(result.party[0].bonusPoints,99);
+    assert.equal(result.party[0].species,'vernix');assert.equal(result.party[0].gender,undefined);assert.equal(result.party[0].bonusPoints,99);
     for(const key of ['uid','nickname','moveOrder','alloc','grantId'])assert.deepEqual(result.party[0][key],party[0][key]);
     assert.equal(result.party[0].heldItem,undefined);
     if(role==='sub')assert(result.party.slice(1).every(mon=>mon.gender==='female'));
   }
 });
 
-test('Lunaxion cannot claim another recipient or role and rejects changed grant growth before a save write',async()=>{
+test('Vernix cannot claim another recipient or role and rejects changed grant growth before a save write',async()=>{
   const h=setup(),actors=await h.actors(),party=partyFor(expectedAddition(actors.main.id,'main'));
   for(const actor of [actors.sub,actors['sub-sub'],actors.visitor]){
     const result=await h.call('/world/kasai/party',actor,'POST',{party});assert.equal(result.status,403,JSON.stringify(result));
@@ -225,25 +225,25 @@ test('legacy owned forms normalize before server ownership checks and preserve t
   }
 });
 
-test('previously registered v69 admin parties are read as Lunaxion without deleting their saved identity',async()=>{
+test('previously registered v69 admin parties are read as Vernix without deleting their saved identity',async()=>{
   const h=setup(),actors=await h.actors(),fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v69-stone-leader-save.json',import.meta.url),'utf8'));
   for(const role of ['main','sub','sub-sub']){
     const legacy=copy(fixture.storage.find(mon=>mon.grantId?.includes(':'+role+':')));legacy.grantId=expectedAddition(actors[role].id,role).members[0].grantId;
     const stored=JSON.stringify([legacy]);h.env.DB.sqlite.prepare('INSERT INTO kasai_parties (player_id,party_json,updated_at) VALUES (?,?,?)').run(actors[role].id,stored,12345);
     const result=await h.call('/world/kasai/party',actors[role]);assert.equal(result.status,200,JSON.stringify(result));
-    assert.equal(result.party[0].species,'lunaxion');assert.equal(result.party[0].uid,legacy.uid);assert.equal(result.party[0].grantId,legacy.grantId);
+    assert.equal(result.party[0].species,'vernix');assert.equal(result.party[0].uid,legacy.uid);assert.equal(result.party[0].grantId,legacy.grantId);
     assert.equal(result.updatedAt,12345);assert.equal(h.env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(actors[role].id).party_json,stored,'Read-time normalization preserves the historical record');
   }
 });
 
 
-test('both new owned forms can be registered independently but the normal form cannot impersonate the final-form entitlement',async()=>{
+test('all three new owned forms can be registered independently but earlier forms cannot impersonate the final-form entitlement',async()=>{
   const h=setup(),actors=await h.actors(),LT=createReplayRuntime(),engine=new LT.Engine();
-  const party=['lunax','lunaxion'].map((species,index)=>{const mon=engine.makeMonster(species,100);mon.uid='lineage-stage-'+index;mon.nickname='新形態'+index;mon.moveOrder=[3,1,0,2];mon.pp.lunax_crescent=1;return mon;});
+  const party=['verny','vernion','vernix'].map((species,index)=>{const mon=engine.makeMonster(species,100);mon.uid='lineage-stage-'+index;mon.nickname='新形態'+index;mon.moveOrder=[3,1,0,2];mon.pp.vernix_psycho=1;return mon;});
   const accepted=await h.call('/world/kasai/party',actors.main,'POST',{party});assert.equal(accepted.status,200,JSON.stringify(accepted));
   assert.deepEqual(accepted.party,party,'Registering owned forms does not automatically evolve them');
   const member=expectedAddition(actors.main.id,'main').members[0];
-  for(const species of ['lunax','galdo','galdoran']){
+  for(const species of ['verny','vernion','lunax','galdo','galdoran']){
     const forged=partyFor(expectedAddition(actors.main.id,'main'))[0];forged.species=species;forged.hp=1;forged.grantId=member.grantId;
     assert.equal((await h.call('/world/kasai/party',actors.main,'POST',{party:[forged]})).status,400);
     assert.deepEqual((await h.call('/world/kasai/party',actors.main)).party,party);
@@ -259,14 +259,14 @@ test('all four retired owned species and their exact spent PP migrate through au
   assert.equal(result.status,200,JSON.stringify(result));assert.deepEqual(result.party,expected);
   assert.deepEqual(party,original,'Normalization does not mutate the submitted legacy data');
   assert.deepEqual((await h.call('/world/kasai/party',actors.main)).party,expected);
-  assert.deepEqual(result.party[0].pp,{lunax_crescent:1,lunax_nova:0,lunax_aegis:3,lunax_renew:2});
+  assert.deepEqual(result.party[0].pp,{vernix_psycho:1,vernix_frost:0,vernix_thunder:3,vernix_renew:2});
   assert.equal(result.party[0].hp,0,'Migration cannot revive a fainted individual');
   for(const mutate of [
-    mon=>mon.pp.lunax_crescent=mon.pp.galdoras_crown,
+    mon=>mon.pp.vernix_psycho=mon.pp.galdoras_crown,
     mon=>mon.pp.galdoras_fault=6,
     mon=>mon.pp.galdoras_crown=-1,
     mon=>delete mon.pp.galdoras_mend,
-    mon=>mon.customMoves=['lunax_crescent','lunax_nova','lunax_aegis','lunax_renew']
+    mon=>mon.customMoves=['vernix_psycho','vernix_frost','vernix_thunder','vernix_renew']
   ]){
     const forged=copy(original);mutate(forged[1]);
     const rejected=await h.call('/world/kasai/party',actors.main,'POST',{party:forged});
@@ -275,15 +275,46 @@ test('all four retired owned species and their exact spent PP migrate through au
   }
 });
 
+test('actual v82 owned lunar parties normalize before authenticated ownership checks for every current operator role',async()=>{
+  const h=setup(),actors=await h.actors(),fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v82-lunar-leader-save.json',import.meta.url),'utf8'));
+  for(const role of ['main','sub','sub-sub']){
+    const old=copy(fixture.storage.find(mon=>mon.grantId.includes(':'+role+':')));old.grantId=expectedAddition(actors[role].id,role).members[0].grantId;
+    const party=[...copy(fixture.party),old],before=copy(party),expected=party.map(expectedMigrated);
+    const result=await h.call('/world/kasai/party',actors[role],'POST',{party});assert.equal(result.status,200,JSON.stringify(result));
+    assert.deepEqual(result.party,expected);assert.deepEqual(party,before);
+    assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,expected);
+    assert.deepEqual(result.party.map(mon=>mon.species),['verny','vernix','vernix']);
+    assert.equal(result.party[0].hp,0);assert.equal(result.party[0].level,23);assert.equal(result.party[2].pp.vernix_renew,5);
+    assert.equal(result.party[2].battleGrowth,undefined,'The separate final-form entitlement does not gain the six-member training migration');
+    const again=await h.call('/world/kasai/party',actors[role],'POST',{party:result.party});assert.equal(again.status,200);assert.deepEqual(again.party,expected);
+    if(role==='sub'){const me=await h.call('/me',actors.sub);assert.equal(me.adminReserveAddition,null);assert.equal(me.adminReserveTeam,null);assert.deepEqual(me.initialCompanions,[]);assert.deepEqual(me.grants,[]);}
+    for(const mutate of [mon=>mon.pp.lunax_renew=7,mon=>mon.pp.lunax_nova=6,mon=>mon.pp.vernix_psycho=1,mon=>mon.grantId=mon.grantId.replace(/:galdogran$/,':vernix')]){
+      const invalid=copy(old);mutate(invalid);assert.equal((await h.call('/world/kasai/party',actors[role],'POST',{party:[invalid]})).status,400);
+      assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,expected);
+    }
+  }
+});
+
+test('stored v82 lunar party reads migrate without rewriting historical database data or issuing another gift',async()=>{
+  const h=setup(),actors=await h.actors(),fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v82-lunar-leader-save.json',import.meta.url),'utf8'));
+  for(const role of ['main','sub','sub-sub']){
+    const old=copy(fixture.storage.find(mon=>mon.grantId.includes(':'+role+':')));old.grantId=expectedAddition(actors[role].id,role).members[0].grantId;
+    const serialized=JSON.stringify([old]);h.env.DB.sqlite.prepare('INSERT INTO kasai_parties (player_id,party_json,updated_at) VALUES (?,?,?)').run(actors[role].id,serialized,54321);
+    const result=await h.call('/world/kasai/party',actors[role]);assert.equal(result.status,200);assert.deepEqual(result.party,[expectedMigrated(old)]);
+    assert.equal(result.updatedAt,54321);assert.equal(h.env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(actors[role].id).party_json,serialized);
+    const me=await h.call('/me',actors[role]);assert.deepEqual(me.adminReserveAddition,role==='sub'?null:expectedAddition(actors[role].id,role));
+  }
+});
+
 test('the worker replay catalog exposes only the new exclusive Super lineage and preserves ordinary trade restrictions',()=>{
   const LT=createReplayRuntime(),D=LT.DATA,engine=new LT.Engine();
   assert.equal(D.elements.super.name,'超');
-  for(const id of ['lunax','lunaxion']){
+  for(const id of ['verny','vernion','vernix']){
     const species=D.species[id];assert(species.hiddenDex&&species.specialOnly);
     assert.deepEqual(LT.TypeSystem.of(species),['super']);
     assert(D.genderless.includes(id));assert.equal(LT.genderOf(engine.makeMonster(id,100)),'none');
-    assert.deepEqual(species.moves,['lunax_crescent','lunax_nova','lunax_aegis','lunax_renew']);
-    assert(species.moves.every(move=>D.moves[move].element==='super'));
+    assert.deepEqual(species.moves,['vernix_renew','vernix_frost','vernix_psycho','vernix_thunder']);
+    assert.deepEqual(species.moves.map(move=>D.moves[move].element),['super','ice','super','thunder']);
     assert.throws(()=>engine.tradeMonster(engine.makeMonster(id,100)),/交換/);
   }
   for(const id of Object.keys(retiredForms))assert.equal(D.species[id],undefined);

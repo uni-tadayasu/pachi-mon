@@ -1,4 +1,5 @@
 /* Pachi Monsters — offline play.
+ * v83: the three-stage psychic leader replaces lunar companions with faithful new art.
  * v82: living waiting party members gain small XP; direct growth stays participant-only.
  * v81: compact desktop controls and consistent normal/expanded screen regions.
  * v80: sub operators start their own adventure without automatic starter gifts.
@@ -125,7 +126,7 @@ function retiredArt(url) {
   const u = new URL(url), base = scope();
   if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) return false;
   const path = u.pathname.slice(base.pathname.length);
-  return /^assets\/(?:galdoras-(?:front|back)-v65|original-(?:galdoras-v67|galdogran-v68)|galdoras-user-v70|(?:galdo|galdoran)-user-v71|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
+  return /^assets\/(?:galdoras-(?:front|back)-v65|original-(?:galdoras-v67|galdogran-v68)|galdoras-user-v70|(?:galdo|galdoran)-user-v71|(?:lunax|lunaxion)-user-v74|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
     || (path === 'assets/dex/futo.webp' && u.searchParams.get('v') !== '20261120-originality-v67');
 }
 

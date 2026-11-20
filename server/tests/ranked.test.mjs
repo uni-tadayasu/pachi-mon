@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import worker,{worldRoomWalls,DEFAULT_CONFIG} from '../server.mjs';
 import {createReplayRuntime} from '../kasai-replay.mjs';
 import {RANKED_RULES_VERSION,normalizeRankedTeam,validateRankedOrders,rankedPreviewMember} from '../ranked-engine.mjs';
@@ -93,8 +94,8 @@ test('owned enrollment validates original records, saves no battle changes, and 
   assert(match.battle.teams[1].monsters.every(member=>member.level===50&&member.sourceLevel===1));
   const saved=JSON.parse(h.env.DB.sqlite.prepare('SELECT team_json FROM ranked_queue WHERE player_id=?').get(a.id).team_json);assert.equal(saved[0].level,70);assert.equal(saved[0].pp[Object.keys(original[0].pp)[0]],0);assert.equal(saved[0].hp,1,'Only the enrollment validator heals a fainted saved member to its minimum valid HP');
   assert.equal(h.env.DB.sqlite.prepare('SELECT map_id FROM world_presence WHERE player_id=?').get(a.id).map_id,'meadow');
-  const enrolled=new LT.Engine().makeMonster('lunaxion',50),c=await h.register();
-  assert.equal(ok(await h.queue(c,[enrolled,...team().slice(1)])).queue.team[0].species,'lunaxion','Hidden owned species are not categorically excluded');
+  const enrolled=new LT.Engine().makeMonster('vernix',50),c=await h.register();
+  assert.equal(ok(await h.queue(c,[enrolled,...team().slice(1)])).queue.team[0].species,'vernix','Hidden owned species are not categorically excluded');
 });
 
 test('team validation rejects duplicates, illegal saved fields and inflated original allocations before acquiring locks',async t=>{
@@ -257,9 +258,9 @@ test('unsupported rules expire waiting intents and void active matches without r
   const changed=ok(await h.status(a));assert.equal(changed.match.result.reason,'rules_changed');assert.equal(changed.match.result.outcome,'void');assert.deepEqual(changed.match.result.ratingDelta,[0,0]);assert.equal(changed.profile.games,0);
 });
 
-test('new queue intents require current growth rules and expired v78 waiting intents cannot restart',async t=>{
+test('new queue intents require current rules and expired legacy waiting intents cannot restart',async t=>{
   const h=setup(t),a=await h.register(),requestId=crypto.randomUUID();
-  for(const rulesVersion of [undefined,'ranked-v78','ranked-v999']){
+  for(const rulesVersion of [undefined,'ranked-v78','ranked-v79-growth','ranked-v999']){
     const reply=await h.call('/world/ranked/queue',a,'POST',{requestId,team:team(),...(rulesVersion===undefined?{}:{rulesVersion})});
     assert.equal(reply.status,409);assert.equal(reply.error.code,'RANKED_RULES_UPDATED');assert.match(reply.error.message,/更新/);
   }
@@ -268,6 +269,29 @@ test('new queue intents require current growth rules and expired v78 waiting int
   const refreshed=ok(await h.status(a));assert.equal(refreshed.queue,null);assert.equal(refreshed.match,null);assert.equal(refreshed.profile.rating,1000);
   assert.equal(ok(await h.queue(a,waiting.queue.team,waiting.queue.requestId)).intent.state,'expired');
   assert(ok(await h.queue(a)).queue);
+});
+
+test('persisted v82 lunar battles finish with exact old snapshots and settle ratings once without changing owned records',async t=>{
+  const saved=JSON.parse(readFileSync(new URL('./fixtures/v82-persisted-battles.json',import.meta.url),'utf8')).cases.find(item=>item.kind==='ranked');
+  const h=setup(t),a=await h.register('旧画面の旅人'),b=await h.register('継続中の相手'),created=await h.pair(a,b);
+  const ownedBefore=copy(h.env.DB.sqlite.prepare('SELECT player_id,team_json FROM ranked_queue ORDER BY player_id').all());
+  h.env.DB.sqlite.prepare('UPDATE ranked_matches SET rules_version=?,battle_json=?,round=? WHERE id=?').run('ranked-v79-growth',JSON.stringify(saved.initial),saved.initial.round,created.id);
+  let current=ok(await h.status(a)).match;assert.deepEqual(current.battle,saved.initial);assert.equal(current.rulesVersion,'ranked-v79-growth');
+  for(const turn of saved.turns){
+    h.advance(500);const round=current.round;
+    let reply=ok(await h.match(a,current.id,'actions',{round,orders:turn.orders[0],requestId:crypto.randomUUID()}));
+    if(reply.match.state==='battle'&&reply.match.round===round)reply=ok(await h.match(b,current.id,'actions',{round,orders:turn.orders[1],requestId:crypto.randomUUID()}));
+    current=reply.match;assert.equal(reply.rulesVersion,'ranked-v79-growth');
+    assert.equal(createHash('sha256').update(JSON.stringify(current.battle)).digest('hex'),turn.sha256);
+  }
+  assert.equal(current.state,'result');assert.equal(current.result.reason,'battle');assert.equal(current.result.winner,saved.winner);
+  assert.deepEqual(current.result.ratingDelta,rankedRatingResult(1000,1000,saved.winner).delta);
+  const profiles=copy(h.env.DB.sqlite.prepare('SELECT player_id,rating,games,wins,losses,draws FROM ranked_profiles ORDER BY player_id').all());
+  assert(profiles.every(profile=>profile.games===1));assert.deepEqual(profiles.map(profile=>profile.rating).sort((x,y)=>x-y),[984,1016]);
+  await Promise.all([h.status(a),h.status(b),h.match(a,current.id,'forfeit'),h.match(b,current.id,'forfeit')]);
+  assert.deepEqual(copy(h.env.DB.sqlite.prepare('SELECT player_id,rating,games,wins,losses,draws FROM ranked_profiles ORDER BY player_id').all()),profiles);
+  assert.deepEqual(copy(h.env.DB.sqlite.prepare('SELECT player_id,team_json FROM ranked_queue ORDER BY player_id').all()),ownedBefore);
+  for(const actor of [a,b]){const reply=ok(await h.match(actor,current.id,'ack'));assert.equal(reply.rulesVersion,'ranked-v79-growth');assert.equal(reply.match,null);assert.equal(ok(await h.status(actor)).rulesVersion,RANKED_RULES_VERSION);}
 });
 
 test('already-started v78 matches finish under their original rules with compatible status and acknowledgement responses',async t=>{
@@ -289,7 +313,7 @@ test('operator delivery and legacy sub holdings keep actual names and verified L
     // Existing sub-admin saves retain these historical receipts, although the
     // delivery endpoint no longer offers them to a new or restored adventure.
     const reserve=role==='sub'?{members:['shizunaria','floravelle','zeroveil','pearlseria','hyogald','rurigorm'].map(species=>({grantId:`admin-trained-v64:sub:${actor.id}:${species}`,species,level:100,gender:'female',heldItem:'trainband',bonusPoints:99,battleGrowth:99}))}:me.adminReserveTeam;
-    const member=role==='sub'?{grantId:`admin-galdogran-v68:sub:${actor.id}:galdogran`,species:'lunaxion'}:me.adminReserveAddition.members[0],mon=engine.makeMonster(member.species,100);
+    const member=role==='sub'?{grantId:`admin-galdogran-v68:sub:${actor.id}:galdogran`,species:'vernix'}:me.adminReserveAddition.members[0],mon=engine.makeMonster(member.species,100);
     if(role==='sub'){assert.equal(me.adminReserveTeam,null);assert.equal(me.adminReserveAddition,null);assert.deepEqual(me.initialCompanions,[]);assert.deepEqual(me.grants,[]);}
     assert.equal(reserve.members.length,6);const rival=await h.register(),reserves=reserve.members.map(gift=>Object.assign(engine.makeMonster(gift.species,100),copy(gift),{alloc:{hp:64,atk:64,def:64,spAtk:64,spDef:41}})),saved=copy(reserves);
     for(const selected of [reserves.slice(0,3),reserves.slice(3)]){

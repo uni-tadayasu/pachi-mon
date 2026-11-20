@@ -267,8 +267,8 @@
       }
     },
     {
-      "id": "lunar_sovereignty",
-      "name": "超月の覇気",
+      "id": "psychic_sovereignty",
+      "name": "紫紋の念動",
       "description": "特殊攻撃技のダメージが1.2倍になる。",
       "kind": "offense",
       "params": {
@@ -545,7 +545,8 @@
     "hyogald": "powerful_limbs",
     "rurikoro": "steady_core",
     "rurigorm": "steady_core",
-    "lunax": "lunar_sovereignty",
-    "lunaxion": "lunar_sovereignty"
+    "verny": "psychic_sovereignty",
+    "vernion": "psychic_sovereignty",
+    "vernix": "psychic_sovereignty"
   }
 }

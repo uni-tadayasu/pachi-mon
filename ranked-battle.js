@@ -171,7 +171,10 @@
   if(!root.document?.createElement||!LT.RankedRules)return;
   const document=root.document,rules=LT.RankedRules,bridge=()=>LT.adminBridge||{},engine=()=>bridge().getEngine?.();
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const name=mon=>LT.displayName?.(mon)||mon?.nickname||LT.DATA?.species?.[mon?.species]?.name||'パチモン';
+  const name=mon=>{
+    const legacy=!LT.DATA?.species?.[mon?.species]&&LT.LegacyBattles?.species?.(mon?.species);
+    return mon?.nickname||legacy?.name||LT.displayName?.(mon)||LT.DATA?.species?.[mon?.species]?.name||'パチモン';
+  };
   const label=mon=>name(mon)+(mon?.gender==='male'?' ♂':mon?.gender==='female'?' ♀':'')+(mon?.shiny?' ★':'');
   const delta=value=>Number.isFinite(value)?(value>0?'+':'')+value:'—';
   const outcomeName=value=>({win:'勝利',loss:'敗北',draw:'引き分け',void:'無効試合'}[value]||'対戦終了');

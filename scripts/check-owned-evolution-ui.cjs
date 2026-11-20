@@ -13,11 +13,11 @@ function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,sta
 const source=[section('  function partyDepositReason(','  const HELD_ITEMS='),
   section('  function findOwned(','  function showNickname(')].join('\n');
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-function ui(destination='party',level=100,species='lunaxion'){
+function ui(destination='party',level=100,species='vernix'){
   const e=new Engine();assert(e.newGame('komori').ok);const mon=e.makeMonster(species,level);
   Object.assign(mon,{nickname:'<A>',shiny:true,heldItem:'trainband',bonusPoints:99,
     alloc:{hp:31,atk:62},moveOrder:[3,0,2,1],xp:level===100?0:13});
-  mon.hp=Math.round(e.stats(mon).hp*.4);mon.pp.lunax_crescent=0;e.state[destination].push(mon);e.markCaught(species);
+  mon.hp=Math.round(e.stats(mon).hp*.4);mon.pp.vernix_frost=0;e.state[destination].push(mon);e.markCaught(species);
   const elements=new Map(),c=vm.createContext({Engine,DATA,HELD_ITEMS:DATA.heldItems,LT:{...model.LT,onlineActive:false,localTradeActive:false},
     engine:e,uid:mon.uid,playing:true,busy:false,tradeLock:false,storedSave:{previous:true},lastSave:7,moveAnim:null,
     SAVE_KEY:'evolution-save',writes:[],attempts:0,updates:0,toasts:[],sounds:[],storageFails:false,
@@ -40,11 +40,11 @@ function ui(destination='party',level=100,species='lunaxion'){
 }
 const owned=c=>[...c.engine.state.party,...c.engine.state.storage].find(mon=>mon.uid===c.uid);
 function details(c){const index=c.engine.state.party.findIndex(mon=>mon.uid===c.uid);if(index>=0)c.showParty(index);else c.showStorageDetail(c.uid);}
-test('party and reserve show the finished Lunaxion form at every level without an evolution action',()=>{
+test('party and reserve show the finished Vernix form at every level without an evolution action',()=>{
   for(const destination of ['party','storage'])for(const level of [1,49,50,70,100]){
     const c=ui(destination,level),before=copy(c.engine.state);details(c);
     assert.equal(c.modal.pane,destination==='party'?'party':'storage-detail');
-    assert(c.modal.markup.includes('data-creature="lunaxion"'));assert(!c.modal.markup.includes('galdogran'));
+    assert(c.modal.markup.includes('data-creature="vernix"'));assert(!c.modal.markup.includes('galdogran'));
     assert(!c.modal.markup.includes('gender-mark'));assert.equal(model.LT.genderOf(owned(c)),'none');
     assert(!c.modal.markup.includes('owned-evolution'));assert(!c.modal.markup.includes('ガルドグラン'));
     assert(c.modal.markup.includes('&lt;A&gt;'));assert(!c.modal.markup.includes('<A>'));
@@ -55,12 +55,12 @@ test('party and reserve show the finished Lunaxion form at every level without a
 });
 
 test('old owned-form saves render the canonical details with the same individual and no save side effect',()=>{
-  for(const destination of ['party','storage']){
-    const c=ui(destination),raw=c.engine.serialize(),old=raw[destination].find(mon=>mon.uid===c.uid);old.species='galdogran';
-    raw.seen.push('galdogran');raw.caught.push('galdogran');c.engine=new Engine(raw);
+  for(const destination of ['party','storage'])for(const former of ['galdogran','galdoras','lunaxion']){
+    const c=ui(destination),raw=c.engine.serialize(),old=raw[destination].find(mon=>mon.uid===c.uid);old.species=former;
+    raw.seen.push(former);raw.caught.push(former);c.engine=new Engine(raw);
     const before=copy(c.engine.state);details(c);
-    assert.equal(owned(c).species,'lunaxion');assert.equal(owned(c).nickname,'<A>');
-    assert(c.modal.markup.includes('ルナクシオン'));assert(!c.modal.markup.includes('owned-evolution'));
+    assert.equal(owned(c).species,'vernix');assert.equal(owned(c).nickname,'<A>');
+    assert(c.modal.markup.includes('ヴェルニクス'));assert(!c.modal.markup.includes('owned-evolution'));
     assert.deepEqual(copy(c.engine.state),before);assert.equal(c.attempts,0);
   }
 });
@@ -69,12 +69,12 @@ test('ordinary species keep their existing evolution notice and the removed acti
   const c=ui(),mon=owned(c);mon.species='komori';mon.level=5;details(c);
   assert(c.modal.markup.includes('新しい姿に進化します'));assert(!c.elements.has('owned-evolution-open'));
   for(const name of ['ownedEvolutionPanel','bindOwnedEvolution','persistOwnedEvolution','showOwnedEvolution'])assert(!html.includes('function '+name+'('));
-  assert.equal(Engine.prototype.evolveOwned,undefined);assert.equal(DATA.species.lunaxion.evolvesTo,undefined);
+  assert.equal(Engine.prototype.evolveOwned,undefined);assert.equal(DATA.species.vernix.evolvesTo,undefined);
 });
 
 
-test('the normal lunar form explains its growth stage in party and reserve without adding a manual mutation',()=>{
-  for(const destination of ['party','storage'])for(const species of ['lunax'])for(const level of [1,47,48,100]){
+test('both psychic pre-evolutions explain their growth stage in party and reserve without adding a manual mutation',()=>{
+  for(const destination of ['party','storage'])for(const species of ['verny','vernion'])for(const level of [1,23,24,47,48,100]){
     const c=ui(destination,level,species),before=copy(c.engine.state),data=DATA.species[species];details(c);
     assert(c.modal.markup.includes('data-creature="'+species+'"'));assert(c.modal.markup.includes('Lv.'+data.evolveLevel));
     assert(!c.modal.markup.includes('gender-mark'));assert.equal(model.LT.genderOf(owned(c)),'none');

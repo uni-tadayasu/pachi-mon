@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import worker,{WORLD_TTL,worldRoomWalls} from '../server.mjs';
 import {createReplayRuntime} from '../kasai-replay.mjs';
 import {validateLiveOrders} from '../kasai-live-engine.mjs';
@@ -45,6 +46,21 @@ async function finish(h,challenger,admin,session){
  }
  assert.equal(session.state,'result');return session;
 }
+
+test('persisted v82 live snapshots resume exact old lunar combat without changing either saved party',async t=>{
+ const saved=JSON.parse(readFileSync(new URL('./fixtures/v82-persisted-battles.json',import.meta.url),'utf8')).cases.find(item=>item.kind==='live');
+ const h=setup(t),{challenger,admin}=await h.players(),created=await h.battle(challenger,admin);
+ const ownedBefore={...h.env.DB.sqlite.prepare('SELECT challenger_party_json,kasai_party_json FROM kasai_live_sessions WHERE id=?').get(created.id)};
+ h.env.DB.sqlite.prepare('UPDATE kasai_live_sessions SET battle_json=?,round=? WHERE id=?').run(JSON.stringify(saved.initial),saved.initial.round,created.id);
+ let current=(await h.live(challenger,created.id)).session;assert.equal(current.state,'battle');assert.deepEqual(current.battle,saved.initial);
+ for(const turn of saved.turns){
+  const round=current.round;let reply=await h.live(challenger,current.id,'actions',{round,orders:turn.orders[0],requestId:crypto.randomUUID()});assert.equal(reply.status,200,JSON.stringify(reply));
+  if(reply.session.state==='battle'&&reply.session.round===round){reply=await h.live(admin,current.id,'actions',{round,orders:turn.orders[1],requestId:crypto.randomUUID()});assert.equal(reply.status,200,JSON.stringify(reply));}
+  current=reply.session;assert.equal(createHash('sha256').update(JSON.stringify(current.battle)).digest('hex'),turn.sha256);
+ }
+ assert.equal(current.state,'result');assert.equal(current.battle.winner,saved.winner);assert.equal(current.battle.liveVersion,'kasai-live-v58');
+ assert.deepEqual({...h.env.DB.sqlite.prepare('SELECT challenger_party_json,kasai_party_json FROM kasai_live_sessions WHERE id=?').get(created.id)},ownedBefore);
+});
 
 test('a live invitation needs an explicitly created Kasai room and never makes a doorway or locks either player',async t=>{
  const h=setup(t),{challenger,admin}=await h.players({createRoom:false}),requestId=crypto.randomUUID();

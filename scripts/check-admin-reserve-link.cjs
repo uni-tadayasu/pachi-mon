@@ -13,6 +13,7 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
 const linkSource = fs.readFileSync(path.join(root, 'online-futo.js'), 'utf8');
 const copy = value => JSON.parse(JSON.stringify(value));
+const lunarFixture = JSON.parse(fs.readFileSync(path.join(root, 'scripts/fixtures/v82-lunar-leader-save.json'), 'utf8'));
 const timers = new Set();
 const roles = ['main', 'sub', 'sub-sub'];
 const starters = { main: 'komorizen', sub: 'shizunaria', 'sub-sub': 'akehomura' };
@@ -56,7 +57,7 @@ function makePeer(role, roleIndex) {
     grantId: `admin-trained-v64:${role}:${playerId}:${species}`, species, level: 100, gender, heldItem: 'trainband', bonusPoints: 99
   })) };
   const addition = {version:2,playerId,role,members:[{
-    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99
+    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'vernix',level:100,gender:'none',heldItem:'trainband',bonusPoints:99
   }]};
   for (const grant of [bundle, addition]) {
     if (role !== 'sub') { assert.equal(engine.receiveAdminReserveTeam(grant).added, grant.members.length); continue; }
@@ -77,7 +78,15 @@ function makePeer(role, roleIndex) {
       engine.restoreMonster(mon); engine.state.storage.push(mon); engine.state.giftReceipts.push(mon.grantId); engine.markCaught(mon.species);
     }
   }
-  if (role === 'sub') engine.state = new LT.Engine(engine.serialize()).state;
+  // Enroll the real v82 saved final form for every role, including the sub role
+  // whose already-owned individual remains valid without receiving another gift.
+  const oldState=engine.serialize(),oldFinal=copy(lunarFixture.storage.find(mon=>mon.grantId.includes(':'+role+':')));
+  oldFinal.grantId=addition.members[0].grantId;
+  oldState.storage[oldState.storage.findIndex(mon=>mon.grantId===oldFinal.grantId)]=oldFinal;
+  for(const field of ['seen','caught'])oldState[field]=oldState[field].map(id=>id==='vernix'?'lunaxion':id);
+  engine.state=new LT.Engine(oldState).state;
+  const migrated=engine.state.storage.find(mon=>mon.uid===oldFinal.uid);
+  assert.equal(migrated.species,'vernix');assert.equal(migrated.grantId,oldFinal.grantId);assert.equal(migrated.pp.vernix_renew,5);assert.equal(migrated.battleGrowth||0,0);
   const members = engine.state.storage.slice();
   members.forEach((mon, index) => {
     const values = [64, 64, 64, 41, 0, 64];
@@ -237,7 +246,7 @@ async function checkBattle(left, right, mode, indexes) {
     'sub initial receive and restore disabled; historically owned members preserved',
     'all seven reserve UIDs selectable per role', 'legacy Lv70 and trained Lv100 mythical both listed',
     'duplicate species and held items still excluded', 'exact role gender/grant appearance validated',
-    'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50', 'six v64 members keep growth99 and original source level; lunar addition stays unchanged',
+    'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50', 'six v64 members keep growth99 and original source level; migrated Vernix addition stays unchanged',
     'single and double peers synchronized after a full turn', 'adventure saves unchanged'
   ] }));
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { for (const timer of timers) clearTimeout(timer); });

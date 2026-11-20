@@ -185,7 +185,7 @@ async function adminReserveAddition(env, playerId, {delivery=true}={}) {
   if(!role||delivery&&role==='sub')return null;
   // A separate receipt never reissues or rewrites the six v64 members.
   // Keep the historical v68 entitlement ID so old receipts suppress a second delivery.
-  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};
+  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'vernix',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};
 }
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
@@ -735,7 +735,7 @@ async function kasaiOwnedParty(env,party,player) {
       else if(reserve===undefined)reserve=await adminReserveTeam(env,player.id,{delivery:false});
       const member=(isAddition?addition:reserve)?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
       if(!player.is_admin||!member)fail(403,'KASAI_PARTY_NOT_OWNED','この育成済みメンバーは、登録された運営本人だけが使用できます。');
-      const genderMatches=member.gender==='none'?member.species==='lunaxion'&&mon.species==='lunaxion'&&mon.gender===undefined:mon.gender===member.gender;
+      const genderMatches=member.gender==='none'?member.species==='vernix'&&mon.species==='vernix'&&mon.gender===undefined:mon.gender===member.gender;
       if(mon.level!==member.level||!genderMatches||mon.bonusPoints!==member.bonusPoints||(!isAddition&&mon.battleGrowth!==member.battleGrowth)||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
       // The original six have their authoritative Lv1-to-100 growth restored
       // by normalizeKasaiParty, including records issued before that field existed.

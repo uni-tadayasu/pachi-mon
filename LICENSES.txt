@@ -78,6 +78,15 @@ assets/lunax-user-v74.png と assets/lunaxion-user-v74.png です。
 ガルドラスの画像は現行の描画一覧から外しました。上記v70・v71の
 記録と画像は過去の版の来歴です。
 
+v83では、依頼者提供の「0001.png」「0002.png」「0003.png」をそれぞれ
+ヴェルニィ（verny）、ヴェルニオン（vernion）、ヴェルニクス（vernix）の
+参照入力として使用しています。紫の斑模様、青緑の目とアクセント、
+白い口元・胸・爪、各段階の腕の数と装甲を保ち、正面と別描きの背面を
+画像生成で制作しました。新しい透過PNGは assets/verny-user-v83.png、
+assets/vernion-user-v83.png、assets/vernix-user-v83.png です。
+生成後のアルファを保持し、ゲーム共通のドット描画経路で表示します。
+詳細な入力対応と生成プロンプトは docs/psychic-art-v83.json に記録しています。
+
 Third-party software notices
 ===========================
 以下は index.html に同梱する PeerJS とその組み込み依存物の原文通知です。

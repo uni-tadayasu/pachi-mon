@@ -92,7 +92,7 @@ function unitChecks(){
 
 async function integratedChecks(){
  const {LT,engine,imageErrors}=await runtime(),P=LT.MonsterPixels,art=LT.CreatureArt,ids=Object.keys(LT.DATA.species),target=traced();
- assert(P&&P.grid===GRID,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,269);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
+ assert(P&&P.grid===GRID,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,270);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
  const before={data:JSON.stringify(LT.DATA),save:JSON.stringify(engine.state)},fronts=new Set(),backs=new Set();let renders=0;
  for(const [index,id]of ids.entries()){
   await art.preload([id],{back:'both'});const views=[];
@@ -160,7 +160,7 @@ async function fallbackChecks(){
  const {LT,engine}=await runtime('no-modules');assert.equal(LT.MonsterPixels,undefined);assert.equal(LT.CreatureArt,undefined);
  const before={data:JSON.stringify(LT.DATA),save:JSON.stringify(engine.state)},target=traced(320),byShape=new Map();
  for(const s of Object.values(LT.DATA.species))if(!byShape.has(s.shape))byShape.set(s.shape,s.id);
- const revised=new Set(['futo','lunax','lunaxion','nullmie','nullva','zeroveil','pearlmi','pearlgoa','pearlseria','shimomaru','shimorei','hyogald']);
+ const revised=new Set(['futo','verny','vernion','vernix','nullmie','nullva','zeroveil','pearlmi','pearlgoa','pearlseria','shimomaru','shimorei','hyogald']);
  const ids=[...new Set([...byShape.values(),'arvelion','floravelle',...revised])];let fallbackViews=0,waitingHash=null;
  for(const id of ids)for(const back of [false,true]){
   target.reset();LT.Art.creature(target.cv,id,{back,time:0});visibleInside(target.cv,`${id}: no external modules`);

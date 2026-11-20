@@ -4,7 +4,8 @@
   const LT=globalThis.LT=globalThis.LT||{};
   if(!LT.Duel||!LT.Engine||!LT.KasaiRules)throw Error('カサイ対戦のルールを読み込めませんでした。');
   const clone=value=>JSON.parse(JSON.stringify(value));
-  const VERSION='kasai-live-v58';
+  const VERSION='kasai-live-v83-vernix';
+  const LEGACY_VERSION='kasai-live-v58';
   const engine=new LT.Engine();
   const integer=(value,min,max)=>Number.isSafeInteger(value)&&value>=min&&value<=max;
   const cleanName=(value,fallback)=>typeof value==='string'?Array.from(value.replace(/[\u0000-\u001f\u007f<>]/g,'').trim()).slice(0,24).join('')||fallback:fallback;
@@ -37,6 +38,10 @@
   }
 
   function hydrate(value){
+    if(value?.liveVersion===LEGACY_VERSION){
+      if(!LT.LegacyBattles)throw Error('以前の対戦ルールを読み込めませんでした。画面を更新してください。');
+      return LT.LegacyBattles.live().hydrate(value);
+    }
     if(!value||value.liveVersion!==VERSION||value.mode!=='single'||!integer(value.round,1,1000)||!integer(value.turn,1,101)||
       !['action','replacement'].includes(value.phase)||!integer(value.seed,0,0xffffffff)||!integer(value.rng,0,0xffffffff)||
       ![null,0,1,'draw'].includes(value.winner)||!Array.isArray(value.teams)||value.teams.length!==2)throw Error('対戦状態を確認できません。');

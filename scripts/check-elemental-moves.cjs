@@ -165,9 +165,9 @@ test('thunder, ice and soil have distinct bounded sounds with one hit cue and ex
   assert.equal(signatures.size,3,'Shared note seeds still produce three different elemental sounds');
 });
 
-test('the lunar leader renders its four super techniques on desktop and phone',()=>{
-  const expectedStyles=['astral-rend','beam','shield','healing'],before=JSON.stringify(D);
-  assert.notDeepEqual(copy(V.palettes.super),copy(V.palettes.void),'Super has its own gold/purple palette');
+test('the psychic leader renders its healing, ice, psychic and thunder techniques on desktop and phone',()=>{
+  const expectedStyles=['healing','ice','beam','lightning'],before=JSON.stringify(D);
+  assert.notDeepEqual(copy(V.palettes.super),copy(V.palettes.void),'Super has its own purple/teal palette');
   for(const [index,id]of D.offDexLeaders.moves.entries())for(const width of [390,960])for(const quality of ['low','high']){
     const move=D.moves[id],kind=move.kind==='attack'?'damage':move.kind;
     const effect=V.fromEvent({kind,move:id,side:width===390?'ally':1,slot:0,target:0,amount:38},null,100);
@@ -184,7 +184,7 @@ test('the lunar leader renders its four super techniques on desktop and phone',(
 });
 
 test('the super technique uses a bounded choir sound and preserves the common hit cue and mute behavior',()=>{
-  const move=D.moves.lunax_crescent,event={kind:'damage',amount:38,effectiveness:1.5,side:'ally'},timing={duration:1180,releaseAt:.14,impactAt:.43};
+  const move=D.moves.vernix_psycho,event={kind:'damage',amount:38,effectiveness:1.5,side:'ally'},timing={duration:1180,releaseAt:.14,impactAt:.43};
   const high=audioSpy(),low=audioSpy('low'),soil=audioSpy();
   high.audio.move(move,event,timing);low.audio.move(move,event,timing);soil.audio.move({...move,element:'earth'},event,timing);
   assert.equal(high.impacts.length,1);assert.equal(low.impacts.length,1);assert.equal(high.ducks.length,1);
@@ -194,4 +194,19 @@ test('the super technique uses a bounded choir sound and preserves the common hi
   assert(!high.calls.some(call=>call.method==='instrument'&&call.args[1]==='bell'));
   assert.notEqual(JSON.stringify(high.calls),JSON.stringify(soil.calls),'Super does not sound like the earth type');
   for(const state of ['muted','suspended']){const h=audioSpy();if(state==='muted')h.audio.enabled=false;else h.audio.ctx.state='suspended';h.audio.move(move,event,timing);assert.equal(h.calls.length,0);assert.equal(h.impacts.length,0);}
+});
+
+test('archived lunar move effects retain their old metadata without entering the current move catalog',()=>{
+  vm.runInContext(fs.readFileSync(path.join(root,'legacy-battle-v82.js'),'utf8'),context);
+  const before=JSON.stringify(D),styles={lunax_crescent:'astral-rend',lunax_nova:'beam',lunax_aegis:'shield',lunax_renew:'healing'};
+  for(const [id,style]of Object.entries(styles)){
+    const move=LT.LegacyBattles.move(id);assert(move);assert.equal(D.moves[id],undefined);
+    for(const field of ['move','moveId']){
+      const event={kind:move.kind==='attack'?'damage':move.kind,[field]:id,side:1,slot:0,target:0,amount:38},source=JSON.stringify(event);
+      const effect=V.fromEvent(event,null,100);assert.equal(effect.move,id);assert.equal(effect.style,style);assert.equal(effect.power,move.power||25);assert.equal(effect.category,move.category);assert.equal(effect.element,move.element);
+      const cv=canvas.createCanvas(390,250);assert(V.render(cv.getContext('2d'),390,250,100+effect.duration*.54,effect,{online:true,quality:'low'}));assert(imageStats(cv).opaque>25);
+      assert.equal(JSON.stringify(event),source,'Effects do not rewrite the archived event');
+    }
+  }
+  assert.equal(JSON.stringify(D),before,'No archived species or moves enter the active catalog');
 });

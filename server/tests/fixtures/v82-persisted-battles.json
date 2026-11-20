@@ -1,0 +1,3184 @@
+{
+  "sourceCommit": "0696373ec0446ceb0d0d7e5fbf7708fafc7f1865",
+  "description": "Real v82 engine snapshots after three rounds; every continuation hash was computed by the original v82 server modules.",
+  "cases": [
+    {
+      "kind": "ranked",
+      "initial": {
+        "version": 11,
+        "rankedVersion": "ranked-v79-growth",
+        "mode": "single",
+        "turn": 4,
+        "round": 4,
+        "phase": "action",
+        "seed": 134,
+        "rng": 1703683553,
+        "abilityState": {
+          "announced": {
+            "1:0": true,
+            "0:0": true
+          },
+          "consumed": {}
+        },
+        "teams": [
+          {
+            "name": "旧画面の旅人",
+            "monsters": [
+              {
+                "uid": "v82-0-0",
+                "species": "lunaxion",
+                "level": 50,
+                "xp": 0,
+                "hp": 3,
+                "pp": {
+                  "lunax_crescent": 8,
+                  "lunax_nova": 4,
+                  "lunax_aegis": 5,
+                  "lunax_renew": 6
+                },
+                "shiny": false,
+                "nickname": "相棒",
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 40,
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 490,
+                  "atk": 286,
+                  "def": 232,
+                  "spAtk": 338,
+                  "spDef": 252,
+                  "speed": 246,
+                  "accuracy": 112,
+                  "evasion": 108
+                },
+                "maxHp": 490,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "item": "trainband"
+              },
+              {
+                "uid": "v82-0-1",
+                "species": "lunax",
+                "level": 50,
+                "xp": 0,
+                "hp": 460,
+                "pp": {
+                  "lunax_crescent": 8,
+                  "lunax_nova": 5,
+                  "lunax_aegis": 6,
+                  "lunax_renew": 6
+                },
+                "shiny": false,
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 40,
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 460,
+                  "atk": 254,
+                  "def": 206,
+                  "spAtk": 298,
+                  "spDef": 220,
+                  "speed": 212,
+                  "accuracy": 108,
+                  "evasion": 106
+                },
+                "maxHp": 460,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "item": "trainband"
+              },
+              {
+                "uid": "v82-0-2",
+                "species": "komorizen",
+                "level": 50,
+                "xp": 0,
+                "hp": 302,
+                "pp": {
+                  "sig_leaf": 8,
+                  "atlas_leaf_8": 10,
+                  "riptide": 10,
+                  "atlas_leaf_11": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 302,
+                  "atk": 178,
+                  "def": 130,
+                  "spAtk": 180,
+                  "spDef": 131,
+                  "speed": 126,
+                  "accuracy": 100,
+                  "evasion": 100
+                },
+                "maxHp": 302,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "active": [
+              0
+            ]
+          },
+          {
+            "name": "継続中の相手",
+            "monsters": [
+              {
+                "uid": "v82-1-0",
+                "species": "lunaxion",
+                "level": 50,
+                "xp": 0,
+                "hp": 368,
+                "pp": {
+                  "lunax_crescent": 7,
+                  "lunax_nova": 4,
+                  "lunax_aegis": 6,
+                  "lunax_renew": 5
+                },
+                "shiny": false,
+                "nickname": "月守り",
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 30,
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 470,
+                  "atk": 276,
+                  "def": 222,
+                  "spAtk": 328,
+                  "spDef": 242,
+                  "speed": 236,
+                  "accuracy": 112,
+                  "evasion": 108
+                },
+                "maxHp": 470,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "item": "trainband",
+                "rechargeTurns": 1
+              },
+              {
+                "uid": "v82-1-1",
+                "species": "rurigorm",
+                "level": 50,
+                "xp": 0,
+                "hp": 309,
+                "pp": {
+                  "atlas_crystal_12": 10,
+                  "atlas_crystal_8": 10,
+                  "sirocco": 20,
+                  "shell": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 309,
+                  "atk": 184,
+                  "def": 138,
+                  "spAtk": 174,
+                  "spDef": 133,
+                  "speed": 115,
+                  "accuracy": 100,
+                  "evasion": 100
+                },
+                "maxHp": 309,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "uid": "v82-1-2",
+                "species": "shizunaria",
+                "level": 50,
+                "xp": 0,
+                "hp": 304,
+                "pp": {
+                  "sig_tide": 8,
+                  "atlas_tide_8": 10,
+                  "blaze": 10,
+                  "mist": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "sourceLevel": 70,
+                "stats": {
+                  "hp": 304,
+                  "atk": 177,
+                  "def": 132,
+                  "spAtk": 184,
+                  "spDef": 129,
+                  "speed": 125,
+                  "accuracy": 101,
+                  "evasion": 101
+                },
+                "maxHp": 304,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "active": [
+              0
+            ]
+          }
+        ],
+        "winner": null,
+        "reason": null,
+        "log": [
+          "第1ターン",
+          "旧画面の旅人の相棒の「月環障壁」。次の一撃を半分にする。",
+          "継続中の相手の月守りの特性「超月の覇気」が発動！",
+          "継続中の相手の月守りの「月輪念斬」。ルナクシオンに201ダメージ。",
+          "第2ターン",
+          "旧画面の旅人の相棒の特性「超月の覇気」が発動！",
+          "旧画面の旅人の相棒の「超月光砲」。ルナクシオンに337ダメージ。 次のターンは反動で動けない。",
+          "継続中の相手の月守りの「月光再生」。体力が235回復した。",
+          "第3ターン",
+          "旧画面の旅人の相棒は技の反動で動けない。",
+          "継続中の相手の月守りの「超月光砲」。ルナクシオンに286ダメージ。 次のターンは反動で動けない。"
+        ],
+        "events": [
+          {
+            "text": "第3ターン",
+            "kind": "turn",
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 289,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 490,
+                        "atk": 286,
+                        "def": 232,
+                        "spAtk": 338,
+                        "spDef": 252,
+                        "speed": 246,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 490,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband",
+                      "rechargeTurns": 1
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 460,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 460,
+                        "atk": 254,
+                        "def": 206,
+                        "spAtk": 298,
+                        "spDef": 220,
+                        "speed": 212,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 460,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 302,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 302,
+                        "atk": 178,
+                        "def": 130,
+                        "spAtk": 180,
+                        "spDef": 131,
+                        "speed": 126,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 302,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 368,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 470,
+                        "atk": 276,
+                        "def": 222,
+                        "spAtk": 328,
+                        "spDef": 242,
+                        "speed": 236,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 470,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 309,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 309,
+                        "atk": 184,
+                        "def": 138,
+                        "spAtk": 174,
+                        "spDef": 133,
+                        "speed": 115,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 309,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 304,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 304,
+                        "atk": 177,
+                        "def": 132,
+                        "spAtk": 184,
+                        "spDef": 129,
+                        "speed": 125,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 304,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "text": "旧画面の旅人の相棒は技の反動で動けない。",
+            "kind": "recharge",
+            "side": 0,
+            "slot": 0,
+            "blocked": true,
+            "recharge": true,
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 289,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 490,
+                        "atk": 286,
+                        "def": 232,
+                        "spAtk": 338,
+                        "spDef": 252,
+                        "speed": 246,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 490,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 460,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 460,
+                        "atk": 254,
+                        "def": 206,
+                        "spAtk": 298,
+                        "spDef": 220,
+                        "speed": 212,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 460,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 302,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 302,
+                        "atk": 178,
+                        "def": 130,
+                        "spAtk": 180,
+                        "spDef": 131,
+                        "speed": 126,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 302,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 368,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 470,
+                        "atk": 276,
+                        "def": 222,
+                        "spAtk": 328,
+                        "spDef": 242,
+                        "speed": 236,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 470,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 309,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 309,
+                        "atk": 184,
+                        "def": 138,
+                        "spAtk": 174,
+                        "spDef": 133,
+                        "speed": 115,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 309,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 304,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 304,
+                        "atk": 177,
+                        "def": 132,
+                        "spAtk": 184,
+                        "spDef": 129,
+                        "speed": 125,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 304,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "text": "継続中の相手の月守りの「超月光砲」。ルナクシオンに286ダメージ。 次のターンは反動で動けない。",
+            "kind": "damage",
+            "side": 1,
+            "slot": 0,
+            "move": "lunax_nova",
+            "element": "super",
+            "target": 0,
+            "amount": 286,
+            "critical": false,
+            "effectiveness": 1,
+            "guarded": false,
+            "category": "special",
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 3,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 490,
+                        "atk": 286,
+                        "def": 232,
+                        "spAtk": 338,
+                        "spDef": 252,
+                        "speed": 246,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 490,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 460,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 460,
+                        "atk": 254,
+                        "def": 206,
+                        "spAtk": 298,
+                        "spDef": 220,
+                        "speed": 212,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 460,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband"
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 302,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 302,
+                        "atk": 178,
+                        "def": 130,
+                        "spAtk": 180,
+                        "spDef": 131,
+                        "speed": 126,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 302,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 368,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 470,
+                        "atk": 276,
+                        "def": 222,
+                        "spAtk": 328,
+                        "spDef": 242,
+                        "speed": 236,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 470,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "item": "trainband",
+                      "rechargeTurns": 1
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 309,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 309,
+                        "atk": 184,
+                        "def": 138,
+                        "spAtk": 174,
+                        "spDef": 133,
+                        "speed": 115,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 309,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 50,
+                      "xp": 0,
+                      "hp": 304,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "sourceLevel": 70,
+                      "stats": {
+                        "hp": 304,
+                        "atk": 177,
+                        "def": 132,
+                        "spAtk": 184,
+                        "spDef": 129,
+                        "speed": 125,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 304,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 3,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 2,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "4f28b56b64a7adc96503b8ddba2031b1df22d5cdbecbfdcaa92d28b57412e8db"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 3,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "c3c2661cccfa1271712b658412ee0f6263c33e59c2d289e3bd9c786956953545"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 2,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "6cc625fbc695a3b9291e4c594b730ccbaf47a75e5cf558f8d5651d36f67cb8b5"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "f355de8e9847840239fd6cb08001deada0fb5e16a757d1da979a34d639a0416f"
+        },
+        {
+          "orders": [
+            [],
+            [
+              {
+                "type": "switch",
+                "slot": 0,
+                "index": 1
+              }
+            ]
+          ],
+          "sha256": "4b91e2c2e09fcebde3cdce130aefbb775cfad511c40969057854dad6a68f817d"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "79333741273cd9f3e251945edcfcff4f6a98bd9581286a8993c809433a216cd8"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "c89705f10562d7016a56aca687f396fe2d7e627d34b8a87be09cb0e82a2f4e3f"
+        },
+        {
+          "orders": [
+            [],
+            [
+              {
+                "type": "switch",
+                "slot": 0,
+                "index": 2
+              }
+            ]
+          ],
+          "sha256": "ebb781c46d1f4b51e75616939fb5f2bb0847bd5f9ffae487988a3daed553ca05"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "57987759ea2dfdd3fde21c1997f70ff60c51b91a73d789efbe1b68263e21cc2d"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "6d3207abe92e40298e8a7ef57b1b677d6cfebabd4d0b4ad6f8456844b4693837"
+        }
+      ],
+      "winner": 0,
+      "finalRound": 14,
+      "finalSha256": "6d3207abe92e40298e8a7ef57b1b677d6cfebabd4d0b4ad6f8456844b4693837"
+    },
+    {
+      "kind": "live",
+      "initial": {
+        "version": 11,
+        "liveVersion": "kasai-live-v58",
+        "mode": "single",
+        "turn": 4,
+        "round": 4,
+        "phase": "replacement",
+        "seed": 134,
+        "rng": 1703683553,
+        "abilityState": {
+          "announced": {
+            "1:0": true,
+            "0:0": true
+          },
+          "consumed": {}
+        },
+        "teams": [
+          {
+            "name": "旧画面の旅人",
+            "monsters": [
+              {
+                "uid": "v82-0-0",
+                "species": "lunaxion",
+                "level": 70,
+                "xp": 0,
+                "hp": 0,
+                "pp": {
+                  "lunax_crescent": 8,
+                  "lunax_nova": 4,
+                  "lunax_aegis": 5,
+                  "lunax_renew": 6
+                },
+                "shiny": false,
+                "nickname": "相棒",
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 40,
+                "stats": {
+                  "hp": 590,
+                  "atk": 346,
+                  "def": 272,
+                  "spAtk": 398,
+                  "spDef": 292,
+                  "speed": 286,
+                  "accuracy": 112,
+                  "evasion": 108
+                },
+                "maxHp": 590,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "item": "trainband",
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "uid": "v82-0-1",
+                "species": "lunax",
+                "level": 70,
+                "xp": 0,
+                "hp": 560,
+                "pp": {
+                  "lunax_crescent": 8,
+                  "lunax_nova": 5,
+                  "lunax_aegis": 6,
+                  "lunax_renew": 6
+                },
+                "shiny": false,
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 40,
+                "stats": {
+                  "hp": 560,
+                  "atk": 314,
+                  "def": 246,
+                  "spAtk": 358,
+                  "spDef": 260,
+                  "speed": 252,
+                  "accuracy": 108,
+                  "evasion": 106
+                },
+                "maxHp": 560,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "item": "trainband",
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "uid": "v82-0-2",
+                "species": "komorizen",
+                "level": 70,
+                "xp": 0,
+                "hp": 402,
+                "pp": {
+                  "sig_leaf": 8,
+                  "atlas_leaf_8": 10,
+                  "riptide": 10,
+                  "atlas_leaf_11": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "stats": {
+                  "hp": 402,
+                  "atk": 238,
+                  "def": 170,
+                  "spAtk": 240,
+                  "spDef": 171,
+                  "speed": 166,
+                  "accuracy": 100,
+                  "evasion": 100
+                },
+                "maxHp": 402,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "active": [
+              0
+            ]
+          },
+          {
+            "name": "継続中の相手",
+            "monsters": [
+              {
+                "uid": "v82-1-0",
+                "species": "lunaxion",
+                "level": 70,
+                "xp": 0,
+                "hp": 397,
+                "pp": {
+                  "lunax_crescent": 7,
+                  "lunax_nova": 4,
+                  "lunax_aegis": 6,
+                  "lunax_renew": 5
+                },
+                "shiny": false,
+                "nickname": "月守り",
+                "heldItem": "trainband",
+                "alloc": {
+                  "hp": 20,
+                  "spAtk": 20
+                },
+                "battleGrowth": 30,
+                "stats": {
+                  "hp": 570,
+                  "atk": 336,
+                  "def": 262,
+                  "spAtk": 388,
+                  "spDef": 282,
+                  "speed": 276,
+                  "accuracy": 112,
+                  "evasion": 108
+                },
+                "maxHp": 570,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "item": "trainband",
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "rechargeTurns": 1
+              },
+              {
+                "uid": "v82-1-1",
+                "species": "rurigorm",
+                "level": 70,
+                "xp": 0,
+                "hp": 409,
+                "pp": {
+                  "atlas_crystal_12": 10,
+                  "atlas_crystal_8": 10,
+                  "sirocco": 20,
+                  "shell": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "stats": {
+                  "hp": 409,
+                  "atk": 244,
+                  "def": 178,
+                  "spAtk": 234,
+                  "spDef": 173,
+                  "speed": 155,
+                  "accuracy": 100,
+                  "evasion": 100
+                },
+                "maxHp": 409,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              },
+              {
+                "uid": "v82-1-2",
+                "species": "shizunaria",
+                "level": 70,
+                "xp": 0,
+                "hp": 404,
+                "pp": {
+                  "sig_tide": 8,
+                  "atlas_tide_8": 10,
+                  "blaze": 10,
+                  "mist": 15
+                },
+                "shiny": false,
+                "gender": "male",
+                "stats": {
+                  "hp": 404,
+                  "atk": 237,
+                  "def": 172,
+                  "spAtk": 244,
+                  "spDef": 169,
+                  "speed": 165,
+                  "accuracy": 101,
+                  "evasion": 101
+                },
+                "maxHp": 404,
+                "stages": {
+                  "atk": 0,
+                  "def": 0,
+                  "spAtk": 0,
+                  "spDef": 0,
+                  "speed": 0,
+                  "accuracy": 0,
+                  "evasion": 0
+                },
+                "guard": false,
+                "moveOrder": [
+                  0,
+                  1,
+                  2,
+                  3
+                ]
+              }
+            ],
+            "active": [
+              0
+            ]
+          }
+        ],
+        "winner": null,
+        "reason": null,
+        "log": [
+          "第1ターン",
+          "旧画面の旅人の相棒の「月環障壁」。次の一撃を半分にする。",
+          "継続中の相手の月守りの特性「超月の覇気」が発動！",
+          "継続中の相手の月守りの「月輪念斬」。ルナクシオンに276ダメージ。",
+          "第2ターン",
+          "旧画面の旅人の相棒の特性「超月の覇気」が発動！",
+          "旧画面の旅人の相棒の「超月光砲」。ルナクシオンに458ダメージ。 次のターンは反動で動けない。",
+          "継続中の相手の月守りの「月光再生」。体力が285回復した。",
+          "第3ターン",
+          "旧画面の旅人の相棒は技の反動で動けない。",
+          "継続中の相手の月守りの「超月光砲」。ルナクシオンに314ダメージ。 次のターンは反動で動けない。",
+          "旧画面の旅人の相棒は戦闘不能。"
+        ],
+        "events": [
+          {
+            "text": "第3ターン",
+            "kind": "turn",
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 314,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 590,
+                        "atk": 346,
+                        "def": 272,
+                        "spAtk": 398,
+                        "spDef": 292,
+                        "speed": 286,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 590,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "rechargeTurns": 1
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 560,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 560,
+                        "atk": 314,
+                        "def": 246,
+                        "spAtk": 358,
+                        "spDef": 260,
+                        "speed": 252,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 560,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 402,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 402,
+                        "atk": 238,
+                        "def": 170,
+                        "spAtk": 240,
+                        "spDef": 171,
+                        "speed": 166,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 402,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 397,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "stats": {
+                        "hp": 570,
+                        "atk": 336,
+                        "def": 262,
+                        "spAtk": 388,
+                        "spDef": 282,
+                        "speed": 276,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 570,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 409,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 409,
+                        "atk": 244,
+                        "def": 178,
+                        "spAtk": 234,
+                        "spDef": 173,
+                        "speed": 155,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 409,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 404,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 404,
+                        "atk": 237,
+                        "def": 172,
+                        "spAtk": 244,
+                        "spDef": 169,
+                        "speed": 165,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 404,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "text": "旧画面の旅人の相棒は技の反動で動けない。",
+            "kind": "recharge",
+            "side": 0,
+            "slot": 0,
+            "blocked": true,
+            "recharge": true,
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 314,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 590,
+                        "atk": 346,
+                        "def": 272,
+                        "spAtk": 398,
+                        "spDef": 292,
+                        "speed": 286,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 590,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 560,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 560,
+                        "atk": 314,
+                        "def": 246,
+                        "spAtk": 358,
+                        "spDef": 260,
+                        "speed": 252,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 560,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 402,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 402,
+                        "atk": 238,
+                        "def": 170,
+                        "spAtk": 240,
+                        "spDef": 171,
+                        "speed": 166,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 402,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 397,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "stats": {
+                        "hp": 570,
+                        "atk": 336,
+                        "def": 262,
+                        "spAtk": 388,
+                        "spDef": 282,
+                        "speed": 276,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 570,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 409,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 409,
+                        "atk": 244,
+                        "def": 178,
+                        "spAtk": 234,
+                        "spDef": 173,
+                        "speed": 155,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 409,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 404,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 404,
+                        "atk": 237,
+                        "def": 172,
+                        "spAtk": 244,
+                        "spDef": 169,
+                        "speed": 165,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 404,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "text": "継続中の相手の月守りの「超月光砲」。ルナクシオンに314ダメージ。 次のターンは反動で動けない。",
+            "kind": "damage",
+            "side": 1,
+            "slot": 0,
+            "move": "lunax_nova",
+            "element": "super",
+            "target": 0,
+            "amount": 314,
+            "critical": false,
+            "effectiveness": 1,
+            "guarded": false,
+            "category": "special",
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 0,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 590,
+                        "atk": 346,
+                        "def": 272,
+                        "spAtk": 398,
+                        "spDef": 292,
+                        "speed": 286,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 590,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 560,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 560,
+                        "atk": 314,
+                        "def": 246,
+                        "spAtk": 358,
+                        "spDef": 260,
+                        "speed": 252,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 560,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 402,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 402,
+                        "atk": 238,
+                        "def": 170,
+                        "spAtk": 240,
+                        "spDef": 171,
+                        "speed": 166,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 402,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 397,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "stats": {
+                        "hp": 570,
+                        "atk": 336,
+                        "def": 262,
+                        "spAtk": 388,
+                        "spDef": 282,
+                        "speed": 276,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 570,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "rechargeTurns": 1
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 409,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 409,
+                        "atk": 244,
+                        "def": 178,
+                        "spAtk": 234,
+                        "spDef": 173,
+                        "speed": 155,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 409,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 404,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 404,
+                        "atk": 237,
+                        "def": 172,
+                        "spAtk": 244,
+                        "spDef": 169,
+                        "speed": 165,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 404,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "text": "旧画面の旅人の相棒は戦闘不能。",
+            "kind": "faint",
+            "side": 0,
+            "slot": 0,
+            "visual": {
+              "teams": [
+                {
+                  "name": "旧画面の旅人",
+                  "monsters": [
+                    {
+                      "uid": "v82-0-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 0,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 5,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "nickname": "相棒",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 590,
+                        "atk": 346,
+                        "def": 272,
+                        "spAtk": 398,
+                        "spDef": 292,
+                        "speed": 286,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 590,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-1",
+                      "species": "lunax",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 560,
+                      "pp": {
+                        "lunax_crescent": 8,
+                        "lunax_nova": 5,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 6
+                      },
+                      "shiny": false,
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 40,
+                      "stats": {
+                        "hp": 560,
+                        "atk": 314,
+                        "def": 246,
+                        "spAtk": 358,
+                        "spDef": 260,
+                        "speed": 252,
+                        "accuracy": 108,
+                        "evasion": 106
+                      },
+                      "maxHp": 560,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-0-2",
+                      "species": "komorizen",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 402,
+                      "pp": {
+                        "sig_leaf": 8,
+                        "atlas_leaf_8": 10,
+                        "riptide": 10,
+                        "atlas_leaf_11": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 402,
+                        "atk": 238,
+                        "def": 170,
+                        "spAtk": 240,
+                        "spDef": 171,
+                        "speed": 166,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 402,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                },
+                {
+                  "name": "継続中の相手",
+                  "monsters": [
+                    {
+                      "uid": "v82-1-0",
+                      "species": "lunaxion",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 397,
+                      "pp": {
+                        "lunax_crescent": 7,
+                        "lunax_nova": 4,
+                        "lunax_aegis": 6,
+                        "lunax_renew": 5
+                      },
+                      "shiny": false,
+                      "nickname": "月守り",
+                      "heldItem": "trainband",
+                      "alloc": {
+                        "hp": 20,
+                        "spAtk": 20
+                      },
+                      "battleGrowth": 30,
+                      "stats": {
+                        "hp": 570,
+                        "atk": 336,
+                        "def": 262,
+                        "spAtk": 388,
+                        "spDef": 282,
+                        "speed": 276,
+                        "accuracy": 112,
+                        "evasion": 108
+                      },
+                      "maxHp": 570,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "item": "trainband",
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ],
+                      "rechargeTurns": 1
+                    },
+                    {
+                      "uid": "v82-1-1",
+                      "species": "rurigorm",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 409,
+                      "pp": {
+                        "atlas_crystal_12": 10,
+                        "atlas_crystal_8": 10,
+                        "sirocco": 20,
+                        "shell": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 409,
+                        "atk": 244,
+                        "def": 178,
+                        "spAtk": 234,
+                        "spDef": 173,
+                        "speed": 155,
+                        "accuracy": 100,
+                        "evasion": 100
+                      },
+                      "maxHp": 409,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    },
+                    {
+                      "uid": "v82-1-2",
+                      "species": "shizunaria",
+                      "level": 70,
+                      "xp": 0,
+                      "hp": 404,
+                      "pp": {
+                        "sig_tide": 8,
+                        "atlas_tide_8": 10,
+                        "blaze": 10,
+                        "mist": 15
+                      },
+                      "shiny": false,
+                      "gender": "male",
+                      "stats": {
+                        "hp": 404,
+                        "atk": 237,
+                        "def": 172,
+                        "spAtk": 244,
+                        "spDef": 169,
+                        "speed": 165,
+                        "accuracy": 101,
+                        "evasion": 101
+                      },
+                      "maxHp": 404,
+                      "stages": {
+                        "atk": 0,
+                        "def": 0,
+                        "spAtk": 0,
+                        "spDef": 0,
+                        "speed": 0,
+                        "accuracy": 0,
+                        "evasion": 0
+                      },
+                      "guard": false,
+                      "moveOrder": [
+                        0,
+                        1,
+                        2,
+                        3
+                      ]
+                    }
+                  ],
+                  "active": [
+                    0
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "turns": [
+        {
+          "orders": [
+            [
+              {
+                "type": "switch",
+                "slot": 0,
+                "index": 1
+              }
+            ],
+            []
+          ],
+          "sha256": "b2d45d6ccd650fa20c8c03f7fb7e8378f072b5a341c901ca683dcc582025b84c"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 3,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "1a0c25e0f0d6f0a00bad32f30e303aeed0329a5063f30676ee4f1e5052d4d036"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 2,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "7bf000308421aeed21972128190e659cb5cf2861d618dd97cde3892c23048d34"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "df193f289ac6232ba732f0666ba19141315d4c182596373f35324514e222e6b1"
+        },
+        {
+          "orders": [
+            [],
+            [
+              {
+                "type": "switch",
+                "slot": 0,
+                "index": 1
+              }
+            ]
+          ],
+          "sha256": "b5995539c8fdc9b8db79fa5fe45d39dee3e89e6d0c693accbfe1d4a566a019ef"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "371621adff5e64147c6ba92407240d306146dd427162347f446b1e4960cd1035"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "9418bd32e6f1cda3f403c3fc7e40332070a30f3aa7e247c782326a3c0d9a4150"
+        },
+        {
+          "orders": [
+            [],
+            [
+              {
+                "type": "switch",
+                "slot": 0,
+                "index": 2
+              }
+            ]
+          ],
+          "sha256": "10de2a6419bd30b8e0aaefe90684b52dc7224fc0f9b10d63398cf813739c8512"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "cb3f11af799d634e623b810eb6cfaaec0fbc1bd2e186cd23a3c2568a1a6d9cea"
+        },
+        {
+          "orders": [
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 1,
+                "target": 0
+              }
+            ],
+            [
+              {
+                "type": "move",
+                "slot": 0,
+                "move": 0,
+                "target": 0
+              }
+            ]
+          ],
+          "sha256": "a334c5bd7e90b188d6f7f7f4225609738498ba6dea78c32e7e7516fe9f2613c0"
+        }
+      ],
+      "winner": 0,
+      "finalRound": 14,
+      "finalSha256": "a334c5bd7e90b188d6f7f7f4225609738498ba6dea78c32e7e7516fe9f2613c0"
+    }
+  ]
+}

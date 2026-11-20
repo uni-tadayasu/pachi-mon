@@ -19,7 +19,7 @@
     stone: ['#f3deb2', '#b7a489', '#62596c', '#fff0ce'],
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff'],
     void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0'],
-    super: ['#fff5ca', '#f4c343', '#704085', '#fffbea']
+    super: ['#fff0ff', '#de4ad2', '#65236f', '#54edcb']
   };
   // Exactly 24 move effects. Every move maps to one, by its role in the type's
   // roster (or a named exception); colours come from the move or its type.
@@ -43,6 +43,8 @@
     futo_breaker:'impact',futo_burst:'beam',arvelion_rend:'astral-rend',arvelion_nova:'creation-nova',
     verdant_lance:'seed',forest_crown:'petals',genesis_bloom:'roots',root_drain:'healing',sig_leaf:'petals',sig_tide:'astral-rend',sig_ember:'creation-nova',
     null_curse:'astral-rend',null_ray:'beam',null_scorch:'flame',
+    vernix_renew:'healing',vernix_frost:'ice',vernix_psycho:'beam',vernix_thunder:'lightning',
+    // Archived in-progress battles retain their original choreography only.
     lunax_crescent:'astral-rend',lunax_nova:'beam'};
   // ID-based variations keep Kiraseed's four techniques within the existing
   // material families; these same cue points drive their sound and HP timing.
@@ -66,7 +68,11 @@
     sig_ember:['#fff3d6','#ff9a3d','#c8331c','#ffe08a'],
     null_restore:['#f1edff','#b4a8e0','#594d91','#a6fff0'],
     null_ray:['#f5efff','#b2a0ef','#5a448e','#9dfff0'],
-    null_scorch:['#ffeddc','#e7799e','#6c376f','#ffdf9b']
+    null_scorch:['#ffeddc','#e7799e','#6c376f','#ffdf9b'],
+    vernix_renew:['#f2fff8','#78f0cc','#804093','#fff2d4'],
+    vernix_frost:['#edffff','#8fe5ff','#476cba','#ebbeff'],
+    vernix_psycho:['#fff0ff','#e15bd6','#65236f','#54edcb'],
+    vernix_thunder:['#fffac9','#ffe264','#b265d0','#70f2d3']
   };
   // Conditions show on the afflicted monster every turn they hold: when they land,
   // when they stop a move, as a damage tick, as an end-of-turn reminder, and when they end.
@@ -229,6 +235,8 @@
     const moves=LT.DATA?.moves||{};
     if(event?.move&&moves[event.move])return moves[event.move];
     if(event?.moveId&&moves[event.moveId])return moves[event.moveId];
+    const archived=LT.LegacyBattles?.move?.(event?.move)||LT.LegacyBattles?.move?.(event?.moveId);
+    if(archived)return archived;
     const quoted=/「([^」]+)」/.exec(event?.text||'')?.[1];
     if(quoted){const found=Object.values(moves).find(m=>m.name===quoted);if(found)return found;}
     return event?.side==='enemy'||typeof event?.side==='number'?null:fallback;

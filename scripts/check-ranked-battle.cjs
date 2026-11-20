@@ -11,7 +11,7 @@ let runtime;
 async function loadRules(){
   if(runtime)return runtime;const {createReplayRuntime}=await import('../server/kasai-replay.mjs'),LT=createReplayRuntime();
   const html=fs.readFileSync(require.resolve('../index.html'),'utf8'),source=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].find(match=>match[1].includes('deterministic, save-independent rental-team duels'))[1];
-  const context=vm.createContext({LT,console});vm.runInContext(source,context);vm.runInContext(fs.readFileSync(require.resolve('../ranked-rules.js'),'utf8'),context);
+  const context=vm.createContext({LT,console});vm.runInContext(source,context);vm.runInContext(fs.readFileSync(require.resolve('../legacy-battle-v82.js'),'utf8'),context);vm.runInContext(fs.readFileSync(require.resolve('../ranked-rules.js'),'utf8'),context);
   return runtime={LT,rules:context.LT.RankedRules};
 }
 async function fixture(){
@@ -58,7 +58,7 @@ async function fixture(){
 test('enrollment sends three owned original-level records with training, items, appearance and move order intact',async()=>{
   const h=await fixture(),adventure=JSON.stringify(h.e.state);assert((await h.c.join(h.team)).ok);
   const post=h.calls.find(call=>call.method==='POST');assert.equal(post.route,'/world/ranked/queue');assert.deepEqual(post.body.team,copy(h.loaded.rules.normalizeTeam(h.team)));
-  assert.equal(post.body.rulesVersion,'ranked-v79-growth');assert.equal(post.body.team[0].battleGrowth,23);
+  assert.equal(post.body.rulesVersion,'ranked-v83-vernix');assert.equal(post.body.team[0].battleGrowth,23);
   assert.deepEqual(post.body.team.map(mon=>mon.level),[24,71,60]);assert.equal(post.body.team[0].uid,h.team[0].uid);assert.deepEqual(post.body.team[0].alloc,{hp:6,atk:5});assert.deepEqual(post.body.team[0].moveOrder,[3,1,0,2]);assert.equal(post.body.team[0].nickname,'育てた仲間');assert.equal(post.body.team[0].shiny,true);assert.equal(post.body.team[0].gender,'male');assert.equal(post.body.team[1].heldItem,'trainband');
   assert(h.c.locked());assert(h.c.queued());assert.equal(h.scenes.length,0);assert.equal(JSON.stringify(h.e.state),adventure,'Ranked enrollment must not heal or edit the adventure save');
   assert(!h.calls.some(call=>call.route.includes('/actions')||call.route.includes('/accept')));
@@ -69,7 +69,7 @@ test('existing v78 matches recover, accept actions and acknowledge with their un
   assert((await h.c.refresh()).ok);assert.equal(h.c.match.rulesVersion,'ranked-v78');assert.deepEqual(h.scenes[0].snapshot,before);
   const orders=copy(h.loaded.rules.hydrate(h.match.battle).legalOrders(h.match.side));assert((await h.c.submit(orders)).ok);assert.equal(h.c.match.rulesVersion,'ranked-v78');
   h.finish('win');assert((await h.c.refresh()).ok);assert((await h.c.acknowledge()).ok);assert(!h.c.locked());assert.equal(h.c.match,null);assert.equal(h.scenes.at(-1).snapshot,null);
-  assert((await h.c.refresh()).ok);assert((await h.c.join(h.team)).ok);assert.equal(h.calls.filter(call=>call.route==='/world/ranked/queue'&&call.method==='POST').at(-1).body.rulesVersion,'ranked-v79-growth');
+  assert((await h.c.refresh()).ok);assert((await h.c.join(h.team)).ok);assert.equal(h.calls.filter(call=>call.route==='/world/ranked/queue'&&call.method==='POST').at(-1).body.rulesVersion,'ranked-v83-vernix');
 });
 
 test('invalid or duplicate individuals and species never create a queue request',async()=>{
@@ -203,6 +203,20 @@ test('matched UI opens automatically, but moves and forfeit still require explic
 test('battle health starts from the visual snapshot, and names are escaped in server-provided panels',async()=>{
   const h=await browserFixture();h.begin();const old=copy(h.match.battle);h.match.battle.teams[0].monsters[0].hp=1;h.match.players[1].name='<img src=x onerror=attack()>';
   h.context.LT.BattleVFX={onlineBusy:()=>true,onlineView:()=>old,onlineProgress:()=>({shown:0,total:0})};await h.ui.refresh();const html=h.dialog().innerHTML,mon=old.teams[0].monsters[0];assert(html.includes('>'+mon.hp+' / '+mon.maxHp+'</small>'));assert(!html.includes('>1 / '+mon.maxHp+'</small>'));assert.match(html,/&lt;img src=x onerror=attack\(\)&gt;/);assert(!html.includes('<img src=x'));assert(!h.calls.some(call=>call.route.endsWith('/actions')));
+});
+
+test('an in-progress v82 ranked match renders original names and moves without changing its snapshot or current catalog',async()=>{
+  const h=await browserFixture(),legacy=h.loaded.LT.LegacyBattles,lunar=JSON.parse(fs.readFileSync(require.resolve('./fixtures/v82-lunar-leader-save.json'),'utf8'));
+  const team=[...lunar.party,copy(h.team[1])].map(mon=>{const member=copy(mon);delete member.nickname;return member;});
+  h.begin();h.match.battle=copy(legacy.ranked().create(team,[team[1],team[0],team[2]],83));h.match.rulesVersion=h.match.battle.rankedVersion;
+  const before=JSON.stringify(h.match.battle),catalog=JSON.stringify(h.loaded.LT.DATA);
+  assert((await h.ui.refresh()).ok);const html=h.dialog().innerHTML;
+  assert.match(html,/ルナクス/);assert.match(html,/ルナクシオン/);
+  for(const id of ['lunax_crescent','lunax_nova','lunax_aegis','lunax_renew'])assert(html.includes(legacy.move(id).name),id+' keeps its archived move label');
+  assert.equal(JSON.stringify(h.match.battle),before);assert.equal(JSON.stringify(h.scenes.at(-1).snapshot),before);
+  assert.equal(JSON.stringify(h.loaded.LT.DATA),catalog);assert.equal(h.loaded.LT.DATA.species.lunaxion,undefined);assert.equal(h.loaded.LT.DATA.moves.lunax_nova,undefined);
+  h.match.battle.teams[0].monsters[0].nickname='<A>';h.match.revision++;assert((await h.ui.refresh()).ok);assert.match(h.dialog().innerHTML,/&lt;A&gt;/);assert(!h.dialog().innerHTML.includes('><A><'));
+  await h.click('move',0);await h.click('submit');assert.equal(h.calls.filter(call=>call.route.endsWith('/actions')).length,1);assert.equal(h.ui.session().battle.rankedVersion,'ranked-v79-growth');
 });
 
 test('a queued native close event cannot dismiss a reopened ranked lobby',async()=>{
