@@ -14,7 +14,7 @@ function harness(engine,reducedMotion=false){
  const out={frames:[],saves:0,toasts:[],draws:[],sounds:[]};
  const c=vm.createContext({engine,LT,DATA,battleView:null,battleEffect:null,busy:false,evolutionUntil:0,settings:{reducedMotion},performance:{now:()=>100},
   $:id=>nodes[id],document:{createElement:()=>({textContent:''})},toast:msg=>out.toasts.push(msg),updateScene(){},
-  updateAll(){out.draws.push({busy:c.busy,enemy:(c.battleView||engine).battle.enemy.species});},updateBattle(){},paintBattleHealth(){},battleHealthDuration(){return 0;},save(){out.saves++;},
+  updateAll(){out.draws.push({busy:c.busy,enemy:(c.battleView||engine).battle.enemy.species});},updateBattle(){},refreshPartyStrip(){},paintBattleHealth(){},battleHealthDuration(){return 0;},save(){out.saves++;},
   sound:{fx:name=>out.sounds.push(name),move(){}},setTimeout(fn,duration){out.frames.push({duration,busy:c.busy,effect:copy(c.battleEffect),visual:copy(c.battleView.battle),party:copy(c.battleView.state.party)});return setTimeout(fn,0);},clearTimeout(id){clearTimeout(id);}});
  const start=html.indexOf('  function captureBattleView()'),end=html.indexOf('  function openBattle()',start);
  assert(start>0&&end>start);vm.runInContext(html.slice(start,end),c);

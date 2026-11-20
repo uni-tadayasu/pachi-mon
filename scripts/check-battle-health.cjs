@@ -30,7 +30,7 @@ function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,sta
 function solo(){
  const e=new Engine();assert(e.newGame('komori').ok);e.state.party[0].level=50;e.restoreMonster(e.state.party[0]);e.state.party.push(e.makeMonster('shizuku',50));e.markCaught('shizuku');assert(e.startBattle('kirari',50));
  const nodes=new Map(),{c,time,H}=runtime({engine:e,DATA:D,settings:{textSpeed:'normal',reducedMotion:false},busy:false,battleView:null,battleEffect:null,evolutionUntil:0,
-  refitBattleText(){},battleActions(){},nameOf:model.LT.displayName,visibleConditions:()=>[],updateScene(){},saved:0,beats:[],
+  refitBattleText(){},battleActions(){},nameOf:model.LT.displayName,visibleConditions:()=>[],updateScene(){},refreshPartyStrip(){},saved:0,beats:[],
   save:()=>{c.saved++;},updateAll:()=>c.updateBattle(),sound:{fx(){},move(){}},
   document:{querySelector:selector=>selector==='.enemy-card .hp-label'?node('enemy-label'):null,createElement:()=>element()},$:id=>node(id)
  });

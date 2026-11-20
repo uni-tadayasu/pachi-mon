@@ -9,7 +9,7 @@ const root=path.join(__dirname,'..'),html=fs.readFileSync(path.join(root,'index.
 const mobileSource=fs.readFileSync(path.join(root,'mobile-screen.js'),'utf8'),desktopSource=fs.readFileSync(path.join(root,'desktop-screen.js'),'utf8');
 const copy=value=>JSON.parse(JSON.stringify(value));
 const styleLinks=[...html.matchAll(/<link\b([^>]+)>/gi)].filter(([,attrs])=>/\brel=["']stylesheet["']/.test(attrs)).map(([,attrs])=>/\bhref=["']([^"']+)/.exec(attrs)?.[1]);
-assert(styleLinks.at(-1)?.startsWith('responsive-fit.css?'),'The responsive layout must load after every legacy/theme stylesheet');
+assert(styleLinks.at(-2)?.startsWith('responsive-fit.css?')&&styleLinks.at(-1)?.startsWith('console-controls.css?'),'Responsive layout and console controls must load after every legacy/theme stylesheet');
 assert(fs.readFileSync(path.join(root,'responsive-fit.css'),'utf8').trim(),'Responsive stylesheet is empty');
 
 function mediaMatches(query,state){

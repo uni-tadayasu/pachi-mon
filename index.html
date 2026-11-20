@@ -492,7 +492,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
             <section id="battle-panel" class="battle-panel" aria-label="戦闘コマンド" hidden><div class="battle-log-wrap"><svg class="battle-log-mark"><use href="#i-resonate"/></svg><div id="battle-log" role="log" aria-live="polite" aria-relevant="additions text">どうする？</div></div><div id="battle-actions" class="battle-actions"></div></section>
           </div>
           <div class="console-brand" aria-hidden="true"><span>Pachi</span><strong>MONSTERS</strong><small>PM-01</small></div>
-          <div class="touch-controls" aria-label="携帯機の操作ボタン"><button id="touch-l" type="button" class="console-shoulder console-shoulder-l" aria-label="Lボタン：ワールドマップ"><span>L</span><small>地図 <kbd>M</kbd></small></button><button id="touch-r" type="button" class="console-shoulder console-shoulder-r" aria-label="Rボタン：モンスター図鑑"><span>R</span><small>図鑑 <kbd>J</kbd></small></button><div class="dpad" aria-label="移動ボタン"><button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><svg><use href="#i-chevron"/></svg></button><span class="dpad-center" aria-hidden="true"><svg><use href="#i-lantern"/></svg></span><button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><svg><use href="#i-chevron"/></svg></button></div><span class="console-caption console-caption-dpad">移動 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><div class="touch-instruction"><small>EXPLORE</small><span>次の出会いへ</span></div><div class="console-system" role="group" aria-label="SELECT・START"><button id="touch-select" type="button" class="console-pill" aria-label="SELECTボタン：道具袋を開く"><i aria-hidden="true"></i><span>SELECT</span><small>道具袋 <kbd>B</kbd></small></button><button id="touch-menu" type="button" class="touch-menu console-pill" aria-label="STARTボタン：メニューを開く"><i aria-hidden="true"></i><span>START</span><small>メニュー <kbd>Esc</kbd></small></button></div><div class="touch-commands"><button id="touch-b" type="button" class="touch-b" aria-label="Bボタン：もどる。押し続けるとダッシュ"><span>B</span><small>もどる <kbd>Shift</kbd></small></button><button id="touch-action" type="button" class="touch-action" aria-label="Aボタン：話す・調べる"><span>A</span><small>調べる <kbd>E</kbd></small></button></div><div class="console-speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="touch-controls" role="group" aria-label="方向キー・A・B・L・R・SELECT・START"><button id="touch-l" type="button" class="console-shoulder console-shoulder-l" aria-label="Lボタン：ワールドマップ"><span>L</span><small>地図 <kbd>M</kbd></small></button><button id="touch-r" type="button" class="console-shoulder console-shoulder-r" aria-label="Rボタン：モンスター図鑑"><span>R</span><small>図鑑 <kbd>J</kbd></small></button><div class="dpad" role="group" aria-label="移動ボタン"><button type="button" data-dir="up" class="dpad-up" aria-label="上へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="left" class="dpad-left" aria-label="左へ移動"><svg><use href="#i-chevron"/></svg></button><span class="dpad-center" aria-hidden="true"><svg><use href="#i-lantern"/></svg></span><button type="button" data-dir="right" class="dpad-right" aria-label="右へ移動"><svg><use href="#i-chevron"/></svg></button><button type="button" data-dir="down" class="dpad-down" aria-label="下へ移動"><svg><use href="#i-chevron"/></svg></button></div><span class="console-caption console-caption-dpad">移動 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><div class="touch-instruction"><small>EXPLORE</small><span>次の出会いへ</span></div><div class="console-system" role="group" aria-label="SELECT・START"><button id="touch-select" type="button" class="console-pill" aria-label="SELECTボタン：道具袋を開く"><i aria-hidden="true"></i><span>SELECT</span><small>道具袋 <kbd>B</kbd></small></button><button id="touch-menu" type="button" class="touch-menu console-pill" aria-label="STARTボタン：メニューを開く"><i aria-hidden="true"></i><span>START</span><small>メニュー <kbd>Esc</kbd></small></button></div><div class="touch-commands"><button id="touch-b" type="button" class="touch-b" aria-label="Bボタン：もどる。押し続けるとダッシュ"><span>B</span><small>戻る・走る <kbd>Shift</kbd></small></button><button id="touch-action" type="button" class="touch-action" aria-label="Aボタン：話す・調べる"><span>A</span><small>調べる <kbd>E</kbd></small></button></div><div class="console-speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         </div>
         <div id="controller-status" class="controller-status" role="status" aria-live="polite" hidden><span class="controller-status-label"><svg aria-hidden="true"><use href="#i-gamepad"/></svg><span id="controller-status-text">コントローラー接続中</span></span><span id="controller-help" class="controller-help"><b>左スティック・十字</b> 移動 <b>決定</b> 調べる <b>START</b> メニュー</span></div>
         <div id="world-controls" class="world-controls"><div class="keyboard-help"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><i>移動</i></span><span><kbd>E</kbd><i>話す・調べる</i></span><span><kbd>Shift</kbd><i>走る</i></span></div><button id="interact-btn" type="button" class="btn btn-small interact-btn"><svg><use href="#i-resonate"/></svg>話す・調べる <kbd>E</kbd></button></div>
@@ -567,7 +567,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
           <thead><tr><th scope="col">操作方法</th><th scope="col">移動</th><th scope="col">決定・調べる</th><th scope="col">メニュー</th></tr></thead>
           <tbody>
             <tr><th scope="row">キーボード</th><td>矢印 / W・A・S・D<br>Shiftで走る</td><td>E / Enter / スペース</td><td>Esc<br>J：図鑑 / M：地図 / B：道具</td></tr>
-            <tr><th scope="row">タッチ</th><td>画面の十字キー</td><td>Aボタン / 各項目をタップ</td><td>画面のメニューボタン</td></tr>
+            <tr><th scope="row">画面のボタン</th><td>左の十字キー<br>Bを押したまま移動で走る</td><td>右のAボタン / 各項目をタップ</td><td>START：メニュー / SELECT：道具袋<br>L：地図 / R：図鑑</td></tr>
             <tr><th scope="row">コントローラー</th><td>左スティック / 方向キー</td><td>下側のフェイスボタン</td><td>メニューボタン</td></tr>
           </tbody>
         </table></div>
@@ -3824,7 +3824,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!b){events?.push({text,kind,...meta});return;}
       const ally=this.state.party[b.activeIndex];
       clearImmuneCondition(ally);clearImmuneCondition(b.enemy);
-      const visual=ally&&b.enemy?{activeIndex:b.activeIndex,ally:clone(ally),enemy:clone(b.enemy),enemyIndex:b.enemyIndex}:null;
+      const visual=ally&&b.enemy?{activeIndex:b.activeIndex,ally:clone(ally),enemy:clone(b.enemy),enemyIndex:b.enemyIndex,party:clone(this.state.party)}:null;
       events.push({text,kind,...meta,...(visual?{visual}:{})});b.log.push(text);if(b.log.length>40)b.log.shift();
     }
     abilityNotice(mon,side,events,{force=false,detail='',...meta}={}){
@@ -6981,6 +6981,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
 })();
 
 </script><script src="retro-screen.js?v=20261119-display-v52"></script>
+<script src="party-reorder.js?v=20261120-console-controls-v72"></script>
 <script>
 /* Pachi Monsters — browser interface, accessible input and original soundtrack. */
 (() => {
@@ -7000,6 +7001,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   let moveAnim = null, pressedDirection = null, directionSource = null;
   let shopQuantity = 1, selectedAvatar = 'male', selectedPlayerName = LT.PlayerIdentity.defaultName, lastPortraitFrame = 0;
   let controller=null, padSprint=false, controllerStatus={supported:typeof navigator.getGamepads==='function',connected:false};
+  let partyReorder=null;
   let settings = { sound:true, volume:.10, quality:matchMedia('(max-width:600px)').matches?'balanced':'high', dayNight:true, reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches, crt:false, screen:LT.RetroScreen?.defaultMode||'color', textSpeed:'normal', autoRun:false };
   try {
     const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY));
@@ -7267,6 +7269,20 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     return `<div class="hp-track"${id ? ` id="${id}"` : ''}><span class="hp-fill${percent < 25 ? ' low' : ''}" style="width:${percent}%"></span></div>`;
   }
   function updateFacing(){const names={up:'↑ 北',right:'→ 東',down:'↓ 南',left:'← 西'},label=$('facing-label');if(label){label.textContent=names[engine.state.facing]||'↓ 南';label.setAttribute('aria-label','向き '+({up:'北',right:'東',down:'南',left:'西'})[engine.state.facing]);}$('game-canvas').setAttribute('aria-label',`冒険フィールド。現在地 ${engine.map.name}。主人公は${({up:'北',right:'東',down:'南',left:'西'})[engine.state.facing]}向き。矢印・WASD・左スティックで移動、Eまたは決定で調べる。`);}
+  function refreshPartyStrip(display=battleView||engine,healthVisual=null) {
+    const list=$('party-list');if(!list)return;
+    partyReorder?.cancel();
+    const readOnly=!!engine.battle,party=healthVisual?.party||display.state.party;
+    list.classList.toggle('party-readonly',readOnly);
+    list.setAttribute('aria-label',readOnly?'手持ちのパチモンと体力。バトル中は表示のみ':'手持ちのパチモン。クリック・タップで詳細、ドラッグ・スライドで並べ替え');
+    list.innerHTML=party.map((saved,i)=>{
+      // During a knockout, the battle keeps the old pose until its animation
+      // finishes. Show that event's HP without revealing later turn results.
+      const mon=healthVisual?.activeIndex===i&&healthVisual.ally?.uid===saved.uid?healthVisual.ally:saved;
+      return `<button type="button" class="party-card${i===0?' leader':''}" data-party="${i}" data-party-uid="${escape(mon.uid)}" draggable="false"${readOnly?' disabled aria-disabled="true"':''} aria-label="${i+1}番目 ${escape(nameOf(mon))}${mon.shiny?' 色違い':''} レベル${mon.level} 体力${mon.hp}/${engine.stats(mon).hp}${readOnly?'':' 詳細。ドラッグ・スライドで並べ替え'}">${portrait(mon,54)}<span class="party-meta"><span class="party-name">${escape(nameOf(mon))}${genderMark(mon)}${mon.shiny?'<small class="shiny-mark" aria-label="色違い">✦</small>':''}${conditionChip(mon)}${mon.heldItem?'<small class="held-mark" aria-label="持ち物あり">◆</small>':''}${i===0?'<small class="lead-mark">先頭</small>':''}</span><span class="party-stats">Lv.${mon.level} <span>${mon.hp}/${engine.stats(mon).hp}</span></span>${hpBar(mon)}</span></button>`;
+    }).join('');
+    paintPortraits(list);
+  }
   function updateAll() {
     updateFacing();
     announceDiscoveries();
@@ -7277,10 +7293,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     $('world-label').textContent = engine.map.name;
     $('objective-text').textContent = engine.objective();
     $('seal-list').innerHTML = Object.values(DATA.guardians).map((g,i) => `<span class="seal${s.seals.includes(g.id) ? ' earned' : ''}" title="${escape(g.title || g.name)}" aria-label="${escape(g.title || g.name)}${s.seals.includes(g.id) ? '取得済み' : '未取得'}"><span>${ico(['leaf','tide','wind','crystal','ember','crystal','ember','star'][i]||'star')}</span><small>${escape(g.seal?.replace('の灯','') || g.name)}</small></span>`).join('');
-    $('party-list').innerHTML = s.party.map((mon,i) => {
-      const species = DATA.species[mon.species];
-      return `<button class="party-card${i === 0 ? ' leader' : ''}" data-party="${i}" aria-label="${escape(nameOf(mon))}${mon.shiny?' 色違い':''} レベル${mon.level} 詳細">${portrait(mon,54)}<span class="party-meta"><span class="party-name">${escape(nameOf(mon))}${genderMark(mon)}${mon.shiny?'<small class="shiny-mark" aria-label="色違い">✦</small>':''}${conditionChip(mon)}${mon.heldItem?'<small class="held-mark" aria-label="持ち物あり">◆</small>':''}${i===0 ? '<small class="lead-mark">先頭</small>' : ''}</span><span class="party-stats">Lv.${mon.level} <span>${mon.hp}/${engine.stats(mon).hp}</span></span>${hpBar(mon)}</span></button>`;
-    }).join('');
+    refreshPartyStrip();
     $('bag-summary').innerHTML = `<span>共鳴鈴 <strong>${s.inventory.chime}</strong></span><span>回復 <strong>${s.inventory.salve + s.inventory.tonic}</strong></span><span class="coin-count">コイン <strong>${s.coins.toLocaleString('ja-JP')}</strong></span>`;
     $('world-hint').textContent = nearHint();
     $('world-controls').hidden = !!engine.battle;
@@ -7290,7 +7303,6 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     $('world-hint').hidden = !!engine.battle;
     document.body.classList.toggle('in-battle', !!engine.battle);
     if (engine.battle) updateBattle();
-    paintPortraits($('party-list'));
     updateScene();
     for(const [id,value] of [['content-species-count',Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex).length],['content-map-count',regions().length],['content-music-count',sound.getTracks().length]])if($(id))$(id).textContent=value;
     if($('quest-btn')){const ready=engine.quests().filter(q=>q.complete&&!q.claimed).length;$('quest-btn').setAttribute('data-ready',String(ready));}
@@ -7426,11 +7438,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         const current=side==='ally'?battleView.state.party[battleView.battle.activeIndex]:battleView.battle.enemy;
         if(current?.uid===visual[side]?.uid)paintBattleHealth(side,visual[side],event);
       }
+      refreshPartyStrip(battleView,visual);
       return;
     }
-    battleView.state.party[visual.activeIndex]=JSON.parse(JSON.stringify(visual.ally));
+    if(Array.isArray(visual.party))battleView.state.party=JSON.parse(JSON.stringify(visual.party));
+    else battleView.state.party[visual.activeIndex]=JSON.parse(JSON.stringify(visual.ally));
     Object.assign(battleView.battle,{activeIndex:visual.activeIndex,enemy:JSON.parse(JSON.stringify(visual.enemy)),enemyIndex:visual.enemyIndex});
-    updateBattle(event);updateScene();
+    updateBattle(event);refreshPartyStrip(battleView);updateScene();
   }
   // Handheld-style message pacing. Typing runs on animation frames beside the
   // existing timed delay, so the turn order and minimum durations never change.
@@ -7618,6 +7632,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     else if(aboutDisplayed)closeModal();
   }
   function openModal(title, html, pane = '') {
+    partyReorder?.cancel();
     restoreAboutGame();
     pressedDirection = null; if(activePane==='music'&&pane!=='music')sound.preview(null); activePane = pane;
     $('modal-title').textContent = title; $('modal-content').innerHTML = html;
@@ -7762,6 +7777,20 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     };
     const selected=engine.state.party.findIndex(mon=>mon.uid===selectedUid);
     if(selected>=0)$('party-order-row-'+selected)?.focus({preventScroll:true});
+  }
+  function setupPartyReorder(){
+    if(!LT.PartyReorder||!$('party-list'))return;
+    partyReorder=new LT.PartyReorder({element:$('party-list'),
+      canStart:()=>playing&&!busy&&!introPending&&!engine.battle&&!fieldDialogOpen()&&!document.querySelector('dialog[open]')&&!(LT.onlineActive||LT.localTradeActive||tradeLocked()),
+      snapshot:()=>({engine,order:engine.state.party.map(mon=>mon.uid)}),
+      onCommit:({uid,from,to,snapshot})=>{
+        // The existing atomic path validates identity/order and persists before
+        // replacing live state, preserving every individual's training and HP.
+        const result=persistPartyOrder(uid,from,to,snapshot.engine,snapshot.order);
+        if(result.ok){sound.fx('click');document.dispatchEvent(new CustomEvent('pachi-party-changed'));}
+        toast(result.message);
+      }
+    });
   }
   function persistMoveOrder(uid,from,to,expectedEngine,expectedMoves){
     if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに、技を並べ替えられます。'};
@@ -8371,6 +8400,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       try{touchB.setPointerCapture(event.pointerId);}catch(_){}
     });
     for(const type of ['pointerup','pointercancel','lostpointercapture'])touchB.addEventListener(type,releaseB);
+    // Enter/Space and assistive activation have no pointer press to handle above.
+    touchB.addEventListener('click',event=>{if(event.detail===0&&!event.pointerType)controllerBack();});
     touchB.addEventListener('contextmenu',event=>event.preventDefault());
   }
   if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
@@ -8782,7 +8813,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   };
   LT.portraitHTML=(mon,size=64)=>portrait(mon,size);
   LT.paintPortraits=root=>paintPortraits(root);
-  resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
+  setupPartyReorder();resize();updateSound();loadStored();updateAll();paintPortraits();setupController();requestAnimationFrame(frame);
   // The title theme starts by itself wherever the browser allows sound before any
   // interaction; elsewhere the note on the title explains that a first touch starts it.
   document.addEventListener('pachi-audio-state',()=>updateAudioHint());
@@ -10472,5 +10503,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="mobile-screen.js?v=20261120-fit-seo-evolution-v68"></script>
 <script src="desktop-screen.js?v=20261120-fit-seo-evolution-v68"></script>
 <link rel="stylesheet" href="responsive-fit.css?v=20261120-galdoras-max-fit-v70">
+<link rel="stylesheet" href="console-controls.css?v=20261120-console-controls-v72">
 </body>
 </html>

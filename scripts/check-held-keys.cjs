@@ -24,7 +24,7 @@ const ctx = vm.createContext({
   directions: { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] },
   walk: (dx, dy) => walked.push([dx, dy]),
   interact() {}, showMenu() {}, showDex() {}, showMap() {}, showBag() {}, finishBattle() {}, save() {},
-  clearTouchDirections() {}, controller: null, battleSkip: false, padSprint: false, LT: {}, tradeLocked: () => false
+  clearTouchDirections() {}, controller: null, battleSkip: false, padSprint: false, LT: {}, tradeLocked: () => false, fieldDialogOpen: () => false
 });
 vm.runInContext(`var pressedDirection=null,directionSource=null;${block};this.state=()=>({pressedDirection,directionSource,sprint});this.lost=now=>{${loopLine.trim().split(';')[0]};};`, ctx);
 const fire = (type, init) => { for (const fn of listeners[type] || []) fn({ preventDefault() {}, target: { tagName: 'CANVAS' }, repeat: false, metaKey: false, ctrlKey: false, altKey: false, ...init }); };

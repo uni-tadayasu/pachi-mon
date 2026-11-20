@@ -2,6 +2,7 @@
  * v69: a maximized one-screen title and its on-demand overview refresh together.
  * v70: the supplied Galdoras artwork and non-evolving roster replace old forms.
  * v71: Galdo and Galdoran join the off-dex line leading to final-form Galdoras.
+ * v72: full-size controls, bottom party layout and saved drag ordering refresh together.
  * The page, its code and the core art are stored at install, so the game starts
  * without a connection. Pages are fetched network-first (updates arrive whenever
  * online); code and art are served cache-first by exact versioned URL and older

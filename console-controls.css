@@ -1,0 +1,416 @@
+/* v72: restore the handheld controls at comfortable sizes in their own space. */
+html.viewport-fit body.is-playing{--fit-topbar:48px}
+html.viewport-fit body.is-playing .topbar{padding-top:2px;padding-bottom:2px}
+html.viewport-fit body.is-playing .top-actions .icon-btn{width:44px;min-width:44px;height:44px;min-height:44px;padding:8px}
+html.viewport-fit body.is-playing .console-screen{padding-top:44px}
+html.viewport-fit body.is-playing .console-screen-top{top:16px;right:100px;height:14px;line-height:14px;font-size:9px}
+html.viewport-fit body.is-playing .console-palette{top:4px;right:6px;width:84px;height:36px;min-height:36px;padding:4px 6px;justify-content:center;font-size:12px;line-height:1.2;touch-action:manipulation}
+html.viewport-fit body.is-playing:not(.in-battle) .world-network-bar button{min-height:44px}
+html.viewport-fit body.is-playing:not(.in-battle){
+  --control-cell:48px;
+  --control-button:68px;
+  --control-deck:200px;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .console-body{
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) var(--control-deck);
+  grid-template-areas:"screen" "controls";
+  gap:6px;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .touch-controls{
+  position:relative;
+  inset:auto;
+  display:grid;
+  grid-area:controls;
+  grid-template-columns:calc(var(--control-cell) * 3) minmax(130px,1fr) calc(var(--control-button) * 2 + 18px);
+  grid-template-rows:44px minmax(0,1fr);
+  grid-template-areas:"lsh . rsh" "dpad sys ab";
+  justify-self:center;
+  align-items:center;
+  gap:4px 20px;
+  width:100%;
+  max-width:900px;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  margin:0;
+  padding:4px 10px;
+  border:0;
+  background:none;
+  box-shadow:none;
+  overflow:visible;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .dpad{
+  grid-area:dpad;
+  justify-self:start;
+  align-self:center;
+  width:calc(var(--control-cell) * 3);
+  min-width:calc(var(--control-cell) * 3);
+  height:calc(var(--control-cell) * 3);
+  min-height:calc(var(--control-cell) * 3);
+  grid-template-columns:repeat(3,var(--control-cell));
+  grid-template-rows:repeat(3,var(--control-cell));
+  margin:0;
+  filter:drop-shadow(0 3px 0 #100d35);
+}
+html.viewport-fit body.is-playing:not(.in-battle) .dpad button{
+  width:var(--control-cell);
+  height:var(--control-cell);
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  color:#e3dfff;
+  touch-action:none;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .dpad svg{width:22px;height:22px}
+html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder{
+  position:static;
+  inset:auto;
+  z-index:1;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  max-width:144px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  margin:0;
+  padding:4px 8px;
+  font-size:14px;
+  border-radius:14px 7px 7px 7px;
+  touch-action:none;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder-l{grid-area:lsh;justify-self:start}
+html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder-r{grid-area:rsh;justify-self:end;border-radius:7px 14px 7px 7px}
+html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder span{font-size:16px}
+html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder small{font-size:13px;line-height:1.25;white-space:nowrap}
+html.viewport-fit body.is-playing:not(.in-battle) .console-system{
+  grid-area:sys;
+  display:flex;
+  align-self:center;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  width:100%;
+  min-width:0;
+  margin:0;
+  padding:0;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill{
+  display:flex;
+  flex:0 1 100px;
+  flex-direction:column;
+  flex-wrap:nowrap;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  width:100px;
+  height:74px;
+  min-width:56px;
+  min-height:44px;
+  margin:0;
+  padding:5px 2px;
+  touch-action:none;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:block;width:46px;height:12px;transform:rotate(-18deg)}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:12px;line-height:1.2;letter-spacing:.06em}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:13px;line-height:1.2;white-space:nowrap}
+html.viewport-fit body.is-playing:not(.in-battle) .touch-commands{
+  grid-area:ab;
+  display:flex;
+  justify-self:end;
+  align-self:center;
+  align-items:flex-start;
+  justify-content:center;
+  gap:18px;
+  width:calc(var(--control-button) * 2 + 18px);
+  min-width:0;
+  margin:0;
+  padding:0;
+}
+html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action){
+  display:flex;
+  flex:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:9px;
+  width:var(--control-button);
+  height:calc(var(--control-button) + 28px);
+  min-width:44px;
+  min-height:44px;
+  margin:0;
+  padding:0;
+  touch-action:none;
+}
+html.viewport-fit body.is-playing:not(.in-battle) .touch-b{margin-top:24px}
+html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action)>span{
+  flex:0 0 var(--control-button);
+  width:var(--control-button);
+  height:var(--control-button);
+  font-size:28px!important;
+}
+html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action) small{font-size:13px!important;line-height:1.2;white-space:nowrap}
+html.viewport-fit body.is-playing:not(.in-battle) .touch-controls kbd{display:none}
+html.viewport-fit body.is-playing:not(.in-battle) .touch-controls button:focus-visible{outline:3px solid var(--pm-gold);outline-offset:2px}
+html.viewport-fit body.is-playing:not(.in-battle) .dpad button:focus-visible{outline-offset:-3px}
+
+/* Small portrait screens: left thumb moves, right thumb confirms; tools below. */
+@media(max-width:600px){
+  html.viewport-fit body.is-playing:not(.in-battle){--control-cell:44px;--control-button:60px;--control-deck:192px}
+  html.viewport-fit body.is-playing:not(.in-battle) .touch-controls{
+    grid-template-columns:56px minmax(0,1fr) minmax(0,1fr) 56px;
+    grid-template-rows:132px 48px;
+    grid-template-areas:"dpad dpad ab ab" "lsh sys sys rsh";
+    gap:4px 6px;
+    max-width:480px;
+    padding:4px;
+  }
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder{flex-direction:column;gap:3px;height:48px;padding:3px;max-width:none}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder span{font-size:14px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder small{font-size:12px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-system{gap:6px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill{flex:1 1 0;width:auto;height:48px;min-width:0;gap:3px;padding:3px 0}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:none}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:11px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:12px}
+  html.viewport-fit body.is-playing:not(.in-battle) .touch-commands{gap:12px;width:132px}
+  html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action) small{font-size:12px!important}
+}
+
+/* Larger touch screens retain comfortable targets without stretching the deck. */
+@media(min-width:601px) and (min-height:900px){
+  html.viewport-fit body.is-playing:not(.in-battle){--control-cell:52px;--control-button:72px;--control-deck:216px}
+  html.viewport-fit body.is-playing:not(.in-battle) .touch-controls{grid-template-rows:48px minmax(0,1fr)}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder{height:48px}
+}
+
+/* A landscape handheld: no tiny buttons or stacked controls over the artwork. */
+@media(orientation:landscape) and (max-height:550px){
+  html.viewport-fit body.is-playing:not(.in-battle){--control-cell:44px;--control-button:60px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-body{
+    grid-template-columns:132px minmax(0,1fr) 138px;
+    grid-template-rows:44px minmax(132px,1fr) 48px;
+    grid-template-areas:"lsh screen rsh" "dpad screen ab" ". screen sys";
+    gap:4px 6px;
+    padding:4px;
+  }
+  html.viewport-fit body.is-playing:not(.in-battle) .touch-controls{display:contents}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-screen{grid-row:1/4}
+  html.viewport-fit body.is-playing:not(.in-battle) .dpad{justify-self:center}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder{flex-direction:row;gap:6px;width:100%;max-width:none;height:44px;padding:4px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-shoulder small{font-size:12px}
+  html.viewport-fit body.is-playing:not(.in-battle) .touch-commands{justify-self:center;gap:12px;width:132px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-system{gap:6px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill{flex:1 1 0;width:auto;height:48px;min-width:0;gap:3px;padding:3px 0}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:none}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:11px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:12px}
+  html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action) small{font-size:12px!important}
+}
+
+@media(orientation:landscape) and (max-height:300px){
+  html.viewport-fit body.is-playing:not(.in-battle) .game-layout{padding:2px}
+  html.viewport-fit body.is-playing:not(.in-battle) .play-column{padding:0}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-body{padding:2px;row-gap:2px;grid-template-rows:44px minmax(132px,1fr) 44px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill{height:44px}
+}
+
+/* Compact the connection strip without shrinking its three actual buttons. */
+@media(max-width:600px),(orientation:landscape) and (max-height:550px){
+  html.viewport-fit body.is-playing:not(.in-battle) .console-screen>.world-network-bar{flex-wrap:nowrap;gap:4px;padding:3px}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-network-summary{width:7px;flex:0 0 7px}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-network-summary [data-world-status]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-network-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);flex:1 1 0;gap:4px;width:100%;margin:0}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-network-actions button{min-width:0;min-height:44px;padding:3px;font-size:11px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-network-actions .world-always-on{display:none}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-screen>.world-network-bar:has(.world-invite-alert:not([hidden])){flex-wrap:wrap}
+  html.viewport-fit body.is-playing:not(.in-battle) .world-invite-alert{flex-basis:100%}
+}
+@media(orientation:landscape) and (max-height:550px){
+  /* The same current location is already shown in the top bar. */
+  html.viewport-fit body.is-playing:not(.in-battle) .field-meta{display:none}
+}
+
+/* Phones and tablets keep their actual party cards at the bottom of the screen. */
+@media(max-width:1100px),(max-width:1400px) and (any-pointer:coarse){
+  html.viewport-fit:root body.is-playing{--party-strip:76px}
+  html.viewport-fit:root body.is-playing .game-layout{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) var(--party-strip);
+    grid-template-areas:"play" "party";
+    gap:4px;
+  }
+  html.viewport-fit:root body.is-playing .play-column{grid-area:play;min-width:0;min-height:0;padding:0}
+  html.viewport-fit:root body.is-playing .journal{
+    position:relative;
+    inset:auto;
+    grid-area:party;
+    display:block;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    margin:0;
+    padding:2px;
+    border-width:2px;
+    border-radius:0;
+    box-shadow:none;
+    clip-path:none;
+    overflow:hidden;
+  }
+  html.viewport-fit:root body.is-playing .journal>:not(.party-section),
+  html.viewport-fit:root body.is-playing .journal .party-section>.section-kicker{display:none!important}
+  html.viewport-fit:root body.is-playing .journal .party-section{display:block;grid-area:auto;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0;border:0}
+  html.viewport-fit:root body.is-playing .journal #party-list{
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    grid-template-rows:minmax(0,1fr);
+    align-items:stretch;
+    gap:3px;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+  }
+  html.viewport-fit:root body.is-playing .journal #party-list>.party-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:44px;
+    margin:0;
+    padding:2px;
+    border-width:1px;
+    text-align:center;
+    overflow:hidden;
+    touch-action:none;
+  }
+  html.viewport-fit:root body.is-playing .journal #party-list>.party-card>.creature-portrait{width:28px!important;height:28px!important;max-width:100%;flex:0 0 28px}
+  html.viewport-fit:root body.is-playing .journal #party-list .party-meta{display:flex;flex:0 0 auto;flex-direction:column;gap:2px;width:100%;min-width:0;min-height:0}
+  html.viewport-fit:root body.is-playing .journal #party-list .party-name{display:block;width:100%;min-width:0;height:12px;font-size:10px;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.viewport-fit:root body.is-playing .journal #party-list .lead-mark{display:none}
+  /* The compact strip emphasizes HP; level and the full name remain in details. */
+  html.viewport-fit:root body.is-playing .journal #party-list .party-stats{display:block;min-width:0;height:10px;font-size:0;line-height:0}
+  html.viewport-fit:root body.is-playing .journal #party-list .party-stats>span{display:block;min-width:0;font-size:9px;line-height:10px;white-space:nowrap}
+  html.viewport-fit:root body.is-playing .journal #party-list .hp-track{width:100%;height:5px;min-height:5px;margin:0;border-width:1px}
+  html.viewport-fit:root body.is-playing .journal #party-list>.party-card:focus-visible{outline:2px solid var(--pm-gold);outline-offset:-3px}
+
+  @media(min-width:700px) and (min-height:600px){
+    html.viewport-fit:root body.is-playing{--party-strip:92px}
+    html.viewport-fit:root body.is-playing .journal #party-list>.party-card>.creature-portrait{width:36px!important;height:36px!important;flex-basis:36px}
+    html.viewport-fit:root body.is-playing .journal #party-list .party-name{height:15px;font-size:12px;line-height:15px}
+    html.viewport-fit:root body.is-playing .journal #party-list .party-stats{height:12px}
+    html.viewport-fit:root body.is-playing .journal #party-list .party-stats>span{height:12px;font-size:11px;line-height:12px}
+    html.viewport-fit:root body.is-playing .journal #party-list .hp-track{height:6px;min-height:6px}
+  }
+  @media(orientation:portrait) and (max-height:650px){
+    html.viewport-fit:root body.is-playing:not(.in-battle) .field-meta{display:none}
+  }
+  @media(orientation:landscape) and (max-height:550px){
+    html.viewport-fit:root body.is-playing{--party-strip:56px}
+    html.viewport-fit:root body.is-playing .journal #party-list>.party-card{display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:3px;padding:2px;text-align:left}
+    html.viewport-fit:root body.is-playing .journal #party-list>.party-card>.creature-portrait{width:28px!important;height:28px!important;align-self:center}
+    html.viewport-fit:root body.is-playing .journal #party-list .party-meta{align-self:center;gap:1px}
+    html.viewport-fit:root body.is-playing .journal #party-list .hp-track{height:4px;min-height:4px}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-body{
+      grid-template-columns:132px minmax(0,1fr) 132px;
+      grid-template-rows:minmax(132px,1fr) 44px;
+      grid-template-areas:"dpad screen ab" "lsh screen sys";
+      gap:4px 6px;
+      padding:3px;
+    }
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-screen{grid-row:1/3}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-shoulder{grid-area:lsh;flex-direction:column;gap:2px;width:63px;min-width:44px;height:44px;padding:2px}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-shoulder-l{justify-self:start}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-shoulder-r{justify-self:end}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-shoulder span{font-size:13px}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-shoulder small{font-size:11px}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-pill{height:44px;min-height:44px;padding:2px 0}
+  }
+  @media(orientation:landscape) and (max-height:300px){
+    html.viewport-fit:root body.is-playing{--party-strip:48px}
+    html.viewport-fit:root body.is-playing .game-layout{gap:2px;padding:1px}
+    html.viewport-fit:root body.is-playing .journal{padding:0}
+    html.viewport-fit:root body.is-playing:not(.in-battle) .console-body{padding:0;row-gap:0}
+  }
+}
+
+/* Keep a held companion under the finger and mark its insertion position. */
+html.viewport-fit body.is-playing .journal #party-list{position:relative;isolation:isolate}
+html.viewport-fit body.is-playing .journal #party-list>.party-card{
+  touch-action:none;
+  cursor:grab;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+}
+html.viewport-fit body.is-playing .journal #party-list.party-reordering>.party-card{cursor:grabbing;transition:none}
+html.viewport-fit body.is-playing .journal #party-list>.party-card.party-dragging{
+  z-index:3;
+  transform:translate(var(--party-drag-x,0px),var(--party-drag-y,0px));
+  border-color:var(--pm-gold);
+  outline:2px solid var(--pm-gold);
+  outline-offset:-2px;
+  background-color:#454589;
+  box-shadow:inset 0 0 0 2px #fff0b24d;
+  opacity:.86;
+  transition:none;
+}
+html.viewport-fit body.is-playing .journal #party-list>.party-card.party-drop-target{
+  z-index:2;
+  border-color:#fff0b2;
+  outline:2px solid var(--pm-gold);
+  outline-offset:-2px;
+  background-color:#344a88;
+  transform:none;
+}
+html.viewport-fit body.is-playing .journal #party-list>.party-card.party-drop-target::after{
+  content:"";
+  position:absolute;
+  top:3px;
+  bottom:3px;
+  width:3px;
+  background:var(--pm-gold);
+  box-shadow:0 0 0 1px var(--pm-ink);
+  pointer-events:none;
+}
+html.viewport-fit body.is-playing .journal #party-list>.party-card.party-drop-target[data-drop-side="before"]::after{left:2px;right:auto}
+html.viewport-fit body.is-playing .journal #party-list>.party-card.party-drop-target[data-drop-side="after"]::after{left:auto;right:2px}
+html.viewport-fit body.is-playing .journal #party-list.party-readonly>.party-card:disabled{
+  opacity:1;
+  filter:none;
+  cursor:default;
+  transform:none;
+}
+
+/* Short battles use the header for the screen-mode button, leaving the full
+   console height to the artwork and commands while the party stays below. */
+@media(orientation:landscape) and (max-height:360px){
+  html.viewport-fit:root body.is-playing.in-battle .topbar>.brand{display:none}
+  html.viewport-fit:root body.is-playing.in-battle .topbar>.location-info{margin-left:92px;padding-left:0;border-left:0}
+  html.viewport-fit:root body.is-playing.in-battle .console-body{isolation:auto}
+  html.viewport-fit:root body.is-playing.in-battle .console-screen{padding-top:4px}
+  html.viewport-fit:root body.is-playing.in-battle .console-screen-top{display:none}
+  html.viewport-fit:root body.is-playing.in-battle .console-palette{
+    position:fixed;
+    z-index:31;
+    top:calc(env(safe-area-inset-top) + 2px);
+    left:calc(env(safe-area-inset-left) + 7px);
+    right:auto;
+    width:84px;
+    height:44px;
+    min-height:44px;
+    margin:0;
+  }
+}
