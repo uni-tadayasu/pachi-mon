@@ -19,7 +19,7 @@ function harness({storage=new Map(),handle=()=>null,bridge={},settings=false}={}
   const serviceRoot={querySelector:selector=>selector==='[data-service-body]'?serviceBody:selector==='.pachi-status'?statusLine:null};
   const settingsContent={querySelector:selector=>selector==='#pachi-service'?serviceRoot:selector==='.pachi-status'?statusLine:null};
   const element=id=>!settings?null:id==='modal-title'?{textContent:'冒険の設定'}:id==='modal-content'?settingsContent:id==='pachi-admin-key'&&serviceBody.innerHTML.includes('id="pachi-admin-key"')?keyField:null;
-  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,restoreAdminReserveTeam,adoptReserveTeam,renderAdminReserveTeam,get reserveTeam(){return reserveTeam;},get reserveBusy(){return reserveBusy;},prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,loadAdminDevices,renderAdminDevices,prepareDeviceGrant,prepareDeviceRevoke,confirmDeviceChange,get adminDevices(){return adminDevices;},get deviceReview(){return deviceReview;},get deviceBusy(){return deviceBusy;},attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
+  const hooks=`globalThis.__test={sync,ensureIdentity,adoptIdentity,restoreAdminReserveTeam,restoreAdminReserveAddition,adoptReserveTeam,renderAdminReserveTeam,get reserveTeam(){return reserveTeam;},get reserveAddition(){return reserveAddition;},get reserveBusy(){return reserveBusy;},prepareGrant,submitPendingGrant,loadPendingGrant,refreshSettings,claim,prepareRelease,releaseAdmin,handleConsole,futoMoveEntries,loadAdminDevices,renderAdminDevices,prepareDeviceGrant,prepareDeviceRevoke,confirmDeviceChange,get adminDevices(){return adminDevices;},get deviceReview(){return deviceReview;},get deviceBusy(){return deviceBusy;},attachConsole(dialog,registration){consoleDialog=dialog;adminRegistration=registration;},get releaseReview(){return releaseReview;},get releaseBusy(){return releaseBusy;},get status(){return status;},get claimBusy(){return claimBusy;},stubConsole(fn){openConsole=fn;},resumePending(){pendingGrant=loadPendingGrant();},get pendingGrant(){return pendingGrant;}};`;
   let source=fs.readFileSync(require.resolve('../admin-console.js'),'utf8');
   assert(source.includes('mountSettings();void sync();'));
   source=source.replace('mountSettings();void sync();',hooks);
@@ -539,7 +539,7 @@ test('either promoted deputy immediately refreshes its operator name, controls a
   assert.equal(h.ctx.LT.Admin.player.adminRole,device.role);assert(!view.box.innerHTML.includes('device-add-review'));
   const expectedName=device.role==='sub'?'サカイ':'イサカ';assert.equal(title.textContent,expectedName+'の運営管理');assert.equal(heading.textContent,expectedName);assert.equal(decorate.textContent,expectedName+'の部屋を飾る');assert(h.serviceBody.innerHTML.includes(expectedName+'の運営管理'));
   promoted=true;await h.api.loadAdminDevices();assert.equal(h.ctx.LT.Admin.player.adminRole,'main');assert(view.box.innerHTML.includes('device-add-review'));
-  assert.equal(title.textContent,'カサイの運営管理');assert.equal(heading.textContent,'謎のトレーナー カサイ');assert.equal(decorate.textContent,'カサイの部屋を飾る');assert(h.serviceBody.innerHTML.includes('カサイの運営管理'));assert.equal(h.ctx.LT.Admin.player.name,current.name);
+  assert.equal(title.textContent,'カサイの運営管理');assert.equal(heading.textContent,'謎の調律士 カサイ');assert.equal(decorate.textContent,'カサイの部屋を飾る');assert(h.serviceBody.innerHTML.includes('カサイの運営管理'));assert.equal(h.ctx.LT.Admin.player.name,current.name);
   h.api.prepareRelease();assert.equal(h.api.releaseReview.registration.claimedAt,4567);
  }
 });
@@ -760,6 +760,7 @@ function reserveRules(){
 function reserveBundle(role='main',id=PLAYER_A.id){
   return {version:1,playerId:id,role,members:[{main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'}[role],'floravelle','zeroveil','pearlseria','hyogald','rurigorm'].map(species=>({grantId:`admin-trained-v64:${role}:${id}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};
 }
+function reserveAddition(role='main',id=PLAYER_A.id){return {version:2,playerId:id,role,members:[{grantId:`admin-galdogran-v68:${role}:${id}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};}
 function enableReserve(h){h.ctx.LT.AdminReserveRules=reserveRules();return h;}
 
 test('each current role receives its own trained six once per paginated synchronization',async()=>{
@@ -824,4 +825,71 @@ test('a newer role heartbeat prevents an older reserve bundle from being deliver
   await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
   pending.resolve(response({player:owner,adminReserveTeam:reserveBundle(),grants:[]}));await sync;
   assert.equal(applied.length,0);assert.equal(h.ctx.LT.Admin.player.adminRole,'sub');assert.equal(h.api.reserveTeam,null);
+});
+
+test('each role receives the Galdogran addition independently of the old six and only once across pages',async()=>{
+  for(const role of ['main','sub','sub-sub']){
+    const owner={...PLAYER_A,adminRole:role},applied=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle(role),adminReserveAddition:reserveAddition(role),grants:[],nextCursor:c.search.includes('cursor=')?null:7}):null,
+      bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:value.version===2?1:0,alreadyReceived:value.version===1};}}}));
+    adopt(h,TOKEN_A,owner);await h.api.sync();
+    assert.equal(applied.length,2);assert.equal(applied[0].value.version,1);assert.equal(applied[1].value.version,2);
+    assert.equal(applied[0].value.members.length,6);assert.equal(applied[1].value.members.length,1);
+    assert.equal(applied[1].value.members[0].gender,'male');assert.equal(applied[1].value.members[0].species,'galdogran');
+    if(role==='sub')assert(applied[0].value.members.every(member=>member.gender==='female'));
+    assert(applied.every(entry=>entry.options===undefined));assert.equal(h.ctx.LT.Admin.pending,0);
+    assert(h.toasts.some(message=>message.includes('1体をひかえに追加')));
+  }
+});
+
+test('Galdogran pending state counts one and retries without turning the old six into restoration',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'},applied=[];let blocked=true;
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle('sub'),adminReserveAddition:reserveAddition('sub'),grants:[]}):null,
+    bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({version:value.version,options});return value.version===1?{ok:true,alreadyReceived:true}:blocked?{ok:false,pending:true}:{ok:true,added:1};},adminReserveTeamStatus:()=>({newCount:1})}}));
+  adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,1);assert.equal(h.toasts.length,0);
+  blocked=false;await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(applied.filter(entry=>entry.version===2).length,2);
+  assert(applied.every(entry=>entry.options===undefined));
+});
+
+test('invalid addition payloads cannot borrow the old bundle, another role, another owner, or female appearance',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},applied=[];let bundle=reserveAddition();
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveAddition:bundle,grants:[]}):null,
+    bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:1};}}}));
+  for(const bad of [reserveBundle(),reserveAddition('sub'),reserveAddition('main',PLAYER_B.id),
+    {...reserveAddition(),members:reserveAddition().members.map(mon=>({...mon,gender:'female'}))},
+    {...reserveAddition(),members:reserveAddition().members.map(mon=>({...mon,species:'galdoras'}))}]){
+    bundle=bad;adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(applied.length,0);assert.equal(h.api.reserveAddition,null);
+  }
+});
+
+test('dedicated Galdogran restore refreshes authorization, shares the operation lock, and never restores v64',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'},pending=deferred(),applied=[];
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,
+    bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:1,restored:1,message:'1体を復元しました。'};}}}));
+  adopt(h,TOKEN_A,owner);
+  const first=h.api.restoreAdminReserveAddition();await until(()=>h.calls.some(c=>c.path==='/me'));
+  assert.equal(await h.api.restoreAdminReserveAddition(),null);assert.equal(await h.api.restoreAdminReserveTeam(),null);
+  pending.resolve(response({player:owner,adminReserveTeam:reserveBundle('sub'),adminReserveAddition:reserveAddition('sub')}));
+  assert.equal((await first).restored,1);assert.equal(applied.length,1);assert.equal(applied[0].value.version,2);
+  assert.equal(applied[0].options.restore,true);assert.equal(h.api.reserveBusy,false);assert.equal(h.calls.filter(c=>c.path==='/me').length,1);
+  const boxes={'#pachi-admin-reserve':{innerHTML:''},'#pachi-admin-reserve-addition':{innerHTML:''}};
+  h.api.attachConsole({open:true,querySelector:selector=>boxes[selector]||null});h.api.renderAdminReserveTeam();
+  assert.match(boxes['#pachi-admin-reserve'].innerHTML,/全員Lv\.100・メス/);
+  assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/ガルドグラン · Lv\.100・オス/);
+  assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/data-admin-action="restore-reserve-addition"/);
+  assert(!boxes['#pachi-admin-reserve-addition'].innerHTML.includes('data-admin-action="restore-reserve"'));
+});
+
+test('Galdogran restore rejects delayed identities, a revoked role and a newer conflicting heartbeat',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'},applied=[];
+  for(const change of ['identity','revoked','heartbeat']){
+    const pending=deferred();
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:c.path==='/world/presence'?response({self:{id:owner.id,isAdmin:true,adminRole:'sub'}}):null,
+      bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,added:1};}}}));
+    adopt(h,TOKEN_A,owner);const restore=h.api.restoreAdminReserveAddition();await until(()=>h.calls.some(c=>c.path==='/me'));
+    if(change==='identity')adopt(h,TOKEN_B,PLAYER_B);
+    if(change==='heartbeat')await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+    pending.resolve(response({player:change==='revoked'?{...owner,isAdmin:false,adminRole:null}:owner,adminReserveAddition:reserveAddition()}));
+    await assert.rejects(restore);assert.equal(applied.length,0);assert.equal(h.api.reserveAddition,null);
+  }
 });

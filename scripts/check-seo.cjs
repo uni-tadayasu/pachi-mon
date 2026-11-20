@@ -2,18 +2,25 @@
 'use strict';
 /* SEO: every public page has its title, description, canonical, social cards,
  * language and valid structured data; links and images resolve; the sitemap
- * lists exactly the indexable pages; the FAQ markup mirrors the visible FAQ. */
-const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+ * lists exactly the indexable pages; visible facts agree with the game data. */
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
 const root = path.join(__dirname, '..'), SITE = 'https://www.kasai-solutions-inc.com';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const pages = ['index.html', 'guide/index.html', 'moves/index.html', 'monsters/index.html', '404.html', ...fs.readdirSync(path.join(root, 'monsters')).filter(f => f.endsWith('.html') && f !== 'index.html').map(f => `monsters/${f}`)];
 const attr = (html, re) => re.exec(html)?.[1];
 const strip = text => String(text).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
 const canonicals = new Map();
+const titles = new Set(), descriptions = new Set(), metadataDates = new Map();
+const today = new Date().toISOString().slice(0, 10);
+const contentHash = contents => crypto.createHash('sha256').update(contents.replace(/<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g, block => block.replace(/("dateModified"\s*:\s*")[^"]+("\s*)/g, '$1__SEO_LASTMOD__$2')).replace(/<time data-content-updated datetime="[^"]+">[^<]+<\/time>/g, '<time data-content-updated datetime="__SEO_LASTMOD__">__SEO_LASTMOD__</time>')).digest('hex');
 let links = 0, images = 0;
 let redirects = 0;
 for (const file of pages) {
   const html = read(file), dir = path.dirname(file);
+  const viewport = attr(html, /<meta name="viewport" content="([^"]+)"/);
+  assert(viewport?.includes('width=device-width') && viewport.includes('initial-scale=1'), `${file}: responsive viewport`);
+  assert(!/user-scalable\s*=\s*(?:no|0)|maximum-scale\s*=\s*1(?:\D|$)/.test(viewport), `${file}: page zoom remains available`);
+  assert.equal((html.match(/<link rel="canonical" /g) || []).length, 1, `${file}: one canonical`);
   // Pages of retired species only point to the species that replaced them.
   const refresh = attr(html, /<meta http-equiv="refresh" content="0; url=([^"]+)"/);
   if (refresh) {
@@ -26,17 +33,37 @@ for (const file of pages) {
   const title = attr(html, /<title>([^<]+)<\/title>/), description = attr(html, /<meta name="description" content="([^"]+)"/);
   assert(title && title.length <= 80, `${file}: title (${title?.length})`);
   assert(description && description.length >= 40 && description.length <= 200, `${file}: description length ${description?.length}`);
+  assert(!titles.has(title), `${file}: distinct title`); titles.add(title);
+  assert(!descriptions.has(description), `${file}: distinct description`); descriptions.add(description);
   const canonical = attr(html, /<link rel="canonical" href="([^"]+)"/);
   assert(canonical?.startsWith(SITE + '/'), `${file}: absolute canonical`);
   assert.equal(canonical, `${SITE}/${file.replace(/index\.html$/, '')}`, `${file}: canonical matches its public path`);
   for (const key of ['og:title', 'og:description', 'og:url', 'og:image']) assert(new RegExp(`<meta property="${key}" content="[^"]+"`).test(html), `${file}: ${key}`);
   assert.equal(attr(html, /<meta property="og:url" content="([^"]+)"/), canonical, `${file}: social URL matches canonical`);
+  assert.equal(attr(html, /<meta property="og:image" content="([^"]+)"/), `${SITE}/assets/ogp-handheld.png`, `${file}: large social card uses the actual share artwork`);
+  assert.equal(attr(html, /<meta property="og:image:width" content="([^"]+)"/), '1200', `${file}: social width`);
+  assert.equal(attr(html, /<meta property="og:image:height" content="([^"]+)"/), '630', `${file}: social height`);
+  assert.equal(attr(html, /<meta property="og:image:type" content="([^"]+)"/), 'image/png', `${file}: social image MIME type`);
   assert(/<meta name="twitter:card" content="summary_large_image">/.test(html), `${file}: twitter card`);
   for (const key of ['twitter:title', 'twitter:description', 'twitter:image']) assert(new RegExp(`<meta name="${key}" content="[^"]+"`).test(html), `${file}: ${key}`);
+  assert.equal(attr(html, /<meta name="twitter:image" content="([^"]+)"/), attr(html, /<meta property="og:image" content="([^"]+)"/), `${file}: social image URLs agree`);
   assert(/<link rel="alternate" hreflang="ja"/.test(html), `${file}: hreflang`);
   for (const lang of ['ja', 'x-default']) assert.equal(attr(html, new RegExp(`<link rel="alternate" hreflang="${lang}" href="([^"]+)"`)), canonical, `${file}: ${lang} alternate matches canonical`);
   assert(/<link rel="manifest" href="[^"]*manifest\.webmanifest">/.test(html), `${file}: app manifest`);
-  for (const m of html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)) JSON.parse(m[1]);
+  const entities = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].flatMap(m => { const value = JSON.parse(m[1]); return value['@graph'] || [value]; });
+  const pageEntity = entities.find(entity => [].concat(entity['@type']).includes('WebPage'));
+  assert(pageEntity, `${file}: WebPage structured data`);
+  assert.equal(pageEntity.url, canonical, `${file}: structured URL matches canonical`);
+  assert.equal(pageEntity.name, strip(title), `${file}: structured title matches visible title`);
+  assert.equal(pageEntity.description, strip(description), `${file}: structured description matches metadata`);
+  assert(/^\d{4}-\d{2}-\d{2}$/.test(pageEntity.dateModified) && pageEntity.dateModified <= today, `${file}: valid, non-future modification date`);
+  metadataDates.set(file, pageEntity.dateModified);
+  assert(html.includes(`<time data-content-updated datetime="${pageEntity.dateModified}">${pageEntity.dateModified}</time>`), `${file}: visible update date agrees with structured data`);
+  for (const entity of entities) {
+    assert(!entity.aggregateRating && !entity.review, `${file}: no unverified review claims`);
+    assert.notEqual(entity['@type'], 'FAQPage', `${file}: retired FAQ rich-result markup is not generated`);
+    if (entity['@type'] === 'CollectionPage') assert.equal(entity.mainEntity?.['@type'], 'ItemList', `${file}: collection count belongs to an ItemList`);
+  }
   const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
   assert.equal((markup.match(/<h1[\s>]/g) || []).length, 1, `${file}: one h1`);
   const noindex = /<meta name="robots" content="noindex/.test(html);
@@ -63,18 +90,27 @@ for (const file of pages) {
 const sitemap = read('sitemap.xml'), locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
 assert.deepEqual([...locs].sort(), [...canonicals.keys()].sort(), 'the sitemap lists every indexable page and nothing else');
 assert.equal((sitemap.match(/<image:image>/g) || []).length, [...canonicals.keys()].filter(url => /\/monsters\/[^/]+\.html$/.test(url)).length, 'every species page carries its sprite');
+const state = JSON.parse(read('scripts/seo-page-state.json'));
+for (const match of sitemap.matchAll(/<url><loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod>/g)) {
+  const file = canonicals.get(match[1]);
+  assert.equal(match[2], metadataDates.get(file), `${file}: sitemap date matches page date`);
+  assert.equal(state[file]?.lastmod, match[2], `${file}: date state matches sitemap`);
+  assert.equal(state[file]?.hash, contentHash(read(file)), `${file}: regenerate SEO after a meaningful page change`);
+}
+assert.equal((sitemap.match(/<lastmod>/g) || []).length, locs.length, 'every public URL has its content modification date');
+assert(!sitemap.includes('<priority>') && !sitemap.includes('<changefreq>'), 'sitemap avoids unsupported frequency and priority hints');
+const socialImage = fs.readFileSync(path.join(root, 'assets/ogp-handheld.png'));
+assert.equal(socialImage.readUInt32BE(16), 1200, 'share image width matches metadata');
+assert.equal(socialImage.readUInt32BE(20), 630, 'share image height matches metadata');
 const robots = read('robots.txt');
 assert(robots.includes(`Sitemap: ${SITE}/sitemap.xml`) && /Disallow: \/scripts\//.test(robots) && /Disallow: \/server\//.test(robots));
-// ── The FAQ markup mirrors the visible FAQ.
+// ── FAQ remains useful visible content after retirement of FAQ rich results.
 const home = read('index.html'), start = home.indexOf('<section class="game-info-faq"'), section = home.slice(start, home.indexOf('</section>', start));
 const visible = [...section.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map(m => [strip(m[1]), strip(m[2])]);
-const faq = JSON.parse(/<script type="application\/ld\+json" id="faq-jsonld">([\s\S]*?)<\/script>/.exec(home)[1]);
-assert.equal(faq['@type'], 'FAQPage'); assert.deepEqual(faq.mainEntity.map(q => [q.name, q.acceptedAnswer.text]), visible);
+assert(!home.includes('id="faq-jsonld"'), 'obsolete FAQ schema is not kept in the head');
 assert(visible.some(([q]) => /オフライン/.test(q)) && visible.some(([q]) => /技/.test(q)), 'FAQ covers offline play and moves');
-// ── The move list covers all 96 moves.
+// ── Public moves are checked against data below.
 const moves = read('moves/index.html');
-assert.equal((moves.match(/<tr id="/g) || []).length, 96, 'the move list has all 96 moves');
-assert(/<meta name="description" content="[^"]*96種/.test(home), 'the home description mentions 96 moves');
 assert.equal(redirects, 6, 'every retired species page redirects');
 // Published facts are checked against the same engine data used by the game.
 // This catches stale marketing counts even when metadata itself remains valid.
@@ -86,11 +122,20 @@ for (const match of home.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
 }
 const data = dataContext.LT.DATA, publicHome = home.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ''), guide = read('guide/index.html');
 const publicSpecies=Object.values(data.species).filter(s=>!s.hiddenDex);
+const publicMoves=Object.values(data.moves).filter(move=>!move.hiddenDex), totalSpecies=Object.keys(data.species).length, totalMoves=Object.keys(data.moves).length;
 assert.equal(publicSpecies.length, 256);
 assert.equal(data.regionIds.length, 128);
 assert.equal(Object.keys(data.guardians).length, 32);
 assert.equal(data.limits.storage, 192);
-assert(publicHome.includes(`全${publicSpecies.length}種の一覧へ`), 'the home dex count matches the public species data');
+assert(publicHome.includes(`公開${publicSpecies.length}種の一覧へ`), 'the home dex count is explicitly the public species count');
+const homeDescription = attr(home, /<meta name="description" content="([^"]+)"/);
+assert(homeDescription.includes(`公開図鑑${publicSpecies.length}種`) && homeDescription.includes(`図鑑外${totalSpecies-publicSpecies.length}種を含む全${totalSpecies}種`), 'home metadata distinguishes all species from the public dex');
+assert(homeDescription.includes(`公開${publicMoves.length}種の技`), 'home metadata gives the public move count');
+assert(publicHome.includes(`全<strong>${totalSpecies}種</strong>`), 'visible overview states the total species count');
+assert.equal((moves.match(/<tr id="/g) || []).length, publicMoves.length, 'the move list includes each public move');
+assert(moves.includes(`ゲーム全体では全${totalMoves}種`), 'the move list distinguishes the total move count');
+assert(visible.some(([q,a])=>/技は何種類/.test(q)&&a.includes(`${publicMoves.length}種`)&&a.includes(`全${totalMoves}種`)), 'FAQ distinguishes public and total moves');
+assert(visible.some(([q,a])=>/キラシード/.test(q)&&a.includes('本人とのリアルタイム対戦')&&a.includes('カサイの勝利報酬を確認')), 'FAQ describes the current live challenge and reward flow');
 for(const s of Object.values(data.species).filter(s=>s.hiddenDex)){
   assert(!fs.existsSync(path.join(root,'monsters',s.id+'.html')), 'hidden companions have no dex page');
   for(const file of ['monsters/index.html','moves/index.html','sitemap.xml']){

@@ -48,13 +48,13 @@ test('the exact eight source filenames form three separate off-dex evolution fam
       assert.deepEqual(parents,stage?[line.ids[stage-1]]:[],'No existing family is redirected into a new one');
     });
   });
-  assert.match(D.species.pearlgoa.description,/太い腕/);assert.match(D.species.pearlseria.description,/細長い手足/);
+  assert.match(D.species.pearlgoa.description,/四本の脚/);assert.match(D.species.pearlseria.description,/四本の長い脚/);
   assert.deepEqual(plain(D.glitchLine.ids),['nullmie','nullva','zeroveil']);
 });
 
 test('public dex, collection goals and ordinary encounter pools remain unchanged',()=>{
-  assert.equal(Object.keys(D.species).length,268);assert.equal(D.content.playableSpecies,268);
-  assert.equal(D.content.hiddenSpecies,12);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
+  assert.equal(Object.keys(D.species).length,269);assert.equal(D.content.playableSpecies,269);
+  assert.equal(D.content.hiddenSpecies,13);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
   assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
   const e=hero(),progress=()=>plain(e.quests().map(({id,target,progress,complete})=>({id,target,progress,complete}))),before=progress();
   for(const id of ids){

@@ -14,6 +14,7 @@ const PLAYER='P0123456789abcdef',OTHER='Pfedcba9876543210';
 const roles={main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'};
 const common=['floravelle','zeroveil','pearlseria','hyogald','rurigorm'];
 function bundle(role='main',playerId=PLAYER){return {version:1,playerId,role,members:[roles[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
+function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};}
 function fresh(){const engine=new Engine();assert(engine.newGame('komori').ok);return engine;}
 const all=engine=>[...engine.state.party,...engine.state.storage];
 
@@ -189,4 +190,91 @@ test('a normalized older save can receive the reserve team without a false stale
   const older=copy(h.initial);delete older.giftReceipts;
   h.control.raw=JSON.stringify(Object.fromEntries(Object.entries(older).reverse()));
   const outcome=h.receive();assert.equal(outcome.added,6,JSON.stringify(outcome));assert.equal(h.control.writes,1);
+});
+
+test('the separate Galdogran grant trains one male per role and leaves every v64 individual unchanged',()=>{
+  for(const role of Object.keys(roles)){
+    const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
+    engine.state.storage[0].nickname='相棒';engine.state.storage[1].moveOrder=[3,2,1,0];
+    engine.setAllocation(engine.state.storage[2],{hp:64,atk:64,def:64,spAtk:64,spDef:41});
+    delete engine.state.storage[3].heldItem;
+    const existing=copy(engine.state.storage),party=copy(engine.state.party),grant=addition(role);
+    assert.equal(engine.adminReserveTeamStatus(grant).total,1);
+    assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
+    assert.deepEqual(copy(engine.state.storage.slice(0,6)),existing);assert.deepEqual(copy(engine.state.party),party);
+    const mon=engine.state.storage[6],simulated=fresh(),trained=simulated.makeMonster('galdogran',1),events=[];
+    trained.heldItem='trainband';trained.gender='male';
+    simulated.giveXP(trained,Array.from({length:99},(_,i)=>simulated.xpToNext(i+1)).reduce((a,b)=>a+b,0),events);
+    assert.equal(events.filter(event=>event.kind==='level').length,99);
+    for(const field of ['level','xp','hp','heldItem','bonusPoints'])assert.equal(mon[field],trained[field],`${role}/${field}`);
+    assert.deepEqual(copy(engine.stats(mon)),copy(simulated.stats(trained)));assert.deepEqual(copy(mon.pp),copy(trained.pp));
+    assert.equal(engine.genderOf(mon),'male');assert.equal(engine.allocationInfo(mon).free,297);
+    assert.equal(mon.gender,'male');assert.equal(mon.shiny,false);assert.equal(mon.customStats,undefined);
+    assert.equal(new Set(all(engine).map(mon=>mon.uid)).size,all(engine).length);
+    assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
+    if(role==='sub')assert(existing.every(member=>member.gender==='female'));
+  }
+});
+
+test('Galdogran retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
+  const engine=fresh(),grant=addition('sub');engine.receiveAdminReserveTeam(bundle('sub'));engine.receiveAdminReserveTeam(grant);
+  const mon=engine.state.storage[6];mon.nickname='いわ';mon.moveOrder=[3,1,0,2];mon.heldItem='everpebble';
+  engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
+  assert(engine.exchange(-1,6).ok);
+  const before=JSON.stringify(engine.state);
+  for(const options of [{},{restore:true}]){assert(engine.receiveAdminReserveTeam(grant,options).alreadyReceived);assert.equal(JSON.stringify(engine.state),before);}
+  assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.state));
+  assert(engine.exchange(1,0).ok); // Put the added monster back into reserve.
+  const at=engine.state.storage.findIndex(member=>member.grantId===mon.grantId);assert(at>=0);
+  assert(engine.release(at).ok);
+  const oldAt=engine.state.storage.findIndex(member=>member.grantId.startsWith('admin-trained-v64:'));
+  assert(engine.release(oldAt).ok); // A missing v64 member is deliberately not part of this recovery.
+  const kept=copy(engine.state),receipts=copy(engine.state.giftReceipts);
+  assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.state),kept);
+  const outcome=engine.receiveAdminReserveTeam(grant,{restore:true});assert.equal(outcome.added,1);assert.equal(outcome.restored,1);
+  assert.deepEqual(copy(engine.state.giftReceipts),receipts);assert.deepEqual(copy(engine.state.storage.slice(0,-1)),kept.storage);
+  assert.deepEqual(copy(engine.state.party),kept.party);
+  const replacement=engine.state.storage.at(-1);assert.equal(replacement.grantId,mon.grantId);assert.notEqual(replacement.uid,mon.uid);
+  assert.equal(replacement.gender,'male');assert.equal(replacement.heldItem,'trainband');assert.equal(engine.allocationInfo(replacement).free,297);
+  assert.equal(engine.adminReserveTeamStatus(bundle('sub')).missingCount,1);
+});
+
+test('Galdogran delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
+  for(const condition of ['full','battle','unstarted','receipts']){
+    const engine=condition==='unstarted'?new Engine():fresh();
+    if(condition==='full')for(let i=0;i<192;i++)engine.state.storage.push(engine.makeMonster('komori',1));
+    if(condition==='battle')engine.battle={};
+    if(condition==='receipts')engine.state.giftReceipts=Array.from({length:10000},(_,i)=>'gift:'+i);
+    const before=JSON.stringify(engine.state),result=engine.receiveAdminReserveTeam(addition());
+    assert.equal(result.pending,true,condition);assert.equal(JSON.stringify(engine.state),before);
+  }
+});
+
+test('Galdogran grants and saves reject another species, duplicate receipt, female or altered growth',()=>{
+  for(const mutate of [g=>g.version=1,g=>g.members.push(copy(g.members[0])),g=>g.members[0].species='galdoras',g=>g.members[0].gender='female',g=>g.members[0].level=99,g=>g.members[0].bonusPoints=100,g=>g.members[0].heldItem='everstone',g=>g.members[0].grantId=g.members[0].grantId.replace('v68','v64'),g=>g.members[0].grantId=g.members[0].grantId.replace(':main:',':sub:')]){
+    const engine=fresh(),grant=addition(),before=JSON.stringify(engine.state);mutate(grant);
+    assert.throws(()=>rules.normalizeBundle(grant));assert.equal(engine.receiveAdminReserveTeam(grant).ok,false);assert.equal(JSON.stringify(engine.state),before);
+  }
+  const engine=fresh();engine.receiveAdminReserveTeam(addition());const raw=engine.serialize();
+  for(const mutate of [m=>m.gender='female',m=>m.level=99,m=>m.bonusPoints=98,m=>m.species='galdoras',m=>m.grantId=m.grantId.replace(':galdogran',':futo')]){
+    const bad=copy(raw);mutate(bad.storage[0]);assert.throws(()=>new Engine(bad));
+  }
+  const duplicate=copy(raw);duplicate.storage.push({...copy(duplicate.storage[0]),uid:'another-galdogran'});assert.throws(()=>new Engine(duplicate));
+});
+
+test('the Galdogran bridge retains durable-write ordering, role checks, battle and cross-tab barriers',()=>{
+  for(const blocked of ['nonadmin','wrong-role','wrong-player','online','trade','live','battle','stale-disk']){
+    const h=bridgeHarness(),owner=h.ctx.LT.Admin.player;
+    if(blocked==='nonadmin')owner.isAdmin=false;if(blocked==='wrong-role')owner.adminRole='sub';if(blocked==='wrong-player')owner.id=OTHER;
+    if(blocked==='online')h.ctx.LT.onlineActive=true;if(blocked==='trade')h.ctx.LT.localTradeActive=true;
+    if(blocked==='live')h.ctx.LT.KasaiLive={isActive:()=>true};if(blocked==='battle')h.engine.battle={};
+    if(blocked==='stale-disk'){const newer=copy(h.initial);newer.coins++;h.control.raw=JSON.stringify(newer);}
+    const before=JSON.stringify(h.engine.state);assert.equal(h.receive(addition()).ok,false,blocked);assert.equal(JSON.stringify(h.engine.state),before);assert.equal(h.control.writes,0);
+  }
+  for(const playing of [true,false]){
+    const h=bridgeHarness({playing});h.control.fail=true;assert(h.receive(addition()).pending);assert.equal(h.control.writes,0);
+    h.control.fail=false;assert.equal(h.receive(addition()).added,1);assert.equal(h.control.writes,1);assert.equal(h.control.remembered,1);
+    assert(h.receive(addition()).alreadyReceived);assert.equal(h.control.writes,1);
+    assert.equal(h.ctx.storedSave.storage[0].species,'galdogran');
+  }
 });

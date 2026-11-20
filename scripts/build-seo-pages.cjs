@@ -1,25 +1,44 @@
 #!/usr/bin/env node
 'use strict';
 /* Builds the indexable companion pages from the shipped game data:
- *   monsters/index.html       — the full encyclopedia (256 species)
+ *   monsters/index.html       — the public encyclopedia
  *   monsters/<id>.html        — one page per species
  *   guide/index.html          — beginner and system guide
- *   moves/index.html          — all 96 moves and who learns them
+ *   moves/index.html          — public moves and who learns them
  *   404.html                  — the not-found page
  *   sitemap.xml               — every public page (with dex images)
- * It also mirrors the home page's visible FAQ into FAQPage structured data.
+ * The home page metadata and static overview use the same public game data.
+ * scripts/seo-page-state.json preserves real content modification dates.
  * Usage: node scripts/build-seo-pages.cjs   (SEO_DATE=YYYY-MM-DD to pin lastmod)
  * Use --only=monsters/floravelle.html,guide/index.html,index.html for targeted updates.
  * Sprites come from scripts/build-dex-sprites.cjs (assets/dex/<id>.webp). */
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
 const ROOT = path.resolve(__dirname, '..');
 const SITE = 'https://www.kasai-solutions-inc.com';
 const DATE = process.env.SEO_DATE || new Date().toISOString().slice(0, 10);
+if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE) || new Date(DATE).toISOString().slice(0, 10) !== DATE) throw Error('SEO_DATE must be a valid YYYY-MM-DD date');
+const LASTMOD = '__SEO_LASTMOD__';
+const stateFile = path.join(ROOT, 'scripts', 'seo-page-state.json');
+const previousState = fs.existsSync(stateFile) ? JSON.parse(fs.readFileSync(stateFile, 'utf8')) : {};
+const previousSitemap = fs.existsSync(path.join(ROOT, 'sitemap.xml')) ? fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8') : '';
+const previousDates = new Map([...previousSitemap.matchAll(/<url>\s*<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g)].map(match => [match[1], match[2]]));
+// A build date alone is not a content change. Only controlled metadata dates
+// are omitted from the hash; game data, copy, markup and resource URLs count.
+function contentHash(contents) {
+  const normalized = contents.replace(/<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g, block => block.replace(/("dateModified"\s*:\s*")[^"]+("\s*)/g, `$1${LASTMOD}$2`))
+    .replace(/<time data-content-updated datetime="[^"]+">[^<]+<\/time>/g, `<time data-content-updated datetime="${LASTMOD}">${LASTMOD}</time>`);
+  return crypto.createHash('sha256').update(normalized).digest('hex');
+}
 const onlyArgument=process.argv.slice(2).find(value=>value.startsWith('--only='));
 const selected=onlyArgument?new Set(onlyArgument.slice(7).split(',').filter(Boolean)):null,written=[];
 function write(file,contents){
   const relative=path.relative(ROOT,file).split(path.sep).join('/');
   if(selected&&!selected.has(relative))return;
+  if (relative.endsWith('.html')) {
+    const prior = previousState[relative];
+    const modified = prior?.hash === contentHash(contents) ? prior.lastmod : DATE;
+    contents = contents.replaceAll(LASTMOD, modified);
+  }
   if(fs.existsSync(file)&&fs.readFileSync(file,'utf8')===contents)return;
   fs.writeFileSync(file,contents);written.push(relative);
 }
@@ -41,7 +60,13 @@ if(selected){
   const allowed=new Set(['index.html','monsters/index.html','guide/index.html','moves/index.html','404.html','sitemap.xml',...ids.map(id=>`monsters/${id}.html`),...Object.keys(D.retiredSpecies||{}).map(id=>`monsters/${id}.html`)]);
   if(!selected.size||[...selected].some(file=>!allowed.has(file)))throw Error('Unknown --only page target');
 }
-const publicMoveCount = Object.values(D.moves).filter(move=>!move.hiddenDex).length;
+const totalSpeciesCount = Object.keys(D.species).length, hiddenSpeciesCount = totalSpeciesCount - ids.length;
+const allMoves = Object.values(D.moves).filter(move=>!move.hiddenDex), publicMoveCount = allMoves.length;
+const totalMoveCount = Object.keys(D.moves).length, hiddenMoveCount = totalMoveCount - publicMoveCount;
+const generalMoveCount = allMoves.filter(move=>move.element&&!['special','signature'].includes(move.role)).length;
+const neutralMoveCount = allMoves.filter(move=>!move.element&&!['special','signature'].includes(move.role)).length;
+const specialMoveCount = allMoves.filter(move=>['special','signature'].includes(move.role)).length;
+const typesWithoutGeneralMoves = publicTypes.filter(type=>!allMoves.some(move=>move.element===type&&!['special','signature'].includes(move.role)));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const typeName = el => el ? (D.elements[el]?.name || el) + 'タイプ' : '無属性';
 const typeChip = el => `<span class="chip t-${esc(el || 'none')}">${esc(el ? D.elements[el].name : '無')}</span>`;
@@ -80,8 +105,10 @@ function obtain(id) {
 const rarityLabel = { common: '通常', evolved: '進化形', rare: '希少', legendary: '伝説', mythical: '幻', gift: '配布限定' };
 
 const fontLinks = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">`;
-function page({ depth, canonical, title, description, body, jsonld = [], image = `${SITE}/assets/ogp-handheld.png`, imageAlt = 'パチモンのタイトル画面', noindex = false, root = false }) {
+function page({ depth, canonical, title, description, body, jsonld = [], noindex = false, root = false }) {
   const up = root ? '/' : depth ? '../'.repeat(depth) : './';
+  const image = `${SITE}/assets/ogp-handheld.png`, imageAlt = 'パチモン｜無料のドット絵モンスター育成RPGの紹介画像';
+  const webPage = { '@context': 'https://schema.org', '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical, name: title, description, inLanguage: 'ja', dateModified: LASTMOD, isPartOf: { '@id': `${SITE}/#website` } };
   return `<!doctype html>
 <html lang="ja">
 <head>
@@ -101,6 +128,10 @@ function page({ depth, canonical, title, description, body, jsonld = [], image =
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${canonical}">
 <meta property="og:image" content="${image}">
+<meta property="og:image:secure_url" content="${image}">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${esc(imageAlt)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
@@ -112,7 +143,7 @@ function page({ depth, canonical, title, description, body, jsonld = [], image =
 <link rel="apple-touch-icon" href="${up}assets/apple-touch-pixel.png">
 ${fontLinks}
 <link rel="stylesheet" href="${up}seo.css?v=20261120-stone-v65">
-${jsonld.map(data => `<script type="application/ld+json">${JSON.stringify(data)}</script>`).join('\n')}
+${[webPage, ...jsonld].map(data => `<script type="application/ld+json">${JSON.stringify(data)}</script>`).join('\n')}
 </head>
 <body>
 <a class="skip-link" href="#main-content">本文へ進む</a>
@@ -120,7 +151,7 @@ ${jsonld.map(data => `<script type="application/ld+json">${JSON.stringify(data)}
 <main class="wrap" id="main-content">
 ${body}
 </main>
-<footer class="site-foot"><p><a href="${up}">パチモン｜無料のドット絵モンスター育成RPG</a> ・ <a href="${up}monsters/">図鑑</a> ・ <a href="${up}moves/">技一覧</a> ・ <a href="${up}guide/">攻略ガイド</a> ・ <a href="${up}LICENSES.txt">ライセンス</a></p><p>© 2026 KASAI SOLUTIONS INC. 本ページの内容はゲーム内データから生成しています。</p></footer>
+<footer class="site-foot"><p><a href="${up}">パチモン｜無料のドット絵モンスター育成RPG</a> ・ <a href="${up}monsters/">図鑑</a> ・ <a href="${up}moves/">技一覧</a> ・ <a href="${up}guide/">攻略ガイド</a> ・ <a href="${up}LICENSES.txt">ライセンス</a></p><p>© 2026 KASAI SOLUTIONS INC. 本ページの内容はゲーム内データから生成しています。更新日：<time data-content-updated datetime="${LASTMOD}">${LASTMOD}</time></p></footer>
 </body>
 </html>
 `;
@@ -173,7 +204,7 @@ for (const [index, id] of ids.entries()) {
   <p class="cta"><a class="button" href="../">${esc(s.name)}に会いに行く — 無料で遊ぶ ▶</a></p>
 </article>
 <nav class="pager" aria-label="前後のパチモン">${prev ? `<a href="${prev}.html">◀ No.${pad(index)} ${esc(D.species[prev].name)}</a>` : '<span></span>'}<a href="./">図鑑一覧</a>${next ? `<a href="${next}.html">No.${pad(index + 2)} ${esc(D.species[next].name)} ▶</a>` : '<span></span>'}</nav>`;
-  write(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の特性・進化・技・入手方法｜パチモン図鑑`, description, body, image: `${SITE}/${dexSprite(id)}`, imageAlt: `${s.name}のドット絵`,
+  write(path.join(ROOT, 'monsters', `${id}.html`), page({ depth: 1, canonical: url, title: `${s.name}（No.${number}）の特性・進化・技・入手方法｜パチモン図鑑`, description, body,
     jsonld: [crumbs([['トップ', `${SITE}/`], ['パチモン図鑑', `${SITE}/monsters/`], [s.name, url]])] }));
 }
 
@@ -181,8 +212,9 @@ for (const [index, id] of ids.entries()) {
 const groups = publicTypes.map(el => [el, ids.filter(id => TYPES.has(id, el))]);
 const indexBody = `${crumbNav([['トップ', '../'], ['パチモン図鑑', '']], 1)}
 <section class="window">
-  <h1>パチモン図鑑（全${ids.length}種）</h1>
-  <p class="lead">無料のドット絵RPG「パチモン」に登場する全${ids.length}種のパチモンの一覧です。雷・氷・土を含む8タイプで分類し、複合タイプは両方の一覧に掲載しています。名前を選ぶと、Lv.50の能力値、覚える技、進化の系譜、入手方法を確認できます。</p>
+  <h1>パチモン図鑑（公開${ids.length}種）</h1>
+  <p class="lead">無料のドット絵RPG「パチモン」の公開図鑑${ids.length}種を掲載しています。${esc(typeList(publicTypes))}の${publicTypes.length}タイプで分類し、複合タイプは両方の一覧に掲載しています。名前を選ぶと、Lv.50の能力値、覚える技、進化の系譜、入手方法を確認できます。</p>
+  <p>ゲーム全体には図鑑外の${hiddenSpeciesCount}種も含めて${totalSpeciesCount}種が存在します。図鑑外の仲間の詳細は、この一覧には掲載していません。</p>
   <p class="jump">${groups.map(([el, list]) => `<a href="#${el}">${typeChip(el)} ${list.length}種</a>`).join(' ')}</p>
 </section>
 ${groups.map(([el, list]) => `<section class="window" id="${el}">
@@ -191,8 +223,8 @@ ${groups.map(([el, list]) => `<section class="window" id="${el}">
   <ul class="dex-grid">${list.map(id => `<li><a href="${id}.html"><img src="../${dexSprite(id)}" width="96" height="96" alt="${esc(D.species[id].name)}" loading="lazy" decoding="async"><span class="dex-no">No.${pad(no(id))}</span><strong>${esc(D.species[id].name)}</strong></a></li>`).join('')}</ul>
 </section>`).join('\n')}
 <p class="cta"><a class="button" href="../">冒険をはじめる — 無料で遊ぶ ▶</a></p>`;
-write(path.join(ROOT, 'monsters', 'index.html'), page({ depth: 1, canonical: `${SITE}/monsters/`, title: `パチモン図鑑 全${ids.length}種一覧｜タイプ・進化・技｜パチモン`, description: `パチモン全${ids.length}種の図鑑一覧。芽・潮・灯・風・晶・雷・氷・土の8タイプ別に、各パチモンの能力値・覚える技・進化・入手方法を掲載しています。`, body: indexBody,
-  jsonld: [crumbs([['トップ', `${SITE}/`], ['パチモン図鑑', `${SITE}/monsters/`]]), { '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'パチモン図鑑', url: `${SITE}/monsters/`, inLanguage: 'ja', numberOfItems: ids.length }] }));
+write(path.join(ROOT, 'monsters', 'index.html'), page({ depth: 1, canonical: `${SITE}/monsters/`, title: `パチモン図鑑 公開${ids.length}種一覧｜タイプ・進化・技｜パチモン`, description: `パチモンの公開図鑑${ids.length}種の一覧。${typeList(publicTypes)}の${publicTypes.length}タイプ別に、各パチモンの特性・能力値・覚える技・進化・入手方法を掲載しています。`, body: indexBody,
+  jsonld: [crumbs([['トップ', `${SITE}/`], ['パチモン図鑑', `${SITE}/monsters/`]]), { '@context': 'https://schema.org', '@type': 'CollectionPage', '@id': `${SITE}/monsters/#webpage`, name: 'パチモン図鑑', url: `${SITE}/monsters/`, inLanguage: 'ja', mainEntity: { '@type': 'ItemList', numberOfItems: ids.length, itemListElement: ids.map((id,i)=>({ '@type':'ListItem', position:i+1, name:D.species[id].name, url:`${SITE}/monsters/${id}.html` })) } }] }));
 
 // ---------- guide ----------
 const starterLines = D.starters.map(id => lineage(id));
@@ -238,7 +270,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>報酬は<strong>プレイヤーごとに一度だけ、Lv.70のキラシード1体</strong>です。性別は<strong>♂・♀からランダム</strong>に決まり、受け取りの再確認で変わりません。手持ちに空きがあっても、<strong>ひかえが${D.limits.storage}体以上のときは受け取れません</strong>。挑戦前にひかえの空きを作っておきましょう。満員や通信切断で受け取れなかった場合は、空きを作り、「秘密部屋」の「カサイの勝利報酬を確認」から「報酬を受け取る」を選びます。空きができても自動では受け取りません。勝利はサーバーで記録され、退出した後でも未受取の報酬を確認できます。</p>
   <p>運営は従来どおり初期メンバーとしてもキラシードを迎えられます。通常の草むらには出現せず、進化はせずにLv.100まで育ちます。育てた個体はオンライン・ローカルの通信対戦に編成できますが、交換はできません。</p>
   <h2 id="journey">128ステージ・32の旅紋・二つの頂</h2>
-  <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者。そして二つの頂には、星路の継承者と天頂の覇者の<strong>2人</strong>が待っています。</p>
+  <p>公開図鑑は<strong>${ids.length}種</strong>。図鑑外の${hiddenSpeciesCount}種を含むゲーム全体では<strong>${totalSpeciesCount}種</strong>のパチモンが登場します。<strong>${D.regionIds.length}</strong>のステージ、<strong>${D.content.bgm}曲</strong>のBGM、<strong>${Object.keys(D.guardians).length}</strong>の旅紋、<strong>${D.secrets.length}</strong>の隠し要素を楽しめます。四境の守護者を越えた二つの頂には、星路の継承者と天頂の覇者が待っています。</p>
   <ul><li>4つのステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館の紋章守に勝つと旅紋がもらえます。深部からは自分の町へ戻る近道があります。</li>
   <li>子午線（第1〜64ステージ）の16旅紋を集めると、第64ステージ「${esc(D.maps.meridianleague.name)}」で四境の守護者4人と、星路の継承者「${esc(D.champion.name)}」に挑めます。</li>
   <li>勝つと評議院の東門から卯酉線（第65〜128ステージ）へ。さらに16旅紋（合計32）を集めると、第128ステージ「${esc(D.maps.zenithcrossing.name)}」で天頂の覇者「${esc(D.champion2.name)}」（Lv.100）が待っています。</li>
@@ -266,17 +298,17 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>画面には「部屋をつくる人」「参加する人」の役割と現在の手順を表示します。カメラを使えない場合は「カメラを使わずコードで接続」を開き、表示されたコードを互いにコピー・貼り付けできます。公共Wi-Fiなどで端末同士の通信が制限されている場合は、別のWi-Fiを使ってください。</p>
   <p>対戦のルールはオンライン対戦と同じです（アルヴェリオン・キラシード・フートも、持っていれば編成できます）。交換は、お互いが出すパチモンを選んで「この内容で交換する」を押すと成立し、両方の冒険記録に保存されます。通信は2台の間だけで行い、サーバーは使いません。</p>
   <p><strong>Bluetoothテザリングは、対応端末での設定が必要です。</strong>共有する側・接続する側の両方がBluetoothテザリングによるネットワーク接続に対応している必要があり、対応はOS・機種・端末の組み合わせにより異なります。各端末の公式手順でネットワーク接続を確認してから、ゲームの接続画面で「Bluetoothテザリング」を選び、QRコードを読み取ります。ゲーム内の選択だけでOSの接続設定は変わりません。<strong>ブラウザー版は、テザリングなしのBluetooth直接通信には対応していません。</strong>BluetoothのペアリングやQRコードの読み取りだけでは、端末間のネットワークは作られません。</p>
-  <h2 id="moves">技（全${publicMoveCount}種）とエフェクト</h2>
-  <p>技は8タイプの一般技75種、無属性6種、特別な技15種の全${publicMoveCount}種です。雷・氷・土にも、それぞれ4つの攻撃技があり、物理・特殊の技を使えます。技ごとに、反動・吸収・守りを貫く効果などがあります。芽・潮・灯・風・晶の攻撃技は、タイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
+  <h2 id="moves">公開${publicMoveCount}種の技とエフェクト</h2>
+  <p>技一覧に掲載するのは一般技${generalMoveCount}種、無属性${neutralMoveCount}種、特別な技${specialMoveCount}種の計${publicMoveCount}種です。非公開の専用技${hiddenMoveCount}種を含めると全${totalMoveCount}種になります。公開タイプは${publicTypes.length}種類です。${typesWithoutGeneralMoves.length ? `${typeList(typesWithoutGeneralMoves)}タイプの公開一般技は現在ありません。` : ''}技ごとに、反動・吸収・守りを貫く効果などがあります。芽・潮・灯・風・晶の攻撃技は、タイプの状態異常を起こすことがあります。最初の相棒は二段進化すると、それぞれ特別な技を覚えます（${Object.entries(D.signatureMoves || {}).map(([id, owner]) => `${esc(D.species[owner].name)}「${esc(D.moves[id].name)}」`).join('・')}）。技の演出は全24種類のエフェクトで表現されます。<a href="../moves/">技一覧</a>で威力・命中・PP・覚えるパチモンを確認できます。</p>
   <h2 id="offline">オフラインで遊ぶ</h2>
-  <p>一度インターネットにつないで開くと、次からは通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像もまとめて端末に保存できます。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。同じネットワークにつないだ近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
+  <p>初回にインターネットにつないでゲーム本体の保存が完了すれば、通信がない場所でも冒険を始められます。設定の「画像をすべて保存」でパチモンの画像もまとめて端末に保存できます。保存したサイトデータを削除すると、再びオンラインで読み込む必要があります。スマホではブラウザーの「ホーム画面に追加」で、アプリのように起動できます。同じネットワークにつないだ近くの友だちとは<a href="#local">ローカル通信</a>でオフラインのまま対戦・交換できます（オンライン対戦・オンライン交換はインターネット接続が必要です）。</p>
   <h2 id="settings">便利な設定</h2>
   <ul><li><strong>画面モード</strong>：カラーとモノクロの2種類です。どちらも細かなドットと豊かな階調で表示し、初期設定はカラーです。本体の「液晶」ボタンでも交互に切り替えられます。ブラウン管風の走査線は最初はOFFです。</li><li><strong>文字と演出の速さ</strong>：ゆっくり・ふつう・はやい・瞬間の4段階。演出中はA・Enterで早送りできます。</li><li><strong>常にダッシュ</strong>：移動を常に早足にします。</li><li><strong>灯渡り</strong>：ワールドマップから、一度訪れた地域へすぐに移動できます。</li></ul>
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'guide'), { recursive: true });
-write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。カサイ本人とのリアルタイム対戦、Lv.70キラシードの一度限りの勝利報酬と受け取り条件、全128ステージ、32の旅紋、操作、8タイプ・複合タイプの相性、共鳴で仲間を迎える方法、進化、状態異常、持ち物、振り分けポイント、オンライン・ローカル対戦を解説します。', body: guideBody,
-  jsonld: [crumbs([['トップ', `${SITE}/`], ['攻略ガイド', `${SITE}/guide/`]]), { '@context': 'https://schema.org', '@type': 'Article', headline: 'パチモン攻略ガイド', inLanguage: 'ja', dateModified: DATE, author: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, publisher: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, mainEntityOfPage: `${SITE}/guide/` }] }));
+write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: `無料ドット絵RPG「パチモン」の攻略ガイド。全${D.regionIds.length}ステージ、${Object.keys(D.guardians).length}の旅紋、操作、${publicTypes.length}タイプ・複合タイプの相性、共鳴で仲間を迎える方法、進化、育成、カサイ本人とのリアルタイム対戦と勝利報酬、オンライン・ローカル対戦を解説します。`, body: guideBody,
+  jsonld: [crumbs([['トップ', `${SITE}/`], ['攻略ガイド', `${SITE}/guide/`]]), { '@context': 'https://schema.org', '@type': 'Article', headline: 'パチモン攻略ガイド', inLanguage: 'ja', dateModified: LASTMOD, image: `${SITE}/assets/ogp-handheld.png`, author: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, publisher: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, mainEntityOfPage: `${SITE}/guide/` }] }));
 
 // ---------- moves ----------
 const learners = {};
@@ -284,19 +316,18 @@ for (const id of ids) for (const mid of D.species[id].moves) (learners[mid] ||= 
 const moveGroups = [...publicTypes.map(el => [typeName(el), m => m.element === el && !['special', 'signature'].includes(m.role)]),
   ['無属性', m => !m.element && !['special', 'signature'].includes(m.role)], ['特別な技', m => ['special', 'signature'].includes(m.role)]];
 const moveRow = m => `<tr id="${esc(m.id)}"><th>${esc(m.name)}</th><td>${typeChip(m.element)}</td><td>${kindLabel(m)}</td><td>${movePower(m)}</td><td>${moveAccuracy(m)}</td><td>${engine.maxPP(m)}</td><td>${esc(m.description)}</td><td>${(learners[m.id] || []).slice(0, 8).map(id => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>`).join('、')}${(learners[m.id] || []).length > 8 ? ` ほか${learners[m.id].length - 8}種` : ''}</td></tr>`;
-const allMoves = Object.values(D.moves).filter(move=>!move.hiddenDex);
 const movesBody = `${crumbNav([['トップ', '../'], ['技一覧', '']], 1)}
 <article class="window">
-  <h1>パチモン技一覧（全${allMoves.length}種）</h1>
-  <p class="lead">8タイプの一般技75種、無属性6種、特別な技15種。雷・氷・土の各4技を含め、威力・命中・PP・効果と、その技を覚えるパチモンをまとめました。芽・潮・灯・風・晶の攻撃技は、タイプの状態異常を起こすことがあります。技の演出は全24種類のエフェクトで表現されます。</p>
+  <h1>パチモン技一覧（公開${allMoves.length}種）</h1>
+  <p class="lead">一般技${generalMoveCount}種、無属性${neutralMoveCount}種、特別な技${specialMoveCount}種の計${publicMoveCount}種を掲載しています。非公開の専用技${hiddenMoveCount}種を含むゲーム全体では全${totalMoveCount}種です。威力・命中・PP・効果と、その技を覚える公開図鑑のパチモンを確認できます。芽・潮・灯・風・晶の攻撃技は、タイプの状態異常を起こすことがあります。技の演出は全24種類のエフェクトで表現されます。</p>
   <p>${moveGroups.map(([name]) => `<a href="#g-${esc(name)}">${esc(name)}</a>`).join(' ・ ')}</p>
 ${moveGroups.map(([name, test]) => `  <h2 id="g-${esc(name)}">${esc(name)}の技（${allMoves.filter(test).length}種）</h2>
   <div class="table-wrap"><table class="moves"><thead><tr><th>技</th><th>タイプ</th><th>分類</th><th>威力</th><th>命中</th><th>PP</th><th>効果</th><th>覚えるパチモン</th></tr></thead><tbody>${allMoves.filter(test).map(moveRow).join('')}</tbody></table></div>`).join('\n')}
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'moves'), { recursive: true });
-write(path.join(ROOT, 'moves', 'index.html'), page({ depth: 1, canonical: `${SITE}/moves/`, title: `パチモン技一覧 全${allMoves.length}種｜タイプ・威力・命中・効果・覚えるパチモン`,
-  description: `パチモンの技全${allMoves.length}種の一覧。芽・潮・灯・風・晶・雷・氷・土の一般技75種、無属性6種、特別な技15種の威力・命中・PP・効果と、覚えるパチモンを掲載。`, body: movesBody,
+write(path.join(ROOT, 'moves', 'index.html'), page({ depth: 1, canonical: `${SITE}/moves/`, title: `パチモン技一覧 公開${allMoves.length}種｜タイプ・威力・命中・効果・覚えるパチモン`,
+  description: `パチモンの公開${allMoves.length}種の技一覧。一般技${generalMoveCount}種、無属性${neutralMoveCount}種、特別な技${specialMoveCount}種の威力・命中・PP・効果と、覚えるパチモンを掲載。非公開の専用技${hiddenMoveCount}種を含む全${totalMoveCount}種のうち、公開技を確認できます。`, body: movesBody,
   jsonld: [crumbs([['トップ', `${SITE}/`], ['技一覧', `${SITE}/moves/`]]), { '@context': 'https://schema.org', '@type': 'ItemList', name: 'パチモン技一覧', numberOfItems: allMoves.length,
     itemListElement: allMoves.map((m, i) => ({ '@type': 'ListItem', position: i + 1, name: m.name, url: `${SITE}/moves/#${m.id}` })) }] }));
 
@@ -307,6 +338,7 @@ for (const [oldId, newId] of Object.entries(D.retiredSpecies || {})) {
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(target.name)}のページへ移動しました｜パチモン図鑑</title>
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="${SITE}/monsters/${newId}.html">
@@ -322,25 +354,94 @@ write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SI
   description: 'お探しのページは見つかりませんでした。パチモンのトップ、図鑑、技一覧、攻略ガイドからお探しください。',
   body: `<article class="window"><h1>ページが見つかりません</h1><p class="lead">お探しのページは移動したか、削除された可能性があります。</p><ul><li><a href="/">パチモンを無料で遊ぶ（トップ）</a></li><li><a href="/monsters/">パチモン図鑑</a></li><li><a href="/moves/">技一覧</a></li><li><a href="/guide/">攻略ガイド</a></li></ul></article>` }));
 
-// ---------- sitemap (with the dex images) ----------
-const urls = [[`${SITE}/`, '1.0', 'weekly'], [`${SITE}/guide/`, '0.8', 'monthly'], [`${SITE}/monsters/`, '0.8', 'monthly'], [`${SITE}/moves/`, '0.7', 'monthly'], ...ids.map(id => [`${SITE}/monsters/${id}.html`, '0.5', 'monthly', id])];
+// ---------- home metadata and visible overview ----------
+{
+  // Read immediately before this narrowly scoped write so another editor's
+  // game CSS, JavaScript and interactive body are never replaced by a snapshot.
+  const home = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const headEnd = home.indexOf('</head>'), aboutStart = home.indexOf('<section id="about-game"'), aboutEnd = home.indexOf('\n  <dialog id="modal"', aboutStart);
+  if (headEnd < 0 || aboutStart < 0 || aboutEnd < 0) throw Error('Home metadata / static overview boundaries were not found');
+  let head = home.slice(0, headEnd), about = home.slice(aboutStart, aboutEnd);
+  const description = `パチモンは登録不要・無料のブラウザ用ドット絵RPG。公開図鑑${ids.length}種（図鑑外${hiddenSpeciesCount}種を含む全${totalSpeciesCount}種）、公開${publicMoveCount}種の技、${D.regionIds.length}ステージと${Object.keys(D.guardians).length}の旅紋。PC・スマホで探索・育成・進化を楽しめます。攻略ガイド・技一覧・図鑑も公開しています。`;
+  const socialDescription = `公開図鑑${ids.length}種と${D.regionIds.length}ステージ。${Object.keys(D.guardians).length}の旅紋を集めて二つの頂を目指す、無料のドット絵RPG。登録不要、PC・スマホ対応。攻略ガイド・技一覧も公開中。`;
+  head = head.replace(/(<meta name="description" content=")[^"]*(">)/, (_, a, b) => a + esc(description) + b)
+    .replace(/(<meta (?:property="og:description"|name="twitter:description") content=")[^"]*(">)/g, (_, a, b) => a + esc(socialDescription) + b)
+    .replace(/(<meta (?:property="og:image:alt"|name="twitter:image:alt") content=")[^"]*(">)/g, '$1パチモン｜無料のドット絵モンスター育成RPGの紹介画像$2')
+    // Google retired FAQ rich results in May 2026. Keep the helpful visible FAQ.
+    .replace(/\s*<script type="application\/ld\+json" id="faq-jsonld">[\s\S]*?<\/script>/, '');
+  let updatedGraph = false;
+  head = head.replace(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g, (block, source) => {
+    const schema = JSON.parse(source);
+    if (!schema['@graph']) return block;
+    for (const entity of schema['@graph']) {
+      const types = [].concat(entity['@type']);
+      if (types.includes('WebPage')) { entity.description = description; entity.dateModified = LASTMOD; }
+      if (types.includes('VideoGame')) {
+        entity.description = description;
+        entity.softwareVersion = '68.0';
+        entity.featureList = [
+          `公開図鑑${ids.length}種・図鑑外${hiddenSpeciesCount}種を含む全${totalSpeciesCount}種のパチモン`,
+          `公開${publicMoveCount}種の技（非公開の専用技${hiddenMoveCount}種を含め全${totalMoveCount}種）`,
+          `${publicTypes.length}種類の公開タイプと複合タイプ`,
+          `${D.regionIds.length}ステージ・${Object.keys(D.guardians).length}の旅紋・四境の守護者・二つの頂`,
+          'レベル100までの育成と進化、8能力と振り分けポイント',
+          `手持ち最大${D.limits.party}体・ひかえ最大${D.limits.storage}体`,
+          'キーボード・タッチ・標準マッピングのゲームパッド操作',
+          'カラー・モノクロの画面モード',
+          'シングル・ダブルのオンライン対戦と交換',
+          '同じローカルネットワークで対戦・交換（QRコードで接続）',
+          'ゲーム本体の保存完了後はオフラインで冒険可能',
+          `${D.content.bgm}曲の場面別BGMと音楽室`,
+          'Webページで読める公開図鑑・技一覧・攻略ガイド'
+        ];
+        delete entity.screenshot; // The share artwork is not an in-game screenshot.
+      }
+    }
+    updatedGraph = true;
+    return `<script type="application/ld+json" id="site-jsonld">\n${JSON.stringify(schema, null, 2)}\n  </script>`;
+  });
+  if (!updatedGraph) throw Error('Home WebSite / WebApplication structured data was not found');
+  about = about.replace(/(<h3 id="dex-teaser-title">)[\s\S]*?(<\/h3>)/, `$1公開${ids.length}種のパチモン図鑑と、攻略ガイド。$2`)
+    .replace('すべてのパチモンの能力値・覚える技・進化・入手方法と、バトルやタイプ相性のコツをWebページでも読めます。', '公開図鑑に掲載したパチモンの能力値・覚える技・進化・入手方法と、バトルやタイプ相性のコツをWebページでも読めます。')
+    .replace(/(?:全|公開)\d+種の一覧へ ▶/, `公開${ids.length}種の一覧へ ▶`);
+  if (!about.includes('<strong>技一覧</strong>')) about = about.replace(/(<a class="dex-teaser-card dex-teaser-more" href="guide\/">[\s\S]*?<\/a>)/, `$1<a class="dex-teaser-card dex-teaser-more" href="moves/"><strong>技一覧</strong><small>威力・効果と覚える仲間 ▶</small></a>`);
+  const speciesSummary = `<p data-seo-species-summary>公開図鑑は<strong>${ids.length}種</strong>。図鑑外の${hiddenSpeciesCount}種を含め、全<strong>${totalSpeciesCount}種</strong>のパチモンが登場します。<strong>${D.regionIds.length}</strong>のステージ、<strong>${D.content.bgm}曲</strong>のBGM、<strong>${Object.keys(D.guardians).length}</strong>の旅紋を巡り、四境の守護者と二つの頂へ。子午線を越えたら、卯酉線の冒険が待っています。BGMは音楽室でも楽しめます。</p>`;
+  about = about.replace(/<p data-seo-species-summary>[\s\S]*?<\/p>|<p>世界は<strong>2の累乗<\/strong>[\s\S]*?<\/p>/, speciesSummary);
+  function answer(question, content) {
+    const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`(<details><summary>${escaped}</summary><p>)[\\s\\S]*?(</p></details>)`);
+    if (!pattern.test(about)) throw Error(`Visible FAQ missing: ${question}`);
+    about = about.replace(pattern, (_, a, b) => a + content + b);
+  }
+  answer('幻のキラシードはどうやって仲間にできますか？', `芽タイプの幻のパチモンです（旧名フロラヴェール）。謎の調律士 カサイ本人とのリアルタイム対戦に勝利すると、プレイヤーごとに一度だけLv.70のキラシードを1体受け取れます。報酬の性別は♂・♀からランダムに決まります。手持ちに空きがあっても、ひかえが${D.limits.storage}体以上のときは受け取れません。空きを作った後は「秘密部屋」の「カサイの勝利報酬を確認」から「報酬を受け取る」を選んでください。自動では受け取りません。挑戦と報酬の確認にはインターネット接続が必要です。運営は初期メンバーとしても迎えられます。通常の草むらには出現せず、進化せずLv.100まで育ちます。通信対戦には編成できますが、交換はできません。詳しくは<a href="guide/#kasai-challenge">カサイの勝利報酬ガイド</a>を確認してください。`);
+  answer('技は何種類ありますか？', `公開する技一覧は${publicMoveCount}種です。一般技${generalMoveCount}種、無属性${neutralMoveCount}種、特別な技${specialMoveCount}種を掲載しています。非公開の専用技${hiddenMoveCount}種を含むゲーム全体では全${totalMoveCount}種です。公開タイプは${typeList(publicTypes)}の${publicTypes.length}種類です。最初の相棒は二段進化すると、それぞれ特別な技を覚えます。<a href="moves/">技一覧</a>で威力・命中・PP・効果と覚えるパチモンを確認できます。`);
+  answer('オフラインでも遊べますか？', 'はい。初回にインターネットにつないでゲーム本体の保存が完了すれば、通信がない場所でも冒険を始められます。設定の「オフラインで遊ぶ」から「画像をすべて保存」を選ぶと、パチモンの画像もまとめて保存できます。保存したサイトデータを削除すると、再びオンラインで読み込む必要があります。同じネットワークにつないだ近くの端末とは「ローカル通信」で対戦・交換できます。オンライン対戦・オンライン交換にはインターネット接続が必要です。');
+  answer('登録やインストールは必要ですか？', 'アカウント登録やインストールは不要です。「旅をはじめる」から無料でプレイできます。初回はインターネット接続が必要です。ゲーム本体の保存が完了すると、次回からオフラインでも冒険を始められます。スマホでは「ホーム画面に追加」でアプリのように起動できます。オンライン対戦中はインターネット接続を維持してください。JavaScriptとCanvasに対応したブラウザーで開いてください。');
+  about = about.replace(/色違いの配色は\d+種すべてで異なります。/, '色違いには種族ごとの配色を用意しています。')
+    .replace('捕獲率は体力満タン時1%、残り体力1の時6%です。', '共鳴の成功率は体力満タン時1%、残り体力1の時6%です。')
+    .replace('タイトル曲は16ビットアレンジの録音、戦闘曲は提供音源を全編ループ再生します。探索や室内などの曲はWeb Audioで再生するオリジナル楽曲です。', 'タイトル・フィールド・通常戦闘では録音した音源も使用しています。通常戦闘BGMは2分5秒の範囲をループ再生します。そのほかの場面にはWeb Audioで演奏する楽曲があります。');
+  if (!about.includes('id="game-javascript-note"')) about = about.replace('<div class="game-info-inner">', '<div class="game-info-inner">\n      <noscript id="game-javascript-note"><p>ゲームを遊ぶにはJavaScriptを有効にしてください。<a href="monsters/">パチモン図鑑</a>・<a href="moves/">技一覧</a>・<a href="guide/">攻略ガイド</a>は、このまま読むことができます。</p></noscript>');
+  if (!about.includes('<a href="moves/">技一覧</a><a href="guide/">')) about = about.replace('<a href="monsters/">パチモン図鑑</a><a href="guide/">攻略ガイド</a>', '<a href="monsters/">パチモン図鑑</a><a href="moves/">技一覧</a><a href="guide/">攻略ガイド</a>');
+  const dateLine = `<p data-seo-updated>掲載内容の更新日：<time data-content-updated datetime="${LASTMOD}">${LASTMOD}</time></p>`;
+  about = about.includes('data-seo-updated') ? about.replace(/<p data-seo-updated>[\s\S]*?<\/p>/, dateLine) : about.replace('<footer class="game-info-footer">', `${dateLine}\n      <footer class="game-info-footer">`);
+  write(path.join(ROOT, 'index.html'), head + home.slice(headEnd, aboutStart) + about + home.slice(aboutEnd));
+}
+
+// ---------- content dates and sitemap (with public dex images) ----------
+const urls = [[`${SITE}/`, 'index.html'], [`${SITE}/guide/`, 'guide/index.html'], [`${SITE}/monsters/`, 'monsters/index.html'], [`${SITE}/moves/`, 'moves/index.html'], ...ids.map(id => [`${SITE}/monsters/${id}.html`, `monsters/${id}.html`, id])];
+const currentState = {};
+for (const [loc, file] of [...urls, [`${SITE}/404.html`, '404.html']]) {
+  if (selected && !selected.has(file) && previousState[file]) { currentState[file] = previousState[file]; continue; }
+  const contents = fs.readFileSync(path.join(ROOT, file), 'utf8'), hash = contentHash(contents), prior = previousState[file];
+  const recordedDate = /"dateModified"\s*:\s*"(\d{4}-\d{2}-\d{2})"/.exec(contents)?.[1];
+  const lastmod = prior?.hash === hash ? prior.lastmod : written.includes(file) ? DATE : recordedDate || previousDates.get(loc) || DATE;
+  currentState[file] = { hash, lastmod };
+}
+const stateText = JSON.stringify(currentState, null, 2) + '\n';
+if (!fs.existsSync(stateFile) || fs.readFileSync(stateFile, 'utf8') !== stateText) { fs.writeFileSync(stateFile, stateText); written.push('scripts/seo-page-state.json'); }
 write(path.join(ROOT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${urls.map(([loc, priority, freq, id]) => `  <url><loc>${loc}</loc><lastmod>${DATE}</lastmod><changefreq>${freq}</changefreq><priority>${priority}</priority>${id ? `<image:image><image:loc>${SITE}/${dexSprite(id)}</image:loc></image:image>` : ''}</url>`).join('\n')}
+${urls.map(([loc, file, id]) => `  <url><loc>${loc}</loc><lastmod>${currentState[file].lastmod}</lastmod>${id ? `<image:image><image:loc>${SITE}/${dexSprite(id)}</image:loc></image:image>` : ''}</url>`).join('\n')}
 </urlset>
 `);
-
-// ---------- home page FAQ structured data (mirrors the visible FAQ) ----------
-{
-  // Read again immediately before the small FAQ update so a simultaneous UI edit
-  // is not overwritten with the generator's earlier data snapshot.
-  const home=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
-  const strip = text => String(text).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-  const start = home.indexOf('<section class="game-info-faq"'), section = home.slice(start, home.indexOf('</section>', start));
-  const questions = [...section.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map(m => ({ '@type': 'Question', name: strip(m[1]), acceptedAnswer: { '@type': 'Answer', text: strip(m[2]) } }));
-  if (!questions.length) throw new Error('The home page FAQ was not found');
-  const block = `<script type="application/ld+json" id="faq-jsonld">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: questions })}</script>`;
-  const next = home.includes('id="faq-jsonld"') ? home.replace(/<script type="application\/ld\+json" id="faq-jsonld">[\s\S]*?<\/script>/, block) : home.replace('</head>', `  ${block}\n</head>`);
-  if (next !== home) write(path.join(ROOT, 'index.html'), next);
-}
-console.log(selected?`Generated only ${[...selected].join(', ')} (${written.length} files changed).`:`Built ${ids.length} species pages, the encyclopedia, the guide, the move list, the 404 page and a sitemap with ${urls.length} URLs (${DATE}; ${written.length} files changed).`);
+console.log(selected ? `Generated only ${[...selected].join(', ')} (${written.length} files changed).` : `Built ${ids.length} public species pages (${totalSpeciesCount} species in game), ${publicMoveCount} public moves (${totalMoveCount} in game), the guide, the 404 page and a sitemap with ${urls.length} URLs (${written.length} files changed).`);

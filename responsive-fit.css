@@ -1,0 +1,274 @@
+/* v68: one viewport, separate artwork/status/control regions at every size. */
+html.viewport-fit{--fit-topbar:48px;--fit-controls:76px;--fit-gap:6px}
+html.viewport-fit:has(body.is-playing){height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
+html.viewport-fit body.is-playing{position:fixed;inset:0;width:100%;height:var(--app-height,100dvh);min-width:0;min-height:0;margin:0;overflow:hidden}
+html.viewport-fit body.is-playing #app{display:grid;grid-template-rows:var(--fit-topbar) minmax(0,1fr);width:100%;height:100%;min-width:0;min-height:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);overflow:hidden}
+html.viewport-fit body.is-playing .topbar{position:relative;inset:auto;display:flex;align-items:center;flex-wrap:nowrap;gap:10px;width:100%;height:var(--fit-topbar);min-height:0;max-width:none;margin:0;padding:3px 9px;overflow:hidden}
+html.viewport-fit body.is-playing .brand{flex:0 0 auto;gap:5px}
+html.viewport-fit body.is-playing .brand-mark{width:26px;height:30px}
+html.viewport-fit body.is-playing .brand-copy strong{font-size:18px}
+html.viewport-fit body.is-playing .brand-copy small{font-size:5px}
+html.viewport-fit body.is-playing .location-info{flex:1 1 0;min-width:0;padding-left:8px;gap:6px}
+html.viewport-fit body.is-playing #location-name{display:block;max-width:100%;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.viewport-fit body.is-playing #location-subtitle{font-size:10px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.viewport-fit body.is-playing .top-actions{display:flex;flex:0 0 auto;gap:3px;margin-left:auto}
+html.viewport-fit body.is-playing .top-actions .icon-btn{width:40px;min-width:40px;height:40px;min-height:40px;padding:7px}
+html.viewport-fit body.is-playing .game-layout{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);align-items:stretch;gap:var(--fit-gap);width:100%;height:100%;max-width:none;min-width:0;min-height:0;margin:0;padding:6px;overflow:hidden}
+html.viewport-fit body.is-playing .play-column{display:flex;flex-direction:column;gap:0;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
+html.viewport-fit body.is-playing :is(.field-heading,.world-controls,.field-caption,.site-footer,.controller-status,.console-brand,.console-caption,.console-speaker,.touch-instruction){display:none!important}
+html.viewport-fit body.is-playing .journal{display:none}
+html.viewport-fit body.is-playing .console-body{display:grid;flex:1 1 0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) var(--fit-controls);grid-template-areas:"screen" "controls";align-items:stretch;gap:5px;width:100%;height:100%;min-width:0;min-height:0;max-width:none;margin:0;padding:6px;overflow:hidden}
+html.viewport-fit body.is-playing .console-screen{display:grid;grid-area:screen;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"network" "meta" "art";align-self:stretch;align-items:stretch;gap:4px;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:22px 5px 5px;overflow:hidden}
+html.viewport-fit body.is-playing .console-screen-top{position:absolute;top:6px;left:8px;right:80px;height:12px;font-size:8px;line-height:12px;overflow:hidden}
+html.viewport-fit body.is-playing .console-palette{position:absolute;top:3px;right:6px;height:17px;min-height:17px;padding:1px 5px;font-size:8px;line-height:12px}
+html.viewport-fit body.is-playing .console-led{display:none}
+html.viewport-fit body.is-playing .console-screen>.world-network-bar{position:static;grid-area:network;display:flex;align-items:center;gap:5px;flex-wrap:wrap;width:100%;min-width:0;min-height:0;margin:0;padding:3px 5px;font-size:11px}
+html.viewport-fit body.is-playing .world-network-actions{display:flex;flex-wrap:wrap;min-width:0;gap:4px;margin-left:auto}
+html.viewport-fit body.is-playing .world-network-bar button{min-height:34px;padding:3px 7px;font-size:11px}
+html.viewport-fit body.is-playing .field-meta{grid-area:meta;display:flex;align-items:center;justify-content:space-between;gap:4px 10px;min-width:0;min-height:0;padding:4px 7px;background:#182c56;border:1px solid var(--pm-frame-faint);color:var(--pm-text-2)}
+html.viewport-fit body.is-playing .field-meta[hidden]{display:none}
+html.viewport-fit body.is-playing .field-meta :is(.world-label,.world-hint){position:static;inset:auto;transform:none;display:block;width:auto;max-width:none;min-width:0;margin:0;padding:0;border:0;clip-path:none;background:none;box-shadow:none;text-shadow:none;font-size:11px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing .field-meta .world-label{flex:0 1 42%;color:var(--pm-gold);font-size:12px}
+html.viewport-fit body.is-playing .field-meta .world-hint{flex:1 1 58%;text-align:right}
+html.viewport-fit body.is-playing .field-meta :is(.world-label,.world-hint)::before{display:none}
+html.viewport-fit body.is-playing .console-screen>.game-stage{position:relative;grid-area:art;align-self:stretch;flex:none;width:100%;height:100%;max-width:none;max-height:none;min-width:0;min-height:0;margin:0;aspect-ratio:auto;border:2px solid var(--pm-ink);box-shadow:none;overflow:hidden}
+html.viewport-fit body.is-playing #game-canvas{display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:none;aspect-ratio:auto;touch-action:none}
+
+/* Exploration controls occupy their own row, outside the canvas. */
+html.viewport-fit body.is-playing .touch-controls{position:static;inset:auto;grid-area:controls;display:grid;grid-template-columns:72px minmax(48px,.6fr) minmax(48px,.6fr) minmax(120px,1fr) minmax(120px,1fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"dpad lsh rsh sys ab";align-items:center;gap:6px;flex:none;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:3px 6px;box-shadow:none;touch-action:none}
+html.viewport-fit body.is-playing .dpad{grid-area:dpad;display:grid;align-self:center;justify-self:center;width:66px;min-width:66px;height:66px;min-height:66px;grid-template-columns:repeat(3,22px);grid-template-rows:repeat(3,22px);margin:0;filter:none}
+html.viewport-fit body.is-playing .dpad button{min-width:0;min-height:0;padding:0}
+html.viewport-fit body.is-playing .dpad svg{width:14px;height:14px}
+html.viewport-fit body.is-playing .console-shoulder{position:static;inset:auto;display:flex;align-items:center;justify-content:center;gap:4px;width:100%;height:40px;min-width:0;min-height:0;margin:0;padding:3px 5px}
+html.viewport-fit body.is-playing .console-shoulder-l{grid-area:lsh}
+html.viewport-fit body.is-playing .console-shoulder-r{grid-area:rsh}
+html.viewport-fit body.is-playing .console-shoulder small{font-size:10px;line-height:1.3}
+html.viewport-fit body.is-playing .console-system{grid-area:sys;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-width:0;margin:0;padding:0}
+html.viewport-fit body.is-playing .console-pill{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;width:50%;min-width:0;min-height:44px;margin:0;padding:2px}
+html.viewport-fit body.is-playing .console-pill>i{width:30px;height:6px;transform:none}
+html.viewport-fit body.is-playing .console-pill>span{font-size:8px;line-height:1.2}
+html.viewport-fit body.is-playing .console-pill small{font-size:10px;line-height:1.3}
+html.viewport-fit body.is-playing .touch-commands{grid-area:ab;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-width:0;padding:0}
+html.viewport-fit body.is-playing :is(.touch-b,.touch-action){display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;width:50px;height:64px;min-width:44px;min-height:44px;margin:0;padding:0;box-shadow:none}
+html.viewport-fit body.is-playing :is(.touch-b,.touch-action)>span{display:grid;place-items:center;width:38px;height:38px;font-size:20px!important}
+html.viewport-fit body.is-playing :is(.touch-b,.touch-action) small{font-size:10px!important;line-height:1.3}
+html.viewport-fit body.is-playing .touch-controls kbd{display:none}
+
+/* Battle HUD and choices are a separate dock in both orientations. */
+html.viewport-fit body.is-playing.in-battle .console-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"screen"}
+html.viewport-fit body.is-playing.in-battle .touch-controls{display:none}
+html.viewport-fit body.is-playing.in-battle .console-screen{grid-template-columns:minmax(0,1fr) clamp(280px,31vw,380px);grid-template-rows:minmax(0,1fr);grid-template-areas:"art dock";gap:7px}
+html.viewport-fit body.is-playing .desktop-battle-sidebar{position:static;inset:auto;grid-area:dock;display:flex;flex-direction:column;gap:6px;width:100%;height:100%;min-width:0;min-height:0;max-height:none;margin:0;overflow:hidden}
+html.viewport-fit body.is-playing .desktop-battle-sidebar[hidden]{display:none!important}
+html.viewport-fit body.is-playing #battle-dock #battle-ui{position:static;inset:auto;display:grid;grid-template-columns:minmax(0,1fr);flex:0 0 auto;gap:5px;width:100%;height:auto;min-width:0;min-height:0;pointer-events:auto}
+html.viewport-fit body.is-playing #battle-dock .combatant{position:static;inset:auto;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:1px 5px;width:100%;min-width:0;max-width:none;height:auto;margin:0;padding:5px 7px;border-width:2px;transform:none;box-shadow:none}
+html.viewport-fit body.is-playing #battle-dock :is(.combatant-top,.combatant-type){display:contents}
+html.viewport-fit body.is-playing #battle-dock .combatant-top strong{grid-column:1;grid-row:1;min-width:0;font-size:13px;line-height:1.3;white-space:normal;overflow-wrap:anywhere;letter-spacing:0}
+html.viewport-fit body.is-playing #battle-dock .combatant-top strong::before{display:none}
+html.viewport-fit body.is-playing #battle-dock .combatant-top>span{grid-column:2;grid-row:1;font-size:10px;line-height:1.3}
+html.viewport-fit body.is-playing #battle-dock .combatant-type>.type-badge{grid-column:1;grid-row:2;justify-self:start;min-width:0;max-width:100%;margin:1px 0;padding:0;border:0;background:none;box-shadow:none;clip-path:none;font-size:10px;line-height:1.3;white-space:normal}
+html.viewport-fit body.is-playing #battle-dock .combatant-type>.hp-label{grid-column:2;grid-row:2;display:block;margin:0;font-size:9px;line-height:1.3;white-space:normal;text-align:right}
+html.viewport-fit body.is-playing #battle-dock .combatant-type>.hp-label.fit-wrap{grid-column:1/-1;grid-row:auto}
+html.viewport-fit body.is-playing #battle-dock .species-types{display:flex;flex-wrap:wrap;gap:2px}
+html.viewport-fit body.is-playing #battle-dock .species-types>.type-badge{padding:0 3px;font-size:9px;line-height:1.3}
+html.viewport-fit body.is-playing #battle-dock .combatant>:is(.hp-track,.hp-row,.ability-chip,.xp-track){grid-column:1/-1;min-width:0}
+html.viewport-fit body.is-playing #battle-dock .hp-track{height:6px;border-width:1px;margin:1px 0}
+html.viewport-fit body.is-playing #battle-dock .hp-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:1px 4px;min-height:13px;margin:0}
+html.viewport-fit body.is-playing #battle-dock :is(.hp-text,.status-chip){font-size:10px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing #battle-dock .ability-chip{min-height:24px;margin-top:1px;padding:2px 4px;font-size:10px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing #battle-dock .xp-track{height:3px;margin-top:2px}
+html.viewport-fit body.is-playing #battle-dock #battle-panel{position:static;inset:auto;display:flex;flex:1 1 0;flex-direction:column;width:100%;height:auto;min-width:0;min-height:0;max-width:none;max-height:none;margin:0;border-width:2px;overflow:hidden;transform:none}
+html.viewport-fit body.is-playing #battle-dock .battle-log-wrap{position:relative;display:flex;flex:0 0 auto;min-height:40px;max-height:74px;padding:5px 7px 10px;gap:4px;border-right:0;border-bottom:1px dashed var(--pm-frame-faint);overflow:hidden}
+html.viewport-fit body.is-playing #battle-dock #battle-log{min-width:0;min-height:0;max-height:58px;height:auto;font-size:12px;line-height:1.45;overflow:auto;overflow-wrap:anywhere;overscroll-behavior:contain;touch-action:pan-y}
+html.viewport-fit body.is-playing #battle-dock .battle-log-wrap::after{bottom:1px;right:5px;font-size:9px}
+html.viewport-fit body.is-playing #battle-dock .battle-actions{position:static;display:grid;flex:1 1 auto;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(min-content,auto);align-content:start;gap:5px;width:100%;min-width:0;min-height:0;padding:5px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y}
+html.viewport-fit body.is-playing #battle-dock .battle-actions>.btn{grid-column:auto;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0;min-height:44px;height:auto;padding:5px 7px;font-size:12px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing #battle-dock .battle-actions>.btn .btn-line{max-width:100%;min-width:0;white-space:normal}
+html.viewport-fit body.is-playing #battle-dock .battle-actions>.btn small{font-size:10px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing #battle-dock .battle-actions :is(svg,.ui-icon){width:14px;height:14px;flex:0 0 14px}
+html.viewport-fit body.is-playing #battle-dock .battle-actions.resonance-actions>.command-techniques{grid-column:1/-1}
+html.viewport-fit body.is-playing #battle-dock .battle-actions.resonance-actions:not(:has(.command-resonance))>.command-depart{grid-column:1/-1}
+html.viewport-fit body.is-playing #battle-dock .battle-actions>:is(p,.battle-back,.battle-continue,.battle-replacement-prompt,.battle-item-target,[data-battle="back"],[data-battle="struggle"],[data-battle="items"]:last-child){grid-column:1/-1}
+html.viewport-fit body.is-playing #battle-dock .move-btn{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"name" "meta" "pp";min-width:0;min-height:62px;height:auto;padding:5px 6px;gap:2px}
+html.viewport-fit body.is-playing #battle-dock .move-btn>span:first-child{display:flex;justify-content:flex-start;flex-wrap:wrap;min-width:0;font-size:12px;line-height:1.3;gap:3px;white-space:normal}
+html.viewport-fit body.is-playing #battle-dock .move-btn .type-badge{font-size:9px;padding:0 3px}
+html.viewport-fit body.is-playing #battle-dock :is(.move-meta,.move-pp){font-size:10px;line-height:1.3;white-space:normal}
+html.viewport-fit body.is-playing #battle-dock .move-pp{justify-self:end;align-self:end;margin:0}
+html.viewport-fit body.is-playing #battle-dock :is(.battle-replacement-prompt,.battle-item-target){margin:0;padding:3px;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+html.viewport-fit body.is-playing #battle-dock .battle-panel:has(.move-btn,[data-switch],[data-battle-item],[data-battle-heal],.replacement-choice) .battle-log-wrap{display:none}
+html.viewport-fit body.is-playing #battle-dock .battle-panel.playing .battle-log-wrap{flex:1 1 auto;max-height:none;min-height:0;border:0}
+html.viewport-fit body.is-playing #battle-dock .battle-panel.playing #battle-log{max-height:none}
+html.viewport-fit body.is-playing #battle-dock .battle-panel.playing .battle-actions{display:none}
+html.viewport-fit body.is-playing #battle-dock .levelup-card{position:static;inset:auto;flex:0 1 auto;order:1;transform:none;width:100%;min-width:0;max-width:100%;max-height:min(180px,36vh);margin:0;padding:6px 8px;overflow:auto;animation:none;box-shadow:none}
+html.viewport-fit body.is-playing #battle-dock:has(.levelup-card) #battle-panel{order:2}
+html.viewport-fit body.is-playing #battle-dock .levelup-title{margin:0 0 3px;font-size:12px}
+html.viewport-fit body.is-playing #battle-dock .levelup-head{gap:5px}
+html.viewport-fit body.is-playing #battle-dock .levelup-gains{margin:4px 0;gap:2px 6px}
+html.viewport-fit body.is-playing #battle-dock .levelup-gains :is(dt,dd){font-size:10px}
+@layer legacy{html.viewport-fit body.is-playing #battle-dock .battle-actions>.battle-back{min-height:44px!important;padding:5px 7px!important}}
+
+/* Menus retain a fixed heading; long collections scroll inside the dialog. */
+html.viewport-fit dialog{inset:0;max-width:min(900px,calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)));width:calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));max-height:calc(var(--app-height,100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-width:0;margin:auto;padding:0;overflow:hidden}
+html.viewport-fit dialog[open]{display:flex;flex-direction:column}
+html.viewport-fit dialog::backdrop{background:#0c1231ed}
+html.viewport-fit dialog>:is(header,.modal-heading,.link-header){flex:0 0 auto;min-width:0;padding:9px 12px}
+html.viewport-fit :is(#modal-content,#online-content,.pachi-console-body,.world-dialog-body,.secret-room-body,.kasai-live-body,.trade-body){flex:1 1 auto;min-width:0;min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain;touch-action:pan-y pinch-zoom}
+html.viewport-fit dialog :is(.modal-heading h2,.link-header h2){min-width:0;max-width:100%;font-size:clamp(16px,3.6vw,22px);line-height:1.4;overflow-wrap:anywhere}
+html.viewport-fit dialog :is(input,select,textarea){max-width:100%}
+html.viewport-fit dialog :is(.creature-card,.guardian-preview){min-width:0;grid-template-columns:minmax(80px,.7fr) minmax(0,1fr)}
+html.viewport-fit dialog :is(.creature-card,.guardian-preview)>*{min-width:0;overflow-wrap:anywhere}
+html.viewport-fit dialog :is(canvas,img){max-width:100%;object-fit:contain}
+
+/* The opening illustration is a sibling of the text, never its background. */
+html.viewport-fit:not(:has(body.is-playing)){height:auto;min-height:100%;overflow:auto;overscroll-behavior:auto}
+html.viewport-fit body:not(.is-playing){position:relative;inset:auto;height:auto;min-height:100%;min-width:0;overflow:auto;touch-action:pan-y pinch-zoom}
+html.viewport-fit .title-screen:not([hidden]){position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(300px,.9fr) minmax(0,1.1fr);grid-template-rows:48px minmax(0,1fr) auto;gap:10px;height:var(--app-height,100dvh);min-height:0;width:100%;max-width:1800px;margin:auto;padding:env(safe-area-inset-top) clamp(8px,2vw,32px) env(safe-area-inset-bottom);overflow:hidden;background:#101a3f}
+html.viewport-fit .title-screen::before,html.viewport-fit .title-screen::after{display:none}
+html.viewport-fit .title-topbar{grid-column:1/-1;grid-row:1;position:static;display:flex;align-items:center;gap:8px;width:100%;height:48px;min-height:0;margin:0;padding:4px 8px;box-shadow:none}
+html.viewport-fit .title-backdrop{grid-column:2;grid-row:2;position:static;inset:auto;z-index:auto;display:block;width:100%;height:100%;min-height:0;margin:0;border:2px solid var(--pm-frame-soft);background-color:#182c56;background-position:center;background-size:contain;background-repeat:no-repeat;box-shadow:none}
+html.viewport-fit .title-inner{grid-column:1;grid-row:2;position:static;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0}
+html.viewport-fit .title-copy{position:static;display:flex;flex-direction:column;gap:0;width:100%;max-width:none;min-width:0;min-height:0;max-height:100%;margin:0;padding:clamp(10px,1.8vw,25px);background:var(--pm-window);box-shadow:none;overflow:auto;overscroll-behavior:contain}
+html.viewport-fit .title-eyebrow{font-size:9px;margin-bottom:7px}
+html.viewport-fit .title-wordmark{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin:0 0 8px}
+html.viewport-fit .title-wordmark h1{font-size:clamp(30px,4vw,60px);line-height:1.2;letter-spacing:1px;margin:0}
+html.viewport-fit .title-english{display:block;width:150px;max-width:100%;height:auto;flex:0 1 150px;margin:0;padding:0;border:0;font-size:12px;letter-spacing:1px}
+html.viewport-fit .title-copy h2{display:block;font-size:clamp(17px,2vw,26px);line-height:1.4;margin:3px 0 9px}
+html.viewport-fit .title-description{display:block;font-size:12px;line-height:1.6;margin:0 0 10px}
+html.viewport-fit .title-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+html.viewport-fit .title-buttons>:is(button,.btn){width:100%;min-width:0;min-height:44px;margin:0;padding:7px;font-size:13px;line-height:1.4;white-space:normal}
+html.viewport-fit .title-buttons>:is(#continue-btn,#start-btn){grid-column:auto}
+html.viewport-fit .title-buttons>#continue-btn[hidden]+#start-btn{grid-column:1/-1}
+html.viewport-fit .title-buttons .button-arrow{display:none}
+html.viewport-fit .title-status{font-size:10px;line-height:1.4;margin:7px 0 0;white-space:normal}
+html.viewport-fit :is(.title-world-note,.title-art-caption){display:none}
+html.viewport-fit .title-metrics{display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 0;padding:0}
+html.viewport-fit .title-metrics>div{gap:5px;padding:3px 0}
+html.viewport-fit .title-metrics strong{font-size:21px}
+html.viewport-fit .title-metrics span{font-size:10px;max-width:none}
+html.viewport-fit .title-footer{grid-column:1/-1;grid-row:3;position:static;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;min-height:0;margin:0;padding:6px 0;font-size:10px;line-height:1.4;box-shadow:none}
+html.viewport-fit .title-footer a{min-height:28px;display:inline-flex;align-items:center;padding:3px 0;font-size:11px}
+html.viewport-fit .title-footer>.title-copyright{font-size:9px}
+html.viewport-fit .title-discover{display:inline-flex;font-size:11px}
+html.viewport-fit body:not(.is-playing) .game-info{display:block;max-width:100%;overflow-wrap:anywhere}
+
+@media(min-width:1200px) and (min-height:700px){
+ html.viewport-fit body.is-playing:not(.in-battle) .game-layout{grid-template-columns:minmax(0,1fr) clamp(220px,19vw,280px)}
+ html.viewport-fit body.is-playing:not(.in-battle) .journal{display:flex;flex-direction:column;min-height:0;overflow:auto}
+ html.viewport-fit.desktop-expanded body.is-playing:not(.in-battle) .game-layout{grid-template-columns:minmax(0,1fr)}
+ html.viewport-fit.desktop-expanded body.is-playing .journal{display:none}
+}
+@media(max-width:700px),(pointer:coarse){
+ html.viewport-fit{--fit-topbar:48px}
+ html.viewport-fit body.is-playing .topbar{gap:5px;padding:2px 5px}
+ html.viewport-fit body.is-playing .top-actions .icon-btn{width:44px;min-width:44px;height:44px;min-height:44px}
+ html.viewport-fit body.is-playing #fullscreen-btn{display:none}
+ html.viewport-fit body.is-playing .location-info{padding-left:5px}
+ html.viewport-fit body.is-playing :is(.location-compass,#location-subtitle){display:none}
+ html.viewport-fit body.is-playing #location-name{font-size:11px}
+ html.viewport-fit body.is-playing .brand-copy strong{font-size:16px}
+ html.viewport-fit body.is-playing .brand-mark{width:22px;height:27px}
+ html.viewport-fit body.is-playing .game-layout{padding:3px}
+ html.viewport-fit body.is-playing .console-body{padding:4px;gap:4px}
+ html.viewport-fit body.is-playing .world-network-bar button{min-height:36px}
+ html.viewport-fit body.is-playing .world-always-on{display:none}
+ html.viewport-fit body.is-playing .field-meta{gap:3px 5px;padding:3px 5px}
+ html.viewport-fit body.is-playing .field-meta .world-label{font-size:11px}
+ html.viewport-fit body.is-playing .field-meta .world-hint{font-size:10px}
+}
+@media(orientation:portrait) and (max-width:1100px){
+ html.viewport-fit{--fit-controls:140px}
+ html.viewport-fit body.is-playing .console-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) var(--fit-controls);grid-template-areas:"screen" "controls"}
+ html.viewport-fit body.is-playing .touch-controls{grid-template-columns:132px minmax(0,1fr) minmax(0,1fr);grid-template-rows:repeat(3,44px);grid-template-areas:"dpad lsh rsh" "dpad ab ab" "dpad sys sys";align-items:stretch;gap:2px 6px;padding:2px 4px}
+ html.viewport-fit body.is-playing .dpad{width:132px;min-width:132px;height:132px;min-height:132px;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}
+ html.viewport-fit body.is-playing .dpad svg{width:21px;height:21px}
+ html.viewport-fit body.is-playing .console-shoulder{height:44px;min-height:44px;font-size:13px}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action){flex:1 1 0;flex-direction:row;gap:4px;width:auto;height:44px;min-height:44px}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action)>span{width:34px;height:34px}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action) small{font-size:9px!important}
+ html.viewport-fit body.is-playing .console-pill{flex-direction:row;flex-wrap:wrap;gap:3px;min-height:44px;padding:3px}
+ html.viewport-fit body.is-playing .console-pill>i{display:none}
+ html.viewport-fit body.is-playing .console-pill>span{font-size:8px}
+ html.viewport-fit body.is-playing.in-battle .console-body{grid-template-rows:minmax(0,1fr);grid-template-areas:"screen"}
+ html.viewport-fit body.is-playing.in-battle .console-screen{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(100px,1fr) auto;grid-template-areas:"art" "dock";gap:5px}
+ html.viewport-fit body.is-playing #battle-dock{height:auto;max-height:65%;max-height:min(65vh,420px);align-self:stretch}
+ html.viewport-fit body.is-playing #battle-dock #battle-ui{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+ html.viewport-fit body.is-playing #battle-dock .combatant{padding:3px 5px;gap:0 3px}
+ html.viewport-fit body.is-playing #battle-dock .combatant-top strong{font-size:12px}
+ html.viewport-fit body.is-playing #battle-dock .combatant-type>.hp-label{display:none}
+ html.viewport-fit body.is-playing #battle-dock #battle-panel{flex:0 1 auto}
+ html.viewport-fit body.is-playing #battle-dock .battle-actions{flex:0 1 auto;max-height:min(320px,42vh)}
+ html.viewport-fit body.is-playing #battle-dock .battle-log-wrap{max-height:48px;min-height:32px;padding:4px 6px 9px}
+ html.viewport-fit body.is-playing #battle-dock #battle-log{max-height:35px;font-size:11px}
+ html.viewport-fit body.is-playing #battle-dock .battle-panel.playing .battle-log-wrap{min-height:60px;max-height:100px}
+ html.viewport-fit body.is-playing #battle-dock .battle-panel.playing #battle-log{max-height:85px}
+ html.viewport-fit .title-screen:not([hidden]){grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(70px,.55fr) minmax(0,1fr) auto;gap:6px;padding-left:7px;padding-right:7px}
+ html.viewport-fit .title-topbar{grid-row:1;height:44px;padding:3px 6px}
+ html.viewport-fit .title-backdrop{grid-column:1;grid-row:2}
+ html.viewport-fit .title-inner{grid-column:1;grid-row:3;align-items:stretch}
+ html.viewport-fit .title-copy{padding:10px 12px;justify-content:center}
+ html.viewport-fit .title-wordmark{margin:0 0 5px;gap:4px 10px}
+ html.viewport-fit .title-wordmark h1{font-size:30px}
+ html.viewport-fit .title-english{width:125px;flex-basis:125px;font-size:9px}
+ html.viewport-fit .title-eyebrow{display:none}
+ html.viewport-fit .title-copy h2{font-size:17px;line-height:1.35;margin-bottom:6px}
+ html.viewport-fit .title-description{font-size:11px;line-height:1.45;margin-bottom:7px}
+ html.viewport-fit .title-buttons{gap:5px}
+ html.viewport-fit .title-buttons>:is(button,.btn){font-size:12px;min-height:44px;padding:5px}
+ html.viewport-fit .title-status{font-size:9px;margin-top:5px}
+ html.viewport-fit .title-metrics{display:none}
+ html.viewport-fit .title-footer{grid-row:4;gap:3px 8px;padding:3px 0}
+ html.viewport-fit .title-footer>.title-copyright{display:none}
+}
+@media(orientation:landscape) and (max-height:550px){
+ html.viewport-fit{--fit-topbar:40px}
+ html.viewport-fit body.is-playing .top-actions .icon-btn{width:36px;min-width:36px;height:36px;min-height:36px;padding:5px}
+ html.viewport-fit body.is-playing .console-body{grid-template-columns:minmax(0,1fr) 138px;grid-template-rows:minmax(0,1fr);grid-template-areas:"screen controls";padding:3px}
+ html.viewport-fit body.is-playing .touch-controls{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:132px repeat(3,minmax(32px,1fr));grid-template-areas:"dpad dpad" "lsh rsh" "ab ab" "sys sys";gap:3px;padding:2px}
+ html.viewport-fit body.is-playing .dpad{width:132px;min-width:132px;height:132px;min-height:132px;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}
+ html.viewport-fit body.is-playing .console-shoulder{height:100%;min-height:32px;font-size:11px}
+ html.viewport-fit body.is-playing .console-system{gap:3px}
+ html.viewport-fit body.is-playing .console-pill{flex-direction:row;flex-wrap:wrap;gap:2px;min-height:32px;padding:0}
+ html.viewport-fit body.is-playing .console-pill>i{display:none}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action){flex:1 1 0;flex-direction:row;gap:3px;min-height:32px;height:100%;width:auto}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action)>span{width:28px;height:28px;font-size:16px!important}
+ html.viewport-fit body.is-playing :is(.touch-b,.touch-action) small{font-size:9px!important}
+ html.viewport-fit body.is-playing .console-screen{padding-top:18px;gap:3px}
+ html.viewport-fit body.is-playing .field-meta .world-hint{display:none}
+ html.viewport-fit body.is-playing .field-meta .world-label{flex-basis:100%;font-size:10px}
+ html.viewport-fit body.is-playing .world-network-bar button{min-height:28px;font-size:10px;padding:2px 5px}
+ html.viewport-fit body.is-playing.in-battle .console-body{grid-template-columns:minmax(0,1fr);grid-template-areas:"screen"}
+ html.viewport-fit body.is-playing.in-battle .console-screen{grid-template-columns:minmax(0,1fr) clamp(278px,44vw,380px);gap:5px}
+ html.viewport-fit body.is-playing #battle-dock #battle-ui{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+ html.viewport-fit body.is-playing #battle-dock{gap:4px}
+ html.viewport-fit body.is-playing #battle-dock .combatant{padding:2px 4px;gap:0 2px}
+ html.viewport-fit body.is-playing #battle-dock .combatant-type>.hp-label{display:none}
+ html.viewport-fit body.is-playing #battle-dock .combatant-top strong{font-size:11px}
+ html.viewport-fit body.is-playing #battle-dock .ability-chip{min-height:20px;font-size:9px;padding:1px 3px}
+ html.viewport-fit body.is-playing #battle-dock .battle-log-wrap{min-height:28px;max-height:40px;padding:3px 5px 7px}
+ html.viewport-fit body.is-playing #battle-dock #battle-log{font-size:10px;max-height:28px}
+ html.viewport-fit body.is-playing #battle-dock .battle-actions{gap:3px;padding:3px}
+ html.viewport-fit body.is-playing #battle-dock .battle-actions>.btn{min-height:36px;padding:3px 5px;font-size:11px}
+ html.viewport-fit body.is-playing #battle-dock .move-btn{min-height:48px;padding:3px 5px;gap:1px}
+ html.viewport-fit body.is-playing #battle-dock .move-btn>span:first-child{font-size:11px}
+ html.viewport-fit body.is-playing #battle-dock :is(.move-meta,.move-pp){font-size:9px}
+ html.viewport-fit .title-screen:not([hidden]){grid-template-columns:minmax(270px,1fr) minmax(0,1fr);grid-template-rows:40px minmax(0,1fr) auto;gap:5px;padding-left:6px;padding-right:6px}
+ html.viewport-fit .title-topbar{height:40px}
+ html.viewport-fit .title-copy{padding:8px 10px}
+ html.viewport-fit .title-wordmark h1{font-size:27px}
+ html.viewport-fit .title-wordmark{margin-bottom:4px}
+ html.viewport-fit .title-english{width:110px;flex-basis:110px;font-size:8px}
+ html.viewport-fit :is(.title-eyebrow,.title-copy h2,.title-metrics){display:none}
+ html.viewport-fit .title-description{font-size:10px;line-height:1.35;margin-bottom:5px}
+ html.viewport-fit .title-buttons>:is(button,.btn){min-height:36px;font-size:11px;padding:4px}
+ html.viewport-fit .title-status{font-size:9px;margin-top:4px}
+ html.viewport-fit .title-footer{padding:2px 0}
+}
+@media(orientation:portrait) and (max-height:650px){
+ html.viewport-fit .title-screen:not([hidden]){grid-template-rows:40px minmax(60px,.2fr) minmax(0,1fr) auto;gap:4px}
+ html.viewport-fit .title-topbar{height:40px}
+ html.viewport-fit .title-copy{padding:7px 9px}
+ html.viewport-fit .title-copy h2{font-size:14px;line-height:1.3;margin:2px 0 5px}
+ html.viewport-fit .title-description{font-size:10px;line-height:1.35;margin-bottom:5px}
+ html.viewport-fit .title-wordmark h1{font-size:26px}
+ html.viewport-fit .title-footer a{font-size:10px;min-height:24px}
+}

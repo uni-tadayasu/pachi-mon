@@ -34,12 +34,15 @@
     clearSelection();
     // The smaller of the layout and visible heights follows an open keyboard;
     // the repeated fits after a rotation catch the final size once it settles.
-    const height=Math.round(Math.min(window.innerHeight||Infinity,window.visualViewport?.height||Infinity));
+    // A software keyboard reduces available height. A deliberate pinch zoom
+    // must not rebuild the layout underneath the reader's magnified view.
+    const zoomed=(window.visualViewport?.scale||1)>1.02;
+    const height=Math.round(zoomed?(window.innerHeight||window.visualViewport?.height):Math.min(window.innerHeight||Infinity,window.visualViewport?.height||Infinity));
     root.style.setProperty('--app-height',height+'px');
-    viewport?.setAttribute('content',baseViewport+(mobile.matches?', minimum-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizes-content':''));
+    viewport?.setAttribute('content',baseViewport+', interactive-widget=resizes-content');
     // A rotation or a closed keyboard can leave the page scrolled; the fixed
     // layout then draws in one place and receives taps in another.
-    if(mobile.matches&&!typing()&&(window.scrollX||window.scrollY||document.scrollingElement?.scrollTop))window.scrollTo(0,0);
+    if(mobile.matches&&!typing()&&!zoomed&&document.body.classList.contains('is-playing')&&(window.scrollX||window.scrollY||document.scrollingElement?.scrollTop))window.scrollTo(0,0);
     const shape=`${window.innerWidth>window.innerHeight?'landscape':'portrait'}:${mobile.matches}`;
     if(shape!==lastShape){lastShape=shape;if(typeof CustomEvent==='function')document.dispatchEvent?.(new CustomEvent('pachi-viewport-change',{detail:{shape}}));}
   }
@@ -57,17 +60,8 @@
     if(guarded()&&!editable(event.target))event.preventDefault();
   },{capture:true,passive:false});
   document.addEventListener('selectionchange',clearSelection);
-  for(const name of ['gesturestart','gesturechange','gestureend'])document.addEventListener(name,event=>{
-    if(mobile.matches)event.preventDefault();
-  },{passive:false});
-  for(const name of ['touchstart','touchmove'])document.addEventListener(name,event=>{
-    if(!mobile.matches||event.touches.length<2)return;
-    // Keep D-pad + A/menu taps working. touch-action:none on the console
-    // already prevents browser gestures without suppressing button clicks.
-    const controlsOnly=Array.from(event.touches).every(touch=>touch.target instanceof Element&&touch.target.closest('.touch-controls'));
-    if(!controlsOnly)event.preventDefault();
-  },{passive:false});
+  // Game controls use touch-action:none in CSS; reading and editing surfaces
+  // keep browser magnification instead of disabling zoom for the whole site.
   document.addEventListener('dblclick',event=>{if(guarded()&&!editable(event.target))event.preventDefault();},{capture:true,passive:false});
-  document.addEventListener('wheel',event=>{if(mobile.matches&&event.ctrlKey)event.preventDefault();},{passive:false});
   fit();window.dispatchEvent(new Event('resize'));
 })();

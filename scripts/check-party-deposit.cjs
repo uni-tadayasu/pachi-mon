@@ -88,7 +88,7 @@ function ui(engine=game(2)){
   storedSave:{previous:true},lastSave:7,moveAnim:{before:true},SAVE_KEY:'deposit-save',writes:[],saveAttempts:0,updates:0,toasts:[],storageFails:false,
   performance:{now:()=>123},tradeLocked:()=>c.tradeLock,
   escape:value=>String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'),portrait:()=>'<canvas></canvas>',creatureView:()=>'<canvas></canvas>',
-  nameOf:mon=>model.LT.displayName(mon),shinyBadge:()=>'',typeBadge:()=>'',creatureDescription:s=>s.description||'',hpBar:()=>'',ico:()=>'',
+  nameOf:mon=>model.LT.displayName(mon),shinyBadge:()=>'',typeBadge:()=>'',speciesBadges:()=>'',abilityPanel:()=>'',creatureDescription:s=>s.description||'',hpBar:()=>'',ico:()=>'',
   $:id=>elements.get(id),updateAll:()=>{c.updates++;},toast:message=>c.toasts.push(message),
   localStorage:{setItem(key,value){c.saveAttempts++;c.onWrite?.();if(c.storageFails)throw Error('Quota exceeded');c.writes.push([key,value]);}},
   openModal(title,markup,pane){

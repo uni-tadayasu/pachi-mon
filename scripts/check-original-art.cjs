@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 'use strict';
-// Exercise the actual v67 atlases: independent views, shared downloads, alpha,
+// Exercise the actual original atlases: independent views, shared downloads, alpha,
 // late recovery, retired-art exclusion and unchanged owned-monster records.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {canvas,imageStats}=require('./check-art.cjs');
 const root=path.resolve(__dirname,'..'),settle=()=>new Promise(setImmediate);
-const ids=['nullmie','nullva','zeroveil','shimomaru','shimorei','hyogald','pearlmi','pearlgoa','pearlseria','galdoras','futo'];
-const files=['original-null-line-v67.png','original-tide-line-v67.png','original-pearl-line-v67.png','original-galdoras-v67.png','original-futo-v67.png'].map(file=>`assets/${file}`);
+const ids=['nullmie','nullva','zeroveil','shimomaru','shimorei','hyogald','pearlmi','pearlgoa','pearlseria','galdoras','galdogran','futo'];
+const files=['original-null-line-v67.png','original-tide-line-v67.png','original-pearl-line-v67.png','original-galdoras-v67.png','original-galdogran-v68.png','original-futo-v67.png'].map(file=>`assets/${file}`);
 const unchanged={rurikoro:'assets/offdex-v54-07.png',rurigorm:'assets/offdex-v54-08.png'};
 const retired=new Set(['nullmie-v46.png','nullva-v46.png','zeroveil-v46.png','galdoras-front-v65.png','galdoras-back-v65.png','futo-front-v2.png','futo-back-v2.png','futo.png',...Array.from({length:6},(_,i)=>`offdex-v54-0${i+1}.png`)].map(file=>`assets/${file}`));
 const source=fs.readFileSync(path.join(root,'creature-art.js'),'utf8');
@@ -34,7 +34,7 @@ async function runtime(mode='normal'){
         const loaded=this.onload,failed=this.onerror;
         this.onload=(...args)=>{try{loaded?.apply(this,args);}finally{resolve();}};
         this.onerror=(...args)=>{try{failed?.apply(this,args);}finally{resolve();}};
-        if(revised&&mode==='failed'){this.onerror(new Error('Expected unavailable v67 atlas'));return;}
+        if(revised&&mode==='failed'){this.onerror(new Error('Expected unavailable original atlas'));return;}
         try{super.src=revised||Object.values(unchanged).includes(file)?absolute:placeholder;}catch(error){this.onerror(error);}
       });
       if(revised&&mode==='delayed')deferred.push(complete);
@@ -72,7 +72,7 @@ function assertSaveIntact(run){
   assert.equal(JSON.stringify(run.engine.serialize()),run.before.save,'Rendering changed owned individuals, HP, PP, level, nickname or shiny state');
   const restored=new run.LT.Engine(run.engine.serialize());
   const owned=engine=>JSON.parse(JSON.stringify([...engine.state.party,...engine.state.storage]));
-  assert.deepEqual(owned(restored),owned(run.engine),'Save reload changed one of the 11 revised species');
+  assert.deepEqual(owned(restored),owned(run.engine),'Save reload changed one of the revised species');
 }
 async function main(){
   for(const file of files)assert(fs.existsSync(path.join(root,file)),`Missing generated atlas: ${file}`);
@@ -90,7 +90,7 @@ async function main(){
   }
   assert.deepEqual(Array.from(await art.preload(ids,{back:'both'})),ids.map(()=>true));await run.drain();
   assert.deepEqual(run.requests.filter(file=>files.includes(file)),files,'Each shared atlas must be fetched exactly once');
-  assert.equal(art.status().revisedLoaded,5);assert.equal(art.status().revisedFailed,0);
+  assert.equal(art.status().revisedLoaded,files.length);assert.equal(art.status().revisedFailed,0);
   assert.equal(art.status().evolutionRequested,0,'Revised forms must not request generic evolution silhouettes');
   assert.equal(LT.IndividualCreatureArt.status().requested,0,'Revised forms must not request old individual sheets');
   assertNoRetired(run);
@@ -127,10 +127,10 @@ async function main(){
     const mirror=canvas.createCanvas(320,320),mc=mirror.getContext('2d');mc.translate(320,0);mc.scale(-1,1);mc.drawImage(views[0],0,0);
     assert.notEqual(imageStats(mirror).hash,imageStats(views[1]).hash,`${id}: rear is only a mirrored front`);mirror.width=mirror.height=1;
   }
-  assert.equal(new Set(hashes.values()).size,22,'Each species/view must retain its own illustration');
+  assert.equal(new Set(hashes.values()).size,ids.length*2,'Each species/view must retain its own illustration');
   art.clearCache();
   for(const id of ids)for(const back of [false,true])assert.equal(imageStats(art.get(id,back)).hash,hashes.get(`${id}:${back}`));
-  await art.preload([...ids,...ids],{back:'both'});assert.equal(run.requests.filter(file=>files.includes(file)).length,5,'Cache rebuild re-fetched an atlas');
+  await art.preload([...ids,...ids],{back:'both'});assert.equal(run.requests.filter(file=>files.includes(file)).length,files.length,'Cache rebuild re-fetched an atlas');
   // The two v54 rock forms were not redrawn. Keep their real-image regression
   // coverage when the old off-dex test entry delegates to this consolidated test.
   assert.deepEqual(Array.from(await art.preload(Object.keys(unchanged),{back:'both'})),[true,true]);await run.drain();
@@ -157,11 +157,11 @@ async function main(){
     const placeholder=productionPortrait(delayed.LT,id,back);pending.set(`${id}:${back}`,imageStats(placeholder).hash);placeholder.width=placeholder.height=1;
   }
   delayed.expire();assert.deepEqual(Array.from(await waiting),ids.map(()=>false));
-  assert.equal(delayed.art.status().revisedFailed,5);assertNoRetired(delayed);
+  assert.equal(delayed.art.status().revisedFailed,files.length);assertNoRetired(delayed);
   for(const id of ids)for(const back of [false,true])assert.equal(delayed.art.get(id,back),null,'Timed-out loading redisplayed a retired illustration');
-  await delayed.finish();assert.equal(delayed.art.status().revisedFailed,0);assert.equal(delayed.art.status().revisedLoaded,5);
+  await delayed.finish();assert.equal(delayed.art.status().revisedFailed,0);assert.equal(delayed.art.status().revisedLoaded,files.length);
   const notifications=delayed.events.filter(event=>event.type==='pachi-art-ready'&&event.speciesIds);
-  assert.equal(notifications.length,5,'Each late atlas should refresh its own portraits once');
+  assert.equal(notifications.length,files.length,'Each late atlas should refresh its own portraits once');
   assert.deepEqual(new Set(notifications.flatMap(event=>Array.from(event.speciesIds))),new Set(ids));
   for(const id of ids)for(const back of [false,true])for(const shiny of [false,true]){
     const cv=productionPortrait(delayed.LT,id,back,shiny),hash=imageStats(cv).hash;
@@ -175,7 +175,7 @@ async function main(){
     assert.equal(failed.art.get(id,back),null);assert.equal(failed.art.orientation(id,back).source,'revised-pending');
     const cv=productionPortrait(failed.LT,id,back);assert.equal(imageStats(cv).hash,pending.get(`${id}:${back}`));cv.width=cv.height=1;
   }
-  await failed.art.preload(ids,{back:'both'});assert.equal(failed.requests.filter(file=>files.includes(file)).length,5,'An error triggered a request storm');
+  await failed.art.preload(ids,{back:'both'});assert.equal(failed.requests.filter(file=>files.includes(file)).length,files.length,'An error triggered a request storm');
   assertNoRetired(failed);assertSaveIntact(failed);
   const output=process.argv[2];
   if(output){
@@ -187,6 +187,6 @@ async function main(){
     }
     fs.mkdirSync(path.dirname(path.resolve(output)),{recursive:true});fs.writeFileSync(output,sheet.toBuffer('image/png'));
   }
-  console.log(JSON.stringify({ok:true,species:11,authoredViews:22,unchangedRockViews:4,sharedAtlases:5,transparentMargins:true,distinctRearViews:true,shinyAlphaPreserved:true,lateRecovery:true,noRetiredImages:true,saveIdentityUnchanged:true}));
+  console.log(JSON.stringify({ok:true,species:ids.length,authoredViews:ids.length*2,unchangedRockViews:4,sharedAtlases:files.length,transparentMargins:true,distinctRearViews:true,shinyAlphaPreserved:true,lateRecovery:true,noRetiredImages:true,saveIdentityUnchanged:true}));
 }
 main().catch(error=>{console.error(error.stack);process.exitCode=1;});

@@ -178,6 +178,12 @@ async function adminReserveTeam(env, playerId) {
     grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender,heldItem:'trainband',bonusPoints:99
   }))};
 }
+async function adminReserveAddition(env, playerId) {
+  const registration=await adminRecord(env,playerId),role=adminRole(registration?.singleton);
+  if(!role)return null;
+  // A separate receipt never reissues or rewrites the six v64 members.
+  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};
+}
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
   // that ID, which disables recovery without editing secrets or deleting data.
@@ -613,7 +619,7 @@ async function kasaiChallengeView(env,row) {
   return {challenge:{id:row.id,roomId:row.room_owner_id,seed:row.seed,rulesVersion:row.rules_version,party:JSON.parse(row.party_json),opponents:kasaiOpponents(row),expiresAt:row.expires_at,state:row.state},token};
 }
 async function kasaiOwnedParty(env,party,player) {
-  let reserve;
+  let reserve,addition;
   for(const mon of party){
     if(!mon.grantId){
       if(mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_NOT_OWNED','特別な能力を持つフートの受け取り記録を確認できません。');
@@ -627,9 +633,11 @@ async function kasaiOwnedParty(env,party,player) {
     }else if(mon.grantId===`kasai-reward:${player.id}`&&mon.species==='floravelle'){
       const receipt=await kasaiReward(env,player.id);
       if(!receipt||receipt.gender!==mon.gender)fail(403,'KASAI_PARTY_NOT_OWNED','キラシードの受け取り記録を確認できません。');
-    }else if(mon.grantId.startsWith('admin-trained-v64:')){
-      if(reserve===undefined)reserve=await adminReserveTeam(env,player.id);
-      const member=reserve?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
+    }else if(mon.grantId.startsWith('admin-trained-v64:')||mon.grantId.startsWith('admin-galdogran-v68:')){
+      const isAddition=mon.grantId.startsWith('admin-galdogran-v68:');
+      if(isAddition){if(addition===undefined)addition=await adminReserveAddition(env,player.id);}
+      else if(reserve===undefined)reserve=await adminReserveTeam(env,player.id);
+      const member=(isAddition?addition:reserve)?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
       if(!player.is_admin||!member)fail(403,'KASAI_PARTY_NOT_OWNED','この育成済みメンバーは、登録された運営本人だけが使用できます。');
       if(mon.level!==member.level||mon.gender!==member.gender||mon.bonusPoints!==member.bonusPoints||mon.customStats||mon.customMoves)fail(403,'KASAI_PARTY_CHANGED','育成済みメンバーのレベル・性別・育成記録が一致しません。');
       // HP, PP, nickname, allocated points and held items may legitimately
@@ -1163,7 +1171,7 @@ async function route(request, env, url) {
   if(path==='/api/trades'||path.startsWith('/api/trades/'))return tradeRoute(request,env,path,method,player);
   if (path === '/api/me' && method === 'GET') {
     const {cursor, limit} = paging(url);
-    return {player:playerView(player), ...await adminState(env, request), ...await playerGrants(env, player.id, cursor, limit), initialCompanions:await initialCompanions(env, player.id), adminReserveTeam:await adminReserveTeam(env,player.id)};
+    return {player:playerView(player), ...await adminState(env, request), ...await playerGrants(env, player.id, cursor, limit), initialCompanions:await initialCompanions(env, player.id), adminReserveTeam:await adminReserveTeam(env,player.id), adminReserveAddition:await adminReserveAddition(env,player.id)};
   }
   if (path === '/api/me' && method === 'PATCH') {
     const name = safeName((await bodyJSON(request)).name);

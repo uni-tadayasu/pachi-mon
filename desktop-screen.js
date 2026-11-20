@@ -1,4 +1,4 @@
-/* Desktop viewport fit and an optional enlarged view. */
+/* Viewport layout: artwork and controls occupy separate grid regions. */
 (() => {
   'use strict';
   const LT = globalThis.LT = globalThis.LT || {};
@@ -9,18 +9,26 @@
   const expandButton = document.getElementById('fullscreen-btn');
   if (!screen || !battleUI || !battlePanel) return;
 
-  // Move the existing controls, preserving their listeners and game state.
-  // These anchors restore the exact mobile DOM order after a window resize.
-  const uiHome = document.createComment('battle-ui mobile position');
-  const panelHome = document.createComment('battle-panel mobile position');
-  battleUI.before(uiHome);
-  battlePanel.before(panelHome);
+  root.classList.add('viewport-fit');
+  // Place each live node once. Rotation changes CSS tracks, never DOM order,
+  // so focus, event handlers and an in-progress battle survive every resize.
   const sidebar = document.createElement('div');
+  sidebar.id = 'battle-dock';
   sidebar.className = 'desktop-battle-sidebar';
   sidebar.setAttribute('role', 'group');
   sidebar.setAttribute('aria-label', '戦闘情報とコマンド');
   sidebar.hidden = true;
   screen.append(sidebar);
+  sidebar.append(battleUI, battlePanel);
+  const fieldMeta = document.createElement('div');
+  fieldMeta.id = 'field-meta';
+  fieldMeta.className = 'field-meta';
+  fieldMeta.setAttribute('aria-label', '現在地と操作案内');
+  for (const id of ['world-label', 'world-hint']) {
+    const label = document.getElementById(id);
+    if (label) fieldMeta.append(label);
+  }
+  screen.append(fieldMeta);
 
   let desktop = null;
   let wasPlaying = false;
@@ -35,33 +43,18 @@
   };
   const dialogOpen = () => !!document.querySelector('dialog[open]');
 
-  function moveBattleControls(nextDesktop, active) {
-    const restoreFocus = active && (battleUI.contains(active) || battlePanel.contains(active));
-    if (nextDesktop) {
-      sidebar.append(battleUI, battlePanel);
-    } else {
-      uiHome.after(battleUI);
-      panelHome.after(battlePanel);
-    }
-    if (restoreFocus && active.isConnected) active.focus({ preventScroll: true });
-  }
-
   function fit() {
     frame = 0;
     const nextDesktop = isDesktop();
     const changedLayout = nextDesktop !== desktop;
     const playing = document.body.classList.contains('is-playing');
-    const active = document.activeElement;
     root.classList.toggle('desktop-fit', nextDesktop);
     // A phone/tablet layout must never inherit an in-page desktop expansion.
     if (!nextDesktop) fallbackExpanded = false;
-    // Reveal a desktop destination before restoring focus. Keep a desktop
-    // source visible until its focused control has moved back to mobile.
-    const hideSidebar = !nextDesktop || !document.body.classList.contains('in-battle');
-    if (nextDesktop) sidebar.hidden = hideSidebar;
-    if (changedLayout) moveBattleControls(nextDesktop, active);
+    const inBattle = playing && document.body.classList.contains('in-battle');
     desktop = nextDesktop;
-    sidebar.hidden = hideSidebar;
+    sidebar.hidden = !inBattle;
+    fieldMeta.hidden = !playing || inBattle;
 
     const expanded = !!fullscreenElement() || fallbackExpanded;
     root.classList.toggle('desktop-expanded', desktop && expanded);

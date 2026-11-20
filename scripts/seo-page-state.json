@@ -1,0 +1,1046 @@
+{
+  "index.html": {
+    "hash": "ce6d3dedd5f265804a44ce247e5710f4147953bb8579caae3aa5ea3d3290996d",
+    "lastmod": "2026-11-20"
+  },
+  "guide/index.html": {
+    "hash": "69c339ecb393d52315698f0e6d6e3a50091a91f23e043763a7e77d38b8a3bbb0",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/index.html": {
+    "hash": "9eb1848adbfb5d57bffe9a394e2961f3265433662871d7ec863ea9b6e3e2305c",
+    "lastmod": "2026-11-20"
+  },
+  "moves/index.html": {
+    "hash": "bee971f5949b7de1445ed7da9daba451a91bbdd66c85d1e6ad1abf10e7a0573f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/komori.html": {
+    "hash": "4779fb9a54d62c5326f40efa0f500991a2bf65751c03771595628c999fa6f75f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/komorion.html": {
+    "hash": "b3932855ae024c4b165658e432f408719378e067a99355b78a5214c1f300530c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shizuku.html": {
+    "hash": "407680c40e969f88ade469c8f90faca3d9eb3ed3a90b26bde3a109d3add67260",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shizurua.html": {
+    "hash": "91f39118a79abf7597645ce09d7b8b3926002831257f998e0500bba3b29261fa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hibana.html": {
+    "hash": "7f66d92d370a0402f835a8dec911cc12e26440f4f24b4ca117257e4d2116eb61",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akebino.html": {
+    "hash": "91988021be524d7a16c160835daa3a000d10251b5732496950bb0c4ae15362fb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fuwari.html": {
+    "hash": "ce12c12ddc440c94bbb1c98be6bfc87db0572de0e61aaef56c4159ee5cda79be",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sorahane.html": {
+    "hash": "ace1c991e3c782877f33bf05b93d756c4442667d8af85bc90612f86d7da6e0d1",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/chirari.html": {
+    "hash": "47ecf6c6dc80f0474c9dec208009e6d07e235764c8cc783ea06c3522b3cebba1",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tomoriga.html": {
+    "hash": "d339dcf0f26e2211fd8d43b89797744dc4687e3024e1a5b3a0d4a5440374381d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nemuri.html": {
+    "hash": "48d4a22205bfa1253664816f21cb6686949de775fbda0f6b5adb88c21a5fef22",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kodamori.html": {
+    "hash": "ebc1aeb6590424a0875339be4dba1cae4f9302f78f75711c202e4c798cbf60a0",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/minamo.html": {
+    "hash": "c4fbaab54c003bd82fe2dccd6b1103032f7433e7180a0c6e9f4254c8a9fcbc3c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shionagi.html": {
+    "hash": "bfb6b1e424075dc7b62efaca0b77e7583b16187d7fcbc79190ab00a1679d5b7d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kirari.html": {
+    "hash": "96bb7f88e195488bc57278f85e4c6f3d90f6aef968d7051976f18bc1a32e85ec",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/seiran.html": {
+    "hash": "89fd611dbc1ebfbd4e5c2f5cb08c8755b65ba89394c1ff6ed785e4ee337805a3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hatane.html": {
+    "hash": "35ed06a3dbe6a0e9d03c125412e3fada6bef9e9c844498b586f9fa001aa080b1",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sunokko.html": {
+    "hash": "7b2a3c30430adf6a04c66da6e7f52d29e7f5147f584c3b853e4445bf25fb10fa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kagetsu.html": {
+    "hash": "3291e0024c9d79b5508eaaaf0beeae0963f22a89f4bd123774483c00b299aead",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hoshiwa.html": {
+    "hash": "150b3d2fe23d00adb96f347a612f7c846f3388c93c09710e0700e1d44010b40e",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yorune.html": {
+    "hash": "4497a2bbfd98a2c35d8b9003c74c38d3aa79e81ad13d9eefa1e9c8c392c7e0b6",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/astralith.html": {
+    "hash": "5cfea3d5c34b5b8b84c386d68d4b575fedbe31354552b0f837aae516a5ab3e9c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/momiji.html": {
+    "hash": "cda9915f11128320e2fd4550f8753267f17215cc2272009ee9a97e5c2d5f7be2",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akihane.html": {
+    "hash": "63732b3555d4fa7ad9566d05da629c0b8f46ec4b085e68fb664cfe8fb0c415ba",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/koromo.html": {
+    "hash": "04261583df0dcc7683b71ea2e38cd4bd3d660f4c3edea4effef361b733361b97",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/moriboshi.html": {
+    "hash": "f749db7bc7f5a2403e886211bed2a26d02b20c8d9b20c76daa2839e3cb18444b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tsumugi.html": {
+    "hash": "fbe4ad2bf31e1ca50176f83982fa6bdc424edf83f2019f23967ea605b7d4b7cc",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/orihime.html": {
+    "hash": "f4d2c6d135ef6c43b3fb145a4f85eb6554d8296068a88917456ea09911cf2db1",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/suine.html": {
+    "hash": "9825aff3174a2b19d272ce03072aa933175c5fd827c2f41a3d397403576b396e",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/suirei.html": {
+    "hash": "5137916beeb00f5b6185132ee85846f25110149dff22e29b6bb09d95dcfedb60",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sazanami.html": {
+    "hash": "ea3b70ecfb0c0e8f0182924bb2cdcd973e0a9f8f10fc1965406d6e7978250d01",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shioshige.html": {
+    "hash": "ed26e0ecef995f0935360bd4a63cb090308dcf085441e86f813cbd609ae07f00",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sunari.html": {
+    "hash": "5face678a4c9e141fd75bb4350fadc6fb947a4281e1a74ec293403dd61e9da9d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sabaryo.html": {
+    "hash": "ed395a7d623aa984a98527f3da782a5aadacb61dd762f8c0281bcf91a968540a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/honoha.html": {
+    "hash": "cd5116d252facdd7100bfef67f5251e20fbece1b24bd4c69750a7b8f16359c72",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/enraku.html": {
+    "hash": "a92763e2d43d826a95f49c5ffff17d3d6ba6992424991df2148a30f4c69daa1d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kourin.html": {
+    "hash": "7f3bc500127911d00ab63aa85bb0f0ff9d1e4f026a4f259b6efe6fd7cc71058d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/setsurei.html": {
+    "hash": "010b8abda97831c1469921061ea6d14f4df2539547a7e64c7fe21ffcf54e0f28",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yukumo.html": {
+    "hash": "580a0954ec6f87a71fb4077f6f6b546a9583a4a75339d979a39342b186d689df",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hakurou.html": {
+    "hash": "e663b746cffa2f3856111a3bc71285a16a87878399c085346e2ffc0ee3c8c853",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/raito.html": {
+    "hash": "8c2c3cc6210afea45e41b88f4380335a6551fc6a8fef26893dac6083e1253b0b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/raigai.html": {
+    "hash": "71936b51734cd3f7038bf4ec4d2757cb805232893c5cc3d96b12f77fe031e4a3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sorami.html": {
+    "hash": "20aeaf32f0cd7e6026dd3fa30a3a3e9bbeb6294505742e3066b62f3c70af923b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/amakumo.html": {
+    "hash": "1336b56676758562f250a9a98232bffbabc5baebd404cc575ffd75bf9c73360f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kuroto.html": {
+    "hash": "44cba40a79002381123b7a35ff4ecaf866ecb1fa391058b91148429611907aca",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yorutsuki.html": {
+    "hash": "e4d2d5604ede069f5d3a9750b10798a63fb6084817b8a86387d47576606d25a5",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/irisowl.html": {
+    "hash": "eefdf7ee5fc199c7ef956915ddc7bc7c13299cebe22d2b791d09c3131a06f4f8",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/mosselk.html": {
+    "hash": "47374e5711b37f87c7ac6b2cae31a72f7d8621bba67c4ac19a2a4f43c24de509",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cocoroc.html": {
+    "hash": "1046732bc533f306a2a1fcfbf2edf6e18d27b83f354334aa0b696fadcdd5d811",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sahari.html": {
+    "hash": "c9b935a63eff2f9de912187bd6756874859de52fa29908c7beaba6dcd26a0009",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/enneko.html": {
+    "hash": "93b14c88385b077a235f88c73536f5b1cf0d44abe802026770b0bccea5932131",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tobari.html": {
+    "hash": "910e2ef23ed7993f5c0d157f2a6bc0ca84acc888021270aed096550d7a91f085",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/rurihime.html": {
+    "hash": "a26f71fd3e9f956d6f15d8d57a56043b90b3ffee3b76020c095ed733dd829562",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yashiro.html": {
+    "hash": "fd90090c2b8bc3785e7c6496f822ce1d80519384d27eeaad29beca5615072b2b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/gurenka.html": {
+    "hash": "75c68102d99e65c1ed550fe92e6a3bc5fbf6205a9ba17d4a9691beee322eff86",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aotori.html": {
+    "hash": "73130ad60a281a29556a9db441a6175643d3cbd0a480621e9f03510fc0974670",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/silfara.html": {
+    "hash": "22057078f320e8e1933ee9142c194ede789951f6e7543d724229fe18c3a56af9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/luminarch.html": {
+    "hash": "c9e432a8bb868bc2e890ff69513751bb618e6471cca37575851a21c5b7c659d3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tanemaru.html": {
+    "hash": "4c1938962d94b2330138d50fb0481242b7762e7fc7916e59c3a54da118cdf3ae",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fukumori.html": {
+    "hash": "c514fb3dee159fdea83514cfca5ec420aec3feeca5329f8c08469a7d8fabfc15",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/saikaju.html": {
+    "hash": "a1949d5cf8b782086ff556f0352a9faf125a1ae7af8c93903728641d0aece2b4",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ruron.html": {
+    "hash": "2d0d7d80482e081faf445444ca80755ad5e91a57b9033d11954571f335322d59",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/mizukane.html": {
+    "hash": "c4bd552d19639c91dccd705517dc5f3ff278ac3fa348d9ad143d188b17d3cfea",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/suirinka.html": {
+    "hash": "e8b1463e1d58cae604eb8283e42c180a6dd66b2ebc4a5ae4917eae3b56e1f73b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hikumaru.html": {
+    "hash": "83d2932c305ce751a4d4e762f0a2f114e1107e5b424346d3506f4d726b01a326",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akazuchi.html": {
+    "hash": "eb13840f077132414ad6012dca1e86526d8330dfff76f11c11b53bfe69763e53",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akakagura.html": {
+    "hash": "6dc40b057325d700ddb87ba280e225cb840bed366475fb47c3470bdd7f24c664",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/piyumu.html": {
+    "hash": "5cfae41b59d6229b710d6c36e94e218ae854987d67d88582ac585bae92a16964",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kazaharu.html": {
+    "hash": "84a0c31e1e5812c146b9463fdf4922bf8ba82852545d642941bd7509b0d3fb54",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/soramado.html": {
+    "hash": "e926a95c763c2420b1ccb8e8e0f7b36efdbd4d01bbfcf3e7766c295e91afa557",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/chokori.html": {
+    "hash": "d145c849a3fe7adb13361f4aef18faf5fdc3f3a8a87fe872ab7d020d95ce39e6",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sekkura.html": {
+    "hash": "2ed65e67e7ec4b239e327d5e36454001d014c16f7fcff5359670f8f11c3dc57a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sekkokyo.html": {
+    "hash": "c4ca1bc03ff7768815bb715d40a5a8edb2a45064c7b230dabf21bad5cfe0a63d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tsurune.html": {
+    "hash": "34ab9bc4d1a0b5f1e26758eb62bfb1649e742dfe489a419e1acbb1c5f8618975",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hagalune.html": {
+    "hash": "ec5c8d1f450f9177b09df7f50603e000820665c13c5539f98840952f05255a1f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shinjuka.html": {
+    "hash": "538476bfada273709adefaefbe0b8e474ab571b39eb94f97a68766215dac453a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nakakiri.html": {
+    "hash": "1020d10077459eb46ce41b7f1059adf67177ec8261dc4825a2372e431aa9cd65",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/umikiri.html": {
+    "hash": "eb320d42a5f60b6f825958efbf2284bd587687ee9b2f8b7f16a8f1e39cb520e6",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/umihibiki.html": {
+    "hash": "b67a7c6c088be82d4e5d768403fa6c645d66950771520bba054d0346f124ccd0",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/lumitomo.html": {
+    "hash": "c42e6e04724d840c2bad5fc89856f38aa5dc19dec63bffbd83c24ed2fe25f1eb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yorutomo.html": {
+    "hash": "6e3426baf9aa71313c0d6163a92ce2939fe02f1af28fca03144d35292ef43afa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akatsubame.html": {
+    "hash": "2ffe6fcf3fd6ec5ba7e7ac90fa5fdc24fdcac9f7d1f785071c0ca1fdebf1103f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fukiho.html": {
+    "hash": "b204bc1da1f8e3842626859e31928c0cdbecf3ddc94955f32782000d0c4dba5c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fukiryu.html": {
+    "hash": "7b57e1fa8743bb613714bcf1401583bbc03883a791a0d763e0ba245c622fb2ce",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kuchuri.html": {
+    "hash": "b118c31e05795758d3deeb6fed3d7c4ee0e985df26cde01e8b82ffdee6bcb765",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kujyura.html": {
+    "hash": "ee143497dfcf932c6979faca2c614190d5dab8df675d505f0d1b207bb24e0208",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/mofuri.html": {
+    "hash": "2e26ec5113d3d675ee6a22640b44307440634f044a51267c72ae95481f63bde7",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/mofurou.html": {
+    "hash": "b957a2bd8239639ba2fb94fb43245d8d6194f7c5d5b4aab6a303cc2022f5a56c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hakone.html": {
+    "hash": "61af7d62d0c3098526951fab72a9e76d26cdeaad9274aec4f06a19e36d3b9dea",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hakozora.html": {
+    "hash": "0586a136ef90d0675c9ed0745fffa34debad360b3f60040581624d727b23fe85",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sorotto.html": {
+    "hash": "cae7418e5cb52495e4eb6427040ceef31a375b9696a8d9c86d2e15c530e5690c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sorotora.html": {
+    "hash": "890dc96a9c4bd0619e1dab3a58aedaae99d93dc8d65b82f5577a38ae5fcefeb5",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nagin.html": {
+    "hash": "72e6dade42a48f63b014117f68f589d7a1eea3f65cb13e6c9bb08a663cffd1c7",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/naginori.html": {
+    "hash": "b6ce1d1c702c6f20645066d3400da4553a776b9dd69fe20ba671a0e9202f9980",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sibuki.html": {
+    "hash": "93134ed9bbb6a591487492fc29d39d54cf54cf7b64105a62fd8b202e8a2fb491",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shibunami.html": {
+    "hash": "1b8671c9825ae143f340d4b4c9af3ce4018fe93b064ef975c2a7f1f4c9f0c2ac",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sumina.html": {
+    "hash": "93db39921e18f694a191768b8baf1ef6bdfba5537f4f15845b6a0877c960acdf",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sumirekka.html": {
+    "hash": "d2d4e911c6df846c8346ddb6f04eadee2d7546944f53365b7e374d3cf1fdb9f9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kanero.html": {
+    "hash": "47912f93eea7de348ec7a89ad9114083411ad8067446ef9c3072c154aba5ab6d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kanedora.html": {
+    "hash": "c63d949ed8576457bc72f039bdeabf197f0b913bf11690f4ae3f9188447a099c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/amaguri.html": {
+    "hash": "3c8d947876e5c0b4bee677d6d4c5b8fd00c499709a1c7babec0cc1a877b5ea92",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/amagurio.html": {
+    "hash": "6369af4298ef2e131f070f9790f155ae1789373f6ab454e1b85887adef359f82",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nukumi.html": {
+    "hash": "d85e9db8edafff5a49d253ca0e3b922243eb345699b28fb90d63f04617d38ae8",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nukumaru.html": {
+    "hash": "5c248bd8fd9fc0f18b3b4354ce3a61952fd325251af2d111e41212481a092fed",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kiraho.html": {
+    "hash": "2e9d063cb05d43a72c222bb441074dc9f5ea4249abcac3766c62a3b95597bf88",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kirawashi.html": {
+    "hash": "c81c421a52ab176f371fa084155a0ea4713193ec10e2f82be0f8a39bc8d3b416",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hazumi.html": {
+    "hash": "48b804d9561fc70683aaf4196ab510d9279056d9c0e311d9211f9f7b496e6cdc",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hazuhane.html": {
+    "hash": "d14b1671b85e78b5c308a15a1f971b2df1b706eeeebe0469569c5275cd67235c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shiori.html": {
+    "hash": "81f2dbdf8d796b69a809da7edd9ee728e2eacca8313d4d78abe57d1a8105b444",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shioraku.html": {
+    "hash": "1810629e2438e158b23f1691e809283298638be2df2d01ca3265c0b405ca1f30",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/torone.html": {
+    "hash": "926b20662be89c9f64404dcbbea664053db236216c49d85f323ba7bb67e8c770",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/toronari.html": {
+    "hash": "89562f08ec8a10af17f6c911a8ff8a3f7d43c8cd26c300579004e78c4c868d1c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hoshimi.html": {
+    "hash": "105bb29d44c5bcead106ac77054bf46b9d4563e377f9893a8db8548d01988cd0",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hoshimori.html": {
+    "hash": "5329e38c8dc850f51ece0337583cca4e1cb251373a61bdfee290a19304919d68",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/riyuna.html": {
+    "hash": "87a7822ecb450e852827760b6d0227cb4a33396090df6e629dedd81af92dd3d9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/riyutai.html": {
+    "hash": "c113f4968aa6bba19e7669f52f8d477cbbb832fe3134dba867ba9888d4b66252",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nomori.html": {
+    "hash": "4c33ba1a300e12b1e93f65e2203325e3ec8377ae086cfac24c2f308c35965ed2",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nomorika.html": {
+    "hash": "8e06b48d003b3884952b3364bd039080d7f44f1495e5877597c4b2d13aa5e316",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ennori.html": {
+    "hash": "0d627ed0a3c22250b22e2f1788149335cde8682198537489caf47ffd258cd84b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ennoraku.html": {
+    "hash": "973f0912ce65afa52028cd48f399a53f25cc1fa88804ed93de2643520aa82537",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yurushi.html": {
+    "hash": "6a5a0da167634818f209434b831803eb233cd96f6da4690da1d9bcbe51ff15bb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yurushio.html": {
+    "hash": "e53ae1838b3416c22f4f10f4e71c0d9acbc6d162fe21a4497d34cfbac4453675",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nureha.html": {
+    "hash": "a8ea03b569a1c36005d2a27334c52138d67751ed28747be24b5f702708dccaa3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tousa.html": {
+    "hash": "c38b2f825a1c9bfa65be4b56a3d83ca7140e73d8cb02250f6a32dc20ee26b0cc",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fukuro.html": {
+    "hash": "88c1cbc34054b125ad153c79d1d2d3b985179b5ed4e11e513eccf0d69fbab6dc",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aonagi.html": {
+    "hash": "a9e3d31a001eda997d3111c130eb70e927e84bb8a2bf37084db4908674ec83a3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/oshire.html": {
+    "hash": "c18cf1108c82fed31445fc7d5c224ae61f232302a46169d3390e2f0c3e8ce0e2",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kagaru.html": {
+    "hash": "36a98a393d9c275b4d3bfb965b10f31a6d1b072e794044e0b246c9c95e34e544",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/murasora.html": {
+    "hash": "d7b9c5f6f5ef3910ee9c6408f0f36d37ac0816f8067e1480641343a32d87fa47",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yamone.html": {
+    "hash": "11132e236278a91dd9259e6ac6d26dcb0ce3835a979a7191fd69ae89dcc76158",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sazuka.html": {
+    "hash": "23fea4f1d69090d20f6f119ed7a926a050c69e30c26504acca8e781832e21dae",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/genro.html": {
+    "hash": "72f7e5d9b38d73277c77fe54e460f95c12e298a5da7b9fb7ec5419cbbc5f1876",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/enritsu.html": {
+    "hash": "c40d3838ee946a480b40a97c3590fdfb9fe09838d6410da8219f3e79f42c9d54",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shimarune.html": {
+    "hash": "b00576c69becbfa7dba1cf30c7c29806fb41ed3f71638e02eb91c0e85c5b3d1c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/kuromado.html": {
+    "hash": "eacf18da0ecbe532b022fd26c09b6d79f8f5ec369b3e45b7f6e45066769fd363",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/suiraku.html": {
+    "hash": "ea760c535031e8e1ec5e9dcc4e7b49f8262dd43098b461ed1b990047a5e251bd",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/haneko.html": {
+    "hash": "097901d80d72cdd2374cc3e320dfd2fd01924f65e4aba3739132e5e83f482d9d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/toganashi.html": {
+    "hash": "9cd76dd25c085312f711f30c60332cccec4d4fc442e7a05503a2dcb36e9a8a00",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/mairaku.html": {
+    "hash": "e0cd2ed1bbd44469ea41a8dbf7337c3c623dbdfd5fa7ace2064db3e3255528b8",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/hotarune.html": {
+    "hash": "3b531e094da2511742f6f83b5e95b9648957394db4286709dbccc63f9c5ae4fa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/sumizora.html": {
+    "hash": "36fb6dbc618f7ac1bbc9040331049e6e656650d26a9bc58e4f1a9f8cee613f83",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/namisora.html": {
+    "hash": "a773983302ec66a74926594b9cc75586defeda33536ef29d7af2abb8b5582f8a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ringetsu.html": {
+    "hash": "4c389242c1f147f4c0fa5908c5eb267ca9009ff46ad0a565ba144e243cbf1ff7",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/tokimori.html": {
+    "hash": "8058c703b8afc58a74cf18971fa0317a11634d1a56231d0a03b8467d17910246",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/yoruumi.html": {
+    "hash": "e83f32e9a87e6223e2a1f00fad23d5f2863db80ebb23d5831944cd8fe5e4f5fb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/velora_1.html": {
+    "hash": "ad735d96db510c74fc75cf2f5b6e4019cbe2e06b35cadfb795e8f089d09d032c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/velora_2.html": {
+    "hash": "b91d0640c08b25e94d083276a6abe77a321f5a676b83446f81a39e5bc81ebf7c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/velora_3.html": {
+    "hash": "c5d7d272ac1148970c763405261a09a5c71d1905014a7d6ee8e3b84c5a194770",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nereid_1.html": {
+    "hash": "87cdb29dde22c082a60188412a2b601a2d196edc57f434b077fa404f4bd4f703",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nereid_2.html": {
+    "hash": "33025bc72d0ce61113be2fddf60d4651e9f9ec2a72b898807056da4f8ea86bd9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/nereid_3.html": {
+    "hash": "82aafd8de0722fee5a2aecc777b20f509e77bf37487f744d4c56452bf9835e45",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ignox_1.html": {
+    "hash": "4fd275044fb26710da3d49739f15cb12eadefdf3dc5d45a348c34cd1ef83c5a4",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ignox_2.html": {
+    "hash": "23c66d5ac04ea80742988f743ccc9b9fc74d9a82468e1e62771e9e2337ee3c97",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ignox_3.html": {
+    "hash": "c64ed15b634618c65f5f76d91149a4b6051c81cace1907081c06b5f563bc8785",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aerlyn_1.html": {
+    "hash": "4b8e84b841b8ddb117fee0d749da20d137ff286a6e253579e3495a5f0f19b0cf",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aerlyn_2.html": {
+    "hash": "cec68b775348374bd0cbd548431c87804b78c9dce80ba923e675e76da027d9bb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aerlyn_3.html": {
+    "hash": "5641bee0c1552a1d850b1542fe45723af9fc915cfd1b156fc170c72b5314d412",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/quartz_1.html": {
+    "hash": "886ae015d0dd330ddc6102dcf5bc0dcd8457bd48255bf3c14f2e1e4d3f72970d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/quartz_2.html": {
+    "hash": "5a7fdf95e800bcd6ccd2fe775c4c716ac79561dbf4d1440fb0d2d49dee95bb19",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/quartz_3.html": {
+    "hash": "483b1f7b888c71cd7c99cf9ff3ec2b1ee0cef7aa5b0b011177ec457046c412a2",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/papilio_1.html": {
+    "hash": "371eed74a276927be072317beee5f570bc486234f62994692961b90a1638bc22",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/papilio_2.html": {
+    "hash": "1c324a8fc58092d9d8d3faf85124031ec3a7a943f394ed7c0001f89adeadca62",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/papilio_3.html": {
+    "hash": "b3f3d187d18aca0f225b8a093c1ed3d45f1e084062d1ff4f808efd15d8ccf42b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/brine_1.html": {
+    "hash": "0fe27f02c49b45381229d4460a78c87274c7a3027637856c67360740e34fe9ce",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/brine_2.html": {
+    "hash": "312a0c92756e35f3d552825aec61c58db19ad064f3747e59255c338a55dac8fd",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/brine_3.html": {
+    "hash": "648daa17b07f51da158955a16976a933830fc5ac5a0571ef450fe89230c99bbb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/carmine_1.html": {
+    "hash": "318953d50579a3d4fd3ace91897aa4d7c841339167de9ca45b578919530c16ba",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/carmine_2.html": {
+    "hash": "6db83cc47124ce3c96ee9f5f9871bb52f39500a97359d2b0abb5b4a007fbfe81",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/carmine_3.html": {
+    "hash": "cad7e6efd45960311cc4d2b4e4ce7d3c01303795f6c4b799ba43d9ae663a6ad5",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/gale_1.html": {
+    "hash": "27ab8f2a648af94779dc33b7f01d03dd37811c3ef340eedcbc888a17afd707c4",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/gale_2.html": {
+    "hash": "733633a6fe32eb96dcfabfac9ddef93f0ffa3356616177987e5f5975a4ebf02c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/gale_3.html": {
+    "hash": "58a5c5b7d788e61925eea54ca7b2aaba51a44b1868c769e159621009cfd49833",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/opal_1.html": {
+    "hash": "0fd915b04de3da91d6a30265b4cdcda776275fd491f4828d905d53a871aa4eea",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/opal_2.html": {
+    "hash": "a0b11edeff72236aada729fbab219760b13cffa91d9ffb4bf1536b43ffee7d54",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/opal_3.html": {
+    "hash": "8f4aca7658933db2bb26d5275cf4eb9fc91850f0c94c9dde2be50cd308462adc",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/thorn_1.html": {
+    "hash": "f216d79e906613c060d8df3bff4b61e7ccb0f56f2c724acb81d5537bea4b10f6",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/thorn_2.html": {
+    "hash": "3fdb61043c8e35f952b527359367cb32849687e988db0c1e1ad7dc073f549485",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/thorn_3.html": {
+    "hash": "3c00b95c1d7e1120102886f0bd911e3e28f9fe6e4fc220d06233ed410c33984b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/rill_1.html": {
+    "hash": "d3dcf09779f6d5bc578ab6eb605456a8242259d1c7e75965d048d0e0ebe27f30",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/rill_2.html": {
+    "hash": "716ebadfd3f60a389363b5cd9fe6cd0793a80a973858b78b0934a0c4c725388d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/rill_3.html": {
+    "hash": "cc45c4b7a86f1f796ca043f93097d01a71373896371bc01ecc2ada358c6e844d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ferrum_1.html": {
+    "hash": "11a73b062a6af9383318dd6553d5c7199c4d2528f631fdf5bab147fb32a4a96c",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ferrum_2.html": {
+    "hash": "d526029a2f402e0b62aabedc5b2ba9257be95495ace55c1366d3d51d23008aff",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/ferrum_3.html": {
+    "hash": "a4b22d2e96f0dd6b8b090814b69d34f1ed7e686e3c9e5f99594c22846348f178",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cirrus_1.html": {
+    "hash": "f30cc3cd990c4b818b4da67d0a7fcf2b54386cc8f8a5525003d81048b5f69533",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cirrus_2.html": {
+    "hash": "b1f80541ed0d948766bf5230cfb81c725c04310404d5e60c77a7757c8a69e649",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cirrus_3.html": {
+    "hash": "351bc9c52bbdd1d797505241f6290b23f6877e2b851a1c7184d374e86775a053",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/obsidian_1.html": {
+    "hash": "b843d2b64722f019aa9ddd26792c22784cab32bcaa4cb965921566b7535ad0fa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/obsidian_2.html": {
+    "hash": "75724eaf2e94c2aadb1b5e6d987da3c38cee3d0af81d1fde5c4d60c82c09c988",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/obsidian_3.html": {
+    "hash": "07129272d1ae32a740041c9088640a19951a03079ab83e1b384d703e2fa2e119",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/saffron_1.html": {
+    "hash": "26c26b99efa04343f9ab3afc168ff8de72fa4e3e52fbed323512066274151f4e",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/saffron_2.html": {
+    "hash": "2a5a9c9995ef0f51da105a666f0a93156bf6e8b1bb265eff95a6d514bb24c5f7",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/saffron_3.html": {
+    "hash": "2b230e56749644ea1d74a59254afc188da05d93ae16f1f9b10b37cc06f01cb7a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/abyss_1.html": {
+    "hash": "a405f528bc1c6a235686599c6c04fa2abafce62df3a5f1d982306a1e0802c130",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/abyss_2.html": {
+    "hash": "2d5ffbdf38ca38b3fe341a7790c884c5b296ce5e46084617f4fc351c1bdf7666",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/abyss_3.html": {
+    "hash": "a4afee18b84b519b2c8a7e0ef6ceed41dcb8883c31d81c759809e0d41a7ed54d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/flint_1.html": {
+    "hash": "994ded31bacba711f19190a6202531a097371ca08cab43e033ab9b8259eea6ec",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/flint_2.html": {
+    "hash": "e5f52f92a660a818972e17a77a985908ee7df89022c697a15105d736b7a93695",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/flint_3.html": {
+    "hash": "0f2417c6fce4dbd4208fee15d0de7787a45c3b51d824f3a888cae0ab6c7223a6",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/volt_1.html": {
+    "hash": "63fea5c0789c0002c69229a9e107263a73534c200a8e1c6320ebf07529e70afb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/volt_2.html": {
+    "hash": "8b47b5ca7e2dada59ec6222d30c6793ed5180c017a6457620abb7a8e42beb36b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/volt_3.html": {
+    "hash": "592373fdffe93f6081a81ea48b12deeb0a67889c707d86e2276010053f63194f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/lunette_1.html": {
+    "hash": "dbc79d758b87ee0d91dbc195c4800c51f2b76fc810f48626af35a2dc6a1933c5",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/lunette_2.html": {
+    "hash": "a8e162a6ae63eacbda8c21f64eb4a4cd3785554810f46ab4504b096193227c82",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/lunette_3.html": {
+    "hash": "1a29c714e97be08137e27d24a2bf2da40b1c4089d0988dab9857b37097b126e9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cedran_1.html": {
+    "hash": "3f26febcb03612c7d55463f9f4004fc9a6e5bc87400b785061cfc928e251ef0b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cedran_2.html": {
+    "hash": "bd2be9d9815470590a4a7760aa3b6f096c85f8f773b3b9601485315124190714",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/cedran_3.html": {
+    "hash": "642ab1bb0f9a7274cbca70f26b53e2aeb472fd8b8d4fb0a10f2d11daa637df32",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/corall_1.html": {
+    "hash": "324d379c4f1a8a69bb433abbe352a8182589e1f90a9f15fd7bdf3c374d5164f7",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/corall_2.html": {
+    "hash": "a5c97ebc072d7ef2184808afe987cee671243a0c8144ff70d1c8531b1fe1ce4f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/corall_3.html": {
+    "hash": "244efa88a0ba2d8ba9bd3857cc63a6675364bebf2988bda188b0442e8ffb4553",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/vermion_1.html": {
+    "hash": "daf67423854ee73ea1135a51fa0e03fda2f7b91579c996262ee58ef1a1e24353",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/vermion_2.html": {
+    "hash": "8e11f3e4f85f17fa9650c208633d4ac82ad6a14beb0827ca48fefbce98a3ff53",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/vermion_3.html": {
+    "hash": "27c3a7648f39b160c605141e52dc21fcbb5ab1fa2c1e03e5b9678dc80b4189c2",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/zephyr_1.html": {
+    "hash": "56a9ccd04429361e95586c78c983869ab42a5afc0340e3249ff3f5ed7a0e9b79",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/zephyr_2.html": {
+    "hash": "215c70c4183b5f0535259bbd7c30059796096be4bdd82ba8e074e12722df2666",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/zephyr_3.html": {
+    "hash": "69cc4a13b0c3e8f824dfd7642474f6ce2290049433538ab73881dd9eaa2aed3f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aurora_1.html": {
+    "hash": "493e083c813b74754cfaa0b1df87500c19104372c50227fda39defc63e4452f8",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aurora_2.html": {
+    "hash": "a5325b507883812e41599360da462bd8f4251d4f58c94fc0ead8356815cf1f63",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/aurora_3.html": {
+    "hash": "b75191ffc130a61070b8241d462fc29e27c11bd0cc075654e5fa1b9472915263",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fernix_1.html": {
+    "hash": "9951406d7ea5156d8813554012a245162bd77ffe417db9b81cf1583c725ae901",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fernix_2.html": {
+    "hash": "268f43432a32914b14a4bdc1b7769be2e7e046cc1e32bf86631ffeb3859b90ca",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/fernix_3.html": {
+    "hash": "0e7d87de1d1a3acad169de8f95086d0cf09cdbc766365527d909a16f7be03b9b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pelagic_1.html": {
+    "hash": "c5cdfa8fed2cce95f42bc4687f8aedb683dfb632d68ad362607ee55d6e923403",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pelagic_2.html": {
+    "hash": "748228638dfd699a4fa3bed2078dee8cc238cf53b5e2f7b7c6540d3e10a29ebb",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pelagic_3.html": {
+    "hash": "369eacfb6769e3c3505d8cf62a21f86e0fe0d5d969c88b5e4f63ae84cf9dbe88",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/solstice_1.html": {
+    "hash": "bc3a3a8544fbce2ae6a69229456586b36ac7323bc997ac38b697ab4be4e72922",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/solstice_2.html": {
+    "hash": "4e8c5e2395af25a010cf8bfcbc2ad84b941e25284f4d025fc565192bb9dbcb99",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/solstice_3.html": {
+    "hash": "49e3e61a51e5dd4c374ff98e5bae4357be2d7406969b1a6ad3b11d6544ead2a3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/stratus_1.html": {
+    "hash": "0b8d19f17a61580b99c8c102eea22335884f61d6858efb9785bd23ddf278e26e",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/stratus_2.html": {
+    "hash": "b0dfcbf4dde49afd8917bf30168daa45f056f02e9d30c0fa988fa2b077e45c7a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/stratus_3.html": {
+    "hash": "d1b40ef026a551b8dd4dde9bbb8d709959bfb6303257a19bf98e3a099dacdd2f",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/noctil_1.html": {
+    "hash": "14d5eab28e17302945b8e8ed0f3b1a0b48db33186eba12b80f87eb18792fdc85",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/noctil_2.html": {
+    "hash": "6a32fda8a3c13759dd00d3430d10fbd91aaeacd64661b58650aa7803e0663831",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/noctil_3.html": {
+    "hash": "64c7090b3364eb760d799002d429014132ac921374e619c53df3f2d91f808969",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/bromel_1.html": {
+    "hash": "e3703e653258055298e2b8d0c9e86c11fff8122916e3a5b7199375bb7022154d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/bromel_2.html": {
+    "hash": "e7bfa979df201345f550746d2cfe78d843d26b67a5695266cf79c01ead73ffc3",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/bromel_3.html": {
+    "hash": "a99319a91c7ec88b690801dbb91dd694ed3e1c86c758389520a3e550e2f27955",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/isola_1.html": {
+    "hash": "96c828afa8e6eccb7b7245072a5b8c9b5ff0c911949c8a6b1b681e2d790e48c5",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/isola_2.html": {
+    "hash": "e5da85eaad4bb927ab822c8dcc959675c2f74f8bf6d36deec916f58e78f24258",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/isola_3.html": {
+    "hash": "223742dc04a3a70325f28124dc6bb6c20eb3abf36d53a3b70a380f807415dc35",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pyrrha_1.html": {
+    "hash": "18f99145b35ccb0cf53c6d0117cbf6b75e5f764585245cf45026410278daa8aa",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pyrrha_2.html": {
+    "hash": "a4dafdbb182c90293c1b7e1a1f8f6ff422584dd2c8f94f5d94d8e4a597b9fbce",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/pyrrha_3.html": {
+    "hash": "fc6daec525f4d6a73f9fed191e5062550619f95d6f02d953b31b446dd0ce7db9",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/skarn_1.html": {
+    "hash": "5a1285ceb1fe239ae6996b2baf7e9f92777a5280d84083fc43abb3ddb8eb0aae",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/skarn_2.html": {
+    "hash": "819c03a5037a36696377a392a85b6114c47ba94f77d5f41a92179c869d08dd1b",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/skarn_3.html": {
+    "hash": "4a321391d456134cec15273e729525f1d3a1dcf7ab3493978c9b406ce185db63",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/caelum_1.html": {
+    "hash": "1fec21de293c614b647bc11f93bc631b0c1ed1539911a504cd404a56ff3fcb07",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/caelum_2.html": {
+    "hash": "eb57682cf2f023432c33c2cb6f003b5897c2a34ef4ee3c6c967fe455ef907c7a",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/caelum_3.html": {
+    "hash": "2f7c11b043555ba85cd066c43d277836da406e51ed11fd15946e4a4175d85c5e",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/futo.html": {
+    "hash": "4bfc98f400a9725821d11ed7976d1c065f04adfd053d41d7e1b2b2837775be6d",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/komorizen.html": {
+    "hash": "d954d4253b9ef5bb41498ecf6c3d87f013d41e461f46261d363e751dfbcfcfae",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/shizunaria.html": {
+    "hash": "2692b91506e22f4cffea2243c18fd9ee80bbd31232e6ed22f9f533d127725b11",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/akehomura.html": {
+    "hash": "484fe59e0e93fa00a16309649a983347f57a7f633f3f01d559d6b94f2b79a745",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/arvelion.html": {
+    "hash": "bafb8cd64e11ce4a35fd3cca45a44cca7486d759a957f7c79e780a8923118bcf",
+    "lastmod": "2026-11-20"
+  },
+  "monsters/floravelle.html": {
+    "hash": "811d05649d7599c86cb8edeb630820a21ae61738e059fcf508fd6f8a427c3098",
+    "lastmod": "2026-11-20"
+  },
+  "404.html": {
+    "hash": "ab8acd2944bb4db55e7ad018205261687c1b2ce3aec0f8ce1b98405255b50255",
+    "lastmod": "2026-11-20"
+  }
+}

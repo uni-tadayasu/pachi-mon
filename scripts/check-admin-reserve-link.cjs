@@ -49,6 +49,9 @@ function makePeer(role, roleIndex) {
     grantId: `admin-trained-v64:${role}:${playerId}:${species}`, species, level: 100, gender, heldItem: 'trainband', bonusPoints: 99
   })) };
   assert.equal(engine.receiveAdminReserveTeam(bundle).added, 6);
+  assert.equal(engine.receiveAdminReserveTeam({version:2,playerId,role,members:[{
+    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99
+  }]}).added,1);
   const members = engine.state.storage.slice();
   members.forEach((mon, index) => {
     const values = [64, 64, 64, 41, 0, 64];
@@ -104,7 +107,7 @@ function checkAppearance(peer) {
       ] };
       assert(session._validTeam(team), `${peer.role}/${mon.species}: canonical appearance`);
       const mutations = [
-        look => { look.gender = peer.gender === 'male' ? 'female' : 'male'; },
+        look => { look.gender = mon.gender === 'male' ? 'female' : 'male'; },
         look => { look.gender = 'none'; },
         look => { look.grantId = look.grantId.replace(`:${peer.role}:`, ':unknown:'); },
         look => { look.grantId = look.grantId.replace(/:P[0-9a-f]{16}:/, ':Pbad:'); },
@@ -168,11 +171,11 @@ async function checkBattle(left, right, mode, indexes) {
       const ready = p.packets.find(packet => packet.from === side && packet.message.t === 'ready').message.team;
       assert.deepEqual(ready.ids, chosen.map(mon => mon.species));
       for (const [index, source] of chosen.entries()) {
-        assert.deepEqual(ready.appearance[index], { nickname: source.nickname, shiny: false, grantId: source.grantId, gender: peer.gender });
+        assert.deepEqual(ready.appearance[index], { nickname: source.nickname, shiny: false, grantId: source.grantId, gender: source.gender });
         assert.equal(Object.values(ready.allocation[index]).reduce((a, b) => a + b, 0), 297);
         for (const duel of duels) {
           const mon = duel.state.teams[side].monsters[index];
-          assert.equal(mon.level, 50); assert.equal(mon.gender, peer.gender); assert.equal(mon.grantId, source.grantId);
+          assert.equal(mon.level, 50); assert.equal(mon.gender, source.gender); assert.equal(mon.grantId, source.grantId);
           assert.equal(mon.nickname, source.nickname); assert.equal(mon.shiny, false);
           assert.deepEqual(copy(mon.alloc), copy(peer.LT.Duel.normalizeAllocation(source.alloc)));
           assert.deepEqual(copy(mon.stats), copy(peer.engine.stats({ species: source.species, level: 50, alloc: source.alloc })));
@@ -193,15 +196,15 @@ async function checkBattle(left, right, mode, indexes) {
 (async () => {
   const peers = roles.map(makePeer);
   for (const peer of peers) { checkPicker(peer); checkAppearance(peer); }
-  // Each role selects every member: first three in singles, last four in doubles.
+  // Each role selects all seven members: first three in singles, last four in doubles.
   // Cycling opponents also exercises all three distinct gender/role grant shapes.
   for (let index = 0; index < peers.length; index++) {
     const left = peers[index], right = peers[(index + 1) % peers.length];
     await checkBattle(left, right, 'single', [0, 1, 2]);
-    await checkBattle(left, right, 'double', [2, 3, 4, 5]);
+    await checkBattle(left, right, 'double', [3, 4, 5, 6]);
   }
-  console.log(JSON.stringify({ ok: true, roles, members: 18, peerMatches: 6, checks: [
-    'all six reserve UIDs selectable per role', 'legacy Lv70 and trained Lv100 mythical both listed',
+  console.log(JSON.stringify({ ok: true, roles, members: 21, peerMatches: 6, checks: [
+    'all seven reserve UIDs selectable per role', 'legacy Lv70 and trained Lv100 mythical both listed',
     'duplicate species and held items still excluded', 'exact role gender/grant appearance validated',
     'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50',
     'single and double peers synchronized after a full turn', 'adventure saves unchanged'

@@ -1,5 +1,5 @@
 {
- "version": "2026-11-20",
+ "version": "20261120-fit-seo-evolution-v68",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -242,6 +242,10 @@
    "bytes": 1341997
   },
   {
+   "url": "assets/original-galdogran-v68.png",
+   "bytes": 1298807
+  },
+  {
    "url": "assets/original-galdoras-v67.png",
    "bytes": 1119958
   },
@@ -295,6 +299,7 @@
   "assets/offdex-v54-07.png",
   "assets/offdex-v54-08.png",
   "assets/original-futo-v67.png",
+  "assets/original-galdogran-v68.png",
   "assets/original-galdoras-v67.png",
   "assets/original-null-line-v67.png",
   "assets/original-pearl-line-v67.png",
@@ -306,6 +311,6 @@
   "assets/traveller-hero-v33.png",
   "assets/traveller-npcs-v33.png"
  ],
- "totalBytes": 72234752,
- "coreBytes": 33957029
+ "totalBytes": 73533559,
+ "coreBytes": 35255836
 }

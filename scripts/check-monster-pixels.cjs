@@ -92,7 +92,7 @@ function unitChecks(){
 
 async function integratedChecks(){
  const {LT,engine,imageErrors}=await runtime(),P=LT.MonsterPixels,art=LT.CreatureArt,ids=Object.keys(LT.DATA.species),target=traced();
- assert(P&&P.grid===GRID,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,268);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
+ assert(P&&P.grid===GRID,'The shipped page loads the shared helper before its creature renderer');assert.equal(ids.length,269);assert.equal(LT.Art.creature,LT.PixelSprites.creature);
  const before={data:JSON.stringify(LT.DATA),save:JSON.stringify(engine.state)},fronts=new Set(),backs=new Set();let renders=0;
  for(const [index,id]of ids.entries()){
   await art.preload([id],{back:'both'});const views=[];
@@ -113,7 +113,7 @@ async function integratedChecks(){
   assert.notEqual(views[0],views[1],`${id}: front and rear remain distinct`);fronts.add(views[0]);backs.add(views[1]);
   if((index+1)%8===0)await settle();if((index+1)%64===0)console.log(`Rendered ${index+1}/${ids.length} species on the ${GRID}-pixel grid`);
  }
- assert.equal(renders,1072);assert(fronts.size>=200&&backs.size>=200,'Individual species keep their distinct artwork');assert.equal(imageErrors.length,0,'The exhaustive pass must use valid shipped artwork');
+ assert.equal(renders,ids.length*4);assert(fronts.size>=200&&backs.size>=200,'Individual species keep their distinct artwork');assert.equal(imageErrors.length,0,'The exhaustive pass must use valid shipped artwork');
  assert.equal(JSON.stringify(LT.DATA),before.data);assert.equal(JSON.stringify(engine.state),before.save);
  console.log(`PASS actual Art.creature: ${ids.length} species, ${renders} front/back/normal/shiny renders, transparent bounds and facing`);
 
@@ -160,15 +160,29 @@ async function fallbackChecks(){
  const {LT,engine}=await runtime('no-modules');assert.equal(LT.MonsterPixels,undefined);assert.equal(LT.CreatureArt,undefined);
  const before={data:JSON.stringify(LT.DATA),save:JSON.stringify(engine.state)},target=traced(320),byShape=new Map();
  for(const s of Object.values(LT.DATA.species))if(!byShape.has(s.shape))byShape.set(s.shape,s.id);
- const ids=[...new Set([...byShape.values(),'futo','arvelion','floravelle','nullmie','nullva','zeroveil'])];let fallbackViews=0;
+ const revised=new Set(['futo','galdoras','galdogran','nullmie','nullva','zeroveil','pearlmi','pearlgoa','pearlseria','shimomaru','shimorei','hyogald']);
+ const ids=[...new Set([...byShape.values(),'arvelion','floravelle',...revised])];let fallbackViews=0,waitingHash=null;
  for(const id of ids)for(const back of [false,true]){
-  target.reset();LT.Art.creature(target.cv,id,{back,time:0});visibleInside(target.cv,`${id}: no external modules`);assert(target.calls.at(-1).image.width>GRID);fallbackViews++;
+  target.reset();LT.Art.creature(target.cv,id,{back,time:0});visibleInside(target.cv,`${id}: no external modules`);
+  const original=target.calls.at(-1).image;
+  if(revised.has(id)){
+   // Authored redesigns deliberately show one neutral loading emblem. Missing
+   // modules must never recreate their retired, species-specific silhouettes.
+   const current=hash(rgba(original));if(waitingHash===null)waitingHash=current;else assert.equal(current,waitingHash,`${id}: expected the shared waiting emblem`);
+  }else assert(original.width>GRID,'Unchanged procedural artwork retains its original source grid');
+  fallbackViews++;
  }
  // A loaded display helper also handles the procedural fallback if the image
  // modules are missing. The fallback art has no dependence on uploaded sheets.
- const P=install(LT);
+ const P=install(LT);let sampledWaitingHash=null;
  for(const id of ids){for(const back of [false,true])for(const shiny of [false,true]){
-  target.reset();LT.Art.creature(target.cv,id,{back,shiny,time:0});visibleInside(target.cv,`${id}: sampled procedural fallback`);assert.equal(target.calls.at(-1).image.width,P.grid);assert.equal(target.calls.at(-1).image.height,P.grid);assert.equal(target.calls.at(-1).smoothing,false);fallbackViews++;
+  target.reset();LT.Art.creature(target.cv,id,{back,shiny,time:0});visibleInside(target.cv,`${id}: sampled procedural fallback`);
+  const drawn=target.calls.at(-1);
+  if(revised.has(id)){
+   assert(drawn.image.width<=P.grid&&drawn.image.height<=P.grid,'A small waiting emblem is not enlarged by the sampling helper');
+   const current=hash(rgba(drawn.image));if(sampledWaitingHash===null)sampledWaitingHash=current;else assert.equal(current,sampledWaitingHash,`${id}: sampled waiting emblem stays neutral for either view and palette`);
+  }else{assert.equal(drawn.image.width,P.grid);assert.equal(drawn.image.height,P.grid);}
+  assert.equal(drawn.smoothing,false);fallbackViews++;
  }await settle();}
  assert.equal(JSON.stringify(LT.DATA),before.data);assert.equal(JSON.stringify(engine.state),before.save);target.cv.width=target.cv.height=1;
  console.log(`PASS no-modules and sampled procedural fallbacks: ${ids.length} species covering all ${byShape.size} shapes, ${fallbackViews} views`);

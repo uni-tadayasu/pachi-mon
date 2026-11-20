@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>パチモン — 画面サイズ確認</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e9edf3;color:#16243a;font:14px/1.5 system-ui,sans-serif}header{padding:12px 16px;background:#fff;border-bottom:1px solid #b9c5d5}h1{font-size:18px;margin:0 0 8px}.controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}label{display:flex;align-items:center;gap:6px}button,select,input{font:inherit;min-height:36px;padding:5px 9px;border:1px solid #8494a8;border-radius:5px;background:#fff;color:inherit}button{cursor:pointer}input{width:80px}main{display:grid;place-items:start center;padding:12px;overflow:auto}.device{position:relative;flex:none;border:1px solid #586a82;background:#101a3f;box-shadow:0 4px 20px #17213a26}iframe{position:absolute;left:0;top:0;border:0;transform-origin:top left;display:block;background:#101a3f}output{display:block;padding:8px 16px;background:#fff;font-size:12px;overflow-wrap:anywhere}pre{margin:0;padding:12px 16px;background:#17243b;color:#d8eadb;max-height:240px;overflow:auto;font:12px/1.5 ui-monospace,monospace}.note{font-size:12px;color:#52617a;margin:6px 0 0}
+</style>
+</head>
+<body>
+<header><h1>パチモン — 画面サイズ確認</h1><div class="controls"><label>表示サイズ<select id="preset"><option value="390,844">スマホ 390 × 844</option><option value="320,568">小型スマホ 320 × 568</option><option value="360,640">スマホ 360 × 640</option><option value="430,932">大型スマホ 430 × 932</option><option value="568,320">小型スマホ横 568 × 320</option><option value="844,390">スマホ横 844 × 390</option><option value="768,1024">タブレット縦 768 × 1024</option><option value="1024,768">タブレット横 1024 × 768</option><option value="1280,720">PC 1280 × 720</option><option value="1366,768" selected>PC 1366 × 768</option><option value="1920,1080">PC 1920 × 1080</option></select></label><label>幅<input id="width" type="number" min="240" max="3840" value="1366"></label><label>高さ<input id="height" type="number" min="240" max="2160" value="768"></label><button id="apply">適用</button><button id="rotate">縦横を入れ替える</button><button id="inspect">はみ出し・重なりを確認</button><a href="../">ゲームへ</a></div><p class="note">実際のゲームを指定した大きさのフレームで表示します。端末固有のブラウザーUIやソフトウェアキーボードは再現しません。保存・通信は通常のゲームと共通です。</p></header>
+<output id="summary" aria-live="polite">1366 × 768</output>
+<main><div class="device" id="device"><iframe id="preview" src="../" title="指定サイズのパチモン" allow="fullscreen; autoplay" width="1366" height="768"></iframe></div></main>
+<pre id="report" hidden></pre>
+<script>
+'use strict';
+const frame=document.getElementById('preview'),device=document.getElementById('device'),widthInput=document.getElementById('width'),heightInput=document.getElementById('height'),summary=document.getElementById('summary');
+function fit(){const width=Math.max(240,Math.min(3840,Number(widthInput.value)||1366)),height=Math.max(240,Math.min(2160,Number(heightInput.value)||768));widthInput.value=width;heightInput.value=height;frame.width=width;frame.height=height;frame.style.width=width+'px';frame.style.height=height+'px';const scale=Math.min(1,(innerWidth-28)/width,Math.max(240,innerHeight-160)/height);frame.style.transform=`scale(${scale})`;device.style.width=width*scale+'px';device.style.height=height*scale+'px';summary.textContent=`表示領域 ${width} × ${height} CSS px ／ 確認画面での縮尺 ${Math.round(scale*100)}%`;}
+document.getElementById('preset').onchange=event=>{[widthInput.value,heightInput.value]=event.target.value.split(',');fit();};
+document.getElementById('apply').onclick=fit;
+document.getElementById('rotate').onclick=()=>{[widthInput.value,heightInput.value]=[heightInput.value,widthInput.value];fit();};
+window.addEventListener('resize',fit);
+document.getElementById('inspect').onclick=()=>{
+ const doc=frame.contentDocument,win=frame.contentWindow;if(!doc)return;
+ const visible=el=>el&&el.getClientRects().length&&win.getComputedStyle(el).visibility!=='hidden';
+ const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+ const selectors=['#game-canvas','#battle-ui','#battle-panel','#field-meta','.touch-controls','.world-network-bar','#battle-dock .levelup-card','.title-backdrop','.title-copy'];
+ const boxes=Object.fromEntries(selectors.map(s=>[s,doc.querySelector(s)]).filter(([,el])=>visible(el)).map(([s,el])=>[s,rect(el)]));
+ const tolerance=2,intersects=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>tolerance&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>tolerance;
+ const outside=Object.entries(boxes).filter(([,r])=>r.left< -tolerance||r.top< -tolerance||r.right>win.innerWidth+tolerance||r.bottom>win.innerHeight+tolerance).map(([s])=>s);
+ const art=boxes['#game-canvas'],overlaps=art?Object.entries(boxes).filter(([s,r])=>s!=='#game-canvas'&&!s.startsWith('.title-')&&intersects(art,r)).map(([s])=>s):[];
+ if(boxes['.title-backdrop']&&boxes['.title-copy']&&intersects(boxes['.title-backdrop'],boxes['.title-copy']))overlaps.push('title artwork / copy');
+ const result={viewport:[win.innerWidth,win.innerHeight],mode:doc.body.classList.contains('in-battle')?'battle':doc.body.classList.contains('is-playing')?'field':'title',outside,artworkOverlaps:overlaps,boxes};
+ const report=document.getElementById('report');report.hidden=false;report.textContent=JSON.stringify(result,null,2);summary.textContent=`${result.viewport.join(' × ')} ／ ${result.mode} ／ 画面外 ${outside.length} ／ 画像とUIの重なり ${overlaps.length}`;
+};
+fit();
+</script>
+</body>
+</html>

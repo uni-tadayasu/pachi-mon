@@ -95,6 +95,8 @@
  *   112px grid; matching public portraits and their versioned URLs refresh.
  * v67: original designs for eleven species, resonance commands and new art;
  *   remove retired portraits from caches without touching adventure saves.
+ * v68: separate artwork and controls at every viewport; evolved Galdogran and
+ *   the additional restorable male operator reserve refresh with the game shell.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

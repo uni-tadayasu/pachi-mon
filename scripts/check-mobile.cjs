@@ -67,7 +67,7 @@ const touch = { matches: false, addEventListener: listen };
 const navigator = { maxTouchPoints: 0 };
 const scrolls = [], shapes = [];
 const window = { innerWidth: 390, innerHeight: 844, scrollX: 0, scrollY: 0, navigator, getSelection: () => selection, scrollTo(x, y) { scrolls.push([x, y]); this.scrollX = x; this.scrollY = y; }, visualViewport: { height: 844, addEventListener: listen }, addEventListener: listen, dispatchEvent() {} };
-const document = { activeElement: null, documentElement: root, getSelection: () => selection, querySelector() { return viewport; }, addEventListener: listen, dispatchEvent(event) { shapes.push(event.detail?.shape); } };
+const document = { activeElement: null, documentElement: root, body: { classList: { contains: name => name === 'is-playing' } }, getSelection: () => selection, querySelector() { return viewport; }, addEventListener: listen, dispatchEvent(event) { shapes.push(event.detail?.shape); } };
 const context = vm.createContext({ window, document, navigator, Element, Event: class Event {}, CustomEvent: class CustomEvent { constructor(type, init) { this.type = type; this.detail = init?.detail; } }, matchMedia: query => query === '(any-pointer:coarse)' ? touch : mobile,
   requestAnimationFrame(callback) { frames.push(callback); return frames.length; } });
 vm.runInContext(mobileSource, context);
@@ -85,8 +85,8 @@ const pad = new Element({ control: true }), action = new Element({ control: true
 const field = new Element(), input = new Element({ editable: true });
 for (const type of ['touchstart', 'touchmove']) {
   check(prevented(type, { touches: [{ target: pad }, { target: action }] }), false, `${type}: D-pad + A/menu stays actionable`);
-  check(prevented(type, { touches: [{ target: field }, { target: field }] }), true, `${type}: field pinch is blocked`);
-  check(prevented(type, { touches: [{ target: pad }, { target: field }] }), true, `${type}: mixed pinch is blocked`);
+  check(prevented(type, { touches: [{ target: field }, { target: field }] }), false, `${type}: browser magnification is not globally intercepted`);
+  check(prevented(type, { touches: [{ target: pad }, { target: field }] }), false, `${type}: control-specific CSS owns gesture handling`);
   check(prevented(type, { touches: [{ target: input }] }), false, `${type}: single-finger input stays available`);
 }
 for (const type of ['contextmenu', 'selectstart', 'dragstart', 'dblclick']) {
@@ -146,13 +146,14 @@ for (const type of ['touchmove', 'touchend', 'touchcancel', 'pointercancel']) {
   check(prevented(type, { target: field, touches: [{ target: field }] }), false, `${type}: scrolling or a cancelled long press is not intercepted`);
 }
 for (const type of ['copy', 'cut', 'paste', 'beforeinput']) check(prevented(type, { target: input }), false, `${type}: native text editing is unaffected`);
-for (const type of ['gesturestart', 'gesturechange', 'gestureend']) check(prevented(type), true, `${type}: native zoom blocked`);
-check(prevented('wheel', { ctrlKey: true }), true, 'Ctrl-wheel zoom blocked on mobile');
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) check(prevented(type), false, `${type}: native magnification remains available`);
+check(prevented('wheel', { ctrlKey: true }), false, 'Ctrl-wheel magnification remains available on mobile');
 check(prevented('wheel', { ctrlKey: false }), false, 'Panel wheel scroll allowed');
 check(classes.has('mobile-screen'), true, 'Mobile class initialized');
 check(classes.has('touch-guard'), true, 'Mobile selection protection initialized');
 check(properties.get('--app-height'), '844px', 'Viewport height initialized');
-check(viewport.content.includes('maximum-scale=1'), true, 'Mobile zoom viewport enabled');
+check(viewport.content.includes('maximum-scale'), false, 'Mobile viewport does not cap magnification');
+check(viewport.content.includes('user-scalable=no'), false, 'Mobile viewport does not prohibit magnification');
 
 window.visualViewport.height = 380;
 for (const listener of events.get('orientationchange')) listener();
@@ -205,7 +206,7 @@ function matchesMedia(query, state) {
   });
 }
 function viewportRuntime(initial) {
-  const state = { pointer: 'coarse', maxTouchPoints: 0, ...initial };
+  const state = { pointer: 'coarse', maxTouchPoints: 0, playing: true, ...initial };
   state.pointers = initial.pointers || [state.pointer];
   const activeClasses = new Set(), values = new Map(), pending = [], timers = [], listeners = new Map(), changes = [], pageScrolls = [];
   const mediaQueries = [], selected = makeSelection();
@@ -217,11 +218,11 @@ function viewportRuntime(initial) {
   const win = { innerWidth: state.width, innerHeight: state.height, scrollX: 0, scrollY: 0,
     navigator: nav, getSelection: () => selected,
     scrollTo(x, y) { this.scrollX = x; this.scrollY = y; pageScrolls.push([x, y]); },
-    visualViewport: { height: state.height, addEventListener: on('visual') }, addEventListener: on('window'), dispatchEvent() {} };
+    visualViewport: { height: state.height, scale: 1, addEventListener: on('visual') }, addEventListener: on('window'), dispatchEvent() {} };
   const doc = { activeElement: null, documentElement: {
     classList: { toggle(name, enabled) { enabled ? activeClasses.add(name) : activeClasses.delete(name); }, contains: name => activeClasses.has(name) },
     style: { setProperty(name, value) { values.set(name, value); } } },
-    getSelection: () => selected,
+    body: { classList: { contains: name => name === 'is-playing' && state.playing } }, getSelection: () => selected,
     querySelector: () => ({ setAttribute(name, value) { viewportText = value; } }), addEventListener: on('document'),
     dispatchEvent(event) { changes.push(event.detail?.shape); } };
   vm.runInNewContext(mobileSource, { window: win, document: doc, navigator: nav, Element,
@@ -242,6 +243,7 @@ function viewportRuntime(initial) {
       const before = mediaQueries.map(media => media.matches);
       Object.assign(state, next);win.innerWidth = state.width;win.innerHeight = state.height;
       win.visualViewport.height = next.visualHeight ?? state.height;
+      win.visualViewport.scale = state.visualScale ?? 1;
       mediaQueries.forEach((media, index) => { if (before[index] !== media.matches) emit(media.source, 'change'); });
       emit('window', event);emit('visual', 'resize');settleTimers();
     },
@@ -284,7 +286,7 @@ for (const [width, height, pointer, pointers, expected, guarded, label] of viewp
   check(runtime.activeClasses.has('mobile-screen'), expected, label);
   check(runtime.activeClasses.has('touch-guard'), guarded, label + ': selection guard covers touch surfaces');
   check(runtime.prevented('contextmenu'), guarded, label + ': event guard agrees with text-selection protection');
-  check(runtime.viewport.includes('maximum-scale=1'), expected, label + ': viewport policy follows the layout');
+  check(runtime.viewport.includes('maximum-scale'), false, label + ': every layout permits browser magnification');
   check(runtime.values.get('--app-height'), height + 'px', label + ': CSS viewport height is available');
 }
 // Some tablets expose a fine pointer in desktop mode but still report touch
@@ -330,6 +332,20 @@ check(tablet.activeClasses.has('mobile-screen'), true, 'Split View retains the r
 tablet.resize({ width: 1920, height: 1080 });
 check(tablet.activeClasses.has('mobile-screen'), false, 'Large touch window returns to desktop instead of staying fixed');
 check(tablet.viewport.includes('maximum-scale'), false, 'Large touch window restores ordinary zoom');
+
+// Magnifying a reading surface must not repeatedly shrink/reflow the console
+// or jump its scroll position. A software keyboard at scale 1 still resizes it.
+const magnified = viewportRuntime({ width: 390, height: 844 });
+magnified.win.scrollY = 120;
+magnified.resize({ visualHeight: 422, visualScale: 2 });
+check(magnified.values.get('--app-height'), '844px', 'Pinch zoom keeps the original layout height');
+check(magnified.win.scrollY, 120, 'Pinch zoom does not reset the reader position');
+check(magnified.prevented('gesturechange'), false, 'Pinch zoom is not cancelled by JavaScript');
+magnified.resize({ visualHeight: 380, visualScale: 1 });
+check(magnified.values.get('--app-height'), '380px', 'A keyboard at normal scale reduces the usable height');
+const titleReader = viewportRuntime({ width: 390, height: 844, playing: false });
+titleReader.win.scrollY = 180;titleReader.resize({ visualHeight: 744 });
+check(titleReader.win.scrollY, 180, 'Reading the title/guide does not snap back to the page origin');
 
 // Run the actual game handlers so simultaneous direction releases and browser
 // interruption events exercise the production pointer state, not a duplicate.
