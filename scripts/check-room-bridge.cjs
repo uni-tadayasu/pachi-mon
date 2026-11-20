@@ -198,6 +198,22 @@ test('secret-room menu opens the room manager and native dialog keys remain unco
   h.controls.roomWorking=true;assert.equal(h.c.controllerContext().busy,true);const position=copy(h.c.engine.state);h.controls.pad.onMove('up',false);h.c.walk(0,-1);assert.deepEqual(copy(h.c.engine.state),position);
 });
 
+test('global chat owns typing and controller focus without moving or acting in the field',()=>{
+  const h=harness();let open=true,closed=0;const position=copy(h.c.engine.state);
+  const chatDialog={id:'global-chat-dialog',querySelector:()=>h.primary},originalQuery=h.c.document.querySelector;
+  h.c.LT.Chat={isDialogOpen:()=>open,closeDialog(){open=false;closed++;return true;}};
+  h.c.document.querySelector=selector=>selector.includes('global-chat-dialog')&&open?chatDialog:originalQuery(selector);
+  for(const key of ['e','w','Enter','Escape','ArrowUp',' ']){
+    let prevented=0;for(const callback of h.events.keydown)callback({key,code:key,target:{tagName:'TEXTAREA'},preventDefault(){prevented++;}});
+    assert.equal(prevented,0,key+' remains with the chat input');
+  }
+  h.c.walk(0,-1);h.c.$('touch-action').onclick();h.c.setupController();h.controls.pad.onMove('up',false);
+  assert.deepEqual(copy(h.c.engine.state),position);assert.equal(h.controls.updates,0);
+  const context=h.c.controllerContext();assert.equal(context.mode,'modal');assert.equal(context.scope,chatDialog);
+  h.c.controllerBack();assert.equal(closed,1);assert.equal(open,false);
+  open=true;h.controls.pad.onMenu();assert.equal(closed,2);
+});
+
 test('solo Kasai battle scene uses its dedicated theme and ordinary battles clear that marker',()=>{
   const h=harness();h.bridge.enterSharedRoom(h.kasai);h.c.engine.battle={kasai:true,result:null};h.c.updateScene();assert.equal(h.controls.scene.kasai,true);assert.equal(h.controls.scene.interior,true);
   h.c.engine.battle={result:null};h.c.updateScene();assert.equal(h.controls.scene.kasai,false);

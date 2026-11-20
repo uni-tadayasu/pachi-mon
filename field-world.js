@@ -78,6 +78,7 @@
   let timer=null,inFlight=null,leavePromise=null,epoch=0,lastSent=0,failures=0,clockOffset=0,connected=false,lastMap='',lastProfile='',lastPayload='',bar=null,dialog=null,dialogMode='',selectedPeer=null,incoming=null,outgoing=null,working=false;
   let population=null,populationRequest=null,populationEpoch=0,populationNext=0,populationQuery='',populationOnlyActive=true,populationError='';
   let presenceProfile=null,presenceProfileKey='';
+  let chatState={unreadCount:0,isOpen:false,available:false};
   const handled=new Set(),cleanup=new Set();
   const game=()=>LT.adminBridge?.getEngine?.();
   const playing=()=>LT.adminBridge?.isPlaying?.()===true;
@@ -114,13 +115,14 @@
     if(bar)return;
     const stage=document.querySelector('.game-stage');if(!stage)return;
     bar=document.createElement('section');bar.className='world-network-bar';bar.setAttribute('aria-label','フィールド交流');
-    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><button type="button" data-world-rooms>秘密部屋</button><button type="button" data-world-population aria-haspopup="dialog" aria-controls="world-player-dialog" aria-expanded="false">オンライン一覧</button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
+    bar.innerHTML='<div class="world-network-summary"><span class="world-network-indicator" aria-hidden="true"></span><span data-world-status role="status" aria-live="polite"></span></div><div class="world-network-actions"><button type="button" data-world-nearby>近くの人</button><button type="button" data-world-rooms>秘密部屋</button><button type="button" data-world-population aria-haspopup="dialog" aria-controls="world-player-dialog" aria-expanded="false">オンライン一覧</button><button type="button" data-world-chat aria-label="全体チャット" aria-haspopup="dialog" aria-controls="global-chat-dialog" aria-expanded="false"><span class="world-chat-label">チャット</span><span class="world-chat-unread" data-world-chat-unread aria-hidden="true" hidden></span></button><span class="world-always-on">交流 ON</span></div><button type="button" class="world-invite-alert" data-world-invite hidden>招待が届いています</button>';
     // A separate row above the canvas keeps connection controls off the
     // traveller sprites, including fixed-height phone and tablet layouts.
     stage.before(bar);
     bar.querySelector('[data-world-nearby]').onclick=()=>openNearby();
     bar.querySelector('[data-world-rooms]').onclick=()=>{void LT.Rooms?.open?.();};
     bar.querySelector('[data-world-population]').onclick=()=>openPopulation();
+    bar.querySelector('[data-world-chat]').onclick=()=>{if(LT.Chat?.open)void LT.Chat.open();};
     bar.querySelector('[data-world-invite]').onclick=()=>{if(incoming)showIncoming(incoming);};
   }
   function status(){
@@ -131,6 +133,15 @@
     bar.querySelector('[data-world-nearby]').disabled=!connected||!playing()||isBusy();
     bar.querySelector('[data-world-rooms]').disabled=!online()||!playing()||isBusy();
     const populationButton=bar.querySelector('[data-world-population]');populationButton.disabled=!playing()||!online()||isBusy(true);populationButton.setAttribute('aria-expanded',String(dialog?.open&&dialogMode==='population'));
+    const chatButton=bar.querySelector('[data-world-chat]'),chat=LT.Chat;
+    const chatOpen=typeof chat?.isDialogOpen==='function'?chat.isDialogOpen()===true:chatState.isOpen;
+    const chatAvailable=typeof chat?.available==='boolean'?chat.available:chatState.available;
+    const unread=Math.max(0,Math.floor(Number(chat?.unreadCount??chatState.unreadCount)||0));
+    chatButton.disabled=!playing()||!online()||!chatAvailable||(!chatOpen&&isBusy(true));
+    chatButton.setAttribute('aria-expanded',String(chatOpen));
+    const chatLabel=unread?`全体チャット、未読${unread>99?'99件以上':`${unread}件`}`:'全体チャット';
+    chatButton.setAttribute('aria-label',chatLabel);chatButton.title=chatLabel;
+    bar.querySelector('[data-world-chat-unread]').hidden=unread===0;
     const alert=bar.querySelector('[data-world-invite]');alert.hidden=!incoming;alert.textContent=incoming?`${incoming.from.name}から${incoming.kind==='trade'?'交換':'対戦'}のお誘い`:'';
     if(dialog?.open&&dialogMode==='population')renderPopulation();
   }
@@ -394,6 +405,7 @@
   document.addEventListener('pachi-admin-bridge-ready',()=>schedule(50));
   document.addEventListener('pachi-online-state',checkRoom);
   document.addEventListener('pachi-trade-state',checkRoom);
+  document.addEventListener('pachi-chat-state',event=>{const detail=event.detail||{};chatState={unreadCount:detail.unreadCount,isOpen:detail.isOpen===true,available:detail.available===true};status();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(timer);void leave();}else schedule(0);});
   root.addEventListener?.('offline',()=>{void leave();schedule(1500);});
   root.addEventListener?.('online',()=>{failures=0;schedule(0);});

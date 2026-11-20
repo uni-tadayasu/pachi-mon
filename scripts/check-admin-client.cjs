@@ -457,6 +457,20 @@ test('world client allows the roster and population endpoints and rejects invali
   assert.deepEqual(h.calls.map(call=>call.path),['/world/kasai/party','/world/population']);assert.deepEqual(h.calls[0].body,{party});assert(h.calls.every(call=>call.token===TOKEN_A));
 });
 
+test('global chat routes use the verified player token and reject unrelated queries before authentication',async()=>{
+  const h=harness({handle:c=>c.path.startsWith('/world/chat')?response({messages:[],latestId:0}):null});
+  for(const path of ['/world/chat/0','/world/chat/-1','/world/chat/1/other','/world/chat?room=private','/world/chat?summary=1&after=-2','/world/chat?summary=1&after=0&token=secret','https://example.test/world/chat'])await assert.rejects(h.ctx.LT.Admin.worldRequest(path),/指定が正しく/);
+  assert.equal(h.calls.length,0);adopt(h);
+  const body={clientId:'f74d60b0-0000-4000-8000-000000000001',text:'こんにちは'};
+  await h.ctx.LT.Admin.worldRequest('/world/chat');
+  await h.ctx.LT.Admin.worldRequest('/world/chat?summary=1&after=0');
+  await h.ctx.LT.Admin.worldRequest('/world/chat',{method:'POST',body});
+  await h.ctx.LT.Admin.worldRequest('/world/chat/12',{method:'DELETE'});
+  assert.deepEqual(h.calls.map(c=>c.path+c.search),['/world/chat','/world/chat?summary=1&after=0','/world/chat','/world/chat/12']);
+  assert.deepEqual(h.calls.map(c=>c.method),['GET','GET','POST','DELETE']);
+  assert.deepEqual(h.calls[2].body,body);assert(h.calls.every(c=>c.token===TOKEN_A));
+});
+
 test('manual roster update checks readiness before saving and saves before forced synchronization',async()=>{
   const sequence=[],h=harness({bridge:{canSyncKasaiParty:()=>false,saveNow:()=>{sequence.push('save');return true;}}});adopt(h);attachOwnerConsole(h);
   h.ctx.LT.KasaiParty={sync:async options=>{sequence.push('sync');assert.equal(options.force,true);return {ok:true,message:'Roster updated'};}};

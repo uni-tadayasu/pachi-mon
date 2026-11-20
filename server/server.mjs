@@ -1078,8 +1078,86 @@ async function worldPopulation(env,now) {
   const rows=result.results.map(row=>({map:row.map,count:row.count,...(row.room_owner?{name:effectiveRoomName(row.room_name,row.room_admin),kind:row.room_admin?'kasai':'secret'}:{})}));
   return {rows,total:rows.reduce((sum,row)=>sum+row.count,0),serverTime:now,ttlMs:WORLD_TTL};
 }
+const WORLD_CHAT_LIMIT=100,WORLD_CHAT_MAX_LENGTH=300;
+const WORLD_CHAT_CLIENT_ID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const WORLD_CHAT_SELECT=`SELECT m.*,p.name AS author_name,
+  (m.player_id=? OR EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=?)) AS may_delete
+  FROM world_chat_messages m JOIN players p ON p.id=m.player_id`;
+function worldChatText(value) {
+  if(typeof value!=='string')fail(400,'INVALID_CHAT_MESSAGE','メッセージを入力してください。');
+  const normalized=value.replace(/\r\n/g,'\n');
+  if(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/u.test(normalized))fail(400,'INVALID_CHAT_MESSAGE','メッセージに使用できない制御文字が含まれています。');
+  const text=normalized.trim(),characters=Array.from(text);
+  if(!text.replace(/[\s\u200b-\u200f\u2060-\u206f\ufeff]/gu,'')||characters.length>WORLD_CHAT_MAX_LENGTH||characters.some(char=>char.length===1&&char.charCodeAt(0)>=0xd800&&char.charCodeAt(0)<=0xdfff))fail(400,'INVALID_CHAT_MESSAGE','メッセージは1〜300文字で入力してください。');
+  return text;
+}
+function worldChatMessage(row) {
+  return {id:row.id,clientId:row.client_id,authorId:row.player_id,name:row.author_name,
+    text:row.deleted_at===null?row.body:null,createdAt:row.created_at,deletedAt:row.deleted_at,
+    canDelete:row.deleted_at===null&&!!row.may_delete};
+}
+async function worldChatRow(env,viewerId,condition,values) {
+  return env.DB.prepare(WORLD_CHAT_SELECT+' WHERE '+condition).bind(viewerId,viewerId,...values).first();
+}
+async function worldChatLatestId(env) {
+  return (await env.DB.prepare('SELECT COALESCE(MAX(id),0) AS latest_id FROM world_chat_messages').first()).latest_id;
+}
+async function worldChatRoute(request,env,path,method,player,now) {
+  const url=new URL(request.url);
+  if(path==='/api/world/chat'&&method==='GET'){
+    const keys=[...url.searchParams.keys()],summary=url.searchParams.get('summary'),after=url.searchParams.get('after')??'0';
+    if(new Set(keys).size!==keys.length||keys.some(key=>!['summary','after'].includes(key))||summary!==null&&summary!=='1'||summary===null&&keys.includes('after')||!/^(?:0|[1-9]\d*)$/.test(after)||!integer(Number(after),0,Number.MAX_SAFE_INTEGER))fail(400,'INVALID_CHAT_QUERY','チャットの読み込み指定が正しくありません。');
+    if(summary==='1'){
+      const row=await env.DB.prepare(`SELECT (SELECT COALESCE(MAX(id),0) FROM world_chat_messages) AS latest_id,
+        (SELECT COUNT(*) FROM world_chat_messages WHERE id>? AND deleted_at IS NULL AND player_id<>?) AS unread_count`).bind(Number(after),player.id).first();
+      return {latestId:row.latest_id,unreadCount:row.unread_count,serverTime:now};
+    }
+    const rows=await env.DB.prepare(WORLD_CHAT_SELECT+' ORDER BY m.id DESC LIMIT ?').bind(player.id,player.id,WORLD_CHAT_LIMIT).all();
+    const messages=rows.results.reverse().map(worldChatMessage);
+    return {messages,latestId:messages.at(-1)?.id||0,serverTime:now};
+  }
+  if(url.searchParams.size)fail(400,'INVALID_CHAT_QUERY','チャットの操作指定が正しくありません。');
+  if(path==='/api/world/chat'&&method==='POST'){
+    const body=await bodyJSON(request);
+    if(Object.keys(body).some(key=>!['clientId','text'].includes(key)))fail(400,'INVALID_CHAT_MESSAGE','メッセージの送信形式が正しくありません。');
+    if(typeof body.clientId!=='string'||!WORLD_CHAT_CLIENT_ID.test(body.clientId))fail(400,'INVALID_CHAT_CLIENT_ID','送信するメッセージの識別情報を確認してください。');
+    const clientId=body.clientId.toLowerCase(),text=worldChatText(body.text);
+    const existing=await worldChatRow(env,player.id,'m.player_id=? AND m.client_id=?',[player.id,clientId]);
+    if(existing){
+      if(existing.body!==text)fail(409,'CHAT_REQUEST_REUSED','同じ送信識別情報で別のメッセージは送信できません。');
+      return {message:worldChatMessage(existing),latestId:await worldChatLatestId(env),duplicate:true,serverTime:now};
+    }
+    // A single conditional insert enforces sliding windows across Worker
+    // isolates. Deleted messages still count; idempotent retries do not.
+    const inserted=await env.DB.prepare(`INSERT OR IGNORE INTO world_chat_messages (player_id,client_id,body,created_at)
+      SELECT ?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM world_chat_messages WHERE player_id=? AND created_at>?)
+      AND (SELECT COUNT(*) FROM world_chat_messages WHERE player_id=? AND created_at>?)<10 RETURNING id`)
+      .bind(player.id,clientId,text,now,player.id,now-2000,player.id,now-60000).first();
+    const saved=await worldChatRow(env,player.id,'m.player_id=? AND m.client_id=?',[player.id,clientId]);
+    if(!saved)fail(429,'CHAT_RATE_LIMITED','投稿は2秒に1回、1分に10回までです。少し待ってから送信してください。');
+    if(saved.body!==text)fail(409,'CHAT_REQUEST_REUSED','同じ送信識別情報で別のメッセージは送信できません。');
+    return {message:worldChatMessage(saved),latestId:await worldChatLatestId(env),duplicate:!inserted,serverTime:now};
+  }
+  if(path==='/api/world/chat')fail(405,'METHOD_NOT_ALLOWED','このチャットの操作方法には対応していません。');
+  const match=/^\/api\/world\/chat\/([1-9]\d*)$/.exec(path),id=match?Number(match[1]):0;
+  if(!match||!integer(id,1,Number.MAX_SAFE_INTEGER))fail(404,'CHAT_MESSAGE_NOT_FOUND','このメッセージは見つかりません。');
+  if(method!=='DELETE')fail(405,'METHOD_NOT_ALLOWED','このチャットの操作方法には対応していません。');
+  if(request.body&&Object.keys(await bodyJSON(request)).length)fail(400,'INVALID_CHAT_MESSAGE','削除するメッセージの指定を確認してください。');
+  let row=await worldChatRow(env,player.id,'m.id=?',[id]);
+  if(!row)fail(404,'CHAT_MESSAGE_NOT_FOUND','このメッセージは見つかりません。');
+  if(!row.may_delete)fail(403,'CHAT_DELETE_FORBIDDEN','自分の投稿だけを削除できます。');
+  if(row.deleted_at===null){
+    await env.DB.prepare(`UPDATE world_chat_messages SET deleted_at=?,deleted_by=? WHERE id=? AND deleted_at IS NULL
+      AND (player_id=? OR EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=?))`).bind(now,player.id,id,player.id,player.id).run();
+    row=await worldChatRow(env,player.id,'m.id=?',[id]);
+    if(!row?.may_delete)fail(403,'CHAT_DELETE_FORBIDDEN','このメッセージを削除する権限がありません。');
+    if(row.deleted_at===null)fail(409,'CHAT_MESSAGE_CHANGED','操作中に権限が変わりました。メッセージを読み込み直してください。');
+  }
+  return {message:worldChatMessage(row),latestId:await worldChatLatestId(env),serverTime:now};
+}
 async function worldRoute(request,env,path,method,player) {
   const now=Date.now();
+  if(path==='/api/world/chat'||path.startsWith('/api/world/chat/'))return worldChatRoute(request,env,path,method,player,now);
   if(path==='/api/world/population'&&method==='GET')return worldPopulation(env,now);
   if(path==='/api/world/rooms'||path.startsWith('/api/world/rooms/'))return roomsRoute(request,env,path,method,player);
   if(path==='/api/world/kasai'||path.startsWith('/api/world/kasai/'))return kasaiRoute(request,env,path,method,player);

@@ -8360,6 +8360,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   const releaseHeldInputs=()=>{releaseKeyboard();clearTouchDirections();pressedDirection=null;directionSource=null;sprint=false;padSprint=false;controller?.reset();$('touch-b')?.resetHold?.();document.querySelectorAll('.touch-controls .pressed').forEach(button=>button.classList.remove('pressed'));resize();};
   window.addEventListener('orientationchange',releaseHeldInputs);
   document.addEventListener('pachi-viewport-change',releaseHeldInputs);
+  document.addEventListener('pachi-chat-state',event=>{if(event.detail?.isOpen)releaseHeldInputs();});
   document.addEventListener('visibilitychange',()=>{releaseKeyboard();clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.suspend();}else if(settings.sound&&sound.ctx)sound.setEnabled(true);});
   const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock()){sound.primeRecording?.();sound.setEnabled(true);}};
   document.addEventListener('pointerdown',unlockSound,{capture:true});
@@ -8574,8 +8575,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     // battles and menu portraits. No extra reduction or per-frame pixel readback.
   }
 
-  function fieldDialogOpen(){return !!(LT.KasaiLive?.isDialogOpen?.()||LT.KasaiLive?.isWorking?.()||LT.World?.isDialogOpen?.()||LT.Rooms?.isDialogOpen?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isDialogOpen?.()||LT.KasaiChallenge?.isWorking?.());}
+  function fieldDialogOpen(){return !!(LT.Chat?.isDialogOpen?.()||LT.KasaiLive?.isDialogOpen?.()||LT.KasaiLive?.isWorking?.()||LT.World?.isDialogOpen?.()||LT.Rooms?.isDialogOpen?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isDialogOpen?.()||LT.KasaiChallenge?.isWorking?.());}
   function closeFieldDialog(){
+    if(LT.Chat?.isDialogOpen?.())return LT.Chat.closeDialog();
     if(LT.KasaiLive?.isDialogOpen?.())return LT.KasaiLive.closeDialog();
     if(LT.KasaiChallenge?.isDialogOpen?.())return LT.KasaiChallenge.closeDialog();
     if(LT.Rooms?.isDialogOpen?.())return LT.Rooms.closeDialog();
@@ -8583,7 +8585,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   function controllerContext(){
     if(fieldDialogOpen()){
-      const scope=document.querySelector('#kasai-live-dialog[open],#kasai-challenge-dialog[open],#secret-room-dialog[open],#world-player-dialog[open]');
+      const scope=document.querySelector('#global-chat-dialog[open],#kasai-live-dialog[open],#kasai-challenge-dialog[open],#secret-room-dialog[open],#world-player-dialog[open]');
       return {mode:'modal',busy:!scope,scope:scope||document.body,defaultTarget:scope?.querySelector('.btn-primary:not(:disabled)')||scope?.querySelector('button:not(:disabled)')};
     }
     if(tradeLocked()){const scope=document.getElementById('pachi-trade-dialog');return {mode:'modal',busy:!scope,scope:scope||document.body,defaultTarget:scope?.querySelector('button:not(:disabled),input,select')};}
@@ -10486,7 +10488,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
 <script src="battle-vfx.js?v=20261120-lunar-super-v74"></script>
-<script src="admin-console.js?v=20261120-lunar-super-v74"></script>
+<script src="admin-console.js?v=20261120-global-chat-v77"></script>
 <script src="secret-rooms.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-challenge.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-party.js?v=20261119-sub-admin-v62"></script>
@@ -10494,7 +10496,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="kasai-live.js?v=20261119-sub-admin-v62"></script>
 <script src="online-futo.js?v=20261120-lunar-super-v74"></script>
 <script src="secret-encounter.js?v=20261120-originality-v67"></script>
-<script src="field-world.js?v=20261119-sub-admin-v62"></script>
+<script src="field-world.js?v=20261120-global-chat-v77"></script>
+<script src="global-chat.js?v=20261120-global-chat-v77"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261119-world-v55-live"></script>
@@ -10515,5 +10518,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="desktop-screen.js?v=20261120-fit-seo-evolution-v68"></script>
 <link rel="stylesheet" href="responsive-fit.css?v=20261120-galdoras-max-fit-v70">
 <link rel="stylesheet" href="console-controls.css?v=20261120-system-buttons-v73">
+<link rel="stylesheet" href="global-chat.css?v=20261120-global-chat-v77">
 </body>
 </html>

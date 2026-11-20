@@ -1,5 +1,22 @@
 # パチモンの通信交換API
 
+## 全プレイヤー共通チャット（v77）
+
+`drizzle/0009_global_chat.sql` が `world_chat_messages` と投稿・未読取得用のインデックスを追加します。Sitesのジャーナルには連番9で登録します。すべて既存のBearer認証が必要で、マップ・秘密部屋・現在の位置にかかわらず同じチャットへ接続します。
+
+| 操作 | API | 内容 |
+| --- | --- | --- |
+| 履歴 | `GET /api/world/chat` | 最新100件を古い順で返す。`{messages,latestId,serverTime}` |
+| 未読数 | `GET /api/world/chat?summary=1&after=123` | 指定IDより新しい、削除されていない他人の投稿数。`{latestId,unreadCount,serverTime}` |
+| 投稿 | `POST /api/world/chat` | `{clientId:UUID,text}`。応答は `{message,latestId,duplicate,serverTime}` |
+| 投稿の削除 | `DELETE /api/world/chat/:id` | 本人または現在の運営3役職のみ。応答は `{message,latestId,serverTime}` |
+
+メッセージは `{id,clientId,authorId,name,text,createdAt,deletedAt,canDelete}`。`name` は `players.name` に保存された実際のプレイヤー名です。役職の別名・肩書き・バッジ・`adminRole` は返しません。削除後は `text:null` となり、元の本文は応答に含めません。クライアントは定期的に完全な最新100件を読み直すため、本文の削除も反映されます。
+
+本文は前後空白を除いて1〜300 Unicodeコードポイント、空文字・不可視文字だけの投稿・制御文字・不正なサロゲートを拒否します。`player_id,client_id` の一意制約により同じ要求の再送は既存の投稿を返し、同じIDで異なる本文を送ると409を返します。2秒に1回・1分に10回の制限は単一の条件付きINSERTで検証し、複数Workerからの同時送信でも守られます。削除済みの投稿も制限に数え、重複再送では枠を使いません。DELETEも更新文の中で現在の権限を再確認します。
+
+履歴の読み取りはDBを変更せず、古い投稿を自動削除しません。開発・表示テストは独立したSQLiteまたは確認画面内のデータを使い、公開チャットにテスト投稿を送りません。
+
 ## 運営の秘密部屋テンプレート（v75）
 
 `drizzle/0008_room_templates.sql` が `world_rooms.template_id` を追加します。既存の部屋は `hall` で、家具・入口・更新版は保持します。Sitesのマイグレーションジャーナルには連番8で登録します。

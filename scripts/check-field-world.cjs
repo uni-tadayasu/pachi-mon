@@ -356,6 +356,23 @@ test('the compact social bar is outside the canvas and the online list uses exac
  assert(h.context.LT.World.closeDialog());assert.equal(h.context.LT.World.isDialogOpen(),false);
 });
 
+test('chat launcher follows late availability, unread and modal state without moving into the canvas',async()=>{
+ const h=runtime(),bar=h.bar(),button=bar.querySelector('[data-world-chat]'),unread=bar.querySelector('[data-world-chat-unread]');
+ assert(button);assert(!h.stage.children.includes(bar));assert(h.screen.children.indexOf(bar)<h.screen.children.indexOf(h.stage));
+ assert.equal(button.disabled,true,'The launcher waits for its client module');assert.equal(unread.hidden,true);assert.equal(button['aria-controls'],'global-chat-dialog');
+ const state={available:true,unreadCount:3,isOpen:false};let opens=0;
+ const chatDialog=h.doc.createElement('dialog');chatDialog.id='global-chat-dialog';h.doc.body.append(chatDialog);
+ const changed=()=>h.event('pachi-chat-state',{detail:{...state}});
+ h.context.LT.Chat={get available(){return state.available;},get unreadCount(){return state.unreadCount;},isDialogOpen:()=>state.isOpen,open(){opens++;state.isOpen=true;state.unreadCount=0;chatDialog.showModal();changed();}};
+ changed();assert.equal(button.disabled,false);assert.equal(unread.hidden,false);assert.match(button['aria-label'],/全体チャット、未読3件/);assert.equal(button['aria-expanded'],'false');
+ button.onclick();await settle();assert.equal(opens,1);assert.equal(button['aria-expanded'],'true');assert.equal(unread.hidden,true);assert.equal(button['aria-label'],'全体チャット');
+ state.isOpen=false;chatDialog.close();changed();assert.equal(button['aria-expanded'],'false');assert.equal(button.disabled,false);
+ state.unreadCount=120;changed();assert.match(button['aria-label'],/99件以上/);assert.equal(unread.hidden,false);
+ h.context.navigator.onLine=false;changed();assert.equal(button.disabled,true,'Offline sessions cannot open a send surface');
+ h.context.navigator.onLine=true;h.trade.active=true;changed();assert.equal(button.disabled,true,'An unrelated active trade keeps the launcher unavailable');
+ h.trade.active=false;state.available=false;changed();assert.equal(button.disabled,true,'A client availability loss is reflected immediately');
+});
+
 test('population refreshes about every five seconds only while its list is open',async()=>{
  const h=runtime();await h.step(800);h.context.LT.World.openPopulation();await settle();const reads=()=>h.calls.filter(call=>call.path==='/world/population').length;
  assert.equal(reads(),1);for(let i=0;i<9;i++)await h.step(500);assert.equal(reads(),1);

@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import worker, {DEFAULT_CONFIG, MYTHICAL_CONFIG, validateConfig} from '../server.mjs';
 
 class LocalD1 {
-  constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON;'); for (const file of ['0000_admin.sql','0006_sub_admin.sql','0007_third_admin.sql']) this.sqlite.exec(readFileSync(new URL('../drizzle/'+file, import.meta.url), 'utf8')); }
+  constructor() { this.sqlite = new DatabaseSync(':memory:'); this.sqlite.exec('PRAGMA foreign_keys=ON;'); for (const file of ['0000_admin.sql','0006_sub_admin.sql','0007_third_admin.sql','0009_global_chat.sql']) this.sqlite.exec(readFileSync(new URL('../drizzle/'+file, import.meta.url), 'utf8')); }
   prepare(sql) {
     const database = this;
     return {
