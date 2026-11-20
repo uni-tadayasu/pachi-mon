@@ -1,4 +1,4 @@
-/* v72: restore the handheld controls at comfortable sizes in their own space. */
+/* v73: full-size handheld controls with visible START and SELECT button faces. */
 html.viewport-fit body.is-playing{--fit-topbar:48px}
 html.viewport-fit body.is-playing .topbar{padding-top:2px;padding-bottom:2px}
 html.viewport-fit body.is-playing .top-actions .icon-btn{width:44px;min-width:44px;height:44px;min-height:44px;padding:8px}
@@ -106,18 +106,33 @@ html.viewport-fit body.is-playing:not(.in-battle) .console-pill{
   flex-wrap:nowrap;
   align-items:center;
   justify-content:center;
-  gap:7px;
+  gap:4px;
   width:100px;
-  height:74px;
+  height:56px;
   min-width:56px;
   min-height:44px;
   margin:0;
   padding:5px 2px;
+  color:#202748;
+  background:linear-gradient(180deg,#e4e9fa 0 3px,#bcc6e5 3px 52%,#9ba9d0 52% 100%)!important;
+  border:2px solid #191638!important;
+  border-radius:4px!important;
+  box-shadow:inset 2px 2px 0 #ffffff99,inset -2px -3px 0 #737fa9,0 3px 0 #13102e!important;
+  text-shadow:none;
+  cursor:pointer;
   touch-action:none;
 }
-html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:block;width:46px;height:12px;transform:rotate(-18deg)}
-html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:12px;line-height:1.2;letter-spacing:.06em}
-html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:13px;line-height:1.2;white-space:nowrap}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:none}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{color:#202748;font-size:13px;font-weight:700;line-height:1.2;letter-spacing:.04em}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{color:#30385e;font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill:active{
+  transform:translateY(2px);
+  background:linear-gradient(180deg,#9ba9d0,#b7c2e2)!important;
+  box-shadow:inset 2px 2px 0 #737fa9,inset -1px -1px 0 #dce3f5,0 1px 0 #13102e!important;
+}
+@media(hover:hover){
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill:hover:not(:active){background:linear-gradient(180deg,#f2f4ff 0 3px,#cbd3ec 3px 52%,#aab7da 52% 100%)!important}
+}
 html.viewport-fit body.is-playing:not(.in-battle) .touch-commands{
   grid-area:ab;
   display:flex;
@@ -175,7 +190,7 @@ html.viewport-fit body.is-playing:not(.in-battle) .dpad button:focus-visible{out
   html.viewport-fit body.is-playing:not(.in-battle) .console-system{gap:6px}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill{flex:1 1 0;width:auto;height:48px;min-width:0;gap:3px;padding:3px 0}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:none}
-  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:11px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:12px}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:12px}
   html.viewport-fit body.is-playing:not(.in-battle) .touch-commands{gap:12px;width:132px}
   html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action) small{font-size:12px!important}
@@ -207,7 +222,7 @@ html.viewport-fit body.is-playing:not(.in-battle) .dpad button:focus-visible{out
   html.viewport-fit body.is-playing:not(.in-battle) .console-system{gap:6px}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill{flex:1 1 0;width:auto;height:48px;min-width:0;gap:3px;padding:3px 0}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill>i{display:none}
-  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:11px}
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill>span{font-size:12px}
   html.viewport-fit body.is-playing:not(.in-battle) .console-pill small{font-size:12px}
   html.viewport-fit body.is-playing:not(.in-battle) :is(.touch-b,.touch-action) small{font-size:12px!important}
 }
@@ -412,5 +427,136 @@ html.viewport-fit body.is-playing .journal #party-list.party-readonly>.party-car
     height:44px;
     min-height:44px;
     margin:0;
+  }
+}
+
+/* The legacy layer owns START's important border color; keep both faces equal. */
+@layer legacy{
+  html.viewport-fit body.is-playing:not(.in-battle) .console-pill{border-color:#191638!important}
+}
+html.viewport-fit body.is-playing:not(.in-battle) .console-pill:focus-visible{outline-offset:-4px}
+
+/* The existing device classifier keeps touch tablets in the bottom layout.
+   Desktop windows narrower than 900px retain that compact fallback as well. */
+@media(min-width:900px){
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing{--desktop-party-width:clamp(184px,19vw,260px)}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing.in-battle{--desktop-party-width:clamp(176px,17vw,220px)}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .game-layout{
+    grid-template-columns:minmax(0,1fr) var(--desktop-party-width);
+    grid-template-rows:minmax(0,1fr);
+    grid-template-areas:"play party";
+    gap:6px;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .play-column{grid-area:play;min-width:0;min-height:0;padding:0}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal{
+    position:relative;
+    inset:auto;
+    grid-area:party;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    margin:0;
+    padding:8px;
+    border-width:2px;
+    border-radius:0;
+    clip-path:none;
+    box-shadow:none;
+    overflow:hidden;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal>:not(.party-section){display:none!important}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal .party-section{
+    display:flex;
+    flex:1 1 0;
+    flex-direction:column;
+    grid-area:auto;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    margin:0;
+    padding:0;
+    border:0;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal .party-section>.section-kicker{display:flex!important;flex:0 0 auto;min-height:18px;margin:0 0 6px;padding:0}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list{
+    display:grid;
+    flex:1 1 0;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:repeat(6,minmax(44px,1fr));
+    align-items:stretch;
+    gap:5px;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-start;
+    gap:6px;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:44px;
+    margin:0;
+    padding:6px;
+    border-width:1px;
+    text-align:left;
+    overflow:hidden;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card>.creature-portrait{width:40px!important;height:40px!important;max-width:100%;flex:0 0 40px}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-meta{display:flex;flex:1 1 0;flex-direction:column;gap:3px;width:auto;min-width:0;min-height:0}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-name{display:block;width:100%;height:auto;min-width:0;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .lead-mark{display:none}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px;min-width:0;height:auto;font-size:10px;line-height:1.2}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats>span{display:block;min-width:0;height:auto;font-size:10px;line-height:1.2;white-space:nowrap}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .hp-track{width:100%;height:6px;min-height:6px;margin:0;border-width:1px}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card:focus-visible{outline:2px solid var(--pm-gold);outline-offset:-3px}
+
+  /* A short desktop uses three rows, so all six companions remain visible. */
+  @media(max-height:500px){
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal{padding:5px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(44px,1fr));gap:4px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card{flex-direction:column;justify-content:center;gap:3px;padding:3px;text-align:center}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card>.creature-portrait{width:32px!important;height:32px!important;flex-basis:32px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-meta{flex:0 0 auto;width:100%;gap:2px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-name{font-size:11px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats{font-size:9px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats>span{font-size:9px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .hp-track{height:5px;min-height:5px}
+  }
+  @media(max-height:360px){
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card{display:grid;grid-template-columns:24px minmax(0,1fr);gap:3px;padding:2px;text-align:left}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list>.party-card>.creature-portrait{width:24px!important;height:24px!important;flex-basis:24px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-name{font-size:10px;line-height:12px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats{display:block;font-size:0;line-height:0}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .party-stats>span{font-size:9px;line-height:10px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing .journal #party-list .hp-track{height:4px;min-height:4px}
+  }
+
+  /* A roomy exploration screen retains the rest of its original journal. */
+  @media(min-width:1200px) and (min-height:700px){
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal{overflow:auto}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal>.journal-heading{display:flex!important}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal>.quest-section{display:block!important}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal>.bag-summary{display:flex!important}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal>.journal-nav{display:grid!important}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal .party-section{flex:0 0 auto;height:auto}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list{flex:none;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(48px,auto));height:auto;gap:4px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list>.party-card{gap:3px;min-height:48px;padding:3px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list>.party-card>.creature-portrait{width:30px!important;height:30px!important;flex-basis:30px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list .party-name{font-size:11px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list .party-stats{gap:3px;font-size:9px}
+    html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list .party-stats>span{font-size:9px}
   }
 }
