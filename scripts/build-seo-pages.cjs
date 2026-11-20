@@ -378,7 +378,7 @@ write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SI
       if (types.includes('WebPage')) { entity.description = description; entity.dateModified = LASTMOD; }
       if (types.includes('VideoGame')) {
         entity.description = description;
-        entity.softwareVersion = '68.0';
+        entity.softwareVersion = '69.0';
         entity.featureList = [
           `公開図鑑${ids.length}種・図鑑外${hiddenSpeciesCount}種を含む全${totalSpeciesCount}種のパチモン`,
           `公開${publicMoveCount}種の技（非公開の専用技${hiddenMoveCount}種を含め全${totalMoveCount}種）`,

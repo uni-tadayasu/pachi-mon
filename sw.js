@@ -1,4 +1,5 @@
 /* Pachi Monsters — offline play.
+ * v69: a maximized one-screen title and its on-demand overview refresh together.
  * The page, its code and the core art are stored at install, so the game starts
  * without a connection. Pages are fetched network-first (updates arrive whenever
  * online); code and art are served cache-first by exact versioned URL and older

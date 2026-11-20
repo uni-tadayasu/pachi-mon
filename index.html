@@ -201,7 +201,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         "@type": "Organization",
         "name": "KASAI SOLUTIONS INC."
       },
-      "softwareVersion": "68.0",
+      "softwareVersion": "69.0",
       "applicationCategory": "GameApplication",
       "genre": [
         "ロールプレイング",
@@ -526,12 +526,12 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       <p class="title-description">256種のパチモンと、128のステージ。32の旅紋を集めて、星路の継承者と天頂の覇者が待つ二つの頂へ。携帯ゲーム機の手ざわりで遊べる、登録不要・無料のドット絵RPG。</p>
       <div class="title-buttons"><button id="continue-btn" type="button" class="btn btn-primary title-start" hidden><svg><use href="#i-play"/></svg>つづきから <svg class="button-arrow"><use href="#i-arrow"/></svg></button><button id="start-btn" type="button" class="btn title-start"><svg><use href="#i-lantern"/></svg>旅をはじめる <svg class="button-arrow"><use href="#i-arrow"/></svg></button><button type="button" class="btn title-start link-title-button" data-open-online><svg><use href="#i-gamepad"/></svg>オンライン対戦 <small>招待リンクで接続</small></button><button id="title-settings-btn" type="button" class="title-settings"><svg><use href="#i-settings"/></svg>遊び方・設定</button></div>
       <p id="title-status" class="title-status">登録不要・無料でプレイ / 端末内に自動セーブ</p>
-      <p id="title-audio-hint" class="title-audio-hint" role="status" hidden>♪ お使いのブラウザーは自動再生を制限しています。画面のどこかに触れると音楽が始まります。</p>
+      <p id="title-audio-hint" class="title-audio-hint" role="status" hidden>♪ 画面に触れると音楽が始まります。</p>
       <div class="title-metrics" aria-label="冒険の内容"><div><strong id="content-species-count">256</strong><span>種のパチモン</span></div><div><strong id="content-map-count">128</strong><span>ステージ</span></div><div><strong id="content-music-count">64</strong><span>曲のBGM</span></div></div>
     </div><div class="title-world-note"><span>THE MERIDIAN ACCORD</span><strong>16<span>WAYMARKS</span></strong><p>四境の守護者、そして星路の継承者へ。</p><svg aria-hidden="true"><use href="#i-trophy"/></svg></div></div>
-    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>／</i> BEFRIEND <i>／</i> BATTLE</span><span class="title-links"><a id="title-discover" class="title-discover" href="#about-game">世界と遊び方 <svg aria-hidden="true"><use href="#i-chevron"/></svg></a><a class="title-discover title-link" href="monsters/">パチモン図鑑</a><a class="title-discover title-link" href="moves/">技一覧</a><a class="title-discover title-link" href="guide/">攻略ガイド</a></span><span class="title-copyright">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button></span></footer>
+    <footer class="title-footer"><span><svg><use href="#i-leaf"/></svg> EXPLORE <i>／</i> BEFRIEND <i>／</i> BATTLE</span><span class="title-links"><a id="title-discover" class="title-discover" href="#about-game" aria-haspopup="dialog" aria-controls="modal">世界と遊び方 <svg aria-hidden="true"><use href="#i-chevron"/></svg></a><a class="title-discover title-link" href="monsters/">パチモン図鑑</a><a class="title-discover title-link" href="moves/">技一覧</a><a class="title-discover title-link" href="guide/">攻略ガイド</a></span><span class="title-copyright">© 2026 KASAI SOLUTIONS INC. <button type="button" data-ui="credits">制作・ライセンス</button></span></footer>
   </section>
-  <section id="about-game" class="game-info" aria-labelledby="about-game-title">
+  <section id="about-game" class="game-info" aria-labelledby="about-game-title" hidden>
     <div class="game-info-inner">
       <noscript id="game-javascript-note"><p>ゲームを遊ぶにはJavaScriptを有効にしてください。<a href="monsters/">パチモン図鑑</a>・<a href="moves/">技一覧</a>・<a href="guide/">攻略ガイド</a>は、このまま読むことができます。</p></noscript>
       <header class="game-info-heading">
@@ -6973,6 +6973,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   'use strict';
   const { DATA, Engine, Art } = globalThis.LT;
   const $ = id => document.getElementById(id);
+  const aboutGame=$('about-game'),aboutHome=aboutGame?.parentNode,aboutNext=aboutGame?.nextSibling;
+  let aboutDisplayed=false;
   const SAVE_KEY = 'lumina-trail-save-v1';
   const BACKUP_KEY = 'lumina-trail-backup-v1';
   const SETTINGS_KEY = 'lumina-trail-settings-v1';
@@ -7573,7 +7575,36 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       ]);
     }
   }
+  // Reuse the static overview node so its headings and links keep unique IDs.
+  function setAboutHash(hash,push=false){
+    const url=new URL(window.location.href);if(url.hash===hash)return;
+    url.hash=hash;
+    try{window.history[push?'pushState':'replaceState'](window.history.state,'',url.href);}catch(_){}
+  }
+  function restoreAboutGame(){
+    if(!aboutDisplayed)return false;
+    aboutDisplayed=false;aboutGame.hidden=true;
+    aboutHome.insertBefore(aboutGame,aboutNext?.parentNode===aboutHome?aboutNext:null);
+    if(window.location.hash==='#about-game')setAboutHash('');
+    return true;
+  }
+  function focusAboutDiscover(){
+    if(!playing&&!busy&&!LT.onlineActive&&!LT.localTradeActive&&!$('title-screen').hidden&&!document.querySelector('dialog[open]'))$('title-discover')?.focus({preventScroll:true});
+  }
+  function showAboutGame(){
+    if(!aboutGame||playing||busy||introPending||$('title-screen').hidden||LT.onlineActive||LT.localTradeActive||LT.tradeActive||LT.KasaiLive?.isActive?.()||tradeLocked()||document.body.classList.contains('is-booting'))return false;
+    if(aboutDisplayed&&$('modal').open)return true;
+    if(document.querySelector('dialog[open]'))return false;
+    openModal('世界と遊び方','','about');
+    $('modal-content').append(aboutGame);aboutGame.hidden=false;aboutDisplayed=true;
+    $('modal-close').focus({preventScroll:true});return true;
+  }
+  function routeTitleHash(){
+    if(window.location.hash==='#about-game')showAboutGame();
+    else if(aboutDisplayed)closeModal();
+  }
   function openModal(title, html, pane = '') {
+    restoreAboutGame();
     pressedDirection = null; if(activePane==='music'&&pane!=='music')sound.preview(null); activePane = pane;
     $('modal-title').textContent = title; $('modal-content').innerHTML = html;
     if (!$('modal').open) $('modal').showModal();
@@ -8340,6 +8371,11 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   document.querySelectorAll('a.brand').forEach(a => { a.href = 'index.html'; a.onclick=e=>{e.preventDefault();if(playing)goTitle();}; });
   $('continue-btn').onclick=()=>storedSave && bootScreen(()=>begin(null,storedSave));
   $('title-settings-btn').onclick=showSettings;
+  $('title-discover').onclick=event=>{event.preventDefault();if(showAboutGame())setAboutHash('#about-game',true);};
+  aboutGame?.querySelector('a[href="#title-screen"]')?.addEventListener('click',event=>{event.preventDefault();closeModal();setAboutHash('#title-screen');});
+  window.addEventListener('hashchange',routeTitleHash);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',routeTitleHash,{once:true});
+  else setTimeout(routeTitleHash,0);
   $('interact-btn').onclick=interact;
   $('touch-action').onclick=()=>{if(busy&&engine.battle){skipBattlePlayback();return;}if(engine.battle?.result)finishBattle();else interact();};
   $('touch-menu').onclick=showMenu;
@@ -8374,9 +8410,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   $('sound-btn').onclick=()=>{settings.sound=!settings.sound;sound.setEnabled(settings.sound);saveSettings();updateSound();};
   $('fullscreen-btn').onclick=async()=>{if(LT.DesktopScreen&&document.documentElement.classList.contains('desktop-fit'))return LT.DesktopScreen.toggle();try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('このブラウザでは全画面に対応していません。');}catch(_){toast('この環境では全画面を開始できません。');}};
   $('modal-close').onclick=closeModal;
-  $('modal').addEventListener('cancel',e=>{if(activePane==='shop-confirm'){e.preventDefault();returnToShop();}else if(activePane==='battle-switch-confirm'){e.preventDefault();closeModal();}});
+  $('modal').addEventListener('cancel',e=>{if(activePane==='shop-confirm'){e.preventDefault();returnToShop();}else if(activePane==='battle-switch-confirm'){e.preventDefault();closeModal();}else if(activePane==='about'){e.preventDefault();closeModal();}});
   $('modal').addEventListener('click',e=>{if(e.target===$('modal')){const r=$('modal').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeModal();}});
-  $('modal').addEventListener('close',()=>{const switchChoice=activePane==='battle-switch-confirm'?battleSwitchConfirmation:null;battleSwitchConfirmation=null;if(activePane==='music'||activePane==='records')sound.preview(null);if(endingActive){endingActive=false;updateScene();}pressedDirection=null;activePane='';restoreBattleSwitchSelection(switchChoice);});
+  $('modal').addEventListener('close',()=>{if($('modal').open)return;const closedAbout=restoreAboutGame(),switchChoice=activePane==='battle-switch-confirm'?battleSwitchConfirmation:null;battleSwitchConfirmation=null;if(activePane==='music'||activePane==='records')sound.preview(null);if(endingActive){endingActive=false;updateScene();}pressedDirection=null;activePane='';restoreBattleSwitchSelection(switchChoice);if(closedAbout)focusAboutDiscover();});
   $('import-input').onchange=e=>{importSave(e.target.files[0]);e.target.value='';};
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b || b.disabled)return;
@@ -10457,6 +10493,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="online-invites.js?v=20261118-easy-connect-v37"></script>
 <script src="mobile-screen.js?v=20261120-fit-seo-evolution-v68"></script>
 <script src="desktop-screen.js?v=20261120-fit-seo-evolution-v68"></script>
-<link rel="stylesheet" href="responsive-fit.css?v=20261120-fit-seo-evolution-v68b">
+<link rel="stylesheet" href="responsive-fit.css?v=20261120-max-title-v69">
 </body>
 </html>
