@@ -1,4 +1,4 @@
-/* v73: full-size handheld controls with visible START and SELECT button faces. */
+/* v81: handheld controls and a compact desktop toolbar in both fit modes. */
 html.viewport-fit body.is-playing{--fit-topbar:48px}
 html.viewport-fit body.is-playing .topbar{padding-top:2px;padding-bottom:2px}
 html.viewport-fit body.is-playing .top-actions .icon-btn{width:44px;min-width:44px;height:44px;min-height:44px;padding:8px}
@@ -11,6 +11,7 @@ html.viewport-fit body.is-playing:not(.in-battle){
   --control-button:68px;
   --control-deck:200px;
 }
+
 html.viewport-fit body.is-playing:not(.in-battle) .console-body{
   grid-template-columns:minmax(0,1fr);
   grid-template-rows:minmax(0,1fr) var(--control-deck);
@@ -559,4 +560,88 @@ html.viewport-fit body.is-playing:not(.in-battle) .console-pill:focus-visible{ou
     html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list .party-stats{gap:3px;font-size:9px}
     html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .journal #party-list .party-stats>span{font-size:9px}
   }
+}
+
+/* A desktop uses its keyboard/mouse without reserving a handheld-sized deck.
+   Match the live device classifier so phones and touch tablets keep their
+   established controls and bottom party. These rules also supersede the old
+   expanded-mode dimensions, including its empty battle control row. */
+html.viewport-fit:root:not(.mobile-screen) body.is-playing{--fit-topbar:52px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing #app{grid-template-rows:var(--fit-topbar) minmax(0,1fr)}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing .topbar{height:var(--fit-topbar);min-height:0;padding:2px 9px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing .top-actions .icon-btn{width:44px;min-width:44px;height:44px;min-height:44px;padding:8px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing .console-screen{padding:44px 5px 5px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing.in-battle .console-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);grid-template-areas:"screen";gap:0;padding:4px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing.in-battle .touch-controls{display:none}
+
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle){--control-cell:36px;--control-button:52px;--control-deck:116px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-body{
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) var(--control-deck);
+  grid-template-areas:"screen" "controls";
+  gap:4px;
+  padding:4px;
+}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-screen{grid-area:screen}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .touch-controls{
+  display:grid;
+  grid-area:controls;
+  grid-template-columns:calc(var(--control-cell) * 3) minmax(64px,1fr) minmax(176px,1.4fr) minmax(64px,1fr) calc(var(--control-button) * 2 + 12px);
+  grid-template-rows:minmax(0,1fr);
+  grid-template-areas:"dpad lsh sys rsh ab";
+  gap:8px;
+  width:100%;
+  max-width:900px;
+  height:100%;
+  padding:4px 6px;
+}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .dpad{
+  justify-self:center;
+  width:calc(var(--control-cell) * 3);
+  min-width:calc(var(--control-cell) * 3);
+  height:calc(var(--control-cell) * 3);
+  min-height:calc(var(--control-cell) * 3);
+  grid-template-columns:repeat(3,var(--control-cell));
+  grid-template-rows:repeat(3,var(--control-cell));
+}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .dpad button{width:var(--control-cell);min-width:var(--control-cell);height:var(--control-cell);min-height:var(--control-cell)}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .dpad svg{width:20px;height:20px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder{justify-self:center;flex-direction:row;gap:6px;width:100%;max-width:96px;height:44px;min-height:44px;padding:4px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder-l{grid-area:lsh}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder-r{grid-area:rsh}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-system{gap:8px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-pill{flex:0 1 96px;width:96px;min-width:72px;height:48px;min-height:44px;gap:3px;padding:4px 2px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .touch-commands{justify-self:center;gap:12px;width:calc(var(--control-button) * 2 + 12px)}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) :is(.touch-b,.touch-action){width:var(--control-button);height:calc(var(--control-button) + 24px);gap:6px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .touch-b{margin-top:16px}
+html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) :is(.touch-b,.touch-action)>span{width:var(--control-button);height:var(--control-button);font-size:24px!important}
+
+@media(any-pointer:coarse){
+  /* Large touch PCs retain full finger targets; the tablet classifier above
+     already excludes ordinary phones and tablets from every desktop rule. */
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle){--control-cell:44px;--control-button:60px;--control-deck:140px}
+}
+@media(orientation:landscape) and (max-height:400px){
+  /* Very short desktop windows give the canvas its full height between two
+     compact control columns instead of spending it on a bottom toolbar. */
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-body{
+    grid-template-columns:calc(var(--control-cell) * 3) minmax(0,1fr) calc(var(--control-button) * 2 + 12px);
+    grid-template-rows:minmax(calc(var(--control-cell) * 3),1fr) 48px;
+    grid-template-areas:"dpad screen ab" "lsh screen sys";
+    gap:4px;
+    padding:3px;
+  }
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .touch-controls{display:contents}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-screen{grid-area:screen}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder{grid-area:lsh;flex-direction:column;gap:2px;width:calc((var(--control-cell) * 3 - 4px) / 2);max-width:none;padding:2px}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder-l{justify-self:start}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-shoulder-r{justify-self:end}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-system{gap:4px}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-pill{flex:1 1 0;width:auto;min-width:44px;padding:3px 0}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-pill>span{font-size:12px}
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing:not(.in-battle) .console-pill small{font-size:12px}
+}
+@media(orientation:landscape) and (max-height:360px){
+  /* This existing short-battle layout puts its palette button in the header. */
+  html.viewport-fit:root:not(.mobile-screen) body.is-playing.in-battle .console-screen{padding-top:4px}
 }
