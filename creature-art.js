@@ -65,7 +65,9 @@
     pearlmi:{file:'assets/original-pearl-line-v67.png',row:0,rows:3,stage:0,nativeSize:[1199,1312],front:[0,0,599,385],back:[599,0,600,385],frontDirection:-1,backDirection:1},
     pearlgoa:{file:'assets/original-pearl-line-v67.png',row:1,rows:3,stage:1,nativeSize:[1199,1312],front:[0,385,599,330],back:[599,385,600,330],frontDirection:-1,backDirection:1},
     pearlseria:{file:'assets/original-pearl-line-v67.png',row:2,rows:3,stage:2,nativeSize:[1199,1312],front:[0,715,599,597],back:[599,715,600,597],frontDirection:-1,backDirection:1},
-    galdoras:{file:'assets/galdoras-user-v70.png',row:0,rows:1,stage:0},
+    galdo:{file:'assets/galdo-user-v71.png',row:0,rows:1,stage:0,frontDirection:-1,backDirection:1},
+    galdoran:{file:'assets/galdoran-user-v71.png',row:0,rows:1,stage:1},
+    galdoras:{file:'assets/galdoras-user-v70.png',row:0,rows:1,stage:2},
     futo:{file:'assets/original-futo-v67.png',row:0,rows:1,stage:0,frontDirection:-1,backDirection:1}
   });
   for(const entry of Object.values(revisedArt)){for(const value of Object.values(entry))if(Array.isArray(value))Object.freeze(value);Object.freeze(entry);}

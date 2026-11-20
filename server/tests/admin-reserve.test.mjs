@@ -186,3 +186,18 @@ test('previously registered v69 admin parties are read as Galdoras without delet
     assert.equal(result.updatedAt,12345);assert.equal(h.env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(actors[role].id).party_json,stored,'Read-time normalization preserves the historical record');
   }
 });
+
+
+test('the new owned earlier forms can be registered independently but cannot impersonate the final-form entitlement',async()=>{
+  const h=setup(),actors=await h.actors(),LT=createReplayRuntime(),engine=new LT.Engine();
+  const party=['galdo','galdoran'].map((species,index)=>{const mon=engine.makeMonster(species,100);mon.uid='lineage-stage-'+index;mon.nickname='初期'+index;mon.moveOrder=[3,1,0,2];mon.pp.galdoras_crown=1;return mon;});
+  const accepted=await h.call('/world/kasai/party',actors.main,'POST',{party});assert.equal(accepted.status,200,JSON.stringify(accepted));
+  assert.deepEqual(accepted.party,party,'Registering owned forms does not automatically evolve them');
+  const member=expectedAddition(actors.main.id,'main').members[0];
+  for(const species of ['galdo','galdoran']){
+    const forged=partyFor(expectedAddition(actors.main.id,'main'))[0];forged.species=species;forged.hp=1;forged.grantId=member.grantId;
+    assert.equal((await h.call('/world/kasai/party',actors.main,'POST',{party:[forged]})).status,400);
+    assert.deepEqual((await h.call('/world/kasai/party',actors.main)).party,party);
+  }
+  assert.deepEqual((await h.call('/me',actors.main)).adminReserveAddition,expectedAddition(actors.main.id,'main'));
+});

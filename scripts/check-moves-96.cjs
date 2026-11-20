@@ -49,7 +49,7 @@ for (const s of Object.values(D.species)) {
   for (const id of s.moves) { assert(M[id], `${s.id}: ${id}`); uses.set(id, uses.get(id) + 1); }
 }
 for (const [id, n] of uses) assert(n > 0, `${id} is learned by no monster`);
-for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['galdoras']);
+for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['galdo', 'galdoran', 'galdoras']);
 assert.deepEqual(copy(D.signatureMoves), { sig_leaf: 'komorizen', sig_tide: 'shizunaria', sig_ember: 'akehomura' });
 for (const [move, owner] of Object.entries(D.signatureMoves)) {
   assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(move)).map(s => s.id), [owner]);

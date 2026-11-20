@@ -13,10 +13,10 @@ const {LT}=context,{DATA:D,Engine}=LT,copy=value=>JSON.parse(JSON.stringify(valu
 const ids=['nullmie','nullva','zeroveil'],names=['ヌルミィ','ヌルヴァ','ゼロヴェイル'];
 assert.deepEqual(copy(D.glitchLine),{ids,starter:'nullmie',level:5});
 assert.equal(D.elements.void.name,'無');assert.equal(D.elements.void.strongAgainst,null);assert.equal(D.elements.void.weakAgainst,null);
-assert.equal(D.content.totalSpecies,256);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,12);assert.equal(D.content.playableSpecies,268);
+assert.equal(D.content.totalSpecies,256);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.hiddenSpecies,14);assert.equal(D.content.playableSpecies,270);
 assert.equal(D.content.species,254);assert.equal(D.content.specialSpecies,2);
 assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
-assert.equal(Object.keys(D.species).length,268);assert.equal(Object.keys(D.moves).length,104);
+assert.equal(Object.keys(D.species).length,270);assert.equal(Object.keys(D.moves).length,104);
 assert.equal(Object.values(D.moves).filter(move=>!move.hiddenDex).length,96);assert.equal(D.content.moves,96);
 const dedicated=['null_restore','null_curse','null_ray','null_scorch'];
 assert.deepEqual(copy(D.hiddenMoves),dedicated);assert.equal(D.content.hiddenMoves,8);assert.equal(D.content.totalMoves,104);
@@ -65,4 +65,4 @@ const old=new Engine();old.newGame('komori');assert.doesNotThrow(()=>new Engine(
 const delayed=e.makeMonster('nullmie',100);delayed.heldItem='everpebble';e.state.storage.push(delayed);
 e.giveXP(delayed,1,[]);assert.equal(delayed.species,'nullmie');
 delete delayed.heldItem;e.giveXP(delayed,1,[]);assert.equal(delayed.species,'zeroveil');assert.equal(delayed.level,100);assert.equal(delayed.xp,0);
-console.log(JSON.stringify({ok:true,hiddenSpecies:ids,dexSpecies:256,playableSpecies:268,publicMoves:96,hiddenMoves:8,totalMoves:104,evolutionLevels:[24,48],coverage:'void metadata, fixed hidden moves, no ordinary acquisition, no exchange, evolution identity and PP, allocation, save round-trip, everstone and level cap'}));
+console.log(JSON.stringify({ok:true,hiddenSpecies:ids,dexSpecies:256,playableSpecies:270,publicMoves:96,hiddenMoves:8,totalMoves:104,evolutionLevels:[24,48],coverage:'void metadata, fixed hidden moves, no ordinary acquisition, no exchange, evolution identity and PP, allocation, save round-trip, everstone and level cap'}));

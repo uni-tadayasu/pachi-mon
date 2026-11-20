@@ -8,8 +8,8 @@ for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
 }
 const {Engine,DATA:D}=context.LT,copy=x=>JSON.parse(JSON.stringify(x));
 const expected=[['komori','komorion','komorizen'],['shizuku','shizurua','shizunaria'],['hibana','akebino','akehomura']];
-assert.equal(Object.keys(D.species).length,268);assert.equal(Object.values(D.species).filter(species=>!species.hiddenDex).length,256);assert.equal(Object.values(D.species).filter(species=>species.hiddenDex).length,12);
-assert.equal(D.content.species,254);assert.equal(D.content.specialSpecies,2);assert.equal(D.content.totalSpecies,256);assert.equal(D.content.hiddenSpecies,12);assert.equal(D.content.playableSpecies,268);
+assert.equal(Object.keys(D.species).length,270);assert.equal(Object.values(D.species).filter(species=>!species.hiddenDex).length,256);assert.equal(Object.values(D.species).filter(species=>species.hiddenDex).length,14);
+assert.equal(D.content.species,254);assert.equal(D.content.specialSpecies,2);assert.equal(D.content.totalSpecies,256);assert.equal(D.content.hiddenSpecies,14);assert.equal(D.content.playableSpecies,270);
 const before=JSON.stringify(D);
 function setup(root,level){const e=new Engine();assert(e.newGame(root).ok);e.state.party=[e.makeMonster(root,level)];e.state.party[0].nickname='きらり';e.state.party[0].shiny=true;e.battle={log:[]};return e;}
 function grant(e,amount){const events=[];e.giveXP(e.state.party[0],amount,events);return events;}
@@ -47,5 +47,5 @@ for(const [id,s]of Object.entries(D.species)){
   const visited=new Set([id]);let next=s,edges=0;while(next.evolvesTo){assert(!visited.has(next.evolvesTo),'No evolution cycles');visited.add(next.evolvesTo);next=D.species[next.evolvesTo];edges++;assert(edges<=2,'No species evolves more than twice');}
   if(!childIds.has(id)){families[edges]++;if(!D.offDexLines.ids.includes(id)&&!D.offDexLeaders.ids.includes(id))legacyFamilies[edges]++;}
 }
-assert.deepEqual(families,{0:45,1:38,2:49});assert.deepEqual(legacyFamilies,{0:44,1:37,2:47},'All pre-existing evolution families keep their lengths');assert.equal(JSON.stringify(D),before,'Gameplay never mutates the evolution catalog');
-console.log(JSON.stringify({ok:true,starters:expected,levels:[8,32],species:268,publicSpecies:256,hiddenSpecies:12,ordinarySpecies:254,families,checks:['thresholds','old saves/high-level captures catch up on next XP','Lv100','nickname and shiny persistence','HP/PP integrity','no Futo evolution','cycle-free mixed evolution lengths']}));
+assert.deepEqual(families,{0:44,1:38,2:50});assert.deepEqual(legacyFamilies,{0:44,1:37,2:47},'All pre-existing evolution families keep their lengths');assert.equal(JSON.stringify(D),before,'Gameplay never mutates the evolution catalog');
+console.log(JSON.stringify({ok:true,starters:expected,levels:[8,32],species:270,publicSpecies:256,hiddenSpecies:14,ordinarySpecies:254,families,checks:['thresholds','old saves/high-level captures catch up on next XP','Lv100','nickname and shiny persistence','HP/PP integrity','no Futo evolution','cycle-free mixed evolution lengths']}));

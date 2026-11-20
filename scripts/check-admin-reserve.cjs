@@ -318,3 +318,17 @@ test('changing the historical entitlement prefix or final species ID cannot crea
     assert.throws(()=>rules.normalizeBundle(grant));assert.equal(engine.receiveAdminReserveTeam(grant).ok,false);assert.deepEqual(copy(engine.state),before);
   }
 });
+
+
+test('the new earlier forms cannot reuse the final-form gift and all three role entitlements stay Galdoras',()=>{
+  for(const role of Object.keys(roles)){
+    const engine=fresh(),grant=addition(role);assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
+    const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'galdoras');
+    const events=[];engine.giveXP(final,1,events);assert.deepEqual(copy(final),before);assert(!events.some(event=>event.kind==='evolve'));
+    for(const species of ['galdo','galdoran']){
+      const invalid=copy(grant);invalid.members[0].species=species;assert.throws(()=>rules.normalizeBundle(invalid));
+      const raw=engine.serialize();raw.storage[0].species=species;raw.storage[0].hp=1;assert.throws(()=>new Engine(raw));
+    }
+    assert.equal(engine.allocationInfo(final).free,297);assert.equal(final.heldItem,'trainband');assert.equal(final.gender,'male');
+  }
+});

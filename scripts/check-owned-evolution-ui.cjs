@@ -13,11 +13,11 @@ function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,sta
 const source=[section('  function partyDepositReason(','  const HELD_ITEMS='),
   section('  function findOwned(','  function showNickname(')].join('\n');
 const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-function ui(destination='party',level=100){
-  const e=new Engine();assert(e.newGame('komori').ok);const mon=e.makeMonster('galdoras',level);
+function ui(destination='party',level=100,species='galdoras'){
+  const e=new Engine();assert(e.newGame('komori').ok);const mon=e.makeMonster(species,level);
   Object.assign(mon,{nickname:'<A>',gender:'male',shiny:true,heldItem:'trainband',bonusPoints:99,
     alloc:{hp:31,atk:62},moveOrder:[3,0,2,1],xp:level===100?0:13});
-  mon.hp=Math.round(e.stats(mon).hp*.4);mon.pp.galdoras_crown=0;e.state[destination].push(mon);e.markCaught('galdoras');
+  mon.hp=Math.round(e.stats(mon).hp*.4);mon.pp.galdoras_crown=0;e.state[destination].push(mon);e.markCaught(species);
   const elements=new Map(),c=vm.createContext({Engine,DATA,HELD_ITEMS:DATA.heldItems,LT:{...model.LT,onlineActive:false,localTradeActive:false},
     engine:e,uid:mon.uid,playing:true,busy:false,tradeLock:false,storedSave:{previous:true},lastSave:7,moveAnim:null,
     SAVE_KEY:'evolution-save',writes:[],attempts:0,updates:0,toasts:[],sounds:[],storageFails:false,
@@ -69,4 +69,17 @@ test('ordinary species keep their existing evolution notice and the removed acti
   assert(c.modal.markup.includes('新しい姿に進化します'));assert(!c.elements.has('owned-evolution-open'));
   for(const name of ['ownedEvolutionPanel','bindOwnedEvolution','persistOwnedEvolution','showOwnedEvolution'])assert(!html.includes('function '+name+'('));
   assert.equal(Engine.prototype.evolveOwned,undefined);assert.equal(DATA.species.galdoras.evolvesTo,undefined);
+});
+
+
+test('the two earlier forms explain their next growth stage in party and reserve without adding a manual mutation',()=>{
+  for(const destination of ['party','storage'])for(const species of ['galdo','galdoran'])for(const level of [1,23,24,47,48,100]){
+    const c=ui(destination,level,species),before=copy(c.engine.state),data=DATA.species[species];details(c);
+    assert(c.modal.markup.includes('data-creature="'+species+'"'));assert(c.modal.markup.includes('Lv.'+data.evolveLevel));
+    assert(c.modal.markup.includes(DATA.species[data.evolvesTo].name));assert(!c.modal.markup.includes('ガルドグラン'));
+    assert(!c.elements.has('owned-evolution-open'));assert.equal(c.attempts,0);assert.deepEqual(copy(c.engine.state),before);
+    if(level>=data.evolveLevel){assert(c.modal.markup.includes('次のバトルで経験値'));assert(c.modal.markup.includes('Lv.100でも進化'));assert(c.modal.markup.includes('パーティーに迎え'));}
+    else assert(!c.modal.markup.includes('進化できるレベルに達しています'));
+    owned(c).heldItem='everpebble';details(c);assert(c.modal.markup.includes('とどまりの小石'));assert(!c.modal.markup.includes('次のバトルで経験値'));
+  }
 });

@@ -93,8 +93,8 @@ function fire(type, init) {
   for (const url of retired) assert.equal(await caches.match(BASE+'assets/'+url),undefined,`retired ${url} must be removed`);
   assert.equal(await (await art.match(currentFuto)).text(),'current-futo','current thumbnail survives cleanup');
   for (const url of offline.core) assert(await art.match(BASE+url),'unrelated cached art survives cleanup');
-  const revised=offline.files.filter(f=>/assets\/(?:original-.*-v67|galdoras-user-v70)\.png$/.test(f.url));
-  assert.equal(revised.length,5,'all five revised atlases are available offline');
+  const revised=offline.files.filter(f=>/assets\/(?:original-.*-v67|galdoras-user-v70|(?:galdo|galdoran)-user-v71)\.png$/.test(f.url));
+  assert.equal(revised.length,7,'all seven revised atlases are available offline');
   assert(revised.every(f=>offline.core.includes(f.url)),'revised designs are installed with core art');
   assert(!offline.files.some(f=>retired.some(url=>f.url.split('?')[0]==='assets/'+url.split('?')[0])),'offline downloads exclude retired portraits');
 

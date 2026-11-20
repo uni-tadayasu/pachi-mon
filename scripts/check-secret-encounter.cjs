@@ -6,14 +6,14 @@ for(const s of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/\bs
 const {Engine,DATA:D}=ctx.LT,owner={id:'P1234567890abcdef',isAdmin:true},copy=v=>JSON.parse(JSON.stringify(v));
 const {eligible:tradeEligible}=require('../trade-client.js');
 const make=()=>{const e=new Engine();assert(e.newGame('komori','female','みどり').ok);e.rng=()=>.999999999;return e;};
-const all=Object.keys(D.species),hidden=all.filter(id=>D.species[id].hiddenDex),nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,268);assert.equal(hidden.length,12);
+const all=Object.keys(D.species),hidden=all.filter(id=>D.species[id].hiddenDex),nullMoves=['null_restore','null_curse','null_ray','null_scorch'];assert.equal(all.length,270);assert.equal(hidden.length,14);
 for(const id of D.glitchLine.ids)assert.deepEqual(copy(D.species[id].moves),nullMoves);
 const genderless=[...D.genderless],gendered=[...D.starters,...hidden.filter(id=>!genderless.includes(id))];
 function assertCapturedGender(engine,mon,gender,enemyUID){
  assert.notEqual(mon.uid,enemyUID,'Capture assigns a new individual ID');assert.equal(engine.genderOf(mon),gender,'The displayed encounter gender survives capture');
  assert.equal(mon.gender,gender==='none'?undefined:gender,'Captured gender is explicit unless the species is genderless');
 }
-// The operator selector covers every species, including all twelve off-dex
+// The operator selector covers every species, including all fourteen off-dex
 // forms. One capsule captures exactly the chosen form and level.
 for(const [i,id] of all.entries()){
  const e=make(),level=i%2?100:1;e.state.inventory.chime=0;
@@ -218,7 +218,7 @@ function ui(){
 async function main(){
  const settle=()=>new Promise(resolve=>setImmediate(resolve));
  let u=ui();for(let n=0;n<6;n++)u.tap();await settle();assert.equal(u.authCalls,0);assert.equal(u.dialog,null);
- u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,268);
+ u.tap();await settle();assert.equal(u.authCalls,1);assert(u.dialog.open);assert.equal(u.dialog.querySelector('#secret-species').children.length,270);
  const choices=u.dialog.querySelector('#secret-species').children;assert.deepEqual(choices.map(option=>option.value).sort(),all.slice().sort());
  let genderSelect=u.dialog.querySelector('#secret-gender');assert.deepEqual(genderSelect.options.map(option=>[option.value,option.textContent]),[['auto','おまかせ'],['male','オス ♂'],['female','メス ♀']]);assert.equal(genderSelect.value,'auto');assert.equal(genderSelect.disabled,false);
  for(const id of hidden){const option=choices.find(option=>option.value===id);assert(option);assert(option.textContent.includes('図鑑外'),'Off-dex operator choices are clearly labelled');assert(option.textContent.includes(ctx.LT.TypeSystem.of(id).map(type=>D.elements[type].name).join('・')),'Both types are displayed in the selector');}
@@ -259,17 +259,18 @@ async function main(){
  // Direct admin-menu access shares the seven-tap path's authorization. Search
  // includes types/tags, normalizes kana, and never triggers a wild battle.
  u=ui();await u.open();assert.equal(u.authCalls,1);assert(u.dialog.open);
- assert.equal(u.dialog.querySelector('#secret-count').textContent,'268種を表示 / 全268種');
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'270種を表示 / 全270種');
  assert.equal(u.dialog.querySelector('#secret-species').children[0].value,'galdoras','The new leader heads the operator picker');
  assert(u.dialog.querySelector('#secret-species').children[0].textContent.includes('筆頭'));
- assert.deepEqual(u.search('石').map(option=>option.value),['galdoras']);
+ assert.deepEqual(u.search('石').map(option=>option.value),['galdoras','galdo','galdoran']);
  assert.deepEqual(u.search('がるどらす').map(option=>option.value),['galdoras']);
+ assert.deepEqual(u.search('がるどらん').map(option=>option.value),['galdoran']);
  assert.deepEqual(u.search('がるどぐらん').map(option=>option.value),[]);
  assert.deepEqual(u.search('筆頭').map(option=>option.value),['galdoras']);
  assert.deepEqual(u.search('きらしーど').map(option=>option.value),['floravelle']);
  assert.deepEqual(u.search('ﾌｰﾄ').map(option=>option.value),['futo']);
  assert.deepEqual(u.search('図鑑外').map(option=>option.value).sort(),hidden.slice().sort());
- assert.equal(u.dialog.querySelector('#secret-count').textContent,'12種を表示 / 全268種');
+ assert.equal(u.dialog.querySelector('#secret-count').textContent,'14種を表示 / 全270種');
  assert.equal(u.authCalls,1);assert.equal(u.startCalls.length,0);
  const ice=u.search('氷').map(option=>option.value);
  assert(ice.length>0);assert(ice.every(id=>ctx.LT.TypeSystem.of(id).some(type=>D.elements[type].name==='氷')));
@@ -289,6 +290,6 @@ async function main(){
   assert.equal(u.authCalls,3);assert.equal(u.startCalls.length,1);assert.equal(u.startCalls[0][0],futureId);
  }finally{delete D.species[futureId];}
  u=ui();u.admin=false;await u.open();assert.equal(u.authCalls,1);assert.equal(u.dialog,null);assert.equal(u.startCalls.length,0);
- console.log('Secret encounter checks passed: all 268 species capture/save; every off-dex form, shiny/gender/level/capacity behavior and special receipt rules; current operator authorization on every open/submit; searchable complete catalogue with kana/type/tag matching, empty-result guards, random selection, and future hidden species without an ID allowlist.');
+ console.log('Secret encounter checks passed: all 270 species capture/save; every off-dex form, shiny/gender/level/capacity behavior and special receipt rules; current operator authorization on every open/submit; searchable complete catalogue with kana/type/tag matching, empty-result guards, random selection, and future hidden species without an ID allowlist.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
