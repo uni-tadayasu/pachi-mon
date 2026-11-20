@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* 96 public moves: 75 across eight types, 6 neutral, 12 special, 3 starter signatures.
- * Four hidden moves belong only to the off-dex Null lineage.
+ * The Null lineage and the standalone stone leader each keep four hidden moves.
  * Every move is learned by someone; old saves, trades with the exchange
  * server and saved Futo settings keep working. */
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
@@ -17,9 +17,11 @@ const copy = value => JSON.parse(JSON.stringify(value));
 
 // ── Roster shape.
 const publicMoves = Object.values(M).filter(move => !move.hiddenDex), hiddenMoves = Object.values(M).filter(move => move.hiddenDex);
-assert.equal(Object.keys(M).length, 100); assert.equal(publicMoves.length, 96); assert.equal(hiddenMoves.length, 4);
-assert.equal(D.content.moves, 96); assert.equal(D.moveRoster.total, 96); assert.equal(D.content.hiddenMoves, 4); assert.equal(D.content.totalMoves, 100);
-assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch']);
+assert.equal(Object.keys(M).length, 104); assert.equal(publicMoves.length, 96); assert.equal(hiddenMoves.length, 8);
+assert.equal(D.content.moves, 96); assert.equal(D.moveRoster.total, 96); assert.equal(D.content.hiddenMoves, 8); assert.equal(D.content.totalMoves, 104);
+assert.deepEqual(hiddenMoves.map(move => move.id), ['null_restore', 'null_curse', 'null_ray', 'null_scorch', 'galdoras_crown', 'galdoras_fault', 'galdoras_bastion', 'galdoras_mend']);
+assert.deepEqual(copy(D.hiddenMoves), ['null_restore', 'null_curse', 'null_ray', 'null_scorch'], 'The Null-line compatibility contract stays at four moves');
+assert.deepEqual(copy(D.allHiddenMoves), hiddenMoves.map(move => move.id));
 const byElement = {}; for (const m of publicMoves) { const key = m.role === 'special' ? 'special' : m.role === 'signature' ? 'signature' : m.element || 'neutral'; byElement[key] = (byElement[key] || 0) + 1; }
 assert.deepEqual(byElement, { leaf: 14, tide: 13, ember: 15, wind: 10, crystal: 11, thunder: 4, ice: 4, earth: 4, neutral: 6, special: 12, signature: 3 });
 assert.equal(D.moveRoster.perElement, null, 'The reclassified roster no longer claims a uniform type count');
@@ -47,7 +49,7 @@ for (const s of Object.values(D.species)) {
   for (const id of s.moves) { assert(M[id], `${s.id}: ${id}`); uses.set(id, uses.get(id) + 1); }
 }
 for (const [id, n] of uses) assert(n > 0, `${id} is learned by no monster`);
-for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), ['nullmie', 'nullva', 'zeroveil']);
+for (const m of hiddenMoves) assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(m.id)).map(s => s.id).sort(), D.hiddenMoves.includes(m.id) ? ['nullmie', 'nullva', 'zeroveil'] : ['galdoras']);
 assert.deepEqual(copy(D.signatureMoves), { sig_leaf: 'komorizen', sig_tide: 'shizunaria', sig_ember: 'akehomura' });
 for (const [move, owner] of Object.entries(D.signatureMoves)) {
   assert.deepEqual(Object.values(D.species).filter(s => s.moves.includes(move)).map(s => s.id), [owner]);
@@ -119,10 +121,10 @@ for (const m of hiddenMoves) assert.throws(() => LT.normalizeFutoMoves(['prism',
 // Every move the admin can pick for Futo is still accepted by the exchange server.
 const accepted = new Set([...server.match(/const DEFAULT_MOVES = (\[.*?\]);/)[1].match(/'([^']+)'/g).map(x => x.slice(1, -1)),
   ...server.match(/const BASIC_MOVES = '([^']+)'/)[1].split(' '), ...['leaf', 'tide', 'ember', 'wind', 'crystal'].flatMap(t => Array.from({ length: 12 }, (_, i) => `atlas_${t}_${i + 1}`))]);
-const exclusive = new Set([...D.species.arvelion.moves, ...D.species.floravelle.moves, ...Object.keys(D.signatureMoves), ...D.hiddenMoves]);
+const exclusive = new Set([...D.species.arvelion.moves, ...D.species.floravelle.moves, ...Object.keys(D.signatureMoves), ...D.allHiddenMoves]);
 for (const id of Object.keys(M).filter(id => !exclusive.has(id))) assert(accepted.has(id), `${id} must be accepted by the current server for Futo`);
 
 // ── Online: rental teams fight with the new movesets.
 const duel = LT.Duel?.create?.({ mode: 'single', teams: [['komori', 'fuwari', 'kirari'], ['hibana', 'shizuku', 'glint' in M ? 'komorion' : 'komorion']], seed: 3 });
 if (duel) assert.deepEqual(copy(duel.moves(duel.state.teams[0].monsters[0]).map(m => m.id)), copy(D.species.komori.moves));
-console.log(JSON.stringify({ ok: true, publicMoves: 96, hiddenMoves: 4, totalMoves: 100, byElement: D.moveRoster.byElement, neutral: 6, special: 12, signature: 3, retired: 19, tradable }));
+console.log(JSON.stringify({ ok: true, publicMoves: 96, hiddenMoves: 8, totalMoves: 104, byElement: D.moveRoster.byElement, neutral: 6, special: 12, signature: 3, retired: 19, tradable }));

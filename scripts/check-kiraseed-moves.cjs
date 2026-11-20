@@ -43,7 +43,7 @@ test('Kiraseed keeps four exclusive slots and PP with its physical, poisonous, l
  assert.deepEqual(copy(D.species[SPECIES].moves),IDS);
  IDS.forEach((id,index)=>{const m=D.moves[id];assert.deepEqual([m.name,m.kind,m.category,m.power,m.accuracy,m.pp,m.effect],expected[index]);assert.equal(m.element,'leaf');assert.equal(m.role,'special');assert.equal(m.alwaysHits===true,index===1);assert.deepEqual(Object.values(D.species).filter(s=>s.moves.includes(id)).map(s=>s.id),[SPECIES]);});
  assert.deepEqual(Object.values(D.moves).filter(m=>m.alwaysHits).map(m=>m.id),['forest_crown'],'Only the requested poison technique bypasses accuracy');
- assert.equal(D.content.moves,96);assert.equal(D.content.hiddenMoves,4);assert.equal(Object.keys(D.moves).length,100);
+ assert.equal(D.content.moves,96);assert.equal(D.content.hiddenMoves,8);assert.equal(Object.keys(D.moves).length,104);
  assert.deepEqual(copy(D.species[SPECIES].base),{hp:76,atk:42,def:42,spAtk:22,spDef:42,speed:10,accuracy:103,evasion:102});
  const e=hero();for(const level of [50,100]){
   const stats=e.stats(e.makeMonster(SPECIES,level)),legend=e.stats(e.makeMonster('arvelion',level));

@@ -89,6 +89,8 @@
  * v63: the common battle recording loops the supplied track's first 125 seconds;
  *   the versioned audio URL refreshes old full-length offline downloads.
  * v64: restorable Lv.100 trained reserve teams for all three operator roles.
+ * v65: Stone type and off-dex leader Galdoras, separate supplied front/authored
+ *   rear portraits, dedicated moves, shared battle rules and owned online roster.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';

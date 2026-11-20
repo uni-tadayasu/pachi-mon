@@ -18,29 +18,34 @@ function runtime(){
   return {context,LT:context.LT,close(){for(const timer of timers)clearTimeout(timer);}};
 }
 const env=runtime(),{LT}=env,{DATA:D,TypeSystem:T,Engine,Duel}=LT;
-const ORDER=['leaf','tide','ember','wind','crystal','thunder','ice','earth','void'];
+const ORDER=['leaf','tide','ember','wind','crystal','thunder','ice','earth','stone','void'];
 const EXPECTED=[
-  [.8,1.5,.7,1,1,1,.7,1.5,1],
-  [.7,.8,1.5,1,1,.7,1,1.5,1],
-  [1.5,.7,.8,1,1,1,1.5,.7,1],
-  [1,1,1,.8,1.5,.7,1.5,1,1],
-  [1,1,1,1.5,.8,1.5,.7,1,1],
-  [1,1.5,1,1.5,.7,.8,1,.7,1],
-  [1.5,1,.7,.7,1.5,1,.8,1,1],
-  [.7,.7,1.5,1,1,1.5,1,.8,1],
-  [1,1,1,1,1,1,1,1,1]
+  [.8,1.5,.7,1,1,1,.7,1.5,1.5,1],
+  [.7,.8,1.5,1,1,.7,1,1.5,1.5,1],
+  [1.5,.7,.8,1,1,1,1.5,.7,1,1],
+  [1,1,1,.8,1.5,.7,1.5,1,.7,1],
+  [1,1,1,1.5,.8,1.5,.7,1,1,1],
+  [1,1.5,1,1.5,.7,.8,1,.7,1,1],
+  [1.5,1,.7,.7,1.5,1,.8,1,.7,1],
+  [.7,.7,1.5,1,1,1.5,1,.8,1,1],
+  [.7,.7,1,1.5,1,1,1.5,1,.8,1],
+  [1,1,1,1,1,1,1,1,1,1]
 ];
-assert.deepEqual(copy(T.order),ORDER);assert.equal(D.content.elements,8);assert.equal(Object.keys(D.elements).length,9);
-assert.deepEqual(['thunder','ice','earth'].map(type=>D.elements[type].name),['雷','氷','土']);
+assert.deepEqual(copy(T.order),ORDER);assert.equal(D.content.elements,9);assert.equal(Object.keys(D.elements).length,10);
+assert.deepEqual(['thunder','ice','earth','stone'].map(type=>D.elements[type].name),['雷','氷','土','石']);
 for(const [i,attack]of ORDER.entries())for(const [j,defense]of ORDER.entries()){
   assert.equal(T.chart[attack][defense],EXPECTED[i][j],`${attack} → ${defense}: declared chart`);
   assert.equal(T.effectiveness(attack,defense),EXPECTED[i][j]);
   assert.equal(new Engine().effectiveness(attack,defense),EXPECTED[i][j]);
 }
-for(const type of ORDER.filter(type=>type!=='void')){
-  assert.equal(ORDER.filter(defense=>T.chart[type][defense]===1.5).length,2,`${type}: uneven strengths`);
-  assert.equal(ORDER.filter(attack=>T.chart[attack][type]===1.5).length,2,`${type}: uneven weaknesses`);
+// Stone extends the chart without moving any of the original eight matchups.
+const legacyTypes=ORDER.filter(type=>!['void','stone'].includes(type));
+for(const type of legacyTypes){
+  assert.equal(legacyTypes.filter(defense=>T.chart[type][defense]===1.5).length,2,`${type}: old strengths changed`);
+  assert.equal(legacyTypes.filter(attack=>T.chart[attack][type]===1.5).length,2,`${type}: old weaknesses changed`);
 }
+assert.deepEqual(ORDER.filter(type=>T.chart.stone[type]===1.5),['wind','ice']);
+assert.deepEqual(ORDER.filter(type=>T.chart[type].stone===1.5),['leaf','tide']);
 assert(Object.isFrozen(T)&&Object.isFrozen(T.chart)&&ORDER.every(type=>Object.isFrozen(T.chart[type])));
 const typeCoverage=Object.fromEntries(ORDER.map(type=>[type,0]));let dualSpecies=0;
 for(const species of Object.values(D.species)){
@@ -168,7 +173,7 @@ delete D.species[actorId];delete D.species[targetId];
 
 // Compatibility includes secondary types and the numeric chart, so two clients
 // with different rules stop at the handshake instead of diverging during play.
-assert.equal(Duel.rules.version,10);assert.match(Duel.rules.types,/two-type-product/);
+assert.equal(Duel.rules.version,11);assert.match(Duel.rules.types,/two-type-product/);
 const initialFingerprint=Duel.rulesFingerprint(),original=D.species.komori;
 D.species.komori={...original,types:[original.element,original.element==='thunder'?'ice':'thunder']};
 assert.notEqual(Duel.rulesFingerprint(),initialFingerprint);D.species.komori=original;assert.equal(Duel.rulesFingerprint(),initialFingerprint);
@@ -183,6 +188,6 @@ async function handshake(remote){
 }
 async function main(){
   const remote=runtime();try{const s=remote.LT.DATA.species.komori;remote.LT.DATA.species.komori={...s,types:[s.element,s.element==='thunder'?'ice':'thunder']};await handshake(remote);}finally{remote.close();}
-  console.log(JSON.stringify({ok:true,publicTypes:8,hiddenTypes:1,dualSpecies,typeCoverage,legacyChartPreserved:true,balancedStrengths:2,balancedWeaknesses:2,battleCases,dualRange:[.49,2.25],bothTypeStab:true,secondaryStatusResistance:true,saveVersions:[1,2,3,4],saveIdentityAndPPPreserved:true,individualTypeSpoofRejected:true,adventureAndDuelAI:true,mismatchedTypeHandshakeRejected:true},null,2));
+  console.log(JSON.stringify({ok:true,publicTypes:9,hiddenTypes:1,dualSpecies,typeCoverage,legacyChartPreserved:true,legacyStrengths:2,legacyWeaknesses:2,stoneStrengths:['wind','ice'],stoneWeaknesses:['leaf','tide'],battleCases,dualRange:[.49,2.25],bothTypeStab:true,secondaryStatusResistance:true,saveVersions:[1,2,3,4],saveIdentityAndPPPreserved:true,individualTypeSpoofRejected:true,adventureAndDuelAI:true,mismatchedTypeHandshakeRejected:true},null,2));
 }
 main().catch(error=>{console.error(error.stack||error);process.exitCode=1;}).finally(()=>env.close());

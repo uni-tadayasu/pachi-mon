@@ -6,7 +6,7 @@
   const notify=message=>LT.adminBridge?.toast?.(message);
   // Use the live catalogue: ordinary, evolved, special and off-dex species all
   // belong here. New species do not require another private encounter list.
-  const allSpecies=()=>Object.values(LT.DATA.species);
+  const allSpecies=()=>Object.values(LT.DATA.species).sort((a,b)=>Number(!!b.hiddenLeader)-Number(!!a.hiddenLeader));
   const normalize=value=>String(value||'').normalize('NFKC').toLocaleLowerCase('ja').replace(/[ぁ-ゖ]/g,char=>String.fromCharCode(char.charCodeAt(0)+0x60));
   const isGenderless=species=>(LT.DATA.genderless||[]).includes(species);
   function speciesLabel(species){
@@ -15,6 +15,7 @@
     if(species.adminOnly||species.id==='futo')tags.push('運営専用');
     if(species.id===LT.DATA.legendary?.species)tags.push('伝説');
     if(species.hiddenDex)tags.push('図鑑外');
+    if(species.hiddenLeader)tags.push('筆頭');
     return species.name+' / '+types.map(type=>LT.DATA.elements[type]?.name||type).join('・')+(tags.length?'（'+tags.join('・')+'）':'');
   }
   function matchingSpecies(){

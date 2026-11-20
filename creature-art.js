@@ -51,7 +51,7 @@
     tortoise:'leaf',golem:'crystal',manta:'tide',whale:'tide',jelly:'crystal',flower:'leaf',seahorse:'tide',crab:'tide',
     scorpion:'tide',dragon:'ember',serpent:'tide',gecko:'leaf',lizard:'ember'
   };
-  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map();
+  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map(), leaderSheets = new Map();
   // These off-dex forms have their own front/rear sheets. Keep them lazy so
   // undiscovered monsters never add image requests to ordinary startup.
   const glitchArt=Object.freeze({
@@ -70,6 +70,11 @@
     hyogald:{file:'assets/offdex-v54-06.png',stage:2},
     rurikoro:{file:'assets/offdex-v54-07.png',stage:0},
     rurigorm:{file:'assets/offdex-v54-08.png',stage:1}
+  });
+  // Keep the supplied front intact and load the independently authored rear.
+  // Separate files preserve both silhouettes and let either view load alone.
+  const leaderArt=Object.freeze({
+    galdoras:{front:'assets/galdoras-front-v65.png',back:'assets/galdoras-back-v65.png',frontDirection:0,backDirection:1}
   });
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
@@ -108,6 +113,11 @@
     if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(offDexArt[id].file,root).href,true);
     return uniqueSheets.get(id);
   }
+  function requestLeader(id,back=false){
+    const key=`${id}:${back?1:0}`;
+    if(!leaderSheets.has(key))loadAtlas(leaderSheets,key,new URL(leaderArt[id][back?'back':'front'],root).href,true);
+    return leaderSheets.get(key);
+  }
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
@@ -115,6 +125,7 @@
       if(id==='arvelion'||id==='floravelle'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
       if(glitchArt[id]&&LT.DATA?.species?.[id]){requests.push(requestGlitch(id).promise);continue;}
       if(offDexArt[id]&&LT.DATA?.species?.[id]){requests.push(requestOffDex(id).promise);continue;}
+      if(leaderArt[id]&&LT.DATA?.species?.[id]){for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestLeader(id,rear).promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
@@ -207,7 +218,7 @@
     loadFutoSource(futoRecords.front,'assets/futo-front-v2.png'),
     loadFutoSource(futoRecords.back,'assets/futo-back-v2.png',true)
   ]);}
-  function futoFrame(record){
+  function sourceFrame(record){
     if(record.frame)return record.frame;
     const image=record.image,raw=canvas(image.naturalWidth,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
     rc.drawImage(image,0,0);const pixels=rc.getImageData(0,0,raw.width,raw.height).data;
@@ -227,7 +238,7 @@
     if(!record)return null;
     const key=`futo:${back?1:0}:${record===authored?'authored':'original'}`;
     if(cache.has(key))return cache.get(key);
-    const frame=futoFrame(record);if(!frame)return null;
+    const frame=sourceFrame(record);if(!frame)return null;
     const scale=Math.min((SIZE-24)/frame[2],(SIZE-24)/frame[3]);
     const w=Math.round(frame[2]*scale),h=Math.round(frame[3]*scale);
     const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
@@ -291,6 +302,17 @@
     cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
+  function leaderSprite(id,back=false){
+    const record=requestLeader(id,back);if(!record.loaded)return null;
+    const key=`${id}:${back?1:0}`;
+    if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
+    const frame=sourceFrame(record);if(!frame)return null;
+    const scale=Math.min((SIZE-24)/frame[2],(SIZE-24)/frame[3]),w=Math.round(frame[2]*scale),h=Math.round(frame[3]*scale);
+    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
+    c.drawImage(record.image,...frame,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
+    cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
+    return cv;
+  }
   function getBase(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
@@ -298,6 +320,7 @@
     if(id==='arvelion'||id==='floravelle')return uniqueSprite(id,back);
     if(glitchArt[id]){requestGlitch(id);return uniqueSprite(id,back);}
     if(offDexArt[id]){requestOffDex(id);return uniqueSprite(id,back);}
+    if(leaderArt[id])return leaderSprite(id,back);
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -421,6 +444,9 @@
     if(offDexArt[id])return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'offdex-authored',authoredBack:!!back,stage:offDexArt[id].stage}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:offDexArt[id].stage};
+    if(leaderArt[id])return leaderSheets.get(`${id}:${back?1:0}`)?.loaded
+      ? {direction:leaderArt[id][back?'backDirection':'frontDirection'],source:'leader-authored',authoredBack:!!back,stage:0}
+      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
     const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
     const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
     let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
@@ -436,6 +462,7 @@
     status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
       glitchRequested:Object.keys(glitchArt).filter(id=>uniqueSheets.has(id)).length,glitchLoaded:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.loaded).length,glitchFailed:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.failed).length,
       offDexRequested:Object.keys(offDexArt).filter(id=>uniqueSheets.has(id)).length,offDexLoaded:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.loaded).length,offDexFailed:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.failed).length,
+      leaderRequested:leaderSheets.size,leaderLoaded:[...leaderSheets.values()].filter(record=>record.loaded).length,leaderFailed:[...leaderSheets.values()].filter(record=>record.failed).length,
       futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
       futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
   };

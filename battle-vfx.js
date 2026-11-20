@@ -16,6 +16,7 @@
     thunder: ['#fff6b0', '#f1c746', '#9a6c34', '#fffdf1'],
     ice: ['#eaffff', '#a7e8ed', '#538bba', '#ffffff'],
     earth: ['#edd3a4', '#b58b57', '#63503d', '#fff0cb'],
+    stone: ['#f3deb2', '#b7a489', '#62596c', '#fff0ce'],
     neutral: ['#fff4d6', '#f1c891', '#b58a8e', '#ffffff'],
     void: ['#f0eaff', '#b4a8e0', '#594d91', '#a6fff0']
   };
@@ -197,9 +198,9 @@
   }
   function accentCell(event){
     if(['faint','arrival','miss','condition'].includes(event.style))return -1;
-    // The old sheet has no electrical, frost or soil cell. Their authored
+    // The old sheet has no electrical, frost, soil or stone cell. Their authored
     // pixel materials stay readable without an unrelated decorative overlay.
-    if(['thunder','ice','earth'].includes(event.element))return -1;
+    if(['thunder','ice','earth','stone'].includes(event.element))return -1;
     if(event.move?.startsWith('futo_'))return 6;
     if(event.style==='healing')return event.move==='arvelion_renewal'?5:7;
     if(['shield','ascension','capture','star-rings','starfall'].includes(event.style))return event.element==='leaf'?7:5;
@@ -237,7 +238,7 @@
     if(NAMED_EFFECTS[move.id])return NAMED_EFFECTS[move.id];
     if(move.element==='thunder')return 'lightning';
     if(move.element==='ice')return 'ice';
-    if(move.element==='earth')return move.category==='special'?'crystals':'impact';
+    if(move.element==='earth'||move.element==='stone')return move.category==='special'?'crystals':'impact';
     const byRole=ROLE_EFFECTS[move.role]?.[move.element];if(byRole)return byRole;
     return {leaf:'seed',tide:'water-orbs',ember:'flame',wind:'wind-blades',crystal:'crystals'}[move.element]||'impact';
   }
@@ -677,12 +678,12 @@
       glow(source.x,source.y,35*s,charge*.38);
       ellipse(source.x,source.y,23*s*charge,14*s*charge,p[1],1,charge*.65);
     }
-    if(e.element==='earth'&&attack){
+    if((e.element==='earth'||e.element==='stone')&&attack){
       // Share the existing impact/crystal cue families, with soil and rock
       // materials instead of stars or gems. The gameplay clock stays .43.
       const floor=Math.min(h-8*s,cy+54*s),unfurl=ease(phase(t,.14,.43)),decay=1-smooth(phase(t,.68,.98));
       const impact=smooth(phase(t,.38,.47))*decay,scatter=ease(phase(t,.43,.96));
-      const pierce=e.move==='atlas_leaf_7',drain=e.move==='atlas_crystal_5';
+      const pierce=e.move==='atlas_leaf_7'||e.move==='galdoras_crown',drain=e.move==='atlas_crystal_5';
       if(pierce){
         for(let i=0,n=low?3:5;i<n;i++){
           const x=cx+(i-(n-1)/2)*23*s,rise=smooth(phase(t,.19+i*.022,.43+i*.022));
@@ -1169,7 +1170,7 @@
           stroke([[start.x,start.y],[(start.x+x)/2+5*s,(start.y+y)/2-6*s],[x,y]],p[i%2],1.5,coronaAlpha*.75);
         }else if(e.element==='ice'){
           shard(x,y,(3+random(seed,i+451)*4)*s,a+expansion*.2,p[i%3],coronaAlpha*.8);
-        }else if(e.element==='earth'){
+        }else if(e.element==='earth'||e.element==='stone'){
           rock(x,y+expansion*24*s,(3+random(seed,i+451)*4)*s,a+expansion,coronaAlpha*.65);
         }else mote(x,y,3*s,p[1],coronaAlpha*.6);
       }

@@ -53,8 +53,8 @@ test('the exact eight source filenames form three separate off-dex evolution fam
 });
 
 test('public dex, collection goals and ordinary encounter pools remain unchanged',()=>{
-  assert.equal(Object.keys(D.species).length,267);assert.equal(D.content.playableSpecies,267);
-  assert.equal(D.content.hiddenSpecies,11);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
+  assert.equal(Object.keys(D.species).length,268);assert.equal(D.content.playableSpecies,268);
+  assert.equal(D.content.hiddenSpecies,12);assert.equal(D.content.dexSpecies,256);assert.equal(D.content.totalSpecies,256);
   assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
   const e=hero(),progress=()=>plain(e.quests().map(({id,target,progress,complete})=>({id,target,progress,complete}))),before=progress();
   for(const id of ids){
@@ -69,7 +69,7 @@ test('public dex, collection goals and ordinary encounter pools remain unchanged
 });
 
 test('each form has four legal moves using both types and stage-appropriate growing stats',()=>{
-  assert.equal(Object.keys(D.moves).length,100,'No existing move was replaced or removed');
+  assert.equal(Object.keys(D.moves).length,104,'No existing move was replaced or removed');
   for(const line of expected)for(const [stage,id]of line.ids.entries()){
     const s=D.species[id],e=hero(),mon=e.makeMonster(id,50);
     assert.equal(s.moves.length,4);assert.equal(new Set(s.moves).size,4);

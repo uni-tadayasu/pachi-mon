@@ -33,7 +33,7 @@ const V=LT.BattleVFX,old=baseline.LT.DATA;
 const audioSource=scripts.find(m=>m[2].includes('class LuminaAudio'))[2];
 
 test('twelve moves retain every gameplay field and every owned, legacy and hidden moveset',()=>{
-  assert.equal(Object.keys(D.moves).length,100);
+  assert.equal(Object.keys(D.moves).length,104);
   assert.equal(Object.values(D.moves).filter(m=>!m.hiddenDex).length,96);
   assert.deepEqual(copy(D.moveRoster.reclassified),ids);
   assert.deepEqual(Object.keys(D.moves),Object.keys(old.moves));
@@ -163,4 +163,35 @@ test('thunder, ice and soil have distinct bounded sounds with one hit cue and ex
     }
   }
   assert.equal(signatures.size,3,'Shared note seeds still produce three different elemental sounds');
+});
+
+test('the stone leader renders its four techniques on desktop and phone without falling back to an unrelated element',()=>{
+  const expectedStyles=['impact','impact','shield','healing'],before=JSON.stringify(D);
+  assert.notDeepEqual(copy(V.palettes.stone),copy(V.palettes.earth),'Stone has a separate gray/gold palette');
+  for(const [index,id]of D.offDexLeaders.moves.entries())for(const width of [390,960])for(const quality of ['low','high']){
+    const move=D.moves[id],kind=move.kind==='attack'?'damage':move.kind;
+    const effect=V.fromEvent({kind,move:id,side:width===390?'ally':1,slot:0,target:0,amount:38},null,100);
+    assert(effect);assert.equal(effect.element,move.element);assert.equal(effect.style,expectedStyles[index]);assert.equal(effect.move,id);
+    const cv=canvas.createCanvas(width,Math.round(width*.6)),ctx=cv.getContext('2d');
+    for(const phase of [.25,.54,.8]){
+      clear(ctx,cv.width,cv.height);assert(V.render(ctx,cv.width,cv.height,100+effect.duration*phase,effect,{quality,online:width===960}));
+      const first=imageStats(cv);assert(first.opaque>25,`${id}/${width}/${quality}/${phase}: the effect is visible`);
+      clear(ctx,cv.width,cv.height);V.render(ctx,cv.width,cv.height,100+effect.duration*phase,effect,{quality,online:width===960});
+      assert.equal(imageStats(cv).hash,first.hash,'The same effect frame is deterministic');
+    }
+  }
+  assert.equal(JSON.stringify(D),before,'Visual effects leave combat and saved data unchanged');
+});
+
+test('the new stone impact uses its own bounded dry sound and preserves the common hit cue and mute behavior',()=>{
+  const move=D.moves.galdoras_crown,event={kind:'damage',amount:38,effectiveness:1.5,side:'ally'},timing={duration:1180,releaseAt:.14,impactAt:.43};
+  const high=audioSpy(),low=audioSpy('low'),soil=audioSpy();
+  high.audio.move(move,event,timing);low.audio.move(move,event,timing);soil.audio.move({...move,element:'earth'},event,timing);
+  assert.equal(high.impacts.length,1);assert.equal(low.impacts.length,1);assert.equal(high.ducks.length,1);
+  assert(Math.abs(high.impacts[0][1]-(10.008+1.18*.43))<1e-9,'The stone hit aligns with its visual contact');
+  assert(high.calls.length<=10);assert(low.calls.length<high.calls.length);
+  assert(high.calls.some(call=>call.method==='instrument'&&call.args[1]==='mallet'));
+  assert(!high.calls.some(call=>call.method==='instrument'&&call.args[1]==='bell'));
+  assert.notEqual(JSON.stringify(high.calls),JSON.stringify(soil.calls),'Stone does not sound like the earth type');
+  for(const state of ['muted','suspended']){const h=audioSpy();if(state==='muted')h.audio.enabled=false;else h.audio.ctx.state='suspended';h.audio.move(move,event,timing);assert.equal(h.calls.length,0);assert.equal(h.impacts.length,0);}
 });

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "abilities": [
     {
       "id": "budding_resolve",
@@ -264,6 +264,16 @@
       "params": {
         "below": 0.5,
         "mul": 1.3
+      }
+    },
+    {
+      "id": "sovereign_carapace",
+      "name": "巌王の甲殻",
+      "description": "物理攻撃技で受けるダメージを20%減らす。特殊攻撃や状態異常のダメージは減らさない。",
+      "kind": "defense",
+      "params": {
+        "category": "physical",
+        "mul": 0.8
       }
     }
   ],
@@ -534,6 +544,7 @@
     "shimorei": "powerful_limbs",
     "hyogald": "powerful_limbs",
     "rurikoro": "steady_core",
-    "rurigorm": "steady_core"
+    "rurigorm": "steady_core",
+    "galdoras": "sovereign_carapace"
   }
 }

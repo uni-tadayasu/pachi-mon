@@ -103,7 +103,7 @@ assert(guide.includes(`ひかえには最大${data.limits.storage}体`), 'the gu
 assert(visible.some(([q,a])=>/ひかえ/.test(q)&&a.includes(`${data.limits.storage}体`)), 'the FAQ explains the storage limit');
 assert(guide.includes('初期設定はカラーです')&&guide.includes('カラーとモノクロの2種類'), 'the guide explains the two equally detailed modes');
 const types=dataContext.LT.TypeSystem, typeIds=Array.from(types.order).filter(type=>!data.elements[type].hiddenDex), dex=read('monsters/index.html');
-assert.equal(typeIds.length,8);
+assert.equal(typeIds.length,9);
 for(const type of typeIds){
  assert(dex.includes(`id="${type}"`),`${type} has a public dex group`);
  assert(moves.includes(`id="g-${data.elements[type].name}タイプ"`),`${type} has a move group`);
@@ -118,7 +118,12 @@ for(const s of publicSpecies){
  for(const attack of typeIds){const factor=types.effectiveness(attack,s);if(factor!==1)assert(page.includes(`${data.elements[attack].name}（${factor}倍）`),`${s.id}: published ${attack} matchup agrees with combat`);}
 }
 assert(dualPages>0&&dualPages<publicSpecies.length,'a subset of existing species are dual types');
-assert.equal((guide.match(/scope="col"/g)||[]).length,9,'the guide shows all eight defending types');
+assert.equal((guide.match(/scope="col"/g)||[]).length,10,'the guide shows all nine defending types plus its row heading');
+for(const move of Object.values(data.moves).filter(move=>move.hiddenDex)){
+ for(const file of ['monsters/index.html','moves/index.html','guide/index.html','sitemap.xml']){
+  assert(!read(file).includes(move.id)&&!read(file).includes(move.name),`${file} does not publish hidden dedicated moves`);
+ }
+}
 assert(!/全262種|64のエリア|64の探索エリア|16の証を集め/.test(publicHome), 'stale home counts were removed');
 assert(!read('monsters/komori.html').includes('通常レンタル'), 'dex pages no longer describe retired rental battles');
 console.log(JSON.stringify({ ok: true, pages: pages.length, indexable: canonicals.size, redirects, links, images, faq: visible.length, publicFactsMatchEngine: true }));

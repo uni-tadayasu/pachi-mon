@@ -11,7 +11,7 @@ for(const script of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
 }
 const {Engine,DATA,displayName}=model.LT,hiddenIds=Object.keys(DATA.species).filter(id=>DATA.species[id].hiddenDex);
 const publicIds=Object.keys(DATA.species).filter(id=>!DATA.species[id].hiddenDex);
-const publicTypes=['leaf','tide','ember','wind','crystal','thunder','ice','earth'];
+const publicTypes=['leaf','tide','ember','wind','crystal','thunder','ice','earth','stone'];
 function section(from,to){const start=html.indexOf(from),end=html.indexOf(to,start);assert(start>=0&&end>start);return html.slice(start,end);}
 const source=[section('  function typeBadge(', '  const nameOf='),
   section('  function showDex(', '  function showMap() {'),
@@ -37,8 +37,8 @@ function ui(complete=false){
 const cards=markup=>[...markup.matchAll(/\bdata-dex="([^"]+)"/g)].map(match=>match[1]);
 function assertNoHidden(markup){for(const id of hiddenIds){assert(!markup.includes(id),`Hidden ID ${id} leaked`);assert(!markup.includes(DATA.species[id].name),`Hidden name ${id} leaked`);}}
 
-test('all 267 internal discoveries still render exactly the 256 public dex entries',()=>{
-  const app=ui(true);assert.equal(app.engine.state.caught.length,267);assert.equal(publicIds.length,256);
+test('all 268 internal discoveries still render exactly the 256 public dex entries',()=>{
+  const app=ui(true);assert.equal(app.engine.state.caught.length,268);assert.equal(publicIds.length,256);
   app.context.showDex();const {markup,pane}=app.modal;assert.equal(pane,'dex');
   assert.deepEqual(cards(markup),publicIds);assertNoHidden(markup);
   assert.match(markup,/捕獲 <strong>256<\/strong> \/ 256/);assert.match(markup,/発見 256<\/p>/);
@@ -48,7 +48,7 @@ test('all 267 internal discoveries still render exactly the 256 public dex entri
 });
 
 test('partial discovery and the actual element-change callback include either type without hidden entries',()=>{
-  const app=ui();assert.equal(app.engine.state.caught.length,12);app.context.showDex();
+  const app=ui();assert.equal(app.engine.state.caught.length,13);app.context.showDex();
   assert.match(app.modal.markup,/捕獲 <strong>1<\/strong> \/ 256/);assert.match(app.modal.markup,/発見 1<\/p>/);
   assert.equal(cards(app.modal.markup).length,256);assert(app.modal.markup.includes('未発見'));assertNoHidden(app.modal.markup);
   for(const element of publicTypes){
@@ -91,7 +91,7 @@ test('owned hidden companions show their name and growth details without an inve
   for(const [index,id]of hiddenIds.entries()){
     const mon=app.engine.makeMonster(id,DATA.species[id].visual.stage===0?5:DATA.species[id].visual.stage===1?24:48);app.engine.state.party[1]=mon;app.context.showParty(1);
     const {markup,title,pane}=app.modal;assert.equal(pane,'party');assert.equal(title,DATA.species[id].name);
-    assert(markup.includes(DATA.offDexLines.ids.includes(id)?'図鑑未登録 · 幻の草むらで出会ったパチモン':'図鑑未登録 · バグ技で出会ったパチモン'));assert(!markup.includes('No.'));
+    assert(markup.includes((DATA.offDexLines.ids.includes(id)||DATA.offDexLeaders.ids.includes(id))?'図鑑未登録 · 幻の草むらで出会ったパチモン':'図鑑未登録 · バグ技で出会ったパチモン'));assert(!markup.includes('No.'));
     assert(markup.includes(`data-creature="${id}"`));const labels=model.LT.TypeSystem.of(id).map(type=>DATA.elements[type].name);assert(markup.includes(`aria-label="${labels.join('・')}タイプ"`));for(const label of labels)assert(markup.includes(`>${label}</span>`));
     assert(markup.includes(`Lv.${mon.level}`));assert(markup.includes(`data-nickname="${mon.uid}"`));
     assert(markup.includes(!DATA.species[id].evolvesTo?'完成した姿':`Lv.${DATA.species[id].evolveLevel}で新しい姿に進化`));
@@ -103,7 +103,7 @@ test('owned hidden companions show their name and growth details without an inve
 test('the adventure record counts public species only, both complete and partially collected',()=>{
   const app=ui(true);app.context.showRecords();
   const firstRow=()=>/<li class="ladder-row[^"]*">([\s\S]*?)<\/li>/.exec(app.modal.markup)?.[1];
-  assert.match(firstRow(),/<strong>256 \/ 256<\/strong>/);assert(!firstRow().includes('267'));assertNoHidden(app.modal.markup);
+  assert.match(firstRow(),/<strong>256 \/ 256<\/strong>/);assert(!firstRow().includes('268'));assertNoHidden(app.modal.markup);
   app.engine.state.caught=['komori',...hiddenIds];app.context.showRecords();
   assert.match(firstRow(),/<strong>1 \/ 256<\/strong>/);assertNoHidden(app.modal.markup);
   assert.deepEqual(app.previews,['records','records']);

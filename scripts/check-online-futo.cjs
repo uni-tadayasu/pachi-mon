@@ -165,7 +165,7 @@ async function combatScenarios(env) {
     assert(LT.Duel.validateTeam(['futo', ...normal.slice(0, 2)], 'single').ok, 'Special species battle like any other');
     assert(LT.Duel.validateTeam(['floravelle', 'arvelion', 'futo'], 'single').ok);
     assert(!LT.Duel.validateTeam(['missing', ...normal.slice(0, 2)], 'single').ok);
-    assert.equal(LT.Duel.rules.version, 10); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/);
+    assert.equal(LT.Duel.rules.version, 11); assert.match(LT.Duel.rulesFingerprint(), /special-three-standard/);
     assert(LT.OnlineFuto.rosterIds(normal).includes('futo'), 'A received Futo is selectable');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('arvelion'), 'Unowned legendary is not a free rental');
     assert(!LT.OnlineFuto.rosterIds(normal).includes('floravelle'), 'Unowned mythical is not offered');
@@ -237,9 +237,9 @@ async function combatScenarios(env) {
     assert.equal(JSON.stringify(state), hiddenSave); hidden.close(); state.storage = [];
     assert(hiddenIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)), 'Released/evolved-away forms do not remain selectable');
 
-    // Each of the eight new off-dex forms follows ownership rules independently
+    // Each of the eight off-dex forms and the standalone leader follows ownership rules independently
     // of the Null lineage. Verify actual peer setup, moves and a synchronized turn.
-    const addedIds = [...LT.DATA.offDexLines.ids]; assert.equal(addedIds.length, 8);
+    const addedIds = [...LT.DATA.offDexLines.ids, ...LT.DATA.offDexLeaders.ids]; assert.equal(addedIds.length, 9);
     assert(addedIds.every(id => !LT.OnlineFuto.rosterIds(normal).includes(id)));
     const addedUnowned = env.pair(); await addedUnowned.start();
     for (const id of addedIds) assert(!(await addedUnowned.sessions[0].setTeam({ ids: [id, ...normal.slice(0, 2)] })).ok);

@@ -1,5 +1,5 @@
 {
- "version": "20261120-v64",
+ "version": "2026-11-20-v65",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -234,6 +234,14 @@
    "bytes": 554441
   },
   {
+   "url": "assets/galdoras-back-v65.png",
+   "bytes": 1593795
+  },
+  {
+   "url": "assets/galdoras-front-v65.png",
+   "bytes": 2132767
+  },
+  {
    "url": "assets/kasai-overworld-v55.json",
    "bytes": 2452
   },
@@ -318,6 +326,8 @@
   "assets/environment-props-v33.png",
   "assets/environment-terrain-v33.png",
   "assets/environment-trees-v33.png",
+  "assets/galdoras-back-v65.png",
+  "assets/galdoras-front-v65.png",
   "assets/kasai-overworld-v55.json",
   "assets/kasai-overworld-v55.png",
   "assets/nullmie-v46.png",
@@ -338,6 +348,6 @@
   "assets/traveller-npcs-v33.png",
   "assets/zeroveil-v46.png"
  ],
- "totalBytes": 77562623,
- "coreBytes": 37160449
+ "totalBytes": 81289185,
+ "coreBytes": 40887011
 }

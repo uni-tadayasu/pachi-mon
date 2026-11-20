@@ -111,7 +111,7 @@ function page({ depth, canonical, title, description, body, jsonld = [], image =
 <link rel="icon" type="image/svg+xml" href="${up}assets/favicon-pixel.svg">
 <link rel="apple-touch-icon" href="${up}assets/apple-touch-pixel.png">
 ${fontLinks}
-<link rel="stylesheet" href="${up}seo.css?v=20261119-types-v52">
+<link rel="stylesheet" href="${up}seo.css?v=20261120-stone-v65">
 ${jsonld.map(data => `<script type="application/ld+json">${JSON.stringify(data)}</script>`).join('\n')}
 </head>
 <body>
@@ -222,7 +222,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>バトルは「たたかう・バッグ・パチモン・にげる」から行動を選びます。素早さの高いほうが先に動き、防御の技は優先して発動します。技にはPP（使用回数）があり、すべて使い切ると反動を受ける「踏ん張り打ち」になります。宿や休み場では体力とPPを無料で全回復できます。</p>
   <ul><li>物理技は「物理攻撃」と相手の「物理防御」、特殊技は「特殊攻撃」と相手の「特殊防御」でダメージが決まります。</li><li>自分のどちらかのタイプと一致する技は、威力が1回だけ1.15倍になります。</li><li>防御の技は次に受けるダメージを半分にします。「守りを貫く」技は防御を無視します。</li><li>回復の技は最大体力の一定割合を回復し、吸収の技は与えたダメージの25%を回復します。</li></ul>
   <h2 id="types">タイプ相性表</h2>
-  <p>公開タイプは芽・潮・灯・風・晶・雷・氷・土の8種類です。有利な相手に1.5倍、不利な相手に0.7倍、同じ属性同士に0.8倍、それ以外には1倍のダメージになります。表は行が攻撃技、列が防御側のタイプです。</p>
+  <p>公開タイプは${typeList(publicTypes)}の${publicTypes.length}種類です。有利な相手に1.5倍、不利な相手に0.7倍、同じ属性同士に0.8倍、それ以外には1倍のダメージになります。表は行が攻撃技、列が防御側のタイプです。</p>
   <p>2属性の複合タイプは、受ける技と各タイプの倍率を掛け合わせます。両方が弱点なら2.25倍、両方が耐性なら0.49倍、弱点と耐性の組み合わせなら1.05倍です。自分のどちらかのタイプと一致する技は、1回だけ1.15倍になります。「無」は単独タイプで、攻撃・防御とも属性相性は常に1倍です。</p>
   <p>技が当たったときの音でも相性が分かります。弱点を突いたときは鋭く上がる音、効きにくいときは低く沈む音、通常は短い打撃音が鳴ります。ソロ・通信対戦の両方に対応し、急所や防御によるダメージの増減では音の種類は変わりません。</p>
   <div class="table-wrap"><table class="type-chart"><caption>技のタイプ → 防御側のタイプ</caption><thead><tr><th scope="col">攻撃技 ↓</th>${publicTypes.map(type => `<th scope="col">${typeChip(type)}</th>`).join('')}</tr></thead><tbody>${typeRows}</tbody></table></div>

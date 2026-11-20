@@ -84,13 +84,15 @@
     });
   }
   // Off-dex companions can battle once owned, but never become rentals or trades.
-  const hiddenRoster=Object.freeze([...(LT.DATA.glitchLine?.ids||[]),...(LT.DATA.offDexLines?.ids||[])]);
+  // Discover hidden species from the live catalogue, including standalone
+  // leaders. Neither a new family list nor a stale rental list grants access.
+  const hiddenRoster=()=>Object.values(LT.DATA.species).filter(species=>species.hiddenDex).map(species=>species.id);
   function rosterIds(base) {
     const legendary = LT.DATA.legendary?.species, hasLegendary = !!ownedLegendary();
-    const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly && (id !== legendary || hasLegendary));
+    const ids = (base || Object.keys(LT.DATA.species)).filter(id => !LT.DATA.species[id]?.specialOnly && !LT.DATA.species[id]?.hiddenDex && (id !== legendary || hasLegendary));
     if (owned() && LT.DATA.species.futo) ids.push('futo');
     if (ownedMythical() && LT.DATA.species.floravelle) ids.push('floravelle');
-    for (const id of hiddenRoster) if (LT.DATA.species[id]?.hiddenDex && firstOf(id)) ids.push(id);
+    for (const id of hiddenRoster()) if (firstOf(id)) ids.push(id);
     return [...new Set(ids)];
   }
   // Looks are carried apart from combat data: they never change stats, levels or PP.
@@ -116,7 +118,7 @@
       if (input.ids.includes(LT.DATA.legendary?.species) && !ownedLegendary()) return fail('アルヴェリオンを仲間にしてから編成してください。');
       if (input.ids.includes('futo') && !owned()) return fail('フートを受け取ってから編成してください。');
       if (input.ids.includes('floravelle') && !ownedMythical()) return fail(`${LT.DATA.species.floravelle?.name || '幻のパチモン'}を迎えてから編成してください。`);
-      if (input.ids.some(id => LT.DATA.species[id]?.glitchOnly && !firstOf(id))) return fail('そのパチモンを仲間にしてから編成してください。');
+      if (input.ids.some(id => (LT.DATA.species[id]?.hiddenDex || LT.DATA.species[id]?.glitchOnly) && !firstOf(id))) return fail('そのパチモンを仲間にしてから編成してください。');
       if (this._closed || !this._started || !this._connected || this.duel || this._teams[this.role]) return fail('現在は編成を変更できません。');
       // Chosen individuals (by uid) bring their own look, points, item, order and
       // permanent curse. A caller cannot override the selected individual's curse.
@@ -149,7 +151,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 11 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 12 };
 })();
