@@ -416,12 +416,13 @@ function worldActor(row) {
   return {...worldProfile(row.player_id,row.name,row.is_admin,row.avatar),map:row.map_id,x:row.x,y:row.y,facing:row.facing,status:row.status,updatedAt:row.updated_at};
 }
 async function validateWorldPresence(env,body) {
-  let bounds=typeof body.map==='string'&&Object.hasOwn(WORLD_MAP_BOUNDS,body.map)?WORLD_MAP_BOUNDS[body.map]:null;
+  let bounds=typeof body.map==='string'&&Object.hasOwn(WORLD_MAP_BOUNDS,body.map)?WORLD_MAP_BOUNDS[body.map]:null,layout=null;
   if(!bounds&&typeof body.map==='string'&&/^room:P[0-9a-f]{16}$/.test(body.map)) {
     const room=await roomRow(env,body.map.slice(5));
-    if(room){const layout=ROOM_LAYOUTS[room.is_admin?'kasai':'secret'];bounds=[layout.width,layout.height];}
+    if(room){layout=roomTemplateLayout(room.is_admin?'kasai':'secret',room.template_id);bounds=[layout.width,layout.height];}
   }
   if(Object.keys(body).some(key=>!WORLD_FIELDS.has(key))||!bounds||!integer(body.x,0,bounds[0]-1)||!integer(body.y,0,bounds[1]-1)||!['down','left','right','up'].includes(body.facing)||!['male','female'].includes(body.avatar)||!['idle','busy'].includes(body.status))fail(400,'INVALID_WORLD_PRESENCE','フィールドの位置・向き・状態が正しくありません。');
+  if(layout&&layout.floorMask[body.y][body.x]!=='1')fail(400,'INVALID_WORLD_PRESENCE','部屋の床の上へ移動してください。');
   return body;
 }
 
@@ -430,6 +431,34 @@ export const ROOM_LAYOUTS=Object.freeze({
   secret:{width:18,height:16,spawn:{x:9,y:12},exit:{x:9,y:14},protected:[{x:8,y:0,width:2,height:16}]},
   kasai:{width:24,height:20,spawn:{x:12,y:16},exit:{x:12,y:18},protected:[{x:11,y:0,width:2,height:20},{x:8,y:2,width:8,height:6}]}
 });
+function roomFloorMask(layout,templateId='hall') {
+  return Object.freeze(Array.from({length:layout.height},(_,y)=>Array.from({length:layout.width},(_,x)=>{
+    if(x<1||y<1||x>layout.width-2||y>layout.height-2)return '0';
+    if(templateId==='sanctum'){
+      const inset=y<=4?7-y:y>=15?y-12:2;
+      return x>=inset&&x<=23-inset?'1':'0';
+    }
+    if(templateId==='wings')return x>=7&&x<=16||y>=6&&y<=13?'1':'0';
+    return '1';
+  }).join('')));
+}
+export const ROOM_TEMPLATES=Object.freeze([
+  {id:'hall',name:'王座の大広間',description:'広い長方形のホール。深緑の石床と金の装飾。'},
+  {id:'sanctum',name:'星環の八角堂',description:'角を落とした八角形。青紫の石床と星の光。'},
+  {id:'wings',name:'双翼の回廊',description:'左右へ広がる十字形。木床と若草色の庭園。'}
+].map(template=>Object.freeze({...template,...ROOM_LAYOUTS.kasai,templateId:template.id,floorMask:roomFloorMask(ROOM_LAYOUTS.kasai,template.id)})));
+const ROOM_TEMPLATE_MAP=new Map(ROOM_TEMPLATES.map(template=>[template.id,template]));
+const ROOM_SECRET_FLOOR=roomFloorMask(ROOM_LAYOUTS.secret);
+function roomTemplateId(value) {
+  if(typeof value!=='string'||!ROOM_TEMPLATE_MAP.has(value))fail(400,'INVALID_ROOM_TEMPLATE','部屋の形は3種類のテンプレートから選んでください。');
+  return value;
+}
+function roomTemplateLayout(kind,templateId='hall') {
+  if(kind==='secret')return {...ROOM_LAYOUTS.secret,templateId:'hall',floorMask:ROOM_SECRET_FLOOR};
+  const template=ROOM_TEMPLATE_MAP.get(templateId);
+  if(kind!=='kasai'||!template)fail(400,'INVALID_ROOM_TEMPLATE','部屋の形を確認してください。');
+  return {...ROOM_LAYOUTS.kasai,templateId:template.id,floorMask:template.floorMask};
+}
 export const ROOM_CATALOG=Object.freeze([
   {id:'plant',name:'観葉植物',width:1,height:1,solid:true},
   {id:'lamp',name:'星あかりランプ',width:1,height:1,solid:true},
@@ -471,8 +500,8 @@ function roomName(value) {
   if(!name)fail(400,'INVALID_ROOM_NAME','部屋の名前を1〜32文字で入力してください。');
   return name;
 }
-export function validateRoomDecorations(input,kind='secret') {
-  const layout=ROOM_LAYOUTS[kind];
+export function validateRoomDecorations(input,kind='secret',templateId='hall') {
+  const layout=roomTemplateLayout(kind,templateId);
   if(!layout||!Array.isArray(input)||input.length>32)fail(400,'INVALID_ROOM_DECORATIONS','模様替えアイテムは32個まで配置できます。');
   const ids=new Set(),occupied=new Set();
   return input.map(value=>{
@@ -481,26 +510,52 @@ export function validateRoomDecorations(input,kind='secret') {
     if(!integer(value.x,1,layout.width-1-width)||!integer(value.y,2,layout.height-2-height))fail(400,'INVALID_ROOM_DECORATIONS','アイテムは部屋の床の内側に配置してください。');
     for(let y=value.y;y<value.y+height;y++)for(let x=value.x;x<value.x+width;x++){
       const cell=x+','+y;
+      if(layout.floorMask[y][x]!=='1')fail(400,'ROOM_DECORATION_BLOCKED','アイテム全体が部屋の床に収まる位置を選んでください。');
       if(occupied.has(cell)||layout.protected.some(rect=>x>=rect.x&&x<rect.x+rect.width&&y>=rect.y&&y<rect.y+rect.height))fail(400,'ROOM_DECORATION_BLOCKED','アイテムを重ねたり、出入口・中央の通り道・カサイの舞台に置いたりすることはできません。');
       occupied.add(cell);
     }
     ids.add(value.id);return {id:value.id,itemId:value.itemId,x:value.x,y:value.y,rotation:value.rotation};
   });
 }
-const ROOM_SELECT=`SELECT r.*,p.name AS owner_name,(SELECT a.singleton FROM admin_members a WHERE a.player_id=r.owner_id) AS is_admin
+const ROOM_SELECT=`SELECT r.*,p.name AS owner_name,(SELECT a.singleton FROM admin_members a WHERE a.player_id=r.owner_id) AS is_admin,
+  (SELECT a.claimed_at FROM admin_members a WHERE a.player_id=r.owner_id) AS admin_claimed_at
   FROM world_rooms r JOIN players p ON p.id=r.owner_id`;
 async function roomRow(env,id) {return env.DB.prepare(ROOM_SELECT+' WHERE r.owner_id=?').bind(id).first();}
 function roomView(row) {
   if(!row)return null;
-  const kind=row.is_admin?'kasai':'secret',layout=ROOM_LAYOUTS[kind],direction=ROOM_DIRECTIONS[row.facing],decorations=[];
+  const kind=row.is_admin?'kasai':'secret',layout=roomTemplateLayout(kind,row.template_id),direction=ROOM_DIRECTIONS[row.facing],decorations=[];
   // A role change can shrink the room or reserve its stage. Keep its permanent
   // doorway and stored design; expose only placements valid in today's layout.
   for(const item of JSON.parse(row.decorations_json)){
-    try{validateRoomDecorations([...decorations,item],kind);decorations.push(item);}catch(_){}
+    try{validateRoomDecorations([...decorations,item],kind,layout.templateId);decorations.push(item);}catch(_){}
   }
   return {id:row.owner_id,mapId:'room:'+row.owner_id,owner:worldProfile(row.owner_id,row.owner_name,row.is_admin,'male'),kind,name:row.name,
     entrance:{map:row.map_id,x:row.entrance_x,y:row.entrance_y,facing:row.facing,returnX:row.entrance_x-direction[0],returnY:row.entrance_y-direction[1]},
     ...layout,decorations,revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at};
+}
+function roomDecorationUpdate(row,input,templateId) {
+  const stored=JSON.parse(row.decorations_json),kind=row.is_admin?'kasai':'secret';
+  if(input===undefined){
+    // Renaming a room must not erase furniture hidden by a role change.
+    if(templateId!==row.template_id)validateRoomDecorations(stored,kind,templateId);
+    return stored;
+  }
+  const decorations=validateRoomDecorations(input,kind,templateId);
+  if(row.is_admin)return decorations;
+  const visibleIds=new Set(roomView(row).decorations.map(item=>item.id)),retained=stored.filter(item=>!visibleIds.has(item.id));
+  if(!retained.length)return decorations;
+  if(decorations.length+retained.length>32)fail(400,'INVALID_ROOM_DECORATIONS','保存されている家具を含めて32個まで配置できます。');
+  const ids=new Set(retained.map(item=>item.id)),occupied=new Set();
+  for(const value of retained){
+    const item=ROOM_ITEMS.get(value.itemId),turned=value.rotation===90||value.rotation===270,width=turned?item.height:item.width,height=turned?item.width:item.height;
+    for(let y=value.y;y<value.y+height;y++)for(let x=value.x;x<value.x+width;x++)occupied.add(x+','+y);
+  }
+  for(const value of decorations){
+    const item=ROOM_ITEMS.get(value.itemId),turned=value.rotation===90||value.rotation===270,width=turned?item.height:item.width,height=turned?item.width:item.height;
+    if(ids.has(value.id))fail(400,'ROOM_DECORATION_BLOCKED','保存されている家具と同じ識別情報は使えません。');
+    for(let y=value.y;y<value.y+height;y++)for(let x=value.x;x<value.x+width;x++)if(occupied.has(x+','+y))fail(400,'ROOM_DECORATION_BLOCKED','保存されている家具と重ならない位置を選んでください。');
+  }
+  return [...decorations,...retained];
 }
 async function currentKasaiRoom(env, playerId = null) {
   const sql = ROOM_SELECT+' JOIN admin_members a ON a.player_id=r.owner_id';
@@ -512,7 +567,7 @@ async function requireRoomEntrancePresence(env,playerId,entrance,now) {
 }
 async function roomsRoute(request,env,path,method,player) {
   const now=Date.now(),url=new URL(request.url);
-  if(path==='/api/world/rooms/catalog'&&method==='GET')return {catalog:ROOM_CATALOG,layouts:ROOM_LAYOUTS,serverTime:now};
+  if(path==='/api/world/rooms/catalog'&&method==='GET')return {catalog:ROOM_CATALOG,layouts:ROOM_LAYOUTS,templates:ROOM_TEMPLATES,serverTime:now};
   if(path==='/api/world/rooms/walls'&&method==='GET'){
     const map=url.searchParams.get('map');
     if(!map||!Object.hasOwn(WORLD_MAP_BOUNDS,map))fail(400,'INVALID_ROOM_MAP','部屋を作るフィールドを指定してください。');
@@ -580,13 +635,16 @@ async function roomsRoute(request,env,path,method,player) {
   if(id!==player.id)fail(403,'ROOM_OWNER_REQUIRED','部屋の持ち主だけが模様替えできます。');
   await requireNoLiveSession(env,player.id,now);
   const body=await bodyJSON(request);
-  if(Object.keys(body).some(key=>!['revision','name','decorations'].includes(key))||!integer(body.revision,1,1000000000)||body.name===undefined&&body.decorations===undefined)fail(400,'INVALID_ROOM_UPDATE','模様替えの内容と版番号を確認してください。');
-  const name=body.name===undefined?row.name:roomName(body.name),decorations=body.decorations===undefined?roomView(row).decorations:validateRoomDecorations(body.decorations,row.is_admin?'kasai':'secret');
+  if(Object.keys(body).some(key=>!['revision','name','decorations','templateId'].includes(key))||!integer(body.revision,1,1000000000)||body.name===undefined&&body.decorations===undefined&&body.templateId===undefined)fail(400,'INVALID_ROOM_UPDATE','模様替えの内容と版番号を確認してください。');
+  if(body.templateId!==undefined&&!row.is_admin)fail(403,'ROOM_TEMPLATE_ADMIN_REQUIRED','部屋の形を変更できるのは、現在登録されている運営本人だけです。');
+  const templateId=body.templateId===undefined?row.template_id:roomTemplateId(body.templateId);
+  const name=body.name===undefined?row.name:roomName(body.name),decorations=roomDecorationUpdate(row,body.decorations,templateId);
   await consumeLimit(env,request,`world-room-edit:${player.id}`,60,60000,true);
-  const changed=await env.DB.prepare(`UPDATE world_rooms SET name=?,decorations_json=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
+  const changed=await env.DB.prepare(`UPDATE world_rooms SET name=?,decorations_json=?,template_id=?,revision=revision+1,updated_at=? WHERE owner_id=? AND revision=?
     AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=world_rooms.owner_id)
-    AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=p.id)=?) RETURNING owner_id`)
-    .bind(name,JSON.stringify(decorations),now,player.id,body.revision,player.id,row.is_admin?1:0).first();
+    AND EXISTS(SELECT 1 FROM players p WHERE p.id=? AND EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=p.id)=?)
+    AND (? IS NULL OR EXISTS(SELECT 1 FROM admin_members a WHERE a.player_id=world_rooms.owner_id AND a.claimed_at=?)) RETURNING owner_id`)
+    .bind(name,JSON.stringify(decorations),templateId,now,player.id,body.revision,player.id,row.is_admin?1:0,row.admin_claimed_at,row.admin_claimed_at).first();
   if(!changed)fail(409,'ROOM_CHANGED','部屋が変更されました。最新の模様替えを読み込み直してください。');
   return {room:roomView(await roomRow(env,player.id)),serverTime:now};
 }

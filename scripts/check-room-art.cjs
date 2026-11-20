@@ -85,6 +85,71 @@ test('room catalog and geometry exactly match the deployed service contract',asy
   }
 });
 
+test('operator templates have matching server floor masks, connected floors and preserved stage routes',async()=>{
+  const {ROOM_TEMPLATES}=await backend,counts={hall:396,sanctum:320,wings:276};
+  assert.deepEqual(Array.from(art.templates,template=>template.id),['hall','sanctum','wings']);
+  assert(Object.isFrozen(art.templates));
+  for(const template of art.templates){
+    const layout=art.getLayout('kasai',template.id),wire=ROOM_TEMPLATES.find(value=>value.id===template.id);
+    assert(wire);assert(Object.isFrozen(layout)&&Object.isFrozen(layout.floorMask));
+    assert.equal(layout.name,undefined,'Geometry must not overwrite a custom room name');
+    for(const key of ['id','name','description','width','height','spawn','exit','protected','floorMask'])assert.deepEqual(plain(template[key]),wire[key],`${template.id}: ${key}`);
+    const source={...record('kasai'),templateId:template.id,name:'残す部屋名'},before=JSON.stringify(source),map=art.createMap(source);
+    assert.equal(map.name,'残す部屋名');assert.equal(map.templateId,template.id);assert.equal(JSON.stringify(source),before);
+    assert.equal(layout.floorMask.length,20);assert(layout.floorMask.every(row=>/^[01]{24}$/.test(row)));
+    const floorCount=layout.floorMask.join('').split('1').length-1;assert.equal(floorCount,counts[template.id]);
+    const visited=reachable(map);assert.equal(visited.size,floorCount,'A floor wing is disconnected from arrival');
+    for(let y=0;y<20;y++)for(let x=0;x<24;x++){
+      const floor=wire.floorMask[y][x]==='1';
+      assert.equal(art.isFloor(layout,x,y),floor);assert.equal(art.isFloor({kind:'kasai',templateId:template.id},x,y),floor);
+      assert.equal(engine.walkable(map,x,y),floor,'Drawn shape and movement collision disagree');
+      if(!floor)assert.equal(map.tiles[y][x],'#');
+    }
+    for(let y=2;y<=7;y++)for(let x=8;x<=15;x++)assert(visited.has(`${x},${y}`),'Protected stage was clipped');
+    for(let y=1;y<=18;y++)for(const x of[11,12])assert(visited.has(`${x},${y}`),'Protected aisle was clipped');
+    assert(visited.has('12,16')&&visited.has('12,18'));
+    assert.equal(art.isFloor(layout,-1,1),false);assert.equal(art.isFloor(layout,24,1),false);
+  }
+  assert.equal(art.getLayout('secret','wings').templateId,'hall');
+  assert.equal(art.getLayout('secret','wings').width,18);
+  assert.equal(art.getLayout('kasai','unknown').templateId,'hall');
+  assert.equal(art.getLayout('kasai','__proto__').templateId,'hall');
+});
+
+test('template edge footprints agree with server placement and renderer ignores off-floor furniture',async()=>{
+  const {validateRoomDecorations}=await backend;
+  for(const template of art.templates){
+    const layout=art.getLayout('kasai',template.id);
+    for(const [id,rotation]of[['plant',0],['bed',0],['bed',90],['rug',0]]){
+      const size=art.footprint(id,rotation);
+      for(let y=1;y<19;y++)for(let x=1;x<23;x++){
+        const deco=piece(id,x,y,rotation);let accepted=false;
+        try{validateRoomDecorations([deco],'kasai',template.id);accepted=true;}catch{}
+        const map=art.createMap({...record('kasai',[deco]),templateId:template.id});
+        assert.equal(map.decorations.length===1,accepted,`${template.id}/${id}/${rotation} at ${x},${y}`);
+        if(accepted)assert(art.footprintFits({kind:'kasai',templateId:template.id},{x,y,...size}));
+        if(!art.footprintFits(layout,{x,y,...size}))assert(!accepted,'A footprint crosses the room wall');
+      }
+    }
+    assert.equal(art.footprintFits(layout,{x:2,y:2,width:0,height:1}),false);
+    assert.equal(art.footprintFits(layout,{x:2.5,y:2,width:1,height:1}),false);
+  }
+});
+
+test('all three native template appearances are distinct, opaque and follow their floor silhouettes',()=>{
+  const hashes=new Set();
+  for(const template of art.templates){
+    const map=art.createMap({...record('kasai'),templateId:template.id}),before=JSON.stringify(map),view=nativeRoom(map),pixels=bounds(view);
+    assert.equal(pixels.opaque,view.width*view.height);assert(pixels.colors>35,'Template lost its material detail');assertTwoPixelGrid(view);
+    hashes.add(view.toBuffer('image/png').toString('base64'));
+    const again=nativeRoom(map);assert.deepEqual(again.toBuffer('image/png'),view.toBuffer('image/png'));
+    if(template.id!=='hall')assert.deepEqual(Array.from(view.getContext('2d').getImageData(0,0,1,1).data),[17,30,44,255],'Outside the shaped walls must remain dark void');
+    assert.equal(JSON.stringify(map),before,'Appearance altered collision or placement data');save(`room-template-${template.id}-v75.png`,view);
+    view.width=view.height=again.width=again.height=1;
+  }
+  assert.equal(hashes.size,3,'Templates share the same appearance');
+});
+
 test('all four furniture rotations share server collision footprints, while rugs stay walkable',async()=>{
   const {validateRoomDecorations}=await backend;
   for(const item of art.catalog)for(const rotation of [0,90,180,270]) {
@@ -192,14 +257,14 @@ test('shipped world renderer uses room artwork, live revision refresh, and both 
   LT.RoomArt={...original,...Object.fromEntries(Object.keys(calls).map(name=>[name,(...args)=>{const result=original[name](...args);if(result)calls[name]++;return result;}]))};
   LT.TravellerArt={...travellers,get(...args){actors.push(args[0]);return travellers.get(...args);}};
   const liveState=JSON.stringify(liveEngine.state),home=LT.RoomArt.createMap(record('secret',homeDecor)),hall=LT.RoomArt.createMap(record('kasai',hallDecor));
-  LT.World={actors:map=>map===hall.id?[{id:'P0000000000000001',name:'カサイ',isAdmin:true,x:12,y:4,facing:'down',moving:false}]:[]};
+  LT.World={actors:map=>map===hall.id?[{id:'P0000000000000001',name:'カサイ',isAdmin:true,x:12,y:hall.spawn.y-2,facing:'down',moving:false}]:[]};
   for(const map of [home,hall]) {
     const startGround=calls.ground;actors.length=0;
     const view=canvas.createCanvas(900,760),state={...liveEngine.state,map:map.id,x:map.spawn.x,y:map.spawn.y,facing:'up'};
     LT.Art.world(view,{map,state},0,{dayPhase:'day'});assert.equal(bounds(view).opaque,view.width*view.height);
     assert(calls.ground>startGround&&calls.dressing>0&&calls.furniture>0,'The shipped renderer bypassed RoomArt hooks or reused a different room kind');
     assert(actors.includes('hero'),'The arriving player was omitted');
-    if(map.roomKindTag==='kasai')assert.equal(actors.filter(kind=>kind==='kasai').length,1,'Only the actual administrator appears at the opposite seat');
+    if(map.roomKindTag==='kasai')assert.equal(actors.filter(kind=>kind==='kasai').length,1,'Only the actual nearby administrator appears in the room');
     save(`room-${map.roomKindTag}-world-v56.png`,view);
   }
   actors.length=0;LT.World={actors:()=>[]};const emptyHall=canvas.createCanvas(900,760);LT.Art.world(emptyHall,{map:hall,state:{...liveEngine.state,map:hall.id,...hall.spawn}},0);assert(!actors.includes('kasai'),'Offline Kasai still appears as an NPC');
@@ -209,25 +274,60 @@ test('shipped world renderer uses room artwork, live revision refresh, and both 
   assert.equal(JSON.stringify(liveEngine.state),liveState,'Room previews changed the active player save');LT.RoomArt=original;LT.TravellerArt=travellers;LT.World=world;
 });
 
-test('both live seats remain visible with the same full-room framing in short mobile viewports',async()=>{
+test('shared rooms retain ordinary field scale, player following and boundary clamping on every viewport',async()=>{
   const {runtime}=require('./check-art.cjs'),{LT,engine:liveEngine}=await runtime();if(!LT.RoomArt)attachArt(LT);
-  const travellers=LT.TravellerArt,world=LT.World,hall=LT.RoomArt.createMap(record('kasai',[])),markers={};
+  const travellers=LT.TravellerArt,world=LT.World,markers={},view=canvas.createCanvas(1,1),liveState=JSON.stringify(liveEngine.state);
   for(const [kind,color] of [['kasai','#ff00ff'],['hero','#00ffff']]){const sprite=canvas.createCanvas(96,128);sprite.getContext('2d').fillStyle=color;sprite.getContext('2d').fillRect(0,0,96,128);markers[kind]=sprite;}
   LT.TravellerArt={...travellers,get:kind=>markers[kind]||markers.hero};
-  const pixelsOf=(view,color)=>{const data=view.getContext('2d').getImageData(0,0,view.width,view.height).data;let count=0,x=0,y=0;for(let i=0;i<data.length;i+=4)if(color.every((value,c)=>data[i+c]===value)&&data[i+3]===255){count++;x+=(i/4)%view.width;y+=Math.floor(i/4/view.width);}return {count,x:x/count,y:y/count};};
-  try{
-    for(const [width,height] of [[560,140],[844,154],[390,170],[900,760]]){
-      const positions=[];
-      for(const role of ['challenger','kasai']){
-        const owner=role==='kasai',remote={id:'P0000000000000001',name:owner?'挑戦者':'カサイ',isAdmin:!owner,avatar:'male',x:12,y:owner?16:4,facing:owner?'up':'down',moving:false};
-        LT.World={actors:map=>map===hall.id?[remote]:[],localKind:()=>owner?'kasai':'hero'};
-        const view=canvas.createCanvas(width,height),state={...liveEngine.state,map:hall.id,x:12,y:owner?4:16,facing:owner?'down':'up',party:[]};
-        LT.Art.world(view,{map:hall,state},0,{dayPhase:'day'});
-        const kasai=pixelsOf(view,[255,0,255]),challenger=pixelsOf(view,[0,255,255]);
-        assert(kasai.count>8&&challenger.count>8,`${role} at ${width}×${height} clipped the opposite live participant`);
-        assert(kasai.y<challenger.y,'The administrator must remain at the opposite seat above the challenger');positions.push([kasai,challenger]);
-      }
-      for(let person=0;person<2;person++)for(const axis of ['x','y'])assert(Math.abs(positions[0][person][axis]-positions[1][person][axis])<=1,`Changing the local participant moved the ${axis} camera at ${width}×${height}`);
+  let remote={id:'P0000000000000001',name:'カサイ',isAdmin:true,avatar:'male',x:14,y:10,facing:'down',moving:false};
+  LT.World={actors:()=>[remote],localKind:()=> 'hero'};
+  const pixelsOf=view=>{
+    const result=Object.fromEntries(['hero','kasai'].map(kind=>[kind,{count:0,left:view.width,right:-1,top:view.height,bottom:-1}]));
+    const data=view.getContext('2d').getImageData(0,0,view.width,view.height).data;
+    for(let i=0;i<data.length;i+=4){
+      if(data[i+2]!==255||data[i+3]!==255)continue;
+      const kind=data[i]===255&&data[i+1]===0?'kasai':data[i]===0&&data[i+1]===255?'hero':null;if(!kind)continue;
+      const p=result[kind],x=(i/4)%view.width,y=Math.floor(i/4/view.width);p.count++;p.left=Math.min(p.left,x);p.right=Math.max(p.right,x);p.top=Math.min(p.top,y);p.bottom=Math.max(p.bottom,y);
     }
-  }finally{LT.TravellerArt=travellers;LT.World=world;}
+    return result;
+  };
+  const render=(map,position,size=[800,640],options={})=>{
+    [view.width,view.height]=size;const state={...liveEngine.state,map:map.id,...position,facing:'up',party:[]},before=JSON.stringify(state);
+    LT.Art.world(view,{map,state},0,{dayPhase:'day',...options});
+    assert.equal(JSON.stringify(state),before,'Drawing a room changed its player state');return pixelsOf(view);
+  };
+  try{
+    // Compare the actual shipped renderer with its ordinary-field path. Include
+    // short mobile viewports and screens larger than the room, at both ratios.
+    const sizes=[[560,140],[844,154],[390,170],[720,240],[720,540],[900,760],[1024,640],[1536,960],[1920,1200]];
+    for(const kind of ['secret','kasai']){
+      const room=LT.RoomArt.createMap(record(kind,[])),before=JSON.stringify(room),ordinary={...room,id:`camera-reference:${kind}`,sharedRoom:false};
+      remote={...remote,x:room.spawn.x+2,y:room.spawn.y};
+      for(const size of sizes)for(const pixelRatio of [1,2]){
+        const actual=render(room,room.spawn,size,{pixelRatio}),reference=render(ordinary,room.spawn,size,{pixelRatio}),label=`${kind} ${size.join('×')} @${pixelRatio}`;
+        assert(actual.hero.count>8,`${label}: local traveller disappeared`);
+        assert(actual.kasai.count>8,`${label}: nearby live traveller disappeared`);
+        assert.deepEqual(actual,reference,`${label}: room camera changed the ordinary field's scale or projection`);
+      }
+      assert.equal(JSON.stringify(room),before,'Camera rendering changed room geometry or furniture');
+    }
+    const hall=LT.RoomArt.createMap(record('kasai',[]));remote={...remote,x:14,y:8};
+    const initial=render(hall,{x:12,y:10}),followed=render(hall,{x:12,y:10},[800,640],{playerX:12.75,playerY:10.5,moving:true});
+    assert.equal(initial.hero.right-initial.hero.left+1,96,'The full local sprite must keep its ordinary pixel width');
+    assert.equal(initial.hero.bottom-initial.hero.top+1,128,'The full local sprite must keep its ordinary pixel height');
+    assert.deepEqual(followed.hero,initial.hero,'An unclamped camera must follow the interpolated local position');
+    assert.equal(followed.kasai.left-initial.kasai.left,-48,'Horizontal following must move a fixed live actor by the travelled distance');
+    assert.equal(followed.kasai.top-initial.kasai.top,-32,'Vertical following must move a fixed live actor by the travelled distance');
+    // At either room edge the camera stops while the player can still approach
+    // the wall; a fixed nearby traveller keeps the same screen position.
+    remote={...remote,x:5,y:5};
+    const northwest=render(hall,{x:1,y:2}),northwestStep=render(hall,{x:2,y:3});
+    assert.deepEqual(northwest.kasai,northwestStep.kasai,'The northwest boundary must clamp the camera');
+    assert.equal(northwestStep.hero.left-northwest.hero.left,64);assert.equal(northwestStep.hero.top-northwest.hero.top,64);
+    remote={...remote,x:hall.width-6,y:hall.height-6};
+    const southeast=render(hall,{x:hall.width-2,y:hall.height-2}),southeastStep=render(hall,{x:hall.width-3,y:hall.height-3});
+    assert.deepEqual(southeast.kasai,southeastStep.kasai,'The southeast boundary must clamp the camera');
+    assert.equal(southeastStep.hero.left-southeast.hero.left,-64);assert.equal(southeastStep.hero.top-southeast.hero.top,-64);
+    assert.equal(JSON.stringify(liveEngine.state),liveState,'Camera previews changed the active save');
+  }finally{LT.TravellerArt=travellers;LT.World=world;view.width=view.height=1;}
 });

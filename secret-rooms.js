@@ -8,21 +8,49 @@
   const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const overlap=(a,b)=>a.x<b.x+b.width&&a.x+a.width>b.x&&a.y<b.y+b.height&&a.y+a.height>b.y;
   function footprint(item,rotation=0){const turn=rotation===90||rotation===270;return {width:turn?item.height:item.width,height:turn?item.width:item.height};}
+  function floorFits(room,rect){
+    const mask=room.floorMask;
+    if(Array.isArray(mask)){
+      for(let y=rect.y;y<rect.y+rect.height;y++)for(let x=rect.x;x<rect.x+rect.width;x++)if(mask[y]?.[x]!=='1')return false;
+      return true;
+    }
+    return LT.RoomArt?.footprintFits?.(room,rect)!==false;
+  }
   function placement(room,catalog,decorations,candidate){
     const item=catalog.find(row=>row.id===candidate.itemId);
     if(!item||!Number.isInteger(candidate.x)||!Number.isInteger(candidate.y)||![0,90,180,270].includes(candidate.rotation))return '家具と配置する場所を選んでください。';
     const rect={x:candidate.x,y:candidate.y,...footprint(item,candidate.rotation)};
-    if(rect.x<1||rect.y<2||rect.x+rect.width>room.width-1||rect.y+rect.height>room.height-2)return '壁の内側に収まる場所を選んでください。';
+    if(rect.x<1||rect.y<2||rect.x+rect.width>room.width-1||rect.y+rect.height>room.height-2||!floorFits(room,rect))return '壁の内側に収まる場所を選んでください。';
     if((room.protected||[]).some(area=>overlap(rect,area)))return '入口・通路・対戦ステージには家具を置けません。';
     for(const other of decorations){if(other.id===candidate.id)continue;const definition=catalog.find(row=>row.id===other.itemId);if(definition&&overlap(rect,{...other,...footprint(definition,other.rotation)}))return 'ほかの家具と重ならない場所を選んでください。';}
     if(!decorations.some(row=>row.id===candidate.id)&&decorations.length>=32)return '一つの部屋には32個まで飾れます。';
     return null;
   }
-  const core={footprint,placement,overlap};if(typeof module!=='undefined'&&module.exports)module.exports=core;
+  function rearrangeDecorations(room,catalog,decorations){
+    const placed=[],pending=[];
+    for(const entry of decorations){
+      if(!catalog.some(item=>item.id===entry.itemId))return {ok:false,message:'家具の情報を確認できません。保存済みの部屋を読み直してください。'};
+      if(placement(room,catalog,placed,entry)===null)placed.push({...entry});else pending.push(entry);
+    }
+    // Keep everything already on a valid tile. Place larger displaced pieces
+    // first, choosing the nearest free cell with a stable row/column tie-break.
+    pending.sort((a,b)=>{const sa=footprint(catalog.find(item=>item.id===a.itemId),a.rotation),sb=footprint(catalog.find(item=>item.id===b.itemId),b.rotation);return sb.width*sb.height-sa.width*sa.height;});
+    for(const entry of pending){
+      const positions=[];
+      for(let y=2;y<room.height-2;y++)for(let x=1;x<room.width-1;x++)positions.push({x,y,distance:Math.abs(x-entry.x)+Math.abs(y-entry.y)});
+      positions.sort((a,b)=>a.distance-b.distance||a.y-b.y||a.x-b.x);
+      const next=positions.find(point=>placement(room,catalog,placed,{...entry,x:point.x,y:point.y})===null);
+      if(!next)return {ok:false,message:'この形では、すべての家具を置けません。家具を減らすか配置を整えてから、もう一度選んでください。現在の間取りと家具はそのままです。'};
+      placed.push({...entry,x:next.x,y:next.y});
+    }
+    const byId=new Map(placed.map(entry=>[entry.id,entry]));
+    return {ok:true,decorations:decorations.map(entry=>byId.get(entry.id)),moved:pending.length};
+  }
+  const core={footprint,placement,overlap,floorFits,rearrangeDecorations};if(typeof module!=='undefined'&&module.exports)module.exports=core;
   if(!root.document?.createElement||!LT.DATA)return;
 
-  let rooms=[],mapKey='',mine=null,kasai=null,current=null,catalog=[],dialog=null,dialogMode='',busy=false,epoch=0,poll=null,polling=null;
-  let editing=null,draft=[],selectedItem='plant',selectedInstance=null,rotation=0,cursor={x:3,y:4},dirty=false,relocation=null,creation=null;
+  let rooms=[],mapKey='',mine=null,kasai=null,current=null,catalog=[],templates=[],dialog=null,dialogMode='',busy=false,epoch=0,poll=null,polling=null;
+  let editing=null,draft=[],selectedItem='plant',selectedInstance=null,rotation=0,cursor={x:3,y:4},dirty=false,relocation=null,creation=null,templateNote='';
   const bridge=()=>LT.adminBridge;
   const engine=()=>bridge()?.getEngine?.();
   const playing=()=>bridge()?.isPlaying?.()===true;
@@ -87,7 +115,7 @@
     const mySection=mine?`${roomCard(mine,ownKasai?`運営${operatorName(mine.owner)}の部屋`:'自分の秘密部屋')}${!ownHere?`<div class="room-owner-actions"><button class="btn btn-primary" data-room-action="edit-own">${editLabel}</button><button class="btn" data-room-action="relocate" ${wall&&!atOwnDoor&&!occupied?'':'disabled'}>${atOwnDoor?'この壁に自分の部屋があります':occupied?'この壁には部屋の入口があります':'この壁へ部屋を移転'}</button><p class="room-note">部屋は運営も含め一人一つです。別の空いた壁に向かい A / E を押すと、家具と名前をそのままに入口を移せます。</p></div>`:''}`:`<section class="room-empty"><h3>壁の向こうに、自分だけの場所を。</h3><p>外のフィールドや建物の壁に向かい、Aボタン / E を押すと秘密部屋を一つ作れます。入口にはドット絵のドアのマークが付き、ほかの旅人も自由に出入りできます。</p><label for="room-new-name">部屋の名前</label><input id="room-new-name" maxlength="24" value="${escape(defaultRoomName())}"><button type="button" class="btn btn-primary" data-room-action="create" ${wall&&!occupied?'':'disabled'}>${occupied?'この壁には部屋の入口があります':wall?'この壁に部屋を作る':'壁に向かってから開いてください'}</button></section>`;
     show(here?engine().map.name:'秘密部屋',`${here?`<div class="room-current-info"><span>${escape(current?.owner?.name||'旅人')}の部屋</span><div>${ownHere?`<button class="btn btn-primary" data-room-action="edit">${ownKasai?`${operatorName(mine?.owner||LT.Admin.player)}の部屋を飾る`:'家具を飾る'}</button>`:''}<button class="btn" data-room-action="leave">フィールドへ戻る</button></div></div>`:''}<section><h3>MY ROOM</h3>${mySection}</section>${kasai&&kasai.id!==mine?.id?`<section><h3>カサイの間</h3>${roomCard(kasai,'謎のトレーナー カサイ')}</section>`:''}<section><div class="room-section-heading"><h3>このエリアの部屋</h3><button class="btn btn-small" data-room-action="refresh">更新</button></div><div class="room-visit-list">${rooms.filter(row=>row.id!==mine?.id&&row.id!==kasai?.id).map(row=>roomCard(row)).join('')||'<p class="room-muted">このエリアには、ほかの秘密部屋がまだありません。</p>'}</div></section>${LT.Admin?.player?.isAdmin!==true&&kasai?.id!==owner()?'<section class="room-reward-check"><button type="button" class="btn" data-room-action="reward">運営との対戦の勝利報酬を確認</button><p class="room-note">ひかえに空きを作った後の受け取りも、ここから確認できます。</p></section>':''}<p class="room-note">入口の前で A / E を押しても入れます。部屋の持ち主だけが家具を変更できます。</p>`);
   }
-  async function loadCatalog(){if(catalog.length)return;const data=await api('/world/rooms/catalog');if(!Array.isArray(data.catalog)||!data.catalog.length)throw Error('家具の一覧を読み込めません。');catalog=data.catalog;}
+  async function loadCatalog(){if(catalog.length)return;const data=await api('/world/rooms/catalog');if(!Array.isArray(data.catalog)||!data.catalog.length)throw Error('家具の一覧を読み込めません。');catalog=data.catalog;const supported=LT.RoomArt?.templates||[];templates=Array.isArray(data.templates)?data.templates.filter(item=>supported.some(template=>template.id===item.id)):supported;}
   async function open(){
     if(!available()||busy)return false;
     if(!online()){toast('秘密部屋は接続が戻ると利用できます。');return false;}
@@ -193,12 +221,35 @@
   function leave(){if(LT.KasaiLive?.locked?.())return LT.KasaiLive.leave?.();const result=bridge()?.leaveSharedRoom?.();if(result?.ok){current=null;dialog?.close();toast('部屋の入口へ戻りました。');refreshSoon();}else error(result?.message||'今は外へ戻れません。');return result;}
   function showDiscard(){show('飾りつけを保存しますか？','<p>まだ保存していない変更があります。</p><div class="room-dialog-actions"><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="resume">編集を続ける</button><button class="btn" data-room-action="discard">保存せず閉じる</button></div>','discard');}
   function close(){if(!dialog?.open||busy)return false;if(dirty&&(dialogMode==='editor'||dialogMode==='discard')){if(dialogMode==='discard')renderEditor();else showDiscard();return false;}dialog.close();return true;}
-  function editor(room){editing=copy(room);draft=copy(room.decorations||[]);dirty=false;selectedInstance=null;cursor={x:3,y:4};rotation=0;renderEditor();}
+  function settleCursor(){
+    if(placement(editing,catalog,draft,{id:selectedInstance,itemId:selectedItem,...cursor,rotation})===null)return;
+    const positions=[];for(let y=2;y<editing.height-2;y++)for(let x=1;x<editing.width-1;x++)positions.push({x,y,distance:Math.abs(x-cursor.x)+Math.abs(y-cursor.y)});
+    positions.sort((a,b)=>a.distance-b.distance||a.y-b.y||a.x-b.x);
+    const point=positions.find(point=>placement(editing,catalog,draft,{id:selectedInstance,itemId:selectedItem,x:point.x,y:point.y,rotation})===null);
+    if(point)cursor={x:point.x,y:point.y};
+  }
+  function editor(room){editing={...copy(room),...copy(LT.RoomArt.getLayout?.(room.kind,room.templateId)||{})};editing.templateId=room.kind==='kasai'?(room.templateId||'hall'):'hall';draft=copy(room.decorations||[]);dirty=false;templateNote='';selectedInstance=null;cursor={x:3,y:4};rotation=0;settleCursor();renderEditor();}
+  function renderTemplatePreview(canvas,templateId){
+    const map=LT.RoomArt.createMap({...editing,templateId,decorations:[]}),ctx=canvas.getContext('2d'),scale=canvas.width/(map.width*64);
+    ctx.setTransform(scale,0,0,scale,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,map.width*64,map.height*64);
+    for(let y=0;y<map.height;y++)for(let x=0;x<map.width;x++)LT.RoomArt.ground(ctx,map,x,y);
+    LT.RoomArt.dressing(ctx,map);ctx.setTransform(1,0,0,1,0,0);
+  }
+  function chooseTemplate(templateId){
+    if(editing?.kind!=='kasai'||!templates.some(template=>template.id===templateId)||templateId===editing.templateId)return;
+    const next={...editing,...copy(LT.RoomArt.getLayout('kasai',templateId)),templateId},result=rearrangeDecorations(next,catalog,draft);
+    if(!result.ok){error(result.message);return;}
+    editing=next;draft=result.decorations;dirty=true;selectedInstance=null;settleCursor();
+    templateNote=result.moved?`新しい形に合わせて、家具${result.moved}個を近くの空き場所へ移しました。配置を確認して保存してください。`:'間取りを変更しました。「保存する」で部屋に反映されます。';
+    renderEditor();dialog.querySelector(`[data-room-template="${templateId}"]`)?.focus?.({preventScroll:true});
+  }
   function renderEditor(){
     if(!editing)return;
     const catalogHtml=catalog.map(item=>`<button type="button" class="room-item${item.id===selectedItem?' is-selected':''}" data-room-action="item" data-room-item="${item.id}" aria-pressed="${item.id===selectedItem}"><canvas width="64" height="64" data-room-thumbnail="${item.id}" aria-hidden="true"></canvas><span>${escape(item.name)}</span><small>${item.width} × ${item.height}</small></button>`).join('');
-    show(editing.kind==='kasai'?`${operatorName(editing.owner)}の部屋を飾る`:'秘密部屋を飾る',`<p class="room-note">家具を選び、部屋の置きたい場所をタップしてください。配置・移動してから「保存する」で反映されます。${editing.kind==='kasai'?'中央の対戦ステージと通路の両側を飾れます。':''}</p><div class="room-editor"><div class="room-palette" aria-label="家具の一覧">${catalogHtml}</div><div class="room-plan"><canvas id="room-editor-canvas" width="${editing.width*28}" height="${editing.height*28}" tabindex="0" role="img" aria-label="部屋の配置図。矢印キーでも配置位置を選べます。"></canvas><div class="room-position"><label>X <input id="room-x" type="number" min="1" max="${editing.width-2}" value="${cursor.x}"></label><label>Y <input id="room-y" type="number" min="2" max="${editing.height-2}" value="${cursor.y}"></label><button class="btn btn-small" data-room-action="rotate">回転 ${rotation}°</button></div><p class="room-selection" data-room-selection></p><div class="room-editor-actions"><button class="btn btn-primary" data-room-action="place">${selectedInstance?'ここへ移動':'ここに置く'}</button><button class="btn" data-room-action="remove">選んだ家具を片付ける</button></div></div></div><div class="room-save-row"><label>部屋の名前<input id="room-edit-name" maxlength="24" value="${escape(editing.name)}"></label><span data-room-count>${draft.length} / 32 個${dirty?' · 未保存':''}</span><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="reload">保存済みに戻す</button></div>`,'editor');
+    const templateHtml=editing.kind==='kasai'?`<section class="room-templates" aria-labelledby="room-templates-title"><div class="room-template-heading"><h3 id="room-templates-title">部屋の形を選ぶ</h3><span>3種類のテンプレート</span></div><div class="room-template-list" role="group" aria-label="秘密部屋のテンプレート">${templates.map(template=>`<button type="button" class="room-template${template.id===editing.templateId?' is-selected':''}" data-room-action="template" data-room-template="${template.id}" aria-pressed="${template.id===editing.templateId}"><canvas width="288" height="240" data-room-template-preview="${template.id}" aria-hidden="true"></canvas><span class="room-template-copy"><span class="room-template-name">${escape(template.name)}</span><small>${escape(template.description)}</small><span class="room-template-state">${template.id===editing.templateId?'✓ 選択中':'この形を選ぶ'}</span></span></button>`).join('')}</div><p class="room-template-notice" role="status" aria-live="polite">${escape(templateNote||'形と内装をまとめて変更できます。家具は引き継がれ、壁と重なる家具だけ空き場所へ移ります。')}</p></section>`:'';
+    show(editing.kind==='kasai'?`${operatorName(editing.owner)}の部屋を飾る`:'秘密部屋を飾る',`${templateHtml}<p class="room-note">家具を選び、部屋の置きたい場所をタップしてください。配置・移動してから「保存する」で反映されます。${editing.kind==='kasai'?'中央の対戦ステージと通路の両側を飾れます。':''}</p><div class="room-editor"><div class="room-palette" aria-label="家具の一覧">${catalogHtml}</div><div class="room-plan"><canvas id="room-editor-canvas" width="${editing.width*28}" height="${editing.height*28}" tabindex="0" role="img" aria-label="部屋の配置図。矢印キーでも配置位置を選べます。"></canvas><div class="room-position"><label>X <input id="room-x" type="number" min="1" max="${editing.width-2}" value="${cursor.x}"></label><label>Y <input id="room-y" type="number" min="2" max="${editing.height-2}" value="${cursor.y}"></label><button class="btn btn-small" data-room-action="rotate">回転 ${rotation}°</button></div><p class="room-selection" data-room-selection></p><div class="room-editor-actions"><button class="btn btn-primary" data-room-action="place">${selectedInstance?'ここへ移動':'ここに置く'}</button><button class="btn" data-room-action="remove">選んだ家具を片付ける</button></div></div></div><div class="room-save-row"><label>部屋の名前<input id="room-edit-name" maxlength="24" value="${escape(editing.name)}"></label><span data-room-count>${draft.length} / 32 個${dirty?' · 未保存':''}</span><button class="btn btn-primary" data-room-action="save">保存する</button><button class="btn" data-room-action="reload">保存済みに戻す</button></div>`,'editor');
     for(const canvas of dialog.querySelectorAll('[data-room-thumbnail]'))LT.RoomArt.renderThumbnail(canvas,canvas.dataset.roomThumbnail);
+    for(const canvas of dialog.querySelectorAll('[data-room-template-preview]'))renderTemplatePreview(canvas,canvas.dataset.roomTemplatePreview);
     const canvas=dialog.querySelector('#room-editor-canvas');
     canvas.addEventListener('click',event=>{const rect=canvas.getBoundingClientRect();cursor={x:Math.max(1,Math.min(editing.width-2,Math.floor((event.clientX-rect.left)/rect.width*editing.width))),y:Math.max(2,Math.min(editing.height-2,Math.floor((event.clientY-rect.top)/rect.height*editing.height)))};pickAtCursor();updateCursor();});
     canvas.addEventListener('keydown',event=>{const delta={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[event.key];if(delta){event.preventDefault();cursor.x=Math.max(1,Math.min(editing.width-2,cursor.x+delta[0]));cursor.y=Math.max(2,Math.min(editing.height-2,cursor.y+delta[1]));updateCursor();}});
@@ -221,7 +272,7 @@
   function place(){const entry={id:selectedInstance||crypto.randomUUID(),itemId:selectedItem,x:cursor.x,y:cursor.y,rotation},problem=placement(editing,catalog,draft,entry);if(problem){error(problem);return;}draft=[...draft.filter(row=>row.id!==entry.id),entry];selectedInstance=entry.id;dirty=true;renderEditor();}
   function remove(){if(!selectedInstance)pickAtCursor();if(!selectedInstance){error('片付ける家具をタップしてください。');return;}draft=draft.filter(row=>row.id!==selectedInstance);selectedInstance=null;dirty=true;renderEditor();}
   async function saveDecor(){
-    if(LT.KasaiLive?.locked?.()){error('対戦の待ち合わせ中は飾りつけを変更できません。');return;}if(busy||!editing||editing.owner.id!==owner())return;const task=operation(),roomId=editing.id,body={revision:editing.revision,name:editing.name,decorations:copy(draft)};setBusy(true);
+    if(LT.KasaiLive?.locked?.()){error('対戦の待ち合わせ中は飾りつけを変更できません。');return;}if(busy||!editing||editing.owner.id!==owner())return;const task=operation(),roomId=editing.id,body={revision:editing.revision,name:editing.name,decorations:copy(draft),...(editing.kind==='kasai'?{templateId:editing.templateId}:{})};setBusy(true);
     try{const data=await api('/world/rooms/'+roomId,{method:'PATCH',body});if(!isCurrent(task)||editing?.id!==roomId)return;if(data.room?.id!==owner())throw Error('保存結果を確認できませんでした。');mine=data.room;if(kasai?.id===mine.id)kasai=mine;rooms=rooms.map(room=>room.id===mine.id?mine:room);dirty=false;if(engine()?.map?.roomOwner===mine.id){current=mine;bridge().refreshSharedRoom?.(LT.RoomArt.createMap(mine));}editor(mine);toast('飾りつけを保存しました。ほかのプレイヤーにも見えるようになります。');}
     catch(err){if(isCurrent(task))error(err.message||'保存できませんでした。変更はこの画面に残っています。');}finally{finish(task);}
   }
@@ -245,6 +296,7 @@
       case 'edit':case 'edit-own':await decorateMine();break;
       case 'reward':if(LT.Admin?.player?.isAdmin!==true&&kasai?.id!==owner()){dialog.close();if(LT.KasaiChallenge?.openRewards)await LT.KasaiChallenge.openRewards();else toast('報酬の確認画面を読み込み中です。');}break;
       case 'item':selectedItem=button.dataset.roomItem;selectedInstance=null;updateCursor();break;
+      case 'template':chooseTemplate(button.dataset.roomTemplate);break;
       case 'rotate':rotation=(rotation+90)%360;updateCursor();break;case 'place':place();break;case 'remove':remove();break;
       case 'save':await saveDecor();break;case 'resume':renderEditor();break;case 'discard':dirty=false;dialog.close();break;
       case 'reload':await loadEditor(true);break;

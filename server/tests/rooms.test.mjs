@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import worker,{ROOM_CATALOG,ROOM_LAYOUTS,worldRoomWalls,validateRoomDecorations,WORLD_TTL,MYTHICAL_CONFIG,DEFAULT_CONFIG} from '../server.mjs';
+import worker,{ROOM_CATALOG,ROOM_LAYOUTS,ROOM_TEMPLATES,worldRoomWalls,validateRoomDecorations,WORLD_TTL,MYTHICAL_CONFIG,DEFAULT_CONFIG} from '../server.mjs';
 import {RULES_VERSION,LEGACY_RULES_VERSION,replayChallenge,normalizeParty} from '../kasai-replay.mjs';
 
 class LocalD1 {
   constructor(){
     this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec('PRAGMA foreign_keys=ON');
-    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+    for(const file of ['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql','0008_room_templates.sql'])this.sqlite.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
   }
   prepare(sql){
     const db=this;
@@ -222,8 +222,88 @@ test('dynamic presence requires persisted room and uses current room dimensions 
   assert.equal((await presence(a,'room:P0000000000000000')).status,400);
   assert.equal((await presence(a,room.mapId,18,12)).status,400);assert.equal((await presence(a,room.mapId,9,16)).status,400);
   assert.equal((await presence(a,room.mapId)).status,200);assert.deepEqual((await presence(b,room.mapId)).players.map(p=>p.id),[a.id]);
-  assert.equal((await presence(a,kasai.mapId,23,19)).status,200);assert.deepEqual((await presence(b,room.mapId)).players,[]);
+  assert.equal((await presence(a,kasai.mapId,23,19)).status,400);
+  assert.equal((await presence(a,kasai.mapId,22,18)).status,200);assert.deepEqual((await presence(b,room.mapId)).players,[]);
   assert.equal((await presence(owner,kasai.mapId,24,19)).status,400);
+});
+
+test('template migration adds the original hall without changing existing rooms, furniture or revisions',()=>{
+  const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');
+  for(const file of ['0000_admin.sql','0003_rooms.sql'])db.exec(readFileSync(new URL('../drizzle/'+file,import.meta.url),'utf8'));
+  const owner='P0000000000000001',decorations=JSON.stringify([{id:'old-bed',itemId:'bed',x:3,y:8,rotation:90}]);
+  db.prepare('INSERT INTO players (id,token_hash,name,created_at,updated_at) VALUES (?,?,?,?,?)').run(owner,'legacy-hash','既存の旅人',100,200);
+  db.prepare("INSERT INTO world_rooms (owner_id,map_id,entrance_x,entrance_y,facing,name,decorations_json,revision,created_at,updated_at) VALUES (?,'forest',4,7,'down','以前の部屋',?,9,100,200)").run(owner,decorations);
+  const before={...db.prepare('SELECT * FROM world_rooms').get()};
+  db.exec(readFileSync(new URL('../drizzle/0008_room_templates.sql',import.meta.url),'utf8'));
+  assert.deepEqual({...db.prepare('SELECT * FROM world_rooms').get()},{...before,template_id:'hall'});
+  for(const id of ['unknown','',null])assert.throws(()=>db.prepare('UPDATE world_rooms SET template_id=?').run(id),/CHECK|NOT NULL/);
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);db.close();
+});
+
+test('the three template masks keep a connected floor, exact silhouettes and the common protected stage',()=>{
+  assert.deepEqual(ROOM_TEMPLATES.map(template=>template.id),['hall','sanctum','wings']);
+  const bounds={
+    hall:Array.from({length:18},()=>[1,22]),
+    sanctum:[[6,17],[5,18],[4,19],[3,20],...Array.from({length:10},()=>[2,21]),[3,20],[4,19],[5,18],[6,17]],
+    wings:[...Array.from({length:5},()=>[7,16]),...Array.from({length:8},()=>[1,22]),...Array.from({length:5},()=>[7,16])]
+  };
+  for(const template of ROOM_TEMPLATES){
+    assert.equal(template.width,24);assert.equal(template.height,20);assert.equal(template.floorMask.length,20);
+    const expected=['0'.repeat(24),...bounds[template.id].map(([left,right])=>'0'.repeat(left)+'1'.repeat(right-left+1)+'0'.repeat(23-right)),'0'.repeat(24)];
+    assert.deepEqual(template.floorMask,expected,template.id);
+    const queue=[[12,16]],visited=new Set(['12,16']);
+    for(let i=0;i<queue.length;i++)for(const [dx,dy] of [[0,1],[1,0],[0,-1],[-1,0]]){
+      const [x,y]=queue[i],nx=x+dx,ny=y+dy,key=nx+','+ny;
+      if(template.floorMask[ny]?.[nx]==='1'&&!visited.has(key)){visited.add(key);queue.push([nx,ny]);}
+    }
+    assert.equal(visited.size,expected.join('').split('1').length-1,'Every floor tile is reachable from the spawn');
+    for(let y=1;y<=18;y++)for(const x of [11,12])assert(visited.has(x+','+y));
+    for(let y=2;y<=7;y++)for(let x=8;x<=15;x++)assert(visited.has(x+','+y));
+    assert.deepEqual(template.spawn,{x:12,y:16});assert.deepEqual(template.exit,{x:12,y:18});
+    assert.deepEqual(template.protected,ROOM_LAYOUTS.kasai.protected);
+    assert.throws(()=>validateRoomDecorations([{id:'stage',itemId:'plant',x:12,y:4,rotation:0}],'kasai',template.id));
+  }
+  assert.throws(()=>validateRoomDecorations([{id:'right-edge',itemId:'sofa',x:18,y:2,rotation:0}],'kasai','sanctum'),/アイテム全体/);
+  assert.throws(()=>validateRoomDecorations([{id:'lower-wing',itemId:'bed',x:5,y:12,rotation:0}],'kasai','wings'),/アイテム全体/);
+});
+
+test('template changes persist for visitors and reject incompatible furniture atomically',async t=>{
+  const {env,call,register,admin}=setup(t),owner=await admin(),visitor=await register();
+  const catalog=await call('/world/rooms/catalog',{token:visitor.token});assert.deepEqual(catalog.templates,ROOM_TEMPLATES);
+  const patch=body=>call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body});
+  const initial=(await call('/world/rooms/mine',{token:owner.token})).room;assert.equal(initial.templateId,'hall');
+  const old=[{id:'keep-plant',itemId:'plant',x:2,y:3,rotation:0}];
+  const furnished=await patch({revision:initial.revision,decorations:old});assert.equal(furnished.status,200);
+  const stored={...env.DB.sqlite.prepare('SELECT * FROM world_rooms WHERE owner_id=?').get(owner.id)};
+  for(const body of [{templateId:'sanctum'},{templateId:'sanctum',decorations:old},{templateId:'wings',decorations:old}]){
+    const refused=await patch({revision:furnished.room.revision,...body});assert.equal(refused.status,400,JSON.stringify(refused));
+    assert.deepEqual({...env.DB.sqlite.prepare('SELECT * FROM world_rooms WHERE owner_id=?').get(owner.id)},stored);
+  }
+  for(const templateId of ['',null,[],{},'__proto__','unknown'])assert.equal((await patch({revision:furnished.room.revision,templateId,decorations:[]})).status,400);
+  let revision=furnished.room.revision;
+  for(const template of ROOM_TEMPLATES){
+    const decorations=[{...old[0],x:3,y:10}],changed=await patch({revision,templateId:template.id,decorations});assert.equal(changed.status,200,JSON.stringify(changed));
+    revision=changed.room.revision;assert.equal(changed.room.templateId,template.id);assert.deepEqual(changed.room.floorMask,template.floorMask);assert.deepEqual(changed.room.decorations,decorations);
+    assert.deepEqual((await call('/world/rooms/'+owner.id,{token:visitor.token})).room,changed.room);
+    assert.deepEqual((await call('/world/rooms?kind=kasai',{token:visitor.token})).rooms,[changed.room]);
+    assert.equal(env.DB.sqlite.prepare('SELECT template_id FROM world_rooms WHERE owner_id=?').get(owner.id).template_id,template.id);
+  }
+  const concurrent=await Promise.all(['hall','sanctum'].map(templateId=>patch({revision,templateId,decorations:[{...old[0],x:3,y:10}]})));
+  assert.deepEqual(concurrent.map(result=>result.status).sort(),[200,409]);
+  const winner=concurrent.find(result=>result.status===200).room;
+  assert.deepEqual((await call('/world/rooms/'+owner.id,{token:visitor.token})).room,winner);
+});
+
+test('world presence follows the selected floor mask and retains stage, spawn and exit coordinates',async t=>{
+  const {call,register,admin,presence}=setup(t),owner=await admin(),visitor=await register();let revision=1;
+  for(const templateId of ['hall','sanctum','wings']){
+    const changed=await call('/world/rooms/'+owner.id,{token:owner.token,method:'PATCH',body:{revision,templateId,decorations:[]}});assert.equal(changed.status,200);revision=changed.room.revision;
+    const map=changed.room.mapId;
+    for(const [x,y] of [[12,4],[12,5],[12,16],[12,18],[3,10]])assert.equal((await presence(visitor,map,x,y)).status,200,templateId+':'+x+','+y);
+    for(const [x,y] of [[0,10],[23,10],[12,0],[12,19]])assert.equal((await presence(visitor,map,x,y)).status,400);
+    for(const [x,y] of [[2,3],[21,3],[3,16]])assert.equal((await presence(visitor,map,x,y)).status,templateId==='hall'?200:400,templateId+':'+x+','+y);
+    assert.equal((await presence(visitor,map,5,8)).status,200,'Both side wings remain walkable');
+  }
 });
 
 test('CPU starts require live play, while authenticated issued-session recovery stays idempotent',async t=>{

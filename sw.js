@@ -3,6 +3,7 @@
  * v70: the supplied Galdoras artwork and non-evolving roster replace old forms.
  * v71: Galdo and Galdoran join the off-dex line leading to final-form Galdoras.
  * v72: full-size controls, bottom party layout and saved drag ordering refresh together.
+ * v75: three operator room templates, saved floor masks and ordinary field camera scale.
  * v74: exclusive Super lineage, genderless operator reserves and lunar sprite atlases.
  * v73: visible START/SELECT buttons and the desktop side party refresh together.
  * The page, its code and the core art are stored at install, so the game starts

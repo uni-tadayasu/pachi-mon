@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import worker, {worldRoomWalls} from '../server.mjs';
+import worker, {worldRoomWalls,ROOM_TEMPLATES} from '../server.mjs';
 import {createReplayRuntime} from '../kasai-replay.mjs';
 import {validateLiveOrders} from '../kasai-live-engine.mjs';
 
 const LT=createReplayRuntime(),copy=value=>JSON.parse(JSON.stringify(value));
 const SECRET='two-admin-integration-test-claim-key';
 const SIGNING='two-admin-integration-test-signing-secret-at-least-32';
-const MIGRATIONS=['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql'];
+const MIGRATIONS=['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql','0008_room_templates.sql'];
 
 class LocalD1 {
   constructor(){
@@ -508,4 +508,83 @@ test('primary release without a secondary promotes the third seat and retains it
   assert.equal(current.kasai.adminRole,'main');assert.equal(current.kasai.avatar,'kasai');assert.equal(current.kasai.name,'謎のトレーナー カサイ');
   const verified=ok(await h.call('/world/trainer-pass/verify',challenger,'POST',{sessionId,side:0,pass:signed.pass})).trainer;
   assert.equal(verified.adminRole,'main');assert.equal(verified.avatar,'kasai');assert.equal(verified.name,'謎のトレーナー カサイ');
+});
+
+test('all three operator roles can persist each room template while ordinary owners and other operators cannot change it',async t=>{
+  const h=setup(t),{main,sub,third}=await h.threeAdmins(),hosts=[main,sub,third],visitor=await h.register('部屋の見学');
+  const ordinary=await h.createRoom(visitor,'harbor');assert.equal(ordinary.templateId,'hall');assert.equal(ordinary.width,18);assert.equal(ordinary.height,16);
+  assert.equal(ordinary.floorMask.length,16);assert(ordinary.floorMask.every(row=>row.length===18));
+  assert.equal((await h.call('/world/rooms/'+visitor.id,visitor,'PATCH',{revision:ordinary.revision,templateId:'hall'})).error.code,'ROOM_TEMPLATE_ADMIN_REQUIRED');
+  for(const [index,actor] of hosts.entries()){
+    let room=await h.createRoom(actor,['village','meadow','forest'][index]);assert.equal(room.templateId,'hall');
+    const decorations=[{id:'same-furniture',itemId:'plant',x:3,y:10,rotation:0}];
+    for(const template of ROOM_TEMPLATES){
+      room=ok(await h.call('/world/rooms/'+actor.id,actor,'PATCH',{revision:room.revision,templateId:template.id,decorations})).room;
+      assert.equal(room.templateId,template.id);assert.deepEqual(room.floorMask,template.floorMask);assert.deepEqual(room.decorations,decorations);
+      assert.deepEqual(ok(await h.call('/world/rooms/'+actor.id,visitor)).room,room);
+      assert.deepEqual(ok(await h.call('/world/rooms/mine',actor)).room,room);
+      assert.equal(h.env.DB.sqlite.prepare('SELECT template_id FROM world_rooms WHERE owner_id=?').get(actor.id).template_id,template.id);
+    }
+    for(const other of [visitor,hosts[(index+1)%3]])assert.equal((await h.call('/world/rooms/'+actor.id,other,'PATCH',{revision:room.revision,templateId:'hall',decorations:[]})).error.code,'ROOM_OWNER_REQUIRED');
+  }
+});
+
+test('role downgrade preserves the operator template and hidden furniture through ordinary edits and reappointment',async t=>{
+  const h=setup(t),{main,sub}=await h.admins(),visitor=await h.register('家具の見学');let room=await h.createRoom(sub);
+  const original=[{id:'visible-plant',itemId:'plant',x:3,y:10,rotation:0},{id:'retained-bed',itemId:'bed',x:16,y:10,rotation:0}];
+  room=ok(await h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,templateId:'wings',decorations:original})).room;
+  ok(await h.revoke(main,sub));
+  const downgraded=ok(await h.call('/world/rooms/'+sub.id,visitor)).room;
+  assert.equal(downgraded.kind,'secret');assert.equal(downgraded.templateId,'hall');assert.equal(downgraded.width,18);assert.deepEqual(downgraded.decorations,[original[0]]);
+  assert.equal((await h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,templateId:'sanctum',decorations:[]})).error.code,'ROOM_TEMPLATE_ADMIN_REQUIRED');
+  room=ok(await h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,name:'家具を保管する部屋'})).room;
+  let stored=h.env.DB.sqlite.prepare('SELECT * FROM world_rooms WHERE owner_id=?').get(sub.id);assert.equal(stored.template_id,'wings');assert.deepEqual(JSON.parse(stored.decorations_json),original);
+  for(const decoration of [{...original[0],x:16},{...original[0],id:'retained-bed'}]){
+    const rejected=await h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,decorations:[decoration]});assert.equal(rejected.error.code,'ROOM_DECORATION_BLOCKED');
+  }
+  const moved={...original[0],x:4};room=ok(await h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,decorations:[moved]})).room;
+  stored=h.env.DB.sqlite.prepare('SELECT * FROM world_rooms WHERE owner_id=?').get(sub.id);assert.deepEqual(JSON.parse(stored.decorations_json),[moved,original[1]]);assert.equal(stored.template_id,'wings');
+  ok(await h.call('/admin/devices',main,'POST',{playerId:sub.id,role:'sub',confirmed:true}));
+  const restored=ok(await h.call('/world/rooms/'+sub.id,visitor)).room;
+  assert.equal(restored.kind,'kasai');assert.equal(restored.templateId,'wings');assert.deepEqual(restored.decorations,[moved,original[1]]);assert.equal(restored.name,'家具を保管する部屋');
+});
+
+test('a queued template change cannot survive revocation and reappointment under the same room revision',{timeout:5000},async t=>{
+  const h=setup(t),{main,sub}=await h.admins(),room=await h.createRoom(sub),prepare=h.env.DB.prepare.bind(h.env.DB);
+  let release,signal,held=false;const gate=new Promise(resolve=>{release=resolve;}),ready=new Promise(resolve=>{signal=resolve;});
+  h.env.DB.prepare=sql=>{
+    const statement=prepare(sql);
+    if(sql.startsWith('UPDATE world_rooms SET name=')&&!held){held=true;const first=statement.first.bind(statement);statement.first=async()=>{signal();await gate;return first();};}
+    return statement;
+  };
+  const pending=h.call('/world/rooms/'+sub.id,sub,'PATCH',{revision:room.revision,templateId:'sanctum',decorations:[]});
+  await ready;h.env.DB.prepare=prepare;
+  try{ok(await h.revoke(main,sub));ok(await h.call('/admin/devices',main,'POST',{playerId:sub.id,role:'sub',confirmed:true}));}finally{release();}
+  const stale=await pending;assert.equal(stale.status,409);assert.equal(stale.error.code,'ROOM_CHANGED');
+  const current=ok(await h.call('/world/rooms/'+sub.id,sub)).room;assert.equal(current.templateId,'hall');assert.equal(current.revision,room.revision);
+});
+
+test('each template keeps live battle coordinates and locks shape changes until its challenger leaves',async t=>{
+  const h=setup(t),{hosts,challengers}=await h.threeParticipants();
+  for(const [index,host] of hosts.entries()){
+    const templateId=ROOM_TEMPLATES[index].id,challenger=challengers[index];
+    let room=ok(await h.call('/world/rooms/'+host.id,host)).room;
+    room=ok(await h.call('/world/rooms/'+host.id,host,'PATCH',{revision:room.revision,templateId,decorations:[]})).room;
+    const session=ok(await h.start(challenger,host)).session;
+    for(const actor of [host,challenger]){
+      const presence=h.env.DB.sqlite.prepare('SELECT x,y FROM world_presence WHERE player_id=?').get(actor.id);
+      assert.equal(room.floorMask[presence.y][presence.x],'1');
+    }
+    const attempted={revision:room.revision,templateId:ROOM_TEMPLATES[(index+1)%3].id,decorations:[]};
+    assert.equal((await h.call('/world/rooms/'+host.id,host,'PATCH',attempted)).error.code,'KASAI_LIVE_BUSY');
+    ok(await h.live(challenger,session.id,'arrive'));ok(await h.live(host,session.id,'arrive',{party:party('komori',70)}));
+    ok(await h.presence(challenger,{map:'room:'+host.id,x:12,y:5}));assert.equal(ok(await h.live(challenger,session.id,'talk')).session.state,'permission');
+    const battle=ok(await h.live(host,session.id,'answer',{accept:true})).session;assert.equal(battle.state,'battle');
+    assert.equal((await h.call('/world/rooms/'+host.id,host,'PATCH',attempted)).error.code,'KASAI_LIVE_BUSY');
+    ok(await h.live(challenger,session.id,'actions',{round:battle.round,orders:orders(battle.battle,0),requestId:crypto.randomUUID()}));
+    const resolved=ok(await h.live(host,session.id,'actions',{round:battle.round,orders:orders(battle.battle,1),requestId:crypto.randomUUID()})).session;
+    assert(resolved.round>battle.round||resolved.state==='result');
+    assert.equal(ok(await h.live(challenger,session.id,'leave')).session.state,'closed');
+    const changed=ok(await h.call('/world/rooms/'+host.id,host,'PATCH',attempted)).room;assert.equal(changed.templateId,attempted.templateId);
+  }
 });

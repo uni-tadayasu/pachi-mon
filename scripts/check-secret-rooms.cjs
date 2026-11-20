@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),test=require('node:test');
 const {pathToFileURL}=require('node:url');
-const {placement,footprint}=require('../secret-rooms.js');
+const {placement,footprint,rearrangeDecorations}=require('../secret-rooms.js');
 const root=path.resolve(__dirname,'..'),SOURCE=fs.readFileSync(path.join(root,'secret-rooms.js'),'utf8'),ART=fs.readFileSync(path.join(root,'room-art.js'),'utf8');
 const SELF='P0000000000000001',PEER='P0000000000000002',KASAI='P0000000000000003';
 const copy=value=>JSON.parse(JSON.stringify(value)),settle=async()=>{for(let i=0;i<60;i++)await Promise.resolve();};
@@ -362,4 +362,57 @@ test('an old poll cannot roll a freshly saved room back to an earlier revision',
   await h.editOwn();delayPoll=true;await h.step(1200);h.place('plant',2,3);h.click('save');await settle();assert.equal(h.engine.map.roomRevision,2);
   poll.resolve({room:makeRoom()});await settle();assert.equal(h.engine.map.roomRevision,2,'A stale poll replaced the saved furniture revision');
   assert.equal(h.LT.Rooms.current().revision,2);
+});
+
+test('each operator can preview all three templates and save a complete furniture-preserving revision',async()=>{
+  for(const role of ['primary','sub','sub-sub']){
+    const h=runtime({others:false}),room=makeRoom(SELF,'kasai');room.owner.isAdmin=true;room.owner.adminRole=role;room.templateId='hall';
+    room.decorations=[item('plant',2,3,0,'corner'),item('sofa',3,11,0,'wing'),item('bed',18,3,0,'bed')];h.store.set(SELF,room);h.LT.Admin.player.isAdmin=true;h.LT.Admin.player.adminRole=role;
+    assert(await h.LT.Rooms.decorateMine());assert.equal(h.dialog().querySelectorAll('[data-room-template]').length,3);
+    h.input('room-edit-name','三つの形を選ぶ部屋');
+    for(const templateId of ['sanctum','wings']){
+      h.click('template',{roomTemplate:templateId});await settle();
+      assert.equal(h.action('template',{roomTemplate:templateId})['aria-pressed'],'true');
+      assert.equal(h.dialog().querySelector('#room-edit-name').value,'三つの形を選ぶ部屋');
+    }
+    assert(!h.calls.some(call=>call.method==='PATCH'),'Template selection is a reversible local preview until Save');
+    h.click('save');await settle();const saved=h.store.get(SELF),patch=h.calls.find(call=>call.method==='PATCH');
+    assert.equal(patch.body.templateId,'wings');assert.equal(saved.templateId,'wings');assert.equal(saved.revision,2);
+    assert.deepEqual(saved.decorations.map(entry=>entry.id),room.decorations.map(entry=>entry.id));assert.equal(saved.decorations.length,room.decorations.length);
+    const target={...saved,...copy(h.LT.RoomArt.getLayout('kasai','wings'))};
+    for(const entry of saved.decorations)assert.equal(placement(target,catalog,saved.decorations,entry),null);
+    assert.deepEqual(saved.decorations.find(entry=>entry.id==='wing'),room.decorations.find(entry=>entry.id==='wing'),'Furniture already within the target shape must stay put');
+    assert.equal(saved.name,'三つの形を選ぶ部屋');assert.equal(h.LT.Rooms.isWorking(),false);
+  }
+});
+
+test('normal rooms have no template selector and visitors cannot edit an operator room',async()=>{
+  const h=runtime({own:true});await h.editOwn();assert.equal(h.dialog().querySelectorAll('[data-room-template]').length,0);h.click('save');await settle();
+  assert(!Object.hasOwn(h.calls.find(call=>call.method==='PATCH').body,'templateId'));
+  h.LT.Rooms.closeDialog();h.LT.Rooms.leave();assert(await h.LT.Rooms.enter(KASAI));assert(await h.LT.Rooms.open());
+  assert.equal(h.action('edit'),undefined);assert.equal(h.dialog().querySelectorAll('[data-room-template]').length,0);
+});
+
+test('unsaved template changes can be resumed or discarded without changing the saved shape',async()=>{
+  const h=runtime({others:false}),room=makeRoom(SELF,'kasai');room.templateId='hall';h.store.set(SELF,room);h.LT.Admin.player.isAdmin=true;
+  assert(await h.LT.Rooms.decorateMine());h.click('template',{roomTemplate:'sanctum'});h.click('close');assert(h.action('resume'));
+  h.click('resume');assert.equal(h.action('template',{roomTemplate:'sanctum'})['aria-pressed'],'true');
+  h.click('close');h.click('discard');assert.equal(h.LT.Rooms.isDialogOpen(),false);assert.equal(h.store.get(SELF).templateId,'hall');
+  assert(await h.LT.Rooms.decorateMine());assert.equal(h.action('template',{roomTemplate:'hall'})['aria-pressed'],'true');
+  assert(!h.calls.some(call=>call.method==='PATCH'));
+});
+
+test('template furniture migration is deterministic, keeps IDs and rotations, and refuses a room that cannot fit everything',()=>{
+  const art=contractContext.LT.RoomArt,target=copy(art.getLayout('kasai','wings')),source=copy(art.getLayout('kasai','hall'));
+  const pieces=[item('plant',1,2,0,'plant'),item('table',20,2,90,'table'),item('sofa',2,9,90,'kept')],before=copy(pieces);
+  const a=rearrangeDecorations(target,catalog,pieces),b=rearrangeDecorations(target,catalog,pieces);
+  assert.equal(a.ok,true);assert.deepEqual(a,b);assert.deepEqual(pieces,before,'Preview must not mutate the saved room');
+  assert.deepEqual(a.decorations.map(({id,itemId,rotation})=>({id,itemId,rotation})),pieces.map(({id,itemId,rotation})=>({id,itemId,rotation})));
+  assert.deepEqual(a.decorations[2],pieces[2]);for(const entry of a.decorations)assert.equal(placement(target,catalog,a.decorations,entry),null);
+  const crowded=[];
+  for(let y=2;y<source.height-2&&crowded.length<32;y++)for(let x=1;x<source.width-1&&crowded.length<32;x++){
+    const entry=item('bed',x,y,0,'bed'+crowded.length);if(placement(source,catalog,crowded,entry)===null)crowded.push(entry);
+  }
+  assert.equal(crowded.length,32);const preserved=copy(crowded),failure=rearrangeDecorations(target,catalog,crowded);
+  assert.equal(failure.ok,false);assert.match(failure.message,/すべての家具/);assert.deepEqual(crowded,preserved);assert(!failure.decorations);
 });

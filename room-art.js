@@ -21,17 +21,64 @@
     {id:'banner',name:'旅団の旗',width:1,height:1,solid:true},
   ].map(Object.freeze));
   const items = new Map(catalog.map(item => [item.id,item]));
-  const freezeLayout = layout => Object.freeze({...layout,spawn:Object.freeze(layout.spawn),exit:Object.freeze(layout.exit),
-    protected:Object.freeze(layout.protected.map(Object.freeze))});
-  const layouts = Object.freeze({
-    secret:freezeLayout({width:18,height:16,spawn:{x:9,y:12},exit:{x:9,y:14},
-      protected:[{x:8,y:0,width:2,height:16}]}),
-    kasai:freezeLayout({width:24,height:20,spawn:{x:12,y:16},exit:{x:12,y:18},
-      protected:[{x:11,y:0,width:2,height:20},{x:8,y:2,width:8,height:6}]}),
-  });
+  const templateDescriptions=Object.freeze([
+    {id:'hall',name:'王座の大広間',description:'広い長方形のホール。深緑の石床と金の装飾。'},
+    {id:'sanctum',name:'星環の八角堂',description:'角を落とした八角形。青紫の石床と星の光。'},
+    {id:'wings',name:'双翼の回廊',description:'左右へ広がる十字形。木床と若草色の庭園。'}
+  ].map(Object.freeze));
+  function floorAt(kind,templateId,x,y,width,height){
+    if(x<1||y<1||x>=width-1||y>=height-1)return false;
+    if(kind!=='kasai'||templateId==='hall')return true;
+    if(templateId==='wings')return x>=7&&x<=16||y>=6&&y<=13;
+    const inset=y<5?7-y:y>14?y-12:2;
+    return x>=inset&&x<=23-inset;
+  }
+  const freezeLayout = layout => {
+    const floorMask=Object.freeze(Array.from({length:layout.height},(_,y)=>Array.from({length:layout.width},(_,x)=>
+      floorAt(layout.kind,layout.templateId,x,y,layout.width,layout.height)?'1':'0').join('')));
+    const wallMask=Object.freeze(floorMask.map((row,y)=>Array.from(row,(_,x)=>row[x]==='0'&&[-1,0,1].some(dy=>[-1,0,1].some(dx=>floorMask[y+dy]?.[x+dx]==='1'))?'1':'0').join('')));
+    return Object.freeze({...layout,spawn:Object.freeze(layout.spawn),exit:Object.freeze(layout.exit),
+      protected:Object.freeze(layout.protected.map(Object.freeze)),floorMask,wallMask});
+  };
+  const secretLayout=freezeLayout({kind:'secret',templateId:'hall',width:18,height:16,spawn:{x:9,y:12},exit:{x:9,y:14},
+    protected:[{x:8,y:0,width:2,height:16}]});
+  const operatorLayouts=Object.freeze(Object.fromEntries(templateDescriptions.map(({id})=>[id,freezeLayout({kind:'kasai',templateId:id,
+    width:24,height:20,spawn:{x:12,y:16},exit:{x:12,y:18},
+    protected:[{x:11,y:0,width:2,height:20},{x:8,y:2,width:8,height:6}]})])));
+  const templates=Object.freeze(templateDescriptions.map(template=>Object.freeze({...template,...operatorLayouts[template.id]})));
+  const legacyGeometry=({width,height,spawn,exit,protected:reserved})=>Object.freeze({width,height,spawn,exit,protected:reserved});
+  const layouts=Object.freeze({secret:legacyGeometry(secretLayout),kasai:legacyGeometry(operatorLayouts.hall)});
+  function getLayout(kind,templateId='hall'){
+    return kind==='kasai'?(Object.hasOwn(operatorLayouts,templateId)?operatorLayouts[templateId]:operatorLayouts.hall):secretLayout;
+  }
+  function resolveLayout(value){
+    if(typeof value==='string')return getLayout(value);
+    const kind=value?.kind||value?.roomType||value?.roomKindTag||value?.roomKind||(value?.width===24&&value?.height===20?'kasai':'secret');
+    return getLayout(kind,value?.templateId);
+  }
+  function isFloor(layoutOrRoom,x,y){
+    const layout=resolveLayout(layoutOrRoom);
+    return Number.isInteger(x)&&Number.isInteger(y)&&layout.floorMask[y]?.[x]==='1';
+  }
+  function footprintFits(layoutOrRoom,rect){
+    if(!rect||![rect.x,rect.y,rect.width,rect.height].every(Number.isInteger)||rect.width<1||rect.height<1)return false;
+    const layout=resolveLayout(layoutOrRoom);
+    if(rect.x<0||rect.y<0||rect.x+rect.width>layout.width||rect.y+rect.height>layout.height)return false;
+    for(let y=rect.y;y<rect.y+rect.height;y++)for(let x=rect.x;x<rect.x+rect.width;x++)if(layout.floorMask[y][x]!=='1')return false;
+    return true;
+  }
   const P = Object.freeze({ink:'#263947',deep:'#173b44',navy:'#30475a',teal:'#357b80',teal2:'#529b99',
     mint:'#a7d3b8',cream:'#f1e4c1',gold:'#d8b76d',gold2:'#f3d99a',wood:'#b48b5d',wood2:'#d3b07a',
     wood3:'#7a604b',plum:'#6b5b79',sky:'#82bbca',white:'#f8f2dc'});
+  const roomPalettes=Object.freeze({
+    hall:Object.freeze({deep:P.deep,gold:P.gold,gold2:P.gold2,light:P.mint,carpet:'#24636a',carpetLight:'#87b6a4',carpetDark:'#2e7175',
+      stage:'#d3ceb1',stageInner:'#e4d9b8',stageLight:'#f0e6c8',stageSeam:'#b6b79d',felt:'#28636b',seal:'#729b90',sealDark:'#2d646a'}),
+    sanctum:Object.freeze({deep:'#222747',gold:'#c8ac69',gold2:'#f6dfa0',light:'#aacded',carpet:'#434e88',carpetLight:'#abbfdf',carpetDark:'#303960',
+      stage:'#8785a8',stageInner:'#c0c6dc',stageLight:'#e1e6f5',stageSeam:'#8a95b8',felt:'#36416e',seal:'#aab7dc',sealDark:'#4d5289'}),
+    wings:Object.freeze({deep:'#294d43',gold:'#c69c59',gold2:'#f2d49a',light:'#c8e1b0',carpet:'#63886b',carpetLight:'#c4dcb0',carpetDark:'#486b53',
+      stage:'#b48757',stageInner:'#d6b588',stageLight:'#f0d9ac',stageSeam:'#ad8358',felt:'#537e65',seal:'#bcdbad',sealDark:'#3f6c53'})
+  });
+  const templateOf=m=>m?.roomKind==='kasai'&&Object.hasOwn(roomPalettes,m.templateId)?m.templateId:'hall';
   const opposite = {up:'down',down:'up',left:'right',right:'left'};
   const integer = n => Number.isInteger(n) && Number.isFinite(n);
   const getItem = id => items.get(String(id)) || null;
@@ -51,6 +98,7 @@
       if(!item||!integer(raw.x)||!integer(raw.y)||!String(raw.id||'')||ids.has(String(raw.id))||![0,90,180,270].includes(raw.rotation))continue;
       const {width:w,height:h}=footprint(item,rotation);
       if(raw.x<1||raw.y<2||raw.x+w>layout.width-1||raw.y+h>layout.height-2)continue;
+      if(!footprintFits(layout,{x:raw.x,y:raw.y,width:w,height:h}))continue;
       let valid=true;
       for(let y=raw.y;y<raw.y+h;y++)for(let x=raw.x;x<raw.x+w;x++)
         if(used.has(`${x},${y}`)||layout.protected.some(rect=>inRect(x,y,rect)))valid=false;
@@ -64,13 +112,12 @@
   function createMap(record) {
     if(!record||!record.owner||typeof record.owner.id!=='string'||!record.owner.id)
       throw new TypeError('秘密の部屋の持ち主が見つかりません。');
-    const kind=record.kind==='kasai'?'kasai':'secret',layout=layouts[kind],owner=record.owner;
+    const kind=record.kind==='kasai'?'kasai':'secret',layout=getLayout(kind,record.templateId),owner=record.owner;
     const entrance=record.entrance||{},outside=LT.DATA?.maps?.[entrance.map];
     if(typeof entrance.map!=='string'||!integer(entrance.returnX)||!integer(entrance.returnY))
       throw new TypeError('秘密の部屋の出口が見つかりません。');
     const returnPoint={map:entrance.map,x:entrance.returnX,y:entrance.returnY,facing:opposite[entrance.facing]||'down'};
-    const tiles=Array.from({length:layout.height},(_,y)=>Array.from({length:layout.width},(_,x)=>
-      x===0||y===0||x===layout.width-1||y===layout.height-1?'#':'_'));
+    const tiles=layout.floorMask.map(row=>Array.from(row,value=>value==='1'?'_':'#'));
     const decorations=normalizedDecorations(record,layout),furniture=[],floorDecorations=[];
     for(const d of decorations) {
       const item=getItem(d.itemId),size=footprint(item,d.rotation);
@@ -85,6 +132,7 @@
       id:`room:${owner.id}`,name,subtitle:kind==='kasai'?(LT.Admin?.player?.id===owner.id?'あなたの専用ステージ。「秘密部屋」から家具を飾ろう。':'カサイ本人と挑戦者を迎える、特別な対戦ステージ。'):'自分らしい家具を飾って、旅人を迎えよう。',
       revision:Number.isSafeInteger(record.revision)?record.revision:0,roomRevision:Number.isSafeInteger(record.revision)?record.revision:0,
       width:layout.width,height:layout.height,spawn:{...layout.spawn,facing:'up'},
+      templateId:layout.templateId,floorMask:layout.floorMask,wallMask:layout.wallMask,
       interior:true,sharedRoom:true,roomKind:kind==='kasai'?'kasai':'home',roomType:kind,roomKindTag:kind,roomOwner:owner.id,
       owner:{id:owner.id,name:String(owner.name||'旅人'),isAdmin:owner.isAdmin===true},
       theme:'village',biome:'town',music:kind==='kasai'?'gym':'inn',parentMap:entrance.map,
@@ -129,22 +177,48 @@
   }
   function pixel(c,draw) {c.save();c.imageSmoothingEnabled=false;c.scale(2,2);draw();c.restore();}
   function wall(c,m,x,y) {
-    const X=x*32,Y=y*32,kasai=m.roomKind==='kasai';
-    const ink=kasai?'#203642':'#514d4a',stone=kasai?'#38545e':'#c1b28e',highlight=kasai?'#587278':'#eadbb8';
+    const X=x*32,Y=y*32,kasai=m.roomKind==='kasai',template=templateOf(m),scheme=roomPalettes[template];
+    if(kasai&&template==='wings'){
+      r(c,X,Y,32,32,'#513e32');r(c,X+2,Y+1,28,25,'#cfbc8d');
+      for(const yy of[3,12,21]){r(c,X+3,Y+yy,26,1,'#e7d5a8');r(c,X+3,Y+yy+7,26,1,'#ae936b');}
+      for(const xx of[1,27]){r(c,X+xx,Y,4,32,'#79533a');r(c,X+xx+1,Y+1,1,28,'#bd9060');}
+      r(c,X,Y+26,32,6,scheme.deep);r(c,X,Y+27,32,1,scheme.gold2);
+      r(c,X+14,Y+4,3,17,'#557950');
+      for(const [dx,dy]of[[-4,4],[4,8],[-4,12],[4,16]]){
+        diamond(c,X+15+dx,Y+dy,4,'#739c67');r(c,X+14+dx,Y+dy-1,2,1,'#bad59c');
+      }
+      return;
+    }
+    const celestial=kasai&&template==='sanctum';
+    const ink=celestial?'#282943':kasai?'#203642':'#514d4a',stone=celestial?'#535876':kasai?'#38545e':'#c1b28e',highlight=celestial?'#7e88a6':kasai?'#587278':'#eadbb8';
     r(c,X,Y,32,32,ink);
     for(let row=0;row<3;row++)for(let col=-1;col<3;col++) {
       const xx=X+col*16+(row%2?8:0),left=Math.max(X+1,xx+1),right=Math.min(X+31,xx+15),yy=Y+row*9+1;
       if(right<=left)continue;
       r(c,left,yy,right-left,7,stone);r(c,left+1,yy+1,right-left-2,1,highlight);
-      r(c,left+1,yy+6,right-left-2,1,kasai?'#293f4b':'#9d8c70');
+      r(c,left+1,yy+6,right-left-2,1,celestial?'#3b405c':kasai?'#293f4b':'#9d8c70');
     }
-    r(c,X,Y+26,32,6,kasai?P.deep:P.wood3);r(c,X,Y+27,32,1,kasai?P.gold:P.wood2);
-    r(c,X+2,Y+29,28,1,kasai?'#5d786e':'#aa895d');
-    if((x===0||x===m.width-1)&&y>0&&y<m.height-1){r(c,X+12,Y,8,28,kasai?P.deep:P.wood3);r(c,X+13,Y,1,28,kasai?P.gold:P.wood2);}
+    r(c,X,Y+26,32,6,kasai?scheme.deep:P.wood3);r(c,X,Y+27,32,1,kasai?scheme.gold:P.wood2);
+    r(c,X+2,Y+29,28,1,celestial?'#8997af':kasai?'#5d786e':'#aa895d');
+    if((x===0||x===m.width-1||celestial&&m.floorMask?.[y]?.[x+1]==='1')&&y>0&&y<m.height-1){r(c,X+12,Y,8,28,kasai?scheme.deep:P.wood3);r(c,X+13,Y,1,28,kasai?scheme.gold:P.wood2);}
+    if(celestial&&(x+y)%3===0){diamond(c,X+16,Y+12,6,scheme.deep);star(c,X+16,Y+12,4,scheme.gold2);}
   }
   function floor(c,m,x,y) {
-    const X=x*32,Y=y*32,kasai=m.roomKind==='kasai',n=hash(x,y);
-    if(kasai) {
+    const X=x*32,Y=y*32,kasai=m.roomKind==='kasai',n=hash(x,y),template=templateOf(m),scheme=roomPalettes[template];
+    if(kasai&&template==='sanctum'){
+      r(c,X,Y,32,32,(x+y)%2?'#394563':'#414d6e');r(c,X,Y,32,1,'#667696');r(c,X,Y,1,32,'#5f7191');
+      r(c,X+31,Y,1,32,'#28354f');r(c,X,Y+31,32,1,'#2b3551');
+      r(c,X+5,Y+5,8,1,'#4d5d7e');r(c,X+23,Y+25,5,1,'#526382');
+      if((x+y)%3===0){diamond(c,X+16,Y+16,5,'#6b7ba0');diamond(c,X+16,Y+16,3,'#bdcce4');r(c,X+15,Y+15,2,2,scheme.gold2);}
+    } else if(kasai&&template==='wings'){
+      r(c,X,Y,32,32,'#896747');
+      for(let row=0;row<4;row++){
+        const yy=Y+row*8,seam=6+((n+row*11)%21),wood=['#c7a374','#cfae7c','#c39e6c'][(n+row)%3];
+        r(c,X,yy,32,7,wood);r(c,X,yy,32,1,'#ead1a0');r(c,X+seam,yy,1,7,'#93724f');
+        r(c,X+3+(row%2)*12,yy+4,8,1,'#b28e62');r(c,X+18-(row%2)*10,yy+2,5,1,'#dfbf8b');
+      }
+      if((x<7||x>16)&&(x+y)%3===0){diamond(c,X+16,Y+16,8,'#648566');diamond(c,X+16,Y+16,5,'#bbd59c');r(c,X+15,Y+13,1,7,'#41694e');}
+    } else if(kasai) {
       r(c,X,Y,32,32,n%3===0?'#3b5660':'#3f5b65');r(c,X,Y,32,1,'#58717a');r(c,X,Y,1,32,'#4f6c73');
       r(c,X+31,Y,1,32,'#304852');r(c,X,Y+31,32,1,'#2f4953');
       r(c,X+4,Y+4,8,1,'#496771');r(c,X+22,Y+26,6,1,'#36515d');
@@ -157,10 +231,10 @@
         r(c,X+3+(row%2)*10,yy+3,8,1,'#b79363');r(c,X+14+(row%2)*3,yy+5,6,1,'#d5b07a');
       }
     }
-    if(m.tiles[y-1]?.[x]==='#'){r(c,X,Y,32,3,'#1c354a38');r(c,X,Y,32,1,kasai?P.gold:P.wood3);}
-    if(m.tiles[y]?.[x-1]==='#'){r(c,X,Y,3,32,'#1c354a30');r(c,X,Y,1,32,kasai?P.gold:P.wood3);}
-    if(m.tiles[y]?.[x+1]==='#')r(c,X+31,Y,1,32,kasai?P.gold:P.wood3);
-    if(m.tiles[y+1]?.[x]==='#')r(c,X,Y+31,32,1,kasai?P.gold:P.wood3);
+    if(m.tiles[y-1]?.[x]==='#'){r(c,X,Y,32,3,'#1c354a38');r(c,X,Y,32,1,kasai?scheme.gold:P.wood3);}
+    if(m.tiles[y]?.[x-1]==='#'){r(c,X,Y,3,32,'#1c354a30');r(c,X,Y,1,32,kasai?scheme.gold:P.wood3);}
+    if(m.tiles[y]?.[x+1]==='#')r(c,X+31,Y,1,32,kasai?scheme.gold:P.wood3);
+    if(m.tiles[y+1]?.[x]==='#')r(c,X,Y+31,32,1,kasai?scheme.gold:P.wood3);
     if(m.tiles[y]?.[x]==='D') {
       frame(c,X+3,Y+2,26,28,kasai?P.deep:'#435b57',P.ink,P.gold);
       r(c,X+5,Y+3,22,1,P.gold2);r(c,X+7,Y+26,18,1,P.gold);
@@ -169,52 +243,69 @@
   }
   function ground(c,m,x,y) {
     if(!m?.sharedRoom)return false;
-    pixel(c,()=>m.tiles[y]?.[x]==='#'?wall(c,m,x,y):floor(c,m,x,y));return true;
+    pixel(c,()=>{
+      if(m.tiles[y]?.[x]!=='#'){floor(c,m,x,y);return;}
+      if(m.wallMask?.[y]?.[x]!=='0'){wall(c,m,x,y);return;}
+      const X=x*32,Y=y*32;r(c,X,Y,32,32,'#111e2c');
+      if(hash(x,y)%5===0)r(c,X+10,Y+17,2,1,'#1c2d3d');
+    });return true;
   }
-  function window(c,x,kasai=false) {
-    const w=46,h=25,y=1;frame(c,x,y,w,h,kasai?'#284d61':'#426f7d',P.ink,P.gold);
-    r(c,x+3,y+3,w-6,h-6,'#a3c9c2');r(c,x+4,y+4,17,9,'#87b7bd');r(c,x+24,y+4,17,9,'#749cac');
-    r(c,x+4,y+15,17,6,'#c7ddba');r(c,x+24,y+15,17,6,'#a8c9ba');
+  function window(c,x,kasai=false,template='hall') {
+    const w=46,h=25,y=1,celestial=kasai&&template==='sanctum',scheme=roomPalettes[template];
+    frame(c,x,y,w,h,celestial?'#313b66':kasai?'#284d61':'#426f7d',P.ink,scheme.gold);
+    r(c,x+3,y+3,w-6,h-6,celestial?'#5069a0':'#a3c9c2');r(c,x+4,y+4,17,9,celestial?'#8399ca':'#87b7bd');r(c,x+24,y+4,17,9,celestial?'#6e85b6':'#749cac');
+    r(c,x+4,y+15,17,6,celestial?'#bec8e5':'#c7ddba');r(c,x+24,y+15,17,6,celestial?'#9bb1d2':'#a8c9ba');
     r(c,x+21,y+2,3,h-4,P.cream);r(c,x+2,y+12,w-4,2,P.cream);
-    for(const dx of[0,w-5]){r(c,x+dx,y+1,5,h-3,kasai?P.teal:P.plum);r(c,x+dx+1,y+2,1,h-5,kasai?P.mint:'#a18f9e');}
+    for(const dx of[0,w-5]){r(c,x+dx,y+1,5,h-3,kasai?scheme.carpet:P.plum);r(c,x+dx+1,y+2,1,h-5,kasai?scheme.light:'#a18f9e');}
+    if(celestial){star(c,x+12,y+8,3,scheme.gold2);star(c,x+33,y+18,3,scheme.gold2);}
     r(c,x-2,y+h,50,2,P.wood3);r(c,x-2,y+h,50,1,P.gold2);
   }
-  function runner(c,x,y,w,h,kasai) {
-    frame(c,x,y,w,h,kasai?'#24636a':'#4c7c77',P.ink,P.gold);
-    r(c,x+3,y+2,1,h-4,P.gold);r(c,x+w-4,y+2,1,h-4,P.gold);
-    for(let yy=y+13;yy<y+h-8;yy+=32){diamond(c,x+w/2,yy,8,kasai?'#87b6a4':'#a9c8a4');diamond(c,x+w/2,yy,5,kasai?'#2e7175':'#46706b');r(c,x+w/2-1,yy-1,2,2,P.gold2);}
+  function runner(c,x,y,w,h,kasai,template='hall') {
+    const scheme=roomPalettes[template];
+    frame(c,x,y,w,h,kasai?scheme.carpet:'#4c7c77',P.ink,scheme.gold);
+    r(c,x+3,y+2,1,h-4,scheme.gold);r(c,x+w-4,y+2,1,h-4,scheme.gold);
+    for(let yy=y+13;yy<y+h-8;yy+=32){diamond(c,x+w/2,yy,8,kasai?scheme.carpetLight:'#a9c8a4');diamond(c,x+w/2,yy,5,kasai?scheme.carpetDark:'#46706b');r(c,x+w/2-1,yy-1,2,2,scheme.gold2);}
     for(let xx=x+5;xx<x+w-4;xx+=4){r(c,xx,y+h,2,3,P.cream);r(c,xx,y-2,2,2,P.cream);}
   }
   function stage(c,m) {
-    const x=8*32,y=2*32,w=8*32,h=6*32;
-    runner(c,11*32,8*32,64,10*32-4,true);
-    r(c,x-2,y+4,w+4,h+2,'#223c48');frame(c,x,y,w,h,'#d3ceb1',P.ink,P.gold2);
-    r(c,x+3,y+3,w-6,h-6,'#e4d9b8');
+    const x=8*32,y=2*32,w=8*32,h=6*32,template=templateOf(m),scheme=roomPalettes[template];
+    runner(c,11*32,8*32,64,10*32-4,true,template);
+    if(template==='wings')for(const side of[1,17])runner(c,side*32+4,9*32+4,6*32-8,2*32-8,true,template);
+    r(c,x-2,y+4,w+4,h+2,scheme.deep);frame(c,x,y,w,h,scheme.stage,P.ink,scheme.gold2);
+    r(c,x+3,y+3,w-6,h-6,scheme.stageInner);
     for(let row=0;row<6;row++)for(let col=0;col<8;col++) {
-      r(c,x+col*32+3,y+row*32+3,27,1,'#f0e6c8');r(c,x+col*32+30,y+row*32+4,1,26,'#b6b79d');
+      r(c,x+col*32+3,y+row*32+3,27,1,scheme.stageLight);r(c,x+col*32+30,y+row*32+4,1,26,scheme.stageSeam);
     }
-    frame(c,x+12,y+12,w-24,h-24,'#28636b',P.deep,P.gold2);
-    r(c,x+16,y+16,w-32,1,P.gold);r(c,x+16,y+h-17,w-32,1,P.gold);
-    r(c,x+16,y+16,1,h-32,P.gold);r(c,x+w-17,y+16,1,h-32,P.gold);
-    for(const xx of[x+24,x+w-24])for(const yy of[y+24,y+h-24]){diamond(c,xx,yy,10,P.gold2);diamond(c,xx,yy,7,P.deep);star(c,xx,yy,4,P.mint);}
+    frame(c,x+12,y+12,w-24,h-24,scheme.felt,scheme.deep,scheme.gold2);
+    r(c,x+16,y+16,w-32,1,scheme.gold);r(c,x+16,y+h-17,w-32,1,scheme.gold);
+    r(c,x+16,y+16,1,h-32,scheme.gold);r(c,x+w-17,y+16,1,h-32,scheme.gold);
+    for(const xx of[x+24,x+w-24])for(const yy of[y+24,y+h-24]){diamond(c,xx,yy,10,scheme.gold2);diamond(c,xx,yy,7,scheme.deep);star(c,xx,yy,4,scheme.light);}
     const cx=12*32+16,cy=5*32+2;
-    polygon(c,[[cx-49,cy-24],[cx-24,cy-49],[cx+24,cy-49],[cx+49,cy-24],[cx+49,cy+24],[cx+24,cy+49],[cx-24,cy+49],[cx-49,cy+24]],P.gold);
-    polygon(c,[[cx-46,cy-22],[cx-22,cy-46],[cx+22,cy-46],[cx+46,cy-22],[cx+46,cy+22],[cx+22,cy+46],[cx-22,cy+46],[cx-46,cy+22]],'#26575f');
-    diamond(c,cx,cy,34,'#729b90');diamond(c,cx,cy,29,'#2d646a');star(c,cx,cy,22,P.gold2);
-    r(c,x+48,y+h-4,w-96,2,P.gold2);r(c,x+52,y+h-2,w-104,2,'#828f7e');
-    for(const xx of[2*32,21*32])for(const yy of[3*32,8*32,13*32]){diamond(c,xx+16,yy+16,7,'#a0af8b');diamond(c,xx+16,yy+16,4,'#3f5b65');}
+    polygon(c,[[cx-49,cy-24],[cx-24,cy-49],[cx+24,cy-49],[cx+49,cy-24],[cx+49,cy+24],[cx+24,cy+49],[cx-24,cy+49],[cx-49,cy+24]],scheme.gold);
+    polygon(c,[[cx-46,cy-22],[cx-22,cy-46],[cx+22,cy-46],[cx+46,cy-22],[cx+46,cy+22],[cx+22,cy+46],[cx-22,cy+46],[cx-46,cy+22]],scheme.deep);
+    if(template==='sanctum'){
+      for(const [dx,dy]of[[-34,-34],[34,-34],[-34,34],[34,34]])diamond(c,cx+dx,cy+dy,4,scheme.light);
+      polygon(c,[[cx,cy-38],[cx+9,cy-11],[cx+30,cy-30],[cx+12,cy-8],[cx+38,cy],[cx+12,cy+8],[cx+30,cy+30],[cx+9,cy+11],[cx,cy+38],[cx-9,cy+11],[cx-30,cy+30],[cx-12,cy+8],[cx-38,cy],[cx-12,cy-8],[cx-30,cy-30],[cx-9,cy-11]],scheme.gold2);
+      diamond(c,cx,cy,16,scheme.sealDark);diamond(c,cx,cy,9,scheme.light);star(c,cx,cy,5,P.white);
+    }else if(template==='wings'){
+      for(const [dx,dy]of[[-18,0],[18,0],[0,-18],[0,18]])diamond(c,cx+dx,cy+dy,18,scheme.seal);
+      diamond(c,cx,cy,17,scheme.sealDark);star(c,cx,cy,10,scheme.gold2);
+    }else{diamond(c,cx,cy,34,scheme.seal);diamond(c,cx,cy,29,scheme.sealDark);star(c,cx,cy,22,scheme.gold2);}
+    r(c,x+48,y+h-4,w-96,2,scheme.gold2);r(c,x+52,y+h-2,w-104,2,scheme.stageSeam);
+    for(const xx of[2,21])for(const yy of[3,8,13])if(isFloor(m,xx,yy)){diamond(c,xx*32+16,yy*32+16,7,scheme.light);diamond(c,xx*32+16,yy*32+16,4,scheme.felt);}
     // A separate challenger seal keeps the two participants legible at entry.
-    diamond(c,12*32+16,16*32+16,15,P.gold2);diamond(c,12*32+16,16*32+16,12,P.deep);star(c,12*32+16,16*32+16,8,P.cream);
+    diamond(c,12*32+16,16*32+16,15,scheme.gold2);diamond(c,12*32+16,16*32+16,12,scheme.deep);star(c,12*32+16,16*32+16,8,P.cream);
   }
   function dressing(c,m) {
     if(!m?.sharedRoom)return false;
     pixel(c,()=>{
-      const kasai=m.roomKind==='kasai';
-      for(const x of kasai?[3*32+8,19*32+8]:[3*32+8,13*32-8])window(c,x,kasai);
+      const kasai=m.roomKind==='kasai',template=templateOf(m),scheme=roomPalettes[template];
+      const windows=!kasai?[3*32+8,13*32-8]:template==='sanctum'?[6*32+12,15*32+8]:template==='wings'?[7*32+8,15*32-8]:[3*32+8,19*32+8];
+      for(const x of windows)window(c,x,kasai,template);
       const cx=kasai?12*32+16:9*32;
-      frame(c,cx-24,3,48,21,kasai?P.deep:P.wood3,P.ink,P.gold2);
-      r(c,cx-20,6,40,1,kasai?P.teal2:P.wood2);diamond(c,cx,13,8,P.gold2);diamond(c,cx,13,5,kasai?P.teal:P.plum);
-      for(const sign of[-1,1]){r(c,cx+sign*13-3,12,6,1,P.gold);r(c,cx+sign*17-2,14,4,1,P.gold);}
+      frame(c,cx-24,3,48,21,kasai?scheme.deep:P.wood3,P.ink,scheme.gold2);
+      r(c,cx-20,6,40,1,kasai?scheme.carpetLight:P.wood2);diamond(c,cx,13,8,scheme.gold2);diamond(c,cx,13,5,kasai?scheme.carpet:P.plum);
+      for(const sign of[-1,1]){r(c,cx+sign*13-3,12,6,1,scheme.gold);r(c,cx+sign*17-2,14,4,1,scheme.gold);}
       if(kasai)stage(c,m);else runner(c,8*32,3*32,64,11*32-5,false);
     });
     for(const f of m.floorDecorations||[])furniture(c,f,m);
@@ -390,6 +481,6 @@
     }
     return true;
   }
-  LT.RoomArt=Object.freeze({catalog,layouts,getItem,footprint,createMap,ground,dressing,furniture,renderDecor,renderThumbnail,drawDoor,
+  LT.RoomArt=Object.freeze({catalog,layouts,templates,getLayout,isFloor,footprintFits,getItem,footprint,createMap,ground,dressing,furniture,renderDecor,renderThumbnail,drawDoor,
     tileSize:TILE,pixelStep:2,ready:Promise.resolve()});
 })();
