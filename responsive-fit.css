@@ -125,18 +125,18 @@ html.viewport-fit body:not(.is-playing){position:relative;inset:auto;height:auto
 html.viewport-fit .title-screen:not([hidden]){position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(300px,.9fr) minmax(0,1.1fr);grid-template-rows:48px minmax(0,1fr) auto;gap:10px;height:var(--app-height,100dvh);min-height:0;width:100%;max-width:1800px;margin:auto;padding:env(safe-area-inset-top) clamp(8px,2vw,32px) env(safe-area-inset-bottom);overflow:hidden;background:#101a3f}
 html.viewport-fit .title-screen::before,html.viewport-fit .title-screen::after{display:none}
 html.viewport-fit .title-topbar{grid-column:1/-1;grid-row:1;position:static;display:flex;align-items:center;gap:8px;width:100%;height:48px;min-height:0;margin:0;padding:4px 8px;box-shadow:none}
-html.viewport-fit .title-backdrop{grid-column:2;grid-row:2;position:static;inset:auto;z-index:auto;display:block;width:100%;height:100%;min-height:0;margin:0;border:2px solid var(--pm-frame-soft);background-color:#182c56;background-position:center;background-size:contain;background-repeat:no-repeat;box-shadow:none}
+html.viewport-fit .title-backdrop{grid-column:2;grid-row:2;position:relative;overflow:hidden;inset:auto;z-index:auto;display:block;width:100%;height:100%;min-height:0;margin:0;border:2px solid var(--pm-frame-soft);background-color:#182c56;background-position:center;background-size:contain;background-repeat:no-repeat;box-shadow:none}
 html.viewport-fit .title-inner{grid-column:1;grid-row:2;position:static;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0}
 html.viewport-fit .title-copy{position:static;display:flex;flex-direction:column;gap:0;width:100%;max-width:none;min-width:0;min-height:0;max-height:100%;margin:0;padding:clamp(10px,1.8vw,25px);background:var(--pm-window);box-shadow:none;overflow:auto;overscroll-behavior:contain}
 html.viewport-fit .title-eyebrow{font-size:9px;margin-bottom:7px}
-html.viewport-fit .title-wordmark{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;margin:0 0 8px}
+html.viewport-fit .title-wordmark{display:flex;flex-direction:row;flex-shrink:0;align-items:center;flex-wrap:wrap;gap:4px 14px;margin:0 0 8px}
 html.viewport-fit .title-wordmark h1{font-size:clamp(30px,4vw,60px);line-height:1.2;letter-spacing:1px;margin:0}
 html.viewport-fit .title-english{display:block;width:150px;max-width:100%;height:auto;flex:0 1 150px;margin:0;padding:0;border:0;font-size:12px;letter-spacing:1px}
 html.viewport-fit .title-copy h2{display:block;font-size:clamp(17px,2vw,26px);line-height:1.4;margin:3px 0 9px}
 html.viewport-fit .title-description{display:block;font-size:12px;line-height:1.6;margin:0 0 10px}
 html.viewport-fit .title-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-html.viewport-fit .title-buttons>:is(button,.btn){width:100%;min-width:0;min-height:44px;margin:0;padding:7px;font-size:13px;line-height:1.4;white-space:normal}
-html.viewport-fit .title-buttons>:is(#continue-btn,#start-btn){grid-column:auto}
+html.viewport-fit .title-buttons>:is(button,.btn){grid-column:auto;width:100%;min-width:0;min-height:44px;margin:0;padding:7px;font-size:13px;line-height:1.4;white-space:normal}
+html.viewport-fit .title-buttons>:is(#continue-btn,#start-btn),html.viewport-fit .title-buttons>#continue-btn:not([hidden])+#start-btn{grid-column:auto}
 html.viewport-fit .title-buttons>#continue-btn[hidden]+#start-btn{grid-column:1/-1}
 html.viewport-fit .title-buttons .button-arrow{display:none}
 html.viewport-fit .title-status{font-size:10px;line-height:1.4;margin:7px 0 0;white-space:normal}
@@ -205,7 +205,7 @@ html.viewport-fit body:not(.is-playing) .game-info{display:block;max-width:100%;
  html.viewport-fit .title-topbar{grid-row:1;height:44px;padding:3px 6px}
  html.viewport-fit .title-backdrop{grid-column:1;grid-row:2}
  html.viewport-fit .title-inner{grid-column:1;grid-row:3;align-items:stretch}
- html.viewport-fit .title-copy{padding:10px 12px;justify-content:center}
+ html.viewport-fit .title-copy{padding:10px 12px;justify-content:flex-start}
  html.viewport-fit .title-wordmark{margin:0 0 5px;gap:4px 10px}
  html.viewport-fit .title-wordmark h1{font-size:30px}
  html.viewport-fit .title-english{width:125px;flex-basis:125px;font-size:9px}
@@ -271,4 +271,18 @@ html.viewport-fit body:not(.is-playing) .game-info{display:block;max-width:100%;
  html.viewport-fit .title-description{font-size:10px;line-height:1.35;margin-bottom:5px}
  html.viewport-fit .title-wordmark h1{font-size:26px}
  html.viewport-fit .title-footer a{font-size:10px;min-height:24px}
+}
+
+/* Constrain the separately rendered title canvas to its own artwork cell. */
+html.viewport-fit .title-backdrop>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+html.viewport-fit .title-backdrop::after{display:none}
+html.viewport-fit .title-copy>*{flex-shrink:0}
+
+/* A very short landscape screen puts the HUD below the art, leaving the
+   complete four-move chooser and its back button the full right-hand height. */
+@media(orientation:landscape) and (max-height:360px){
+ html.viewport-fit body.is-playing.in-battle .console-screen:not(:has(.levelup-card)){grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"art dock" "hud dock"}
+ html.viewport-fit body.is-playing #battle-dock:not(:has(.levelup-card)){display:contents}
+ html.viewport-fit body.is-playing #battle-dock:not(:has(.levelup-card)) #battle-ui{grid-area:hud;align-self:end}
+ html.viewport-fit body.is-playing #battle-dock:not(:has(.levelup-card)) #battle-panel{grid-area:dock;height:100%}
 }

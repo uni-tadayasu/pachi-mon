@@ -26,14 +26,17 @@ document.getElementById('inspect').onclick=()=>{
  const doc=frame.contentDocument,win=frame.contentWindow;if(!doc)return;
  const visible=el=>el&&el.getClientRects().length&&win.getComputedStyle(el).visibility!=='hidden';
  const rect=el=>{const r=el.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
- const selectors=['#game-canvas','#battle-ui','#battle-panel','#field-meta','.touch-controls','.world-network-bar','#battle-dock .levelup-card','.title-backdrop','.title-copy'];
+ const selectors=['#game-canvas','#battle-ui','#battle-panel','#field-meta','.touch-controls','.world-network-bar','#battle-dock .levelup-card','.title-backdrop','.title-backdrop canvas','.title-copy'];
  const boxes=Object.fromEntries(selectors.map(s=>[s,doc.querySelector(s)]).filter(([,el])=>visible(el)).map(([s,el])=>[s,rect(el)]));
  const tolerance=2,intersects=(a,b)=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>tolerance&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>tolerance;
  const outside=Object.entries(boxes).filter(([,r])=>r.left< -tolerance||r.top< -tolerance||r.right>win.innerWidth+tolerance||r.bottom>win.innerHeight+tolerance).map(([s])=>s);
  const art=boxes['#game-canvas'],overlaps=art?Object.entries(boxes).filter(([s,r])=>s!=='#game-canvas'&&!s.startsWith('.title-')&&intersects(art,r)).map(([s])=>s):[];
- if(boxes['.title-backdrop']&&boxes['.title-copy']&&intersects(boxes['.title-backdrop'],boxes['.title-copy']))overlaps.push('title artwork / copy');
- const result={viewport:[win.innerWidth,win.innerHeight],mode:doc.body.classList.contains('in-battle')?'battle':doc.body.classList.contains('is-playing')?'field':'title',outside,artworkOverlaps:overlaps,boxes};
- const report=document.getElementById('report');report.hidden=false;report.textContent=JSON.stringify(result,null,2);summary.textContent=`${result.viewport.join(' × ')} ／ ${result.mode} ／ 画面外 ${outside.length} ／ 画像とUIの重なり ${overlaps.length}`;
+ const titleArt=boxes['.title-backdrop canvas']||boxes['.title-backdrop'];
+ if(titleArt&&boxes['.title-copy']&&intersects(titleArt,boxes['.title-copy']))overlaps.push('title artwork / copy');
+ const critical=[...doc.querySelectorAll('.title-copy h1,.title-buttons>button,#battle-actions .move-btn,#battle-actions:has(.move-btn)>[data-battle=back]')].filter(visible);
+ const clippedControls=critical.filter(el=>{const r=rect(el),container=el.closest('.title-copy,.battle-actions');if(!container)return false;const b=rect(container);return r.left<b.left-tolerance||r.right>b.right+tolerance||r.top<b.top-tolerance||r.bottom>b.bottom+tolerance;}).map(el=>el.textContent.trim().slice(0,32));
+ const result={viewport:[win.innerWidth,win.innerHeight],mode:doc.body.classList.contains('in-battle')?'battle':doc.body.classList.contains('is-playing')?'field':'title',outside,artworkOverlaps:overlaps,clippedControls,boxes};
+ const report=document.getElementById('report');report.hidden=false;report.textContent=JSON.stringify(result,null,2);summary.textContent=`${result.viewport.join(' × ')} ／ ${result.mode} ／ 画面外 ${outside.length} ／ 画像とUIの重なり ${overlaps.length} ／ 主操作の欠け ${clippedControls.length}`;
 };
 fit();
 </script>

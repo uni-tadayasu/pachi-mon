@@ -7950,7 +7950,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
         showParty(current<0?Math.min(index,engine.state.party.length-1):current);
       } else showStorage(-2);
     };
-    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から外します。${trained?'現在のニックネーム・ポイント配分・持ち物などの変更は、復元した個体には引き継がれません。':`一度逃がすと元には戻せません。${DATA.species[mon.species].hiddenDex?((DATA.species[mon.species].acquisition==='operator-secret'||DATA.offDexLines?.ids.includes(mon.species))?'出会いの記録は残ります。再び仲間にするには、運営専用の幻の草むらで出会う必要があります。':'受け取りの記録は残り、同じ裏技から再入手できません。'):'図鑑の発見・捕獲済みの記録は残ります。'}`}</p>${trained?'<p>同じ役職の運営登録中なら、運営管理の「Lv.100の運営メンバー」からLv.100・振り分け前297ポイントの状態で復元できます。</p>':mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
+    openModal('このモンスターを逃がしますか？',`<div class="creature-card">${portrait(mon,130)}<div><h3>${escape(LT.displayName?.(mon)||DATA.species[mon.species].name)} · Lv.${mon.level}</h3><p>この個体を${source==='party'?'旅の仲間':'ひかえ'}から外します。${trained?'現在のニックネーム・ポイント配分・持ち物などの変更は、復元した個体には引き継がれません。':`一度逃がすと元には戻せません。${DATA.species[mon.species].hiddenDex?((DATA.species[mon.species].acquisition==='operator-secret'||DATA.offDexLines?.ids.includes(mon.species))?'出会いの記録は残ります。再び仲間にするには、運営専用の幻の草むらで出会う必要があります。':'受け取りの記録は残り、同じ裏技から再入手できません。'):'図鑑の発見・捕獲済みの記録は残ります。'}`}</p>${trained?`<p>同じ役職の運営登録中なら、運営管理の「${mon.grantId?.startsWith('admin-galdogran-v68:')?'ガルドグランの追加配布':'Lv.100の運営メンバー'}」からLv.100・振り分け前297ポイントの状態で復元できます。</p>`:mon.grantId?'<p>配布で受け取った個体は、逃がしても同じお届けものから再受領できません。</p>':''}</div></div><p class="notice" id="release-result" role="status" hidden></p><div class="modal-actions"><button class="btn btn-primary" id="release-cancel">やめる</button><button class="btn btn-quiet" id="release-confirm">このモンスターを逃がす</button></div>`,'release');
     $('release-cancel').onclick=returnToSource;
     const button=$('release-confirm');
     button.onclick=()=>{
@@ -10457,6 +10457,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="online-invites.js?v=20261118-easy-connect-v37"></script>
 <script src="mobile-screen.js?v=20261120-fit-seo-evolution-v68"></script>
 <script src="desktop-screen.js?v=20261120-fit-seo-evolution-v68"></script>
-<link rel="stylesheet" href="responsive-fit.css?v=20261120-fit-seo-evolution-v68">
+<link rel="stylesheet" href="responsive-fit.css?v=20261120-fit-seo-evolution-v68b">
 </body>
 </html>
