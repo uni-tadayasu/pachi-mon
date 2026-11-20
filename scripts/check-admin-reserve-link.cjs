@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-// Exercise the shipped team picker and peer protocol with real reserve grants.
+// Exercise the shipped team picker and peer protocol with real reserve grants
+// plus sub members already owned before the no-initial-gifts policy.
 // Each peer has its own engine; battle state must never modify either save.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -43,17 +44,40 @@ function makePeer(role, roleIndex) {
   const { LT } = context, engine = new LT.Engine();
   assert(engine.newGame('komori').ok);
   const playerId = `P${String(roleIndex + 1).repeat(16)}`, gender = role === 'sub' ? 'female' : 'male';
-  assert(engine.receiveAdminMythical({ grantId: `admin-mythical:${playerId}`, species: 'floravelle', level: 70 }).ok);
+  const mythical = { grantId: `admin-mythical:${playerId}`, species: 'floravelle', level: 70 };
+  if (role === 'sub') {
+    const mon = engine.makeMonster(mythical.species, mythical.level); mon.grantId = mythical.grantId;
+    engine.state.party.push(mon); engine.state.giftReceipts.push(mon.grantId); engine.markCaught(mon.species);
+  } else assert(engine.receiveAdminMythical(mythical).ok);
   const legacy = engine.state.party.find(mon => mon.species === 'floravelle');
   legacy.nickname = '旧キラ';
   engine.setAllocation(legacy, { hp: 64, atk: 64, def: 10 });
   const bundle = { version: 1, playerId, role, members: [starters[role], ...common].map(species => ({
     grantId: `admin-trained-v64:${role}:${playerId}:${species}`, species, level: 100, gender, heldItem: 'trainband', bonusPoints: 99
   })) };
-  assert.equal(engine.receiveAdminReserveTeam(bundle).added, 6);
-  assert.equal(engine.receiveAdminReserveTeam({version:2,playerId,role,members:[{
+  const addition = {version:2,playerId,role,members:[{
     grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99
-  }]}).added,1);
+  }]};
+  for (const grant of [bundle, addition]) {
+    if (role !== 'sub') { assert.equal(engine.receiveAdminReserveTeam(grant).added, grant.members.length); continue; }
+    const before = JSON.stringify(engine.state), status = engine.adminReserveTeamStatus(grant);
+    assert.equal(status.disabled, true); assert.equal(status.canReceive, false); assert.equal(status.canRestore, false);
+    for (const options of [{}, {restore:true}]) {
+      const blocked = engine.receiveAdminReserveTeam(grant, options);
+      assert.equal(blocked.ok, false); assert.equal(blocked.disabled, true); assert.notEqual(blocked.pending, true);
+      assert.equal(JSON.stringify(engine.state), before, 'Sub cannot obtain or restore another initial gift');
+    }
+    // Historical records remain owned and usable; today's receive operation
+    // intentionally cannot construct this fixture for the sub role.
+    for (const member of LT.AdminReserveRules.normalizeBundle(grant).members) {
+      const mon = engine.makeMonster(member.species, member.level);
+      Object.assign(mon, {grantId:member.grantId, heldItem:member.heldItem, bonusPoints:member.bonusPoints});
+      if (member.gender !== 'none') mon.gender = member.gender;
+      if (member.battleGrowth) mon.battleGrowth = member.battleGrowth;
+      engine.restoreMonster(mon); engine.state.storage.push(mon); engine.state.giftReceipts.push(mon.grantId); engine.markCaught(mon.species);
+    }
+  }
+  if (role === 'sub') engine.state = new LT.Engine(engine.serialize()).state;
   const members = engine.state.storage.slice();
   members.forEach((mon, index) => {
     const values = [64, 64, 64, 41, 0, 64];
@@ -209,7 +233,8 @@ async function checkBattle(left, right, mode, indexes) {
     await checkBattle(left, right, 'single', [0, 1, 2]);
     await checkBattle(left, right, 'double', [3, 4, 5, 6]);
   }
-  console.log(JSON.stringify({ ok: true, roles, members: 21, peerMatches: 6, checks: [
+  console.log(JSON.stringify({ ok: true, roles, historicalRoles: ['sub'], members: 21, peerMatches: 6, checks: [
+    'sub initial receive and restore disabled; historically owned members preserved',
     'all seven reserve UIDs selectable per role', 'legacy Lv70 and trained Lv100 mythical both listed',
     'duplicate species and held items still excluded', 'exact role gender/grant appearance validated',
     'invalid selected mythical refused despite an older entitled companion', 'full 297 points at Lv50', 'six v64 members keep growth99 and original source level; lunar addition stays unchanged',

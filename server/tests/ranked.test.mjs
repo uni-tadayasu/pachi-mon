@@ -282,11 +282,16 @@ test('already-started v78 matches finish under their original rules with compati
   assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM ranked_members').get().n,0);
 });
 
-test('all operator roles use actual player names and original special-grant entitlements before normalizing Lv100 gifts',async t=>{
+test('operator delivery and legacy sub holdings keep actual names and verified Lv100 builds in ranked battles',async t=>{
   const h=setup(t),{main,sub,third}=await h.operators();
   for(const actor of [main,sub,third]){
-    const me=ok(await h.call('/me',actor)),member=me.adminReserveAddition.members[0],mon=engine.makeMonster(member.species,100);
-    assert.equal(me.adminReserveTeam.members.length,6);const rival=await h.register(),reserves=me.adminReserveTeam.members.map(gift=>Object.assign(engine.makeMonster(gift.species,100),copy(gift),{alloc:{hp:64,atk:64,def:64,spAtk:64,spDef:41}})),saved=copy(reserves);
+    const me=ok(await h.call('/me',actor)),role=me.player.adminRole;
+    // Existing sub-admin saves retain these historical receipts, although the
+    // delivery endpoint no longer offers them to a new or restored adventure.
+    const reserve=role==='sub'?{members:['shizunaria','floravelle','zeroveil','pearlseria','hyogald','rurigorm'].map(species=>({grantId:`admin-trained-v64:sub:${actor.id}:${species}`,species,level:100,gender:'female',heldItem:'trainband',bonusPoints:99,battleGrowth:99}))}:me.adminReserveTeam;
+    const member=role==='sub'?{grantId:`admin-galdogran-v68:sub:${actor.id}:galdogran`,species:'lunaxion'}:me.adminReserveAddition.members[0],mon=engine.makeMonster(member.species,100);
+    if(role==='sub'){assert.equal(me.adminReserveTeam,null);assert.equal(me.adminReserveAddition,null);assert.deepEqual(me.initialCompanions,[]);assert.deepEqual(me.grants,[]);}
+    assert.equal(reserve.members.length,6);const rival=await h.register(),reserves=reserve.members.map(gift=>Object.assign(engine.makeMonster(gift.species,100),copy(gift),{alloc:{hp:64,atk:64,def:64,spAtk:64,spDef:41}})),saved=copy(reserves);
     for(const selected of [reserves.slice(0,3),reserves.slice(3)]){
       assert(selected.every(mon=>mon.battleGrowth===99&&mon.bonusPoints===99));
       const battle=await h.pair(actor,rival,selected);

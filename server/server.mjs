@@ -164,13 +164,14 @@ async function initialCompanions(env, playerId) {
   // This is a current administrator entitlement, not a distributable grant. Keeping its stable
   // receipt separate from Futo deliveries lets existing administrators receive
   // their initial companion without adding records or replaying gift batches.
-  return await adminRecord(env, playerId) ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}, {grantId:`admin-mythical:${playerId}`,species:'floravelle',level:70}] : [];
+  const registration=await adminRecord(env,playerId);
+  return registration&&registration.singleton!==2 ? [{grantId:`admin-legendary:${playerId}`, species:'arvelion', level:70}, {grantId:`admin-mythical:${playerId}`,species:'floravelle',level:70}] : [];
 }
 const ADMIN_RESERVE_STARTERS = Object.freeze({main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'});
 const ADMIN_RESERVE_COMMON = Object.freeze(['floravelle','zeroveil','pearlseria','hyogald','rurigorm']);
-async function adminReserveTeam(env, playerId) {
+async function adminReserveTeam(env, playerId, {delivery=true}={}) {
   const registration=await adminRecord(env,playerId),role=adminRole(registration?.singleton);
-  if(!role)return null;
+  if(!role||delivery&&role==='sub')return null;
   // A deterministic current-role entitlement is independent of the gift inbox.
   // Stable member receipts let the client restore only missing individuals;
   // reading or restoring it never creates another Futo distribution batch.
@@ -179,9 +180,9 @@ async function adminReserveTeam(env, playerId) {
     grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender,heldItem:'trainband',bonusPoints:99,battleGrowth:99
   }))};
 }
-async function adminReserveAddition(env, playerId) {
+async function adminReserveAddition(env, playerId, {delivery=true}={}) {
   const registration=await adminRecord(env,playerId),role=adminRole(registration?.singleton);
-  if(!role)return null;
+  if(!role||delivery&&role==='sub')return null;
   // A separate receipt never reissues or rewrites the six v64 members.
   // Keep the historical v68 entitlement ID so old receipts suppress a second delivery.
   return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};
@@ -225,7 +226,12 @@ function sameGrantRequest(row, playerId, target, configJSON) {
   return row?.creator_id === playerId && row.target === target && JSON.stringify(validateConfig(JSON.parse(row.config_json))) === configJSON;
 }
 async function playerGrants(env, playerId, cursor, limit) {
-  const result = await env.DB.prepare('SELECT row_id, grant_id, config_json, created_at FROM grants WHERE player_id = ? AND row_id > ? ORDER BY row_id LIMIT ?').bind(playerId, cursor, limit + 1).all();
+  // Old clients also read this inbox. Hide even previously queued automatic
+  // Futo grants from a current sub administrator, but retain the rows as proof
+  // for already-owned individuals. Explicit manual gift batches stay visible.
+  const result = await env.DB.prepare(`SELECT row_id, grant_id, config_json, created_at FROM grants WHERE player_id = ? AND row_id > ?
+    AND (grant_id <> 'admin-initial:' || player_id OR NOT EXISTS (SELECT 1 FROM admin_members a WHERE a.player_id=grants.player_id AND a.singleton=2))
+    ORDER BY row_id LIMIT ?`).bind(playerId, cursor, limit + 1).all();
   const rows = result.results || [];
   return {grants:rows.slice(0, limit).map(grantView), nextCursor:rows.length > limit ? rows[limit - 1].row_id : null};
 }
@@ -723,8 +729,10 @@ async function kasaiOwnedParty(env,party,player) {
       if(!receipt||receipt.gender!==mon.gender)fail(403,'KASAI_PARTY_NOT_OWNED','キラシードの受け取り記録を確認できません。');
     }else if(mon.grantId.startsWith('admin-trained-v64:')||mon.grantId.startsWith('admin-galdogran-v68:')){
       const isAddition=mon.grantId.startsWith('admin-galdogran-v68:');
-      if(isAddition){if(addition===undefined)addition=await adminReserveAddition(env,player.id);}
-      else if(reserve===undefined)reserve=await adminReserveTeam(env,player.id);
+      // Stopping new sub-admin deliveries does not revoke legacy holdings.
+      // These stable receipts remain valid only for their actual role/owner.
+      if(isAddition){if(addition===undefined)addition=await adminReserveAddition(env,player.id,{delivery:false});}
+      else if(reserve===undefined)reserve=await adminReserveTeam(env,player.id,{delivery:false});
       const member=(isAddition?addition:reserve)?.members.find(item=>item.grantId===mon.grantId&&item.species===mon.species);
       if(!player.is_admin||!member)fail(403,'KASAI_PARTY_NOT_OWNED','この育成済みメンバーは、登録された運営本人だけが使用できます。');
       const genderMatches=member.gender==='none'?member.species==='lunaxion'&&mon.species==='lunaxion'&&mon.gender===undefined:mon.gender===member.gender;
@@ -1408,8 +1416,8 @@ async function route(request, env, url) {
       nextAdminRegistration(env, now, claimGuard, claimValues),
       claimOwner,
       env.DB.prepare('INSERT OR IGNORE INTO futo_config (singleton, config_json, revision, updated_at) SELECT 1, ?, 1, ? WHERE EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)').bind(config, now, player.id),
-      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)').bind(batchId, player.id, player.id, payloadHash, player.row_id, now, player.id),
-      env.DB.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?) ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json').bind(`admin-initial:${player.id}`, batchId, player.id, now, player.id)
+      env.DB.prepare('INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at) SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND singleton IN (1,3))').bind(batchId, player.id, player.id, payloadHash, player.row_id, now, player.id),
+      env.DB.prepare('INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND singleton IN (1,3)) ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json').bind(`admin-initial:${player.id}`, batchId, player.id, now, player.id)
     ]);
     const claimed = await adminRecord(env, player.id);
     if (!claimed) fail(409, 'ADMIN_ALREADY_EXISTS', '運営はすでに登録されています。');
@@ -1448,6 +1456,7 @@ async function route(request, env, url) {
     const seats = body.role === undefined ? [2,3] : [body.role === 'sub' ? 2 : 3];
     const vacancy = '('+seats.map(seat => `NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton = ${seat})`).join(' OR ')+')';
     const granted = `EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND singleton IN (${seats.join(',')}))`;
+    const initialGranted = `EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND singleton IN (${seats.filter(seat=>seat!==2).join(',')||'NULL'}))`;
     const results = await env.DB.batch([
       nextAdminRegistration(env, now, `${authority} AND ${vacancy} AND NOT EXISTS (SELECT 1 FROM admin_members WHERE player_id = ?)`, [...authorityValues, id]),
       ...seats.map(seat => env.DB.prepare(`INSERT OR IGNORE INTO ${adminTable({singleton:seat})} (singleton, player_id, claimed_at)
@@ -1457,9 +1466,9 @@ async function route(request, env, url) {
         WHERE ${authority} AND ${granted}`).bind(config, now, ...authorityValues, id),
       env.DB.prepare(`INSERT OR IGNORE INTO grant_batches (id, creator_id, target, payload_hash, config_json, max_player_row, created_at)
         SELECT ?, ?, ?, ?, config_json, ?, ? FROM futo_config WHERE singleton = 1 AND ${authority}
-        AND ${granted}`).bind(batchId, player.id, id, payloadHash, target.row_id, now, ...authorityValues, id),
+        AND ${initialGranted}`).bind(batchId, player.id, id, payloadHash, target.row_id, now, ...authorityValues, id),
       env.DB.prepare(`INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at)
-        SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND ${authority} AND ${granted}
+        SELECT ?, ?, ?, config_json, ? FROM futo_config WHERE singleton = 1 AND ${authority} AND ${initialGranted}
         ON CONFLICT(grant_id) DO UPDATE SET config_json = excluded.config_json`).bind(`admin-initial:${id}`, batchId, id, now, ...authorityValues, id)
     ]);
     const current = await requireAdmin(env, player);
@@ -1502,6 +1511,22 @@ async function route(request, env, url) {
     if (registration.singleton === 1) {
       const successor = await env.DB.prepare('SELECT singleton, player_id, claimed_at FROM admin_members WHERE singleton > 1 ORDER BY singleton LIMIT 1').first(), operationId = crypto.randomUUID();
       const successorGuard = successor ? 'EXISTS (SELECT 1 FROM admin_members WHERE singleton = ? AND player_id = ? AND claimed_at = ?) AND NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton > 1 AND singleton < ?)' : 'NOT EXISTS (SELECT 1 FROM admin_members WHERE singleton > 1)';
+      const promotionGifts=[];
+      if(successor){
+        // A gift-free sub may now become main. Create only a missing initial
+        // Futo after this exact promotion succeeds, retaining historical rows.
+        const config=JSON.stringify((await configRecord(env)).config),payloadHash=await digest(config),grantId=`admin-initial:${successor.player_id}`,createdAt=Date.now();
+        const promoted='EXISTS (SELECT 1 FROM admin_owner a JOIN admin_registration_clock c ON c.claimed_at=a.claimed_at WHERE a.singleton=1 AND a.player_id=? AND c.singleton=1 AND c.operation_id=?)';
+        const missing='NOT EXISTS (SELECT 1 FROM grants WHERE grant_id=?)';
+        promotionGifts.push(
+          env.DB.prepare(`INSERT OR IGNORE INTO grant_batches (id,creator_id,target,payload_hash,config_json,max_player_row,created_at)
+            SELECT ?,?,?,?, ?,row_id,? FROM players WHERE id=? AND ${promoted} AND ${missing}`)
+            .bind(grantId,player.id,successor.player_id,payloadHash,config,createdAt,successor.player_id,successor.player_id,operationId,grantId),
+          env.DB.prepare(`INSERT OR IGNORE INTO grants (grant_id,batch_id,player_id,config_json,created_at)
+            SELECT ?,?,?,?,? WHERE ${promoted} AND ${missing}`)
+            .bind(grantId,grantId,successor.player_id,config,createdAt,successor.player_id,operationId,grantId)
+        );
+      }
       const results = await env.DB.batch([
         nextAdminRegistration(env, Date.now(), `EXISTS (SELECT 1 FROM admin_owner WHERE player_id = ? AND claimed_at = ?) AND ${successorGuard}`,
           [player.id, expected.claimedAt, ...(successor ? [successor.singleton, successor.player_id, successor.claimed_at, successor.singleton] : [])], operationId),
@@ -1509,7 +1534,8 @@ async function route(request, env, url) {
         ...(successor ? [
           env.DB.prepare(`DELETE FROM ${adminTable(successor)} WHERE singleton = 1 AND player_id = ? AND claimed_at = ? AND EXISTS (SELECT 1 FROM admin_registration_clock WHERE operation_id = ?)`).bind(successor.player_id, successor.claimed_at, operationId),
           env.DB.prepare('INSERT INTO admin_owner (singleton, player_id, claimed_at) SELECT 1, ?, claimed_at FROM admin_registration_clock WHERE singleton = 1 AND operation_id = ?').bind(successor.player_id, operationId)
-        ] : [])
+        ] : []),
+        ...promotionGifts
       ]);
       removed = results[1]?.results?.[0];
     } else {
@@ -1525,7 +1551,7 @@ async function route(request, env, url) {
     if (body.expectedRevision !== undefined && body.expectedRevision !== current.revision) fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。');
     const results = await env.DB.batch([
       env.DB.prepare('UPDATE futo_config SET config_json = ?, revision = revision + 1, updated_at = ? WHERE singleton = 1 AND revision = ? AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?) RETURNING revision').bind(JSON.stringify(config), Date.now(), current.revision, player.id, registration.claimed_at),
-      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = 'admin-initial:' || player_id AND EXISTS (SELECT 1 FROM admin_members a WHERE a.player_id = grants.player_id) AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?)").bind(player.id, registration.claimed_at)
+      env.DB.prepare("UPDATE grants SET config_json = (SELECT config_json FROM futo_config WHERE singleton = 1) WHERE grant_id = 'admin-initial:' || player_id AND EXISTS (SELECT 1 FROM admin_members a WHERE a.player_id = grants.player_id AND a.singleton IN (1,3)) AND EXISTS (SELECT 1 FROM admin_members WHERE player_id = ? AND claimed_at = ?)").bind(player.id, registration.claimed_at)
     ]);
     const result = results[0]?.results?.[0];
     if (!result) { await requireAdmin(env, player); fail(409, 'CONFIG_CHANGED', '設定が変更されています。再読み込みしてください。'); }

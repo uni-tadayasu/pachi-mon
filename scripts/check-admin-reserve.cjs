@@ -12,14 +12,32 @@ for(const script of scripts){
 const {Engine,DATA:D,AdminReserveRules:rules}=context.LT,copy=value=>JSON.parse(JSON.stringify(value));
 const PLAYER='P0123456789abcdef',OTHER='Pfedcba9876543210';
 const roles={main:'komorizen',sub:'shizunaria','sub-sub':'akehomura'};
+const entitledRoles=['main','sub-sub'];
 const common=['floravelle','zeroveil','pearlseria','hyogald','rurigorm'];
 function bundle(role='main',playerId=PLAYER){return {version:1,playerId,role,members:[roles[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
 function addition(role='main',playerId=PLAYER){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function fresh(){const engine=new Engine();assert(engine.newGame('komori').ok);return engine;}
 const all=engine=>[...engine.state.party,...engine.state.storage];
+function assertDisabled(result){
+  assert.equal(result.ok,false);assert.equal(result.disabled,true);assert.notEqual(result.pending,true);
+  assert.match(result.message,/サブ運営/);
+}
+// Build records that were already owned before the no-initial-gifts policy.
+// This must not call today's receive path, which intentionally rejects sub.
+function seedHistoricalReserve(engine,grant){
+  for(const member of rules.normalizeBundle(grant).members){
+    const mon=engine.makeMonster(member.species,member.level);
+    Object.assign(mon,{grantId:member.grantId,heldItem:member.heldItem,bonusPoints:member.bonusPoints});
+    if(member.battleGrowth)mon.battleGrowth=member.battleGrowth;
+    if(member.gender!=='none')mon.gender=member.gender;
+    engine.restoreMonster(mon);engine.state.storage.push(mon);engine.markCaught(mon.species);
+    engine.state.giftReceipts.push(member.grantId);
+    if(D.glitchLine?.ids.includes(mon.species))engine.state.flags.nullLineClaimed=true;
+  }
+}
 
-test('all three six-member grants match actual Lv1-to-100 training and go exclusively to reserve',()=>{
-  for(const role of Object.keys(roles)){
+test('main and sub-sub six-member grants match actual Lv1-to-100 training and go exclusively to reserve',()=>{
+  for(const role of entitledRoles){
     const engine=fresh(),grant=bundle(role),before=copy(engine.state.party);
     const result=engine.receiveAdminReserveTeam(grant);
     assert.equal(result.added,6);assert.equal(result.destination,'storage');assert.deepEqual(copy(engine.state.party),before);
@@ -50,7 +68,7 @@ test('ordinary genderless and unrelated owned monsters retain their existing rul
   ordinary.grantId='admin-mythical:legacy';ordinary.gender='female';
   assert.equal(engine.genderOf(ordinary),'none');
   engine.state.storage.push(ordinary);engine.markCaught('floravelle');
-  const original=copy(ordinary);assert(engine.receiveAdminReserveTeam(bundle('sub')).ok);
+  const original=copy(ordinary);assert(engine.receiveAdminReserveTeam(bundle()).ok);
   assert.deepEqual(copy(engine.state.storage[0]),original);
   assert.equal(engine.state.storage.filter(mon=>mon.species==='floravelle').length,2,'new team never replaces the existing Lv70 mythical');
 });
@@ -71,7 +89,7 @@ test('repeated delivery or restore preserves each existing individual and its cu
 });
 
 test('manual restoration replaces only missing received members and does not consume another receipt',()=>{
-  const engine=fresh(),grant=bundle('sub');assert(engine.receiveAdminReserveTeam(grant).ok);
+  const engine=fresh(),grant=bundle('sub-sub');assert(engine.receiveAdminReserveTeam(grant).ok);
   const lost=copy(engine.state.storage[2]),kept=copy(engine.state.storage.filter((_,i)=>i!==2));
   assert(engine.release(2).ok);
   let status=engine.adminReserveTeamStatus(grant);assert.equal(status.restorableCount,1);assert.equal(status.newCount,0);assert.equal(status.ownedCount,5);
@@ -81,7 +99,7 @@ test('manual restoration replaces only missing received members and does not con
   assert.deepEqual(copy(engine.state.giftReceipts),receipts);
   assert.deepEqual(copy(engine.state.storage.slice(0,5)),kept);
   const replacement=engine.state.storage[5];assert.equal(replacement.grantId,lost.grantId);assert.notEqual(replacement.uid,lost.uid);
-  assert.equal(replacement.gender,'female');assert.equal(engine.allocationInfo(replacement).free,297);
+  assert.equal(replacement.gender,'male');assert.equal(engine.allocationInfo(replacement).free,297);
   assert(engine.receiveAdminReserveTeam(grant,{restore:true}).alreadyReceived);assert.equal(engine.state.storage.length,6);
 });
 
@@ -135,7 +153,7 @@ test('saved member grants reject mismatched or duplicated identity and preserve 
 
 test('all assigned training points survive level50 battle scaling',()=>{
   vm.runInContext(scripts.find(script=>script[2].includes('deterministic, save-independent rental-team duels'))[2],context);
-  const engine=fresh();engine.receiveAdminReserveTeam(bundle('sub'));
+  const engine=fresh();seedHistoricalReserve(engine,bundle('sub'));
   const alloc={hp:64,atk:64,def:64,spAtk:41,spDef:0,speed:64};
   const ids=engine.state.storage.slice(0,3).map(mon=>mon.species),duel=context.LT.Duel.create({mode:'single',teams:[ids,['komori','shizuku','hibana']],seed:7,allocation:[[alloc,alloc,alloc],null]});
   for(const mon of duel.state.teams[0].monsters){assert.equal(mon.level,50);assert.deepEqual(copy(mon.stats),copy(engine.stats({species:mon.species,level:50,alloc})));assert.equal(Object.values(mon.alloc).reduce((a,b)=>a+b),297);}
@@ -150,7 +168,10 @@ function bridgeHarness({playing=true,initialSave=null,role='main'}={}){
     rememberTradeSave(){control.remembered++;},CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},document:{dispatchEvent(){control.events++;}}});
   const begin=html.indexOf('  function persistGiftMutation(method,...args){'),end=html.indexOf('  LT.playMoveSound=',begin);
   vm.runInContext(html.slice(begin,end),ctx);
-  return {ctx,engine,control,initial,receive:(grant=bundle(),options)=>{control.liveBeforeWrite=JSON.stringify(engine.state);return ctx.persistGiftMutation('receiveAdminReserveTeam',grant,options);}};
+  const statusBegin=html.indexOf('    adminReserveTeamStatus:bundle=>{'),statusEnd=html.indexOf('    updateOwnedFuto:',statusBegin);
+  vm.runInContext('var reserveStatus=({'+html.slice(statusBegin,statusEnd)+'}).adminReserveTeamStatus;',ctx);
+  const mutate=(method,...args)=>{control.liveBeforeWrite=JSON.stringify(engine.state);return ctx.persistGiftMutation(method,...args);};
+  return {ctx,engine,control,initial,mutate,status:grant=>ctx.reserveStatus(grant),receive:(grant=bundle(),options)=>mutate('receiveAdminReserveTeam',grant,options)};
 }
 
 test('bridge checks live role/identity and refuses stale-disk or communication-state writes',()=>{
@@ -193,8 +214,8 @@ test('a normalized older save can receive the reserve team without a false stale
   const outcome=h.receive();assert.equal(outcome.added,6,JSON.stringify(outcome));assert.equal(h.control.writes,1);
 });
 
-test('the separate Lunaxion grant trains one genderless member per role and leaves every v64 individual unchanged',()=>{
-  for(const role of Object.keys(roles)){
+test('the separate Lunaxion grant trains one genderless member per entitled role and leaves every v64 individual unchanged',()=>{
+  for(const role of entitledRoles){
     const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     engine.state.storage[0].nickname='相棒';engine.state.storage[1].moveOrder=[3,2,1,0];
     engine.setAllocation(engine.state.storage[2],{hp:64,atk:64,def:64,spAtk:64,spDef:41});
@@ -213,12 +234,11 @@ test('the separate Lunaxion grant trains one genderless member per role and leav
     assert.equal(mon.gender,undefined);assert.equal(mon.shiny,false);assert.equal(mon.customStats,undefined);
     assert.equal(new Set(all(engine).map(mon=>mon.uid)).size,all(engine).length);
     assert.deepEqual(copy(new Engine(engine.serialize()).state),copy(engine.serialize()));
-    if(role==='sub')assert(existing.every(member=>member.gender==='female'));
   }
 });
 
 test('Lunaxion retry preserves its UID and build; explicit recovery restores only that missing individual',()=>{
-  const engine=fresh(),grant=addition('sub');engine.receiveAdminReserveTeam(bundle('sub'));engine.receiveAdminReserveTeam(grant);
+  const engine=fresh(),grant=addition('sub-sub');engine.receiveAdminReserveTeam(bundle('sub-sub'));engine.receiveAdminReserveTeam(grant);
   const mon=engine.state.storage[6];mon.nickname='いわ';mon.moveOrder=[3,1,0,2];mon.heldItem='everpebble';
   engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
   assert(engine.exchange(-1,6).ok);
@@ -237,7 +257,7 @@ test('Lunaxion retry preserves its UID and build; explicit recovery restores onl
   assert.deepEqual(copy(engine.state.party),kept.party);
   const replacement=engine.state.storage.at(-1);assert.equal(replacement.grantId,mon.grantId);assert.notEqual(replacement.uid,mon.uid);
   assert.equal(replacement.gender,undefined);assert.equal(engine.genderOf(replacement),'none');assert.equal(replacement.heldItem,'trainband');assert.equal(engine.allocationInfo(replacement).free,297);
-  assert.equal(engine.adminReserveTeamStatus(bundle('sub')).missingCount,1);
+  assert.equal(engine.adminReserveTeamStatus(bundle('sub-sub')).missingCount,1);
 });
 
 test('Lunaxion delivery remains atomic under full reserve, battle, unopened save and receipt limits',()=>{
@@ -291,10 +311,10 @@ test('v68 through v73 received forms and unchanged entitlement IDs suppress dupl
     const raw=copy(legacySave);if(removeReceipts)raw.giftReceipts=[];
     const engine=new Engine(raw),grant=addition(role),oldPayload=copy(grant);oldPayload.members[0].species=retired;oldPayload.members[0].gender=gender;
     const member=all(engine).find(mon=>mon.grantId===grant.members[0].grantId),before=copy(engine.state);
-    assert.equal(member.species,'lunaxion');assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
+    assert.equal(member.species,'lunaxion');if(role==='sub')assertDisabled(engine.adminReserveTeamStatus(grant));else assert.equal(engine.adminReserveTeamStatus(grant).ownedCount,1);
     assert.deepEqual(copy(rules.normalizeBundle(oldPayload)),grant,'A pending old-backend payload receives the same canonical entitlement');
     for(const payload of [grant,oldPayload])for(const options of [{},{restore:true}]){
-      const result=engine.receiveAdminReserveTeam(payload,options);assert(result.alreadyReceived);assert.equal(result.added,0);
+      const result=engine.receiveAdminReserveTeam(payload,options);if(role==='sub')assertDisabled(result);else{assert(result.alreadyReceived);assert.equal(result.added,0);}
       assert.deepEqual(copy(engine.state),before,'A received individual keeps UID, nickname, allocation, item, move order and PP');
     }
     assert.equal(engine.state.giftReceipts.filter(id=>id===member.grantId).length,1);
@@ -303,7 +323,7 @@ test('v68 through v73 received forms and unchanged entitlement IDs suppress dupl
 });
 
 test('an old receipt restores only its missing canonical Lunaxion and keeps the original six intact',()=>{
-  for(const role of Object.keys(roles)){
+  for(const role of entitledRoles){
     const raw=copy(legacySave),grant=addition(role),at=raw.storage.findIndex(mon=>mon.grantId===grant.members[0].grantId),missing=raw.storage.splice(at,1)[0];
     const engine=new Engine(raw);assert.equal(engine.receiveAdminReserveTeam(bundle(role)).added,6);
     const before=copy(engine.state);assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.state),before);
@@ -313,7 +333,6 @@ test('an old receipt restores only its missing canonical Lunaxion and keeps the 
     assert.equal(restored.level,100);assert.equal(restored.gender,undefined);assert.equal(engine.genderOf(restored),'none');assert.equal(restored.heldItem,'trainband');assert.equal(engine.allocationInfo(restored).free,297);
     assert.deepEqual(copy(engine.state.storage.slice(0,-1)),before.storage);assert.deepEqual(copy(engine.state.party),before.party);
     assert.deepEqual(copy(engine.state.giftReceipts),before.giftReceipts);
-    if(role==='sub')assert(engine.state.storage.filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')).every(mon=>mon.gender==='female'));
   }
 });
 
@@ -327,7 +346,7 @@ test('changing the historical entitlement prefix or final species ID cannot crea
 
 test('normal and retired earlier forms cannot reuse the final-form gift and all three role entitlements stay Lunaxion',()=>{
   for(const role of Object.keys(roles)){
-    const engine=fresh(),grant=addition(role);assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
+    const engine=fresh(),grant=addition(role);if(role==='sub')seedHistoricalReserve(engine,grant);else assert.equal(engine.receiveAdminReserveTeam(grant).added,1);
     const final=engine.state.storage[0],before=copy(final);assert.equal(final.species,'lunaxion');
     const events=[];engine.giveXP(final,1,events);assert.deepEqual(copy(final),before);assert(!events.some(event=>event.kind==='evolve'));
     for(const species of ['lunax','galdo','galdoran']){
@@ -373,7 +392,7 @@ function assertFullReserveGrowth(engine,mon){
   assert.equal(actual.accuracy,base.accuracy);assert.equal(actual.evasion,base.evasion);
 }
 function oldReserveSave(role,counts=Array(6).fill(undefined)){
-  const engine=fresh(),grant=bundle(role);assert.equal(engine.receiveAdminReserveTeam(grant).added,6);assert(engine.exchange(-1,0).ok);
+  const engine=fresh(),grant=bundle(role);seedHistoricalReserve(engine,grant);assert(engine.exchange(-1,0).ok);
   const raw=engine.serialize();raw.version=4;
   grant.members.forEach((member,index)=>{
     const mon=[...raw.party,...raw.storage].find(owned=>owned.grantId===member.grantId),count=counts[index];
@@ -396,13 +415,13 @@ function assertMigratedReserve(before,engine){
   assert.deepEqual(copy(engine.state.giftReceipts),copy(before.giftReceipts));assert.equal(engine.serialize().version,5);
 }
 
-test('v79 canonicalizes old six-member entitlements and grants all eighteen role members with combatGrowth99 and full HP',()=>{
+test('v79 canonicalizes old six-member entitlements but grants only entitled roles with combatGrowth99 and full HP',()=>{
   for(const role of Object.keys(roles))for(const oldGrowth of [undefined,0,99]){
     const grant=bundle(role);if(oldGrowth!==undefined)grant.members.forEach(mon=>mon.battleGrowth=oldGrowth);
     const original=copy(grant),canonical=rules.normalizeBundle(grant);
     assert.deepEqual(copy(grant),original,'Normalization does not mutate a pending legacy response');
     assert.deepEqual(copy(canonical.members.map(mon=>mon.battleGrowth)),[99,99,99,99,99,99]);
-    const engine=fresh();assert.equal(engine.receiveAdminReserveTeam(grant).added,6);assert.equal(engine.state.party.length,1);
+    const engine=fresh();if(role==='sub'){const before=JSON.stringify(engine.state);assertDisabled(engine.receiveAdminReserveTeam(grant));assert.equal(JSON.stringify(engine.state),before);continue;}assert.equal(engine.receiveAdminReserveTeam(grant).added,6);assert.equal(engine.state.party.length,1);
     for(const mon of engine.state.storage){
       assertFullReserveGrowth(engine,mon);assert.equal(mon.hp,engine.stats(mon).hp);assert.equal(mon.heldItem,'trainband');assert.equal(mon.gender,role==='sub'?'female':'male');assert.equal(engine.allocationInfo(mon).free,297);
     }
@@ -415,7 +434,7 @@ test('old saved v64 members with missing or zero combat growth migrate once with
   for(const role of Object.keys(roles))for(const count of [undefined,0]){
     const {raw,grant}=oldReserveSave(role,Array(6).fill(count)),input=copy(raw),engine=new Engine(raw);assertMigratedReserve(input,engine);assert.deepEqual(copy(raw),input,'Loading leaves the original raw save unchanged');
     const once=copy(engine.serialize()),restored=new Engine(once);assert.deepEqual(copy(restored.serialize()),once,'Loading a migrated save never adds the HP correction twice');
-    for(const options of [{},{restore:true}]){assert(restored.receiveAdminReserveTeam(grant,options).alreadyReceived);assert.deepEqual(copy(restored.serialize()),once);}
+    for(const options of [{},{restore:true}]){const result=restored.receiveAdminReserveTeam(grant,options);if(role==='sub')assertDisabled(result);else assert(result.alreadyReceived);assert.deepEqual(copy(restored.serialize()),once);}
     const fallen=all(restored).find(mon=>mon.uid===input.party[1].uid);assert.equal(fallen.hp,0);
   }
 });
@@ -423,21 +442,21 @@ test('old saved v64 members with missing or zero combat growth migrate once with
 test('partial combat growth upgrades only the missing portion and neither repeat loading nor repeat delivery heals existing damage twice',()=>{
   for(const role of Object.keys(roles)){
     const {raw,grant}=oldReserveSave(role,[1,13,25,49,77,99]);raw.version=5;const engine=new Engine(raw);assertMigratedReserve(raw,engine);
-    const once=copy(engine.serialize());assert.deepEqual(copy(new Engine(once).serialize()),once);assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.deepEqual(copy(engine.serialize()),once);
+    const once=copy(engine.serialize());assert.deepEqual(copy(new Engine(once).serialize()),once);const result=engine.receiveAdminReserveTeam(grant);if(role==='sub')assertDisabled(result);else assert(result.alreadyReceived);assert.deepEqual(copy(engine.serialize()),once);
     for(const mon of all(engine).filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')))assert.equal(mon.battleGrowth,99);
   }
 });
 
 test('already-loaded legacy members can upgrade in place without adding individuals or consuming duplicate receipts',()=>{
-  for(const role of Object.keys(roles)){
+  for(const role of entitledRoles){
     const {raw,grant}=oldReserveSave(role,[undefined,0,12,33,70,98]),engine=fresh();engine.state=copy(raw);
     const result=engine.receiveAdminReserveTeam(grant);assert(result.ok);assert.equal(result.added,0);assert.equal(result.updated,6);assert.equal(result.restored,0);assert.equal(all(engine).length,7);assertMigratedReserve(raw,engine);
     const once=JSON.stringify(engine.state);assert(engine.receiveAdminReserveTeam(grant,{restore:true}).alreadyReceived);assert.equal(JSON.stringify(engine.state),once);
   }
 });
 
-test('manual recovery gives every role a fresh full-growth missing member while preserving the five surviving builds',()=>{
-  for(const role of Object.keys(roles)){
+test('manual recovery gives each entitled role a fresh full-growth missing member while preserving the five surviving builds',()=>{
+  for(const role of entitledRoles){
     const engine=fresh(),grant=bundle(role);engine.receiveAdminReserveTeam(grant);
     const missing=copy(engine.state.storage[2]);assert(engine.release(2).ok);const kept=copy(engine.state.storage),receipts=copy(engine.state.giftReceipts);
     assert(engine.receiveAdminReserveTeam(grant).alreadyReceived);assert.equal(engine.state.storage.length,5);
@@ -451,7 +470,7 @@ test('all eighteen operator members retain HP198 and five stats99 from combat gr
   if(!context.LT.Duel)vm.runInContext(scripts.find(script=>script[2].includes('deterministic, save-independent rental-team duels'))[2],context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../ranked-rules.js'),'utf8'),context);
   for(const role of Object.keys(roles)){
-    const engine=fresh();engine.receiveAdminReserveTeam(bundle(role));
+    const engine=fresh();if(role==='sub')seedHistoricalReserve(engine,bundle(role));else engine.receiveAdminReserveTeam(bundle(role));
     for(const mon of engine.state.storage)engine.setAllocation(mon,{hp:64,atk:64,def:64,spAtk:64,spDef:41});
     const before=JSON.stringify(engine.state),battle=context.LT.RankedRules.create(copy(engine.state.storage.slice(0,3)),copy(engine.state.storage.slice(3)),7,['甲','乙']);
     const rendered=context.LT.RankedRules.hydrate(battle).snapshot();
@@ -466,9 +485,9 @@ test('all eighteen operator members retain HP198 and five stats99 from combat gr
 
 test('the separate v68 Lunaxion entitlement never acquires the six-member growth migration',()=>{
   for(const role of Object.keys(roles)){
-    const engine=fresh();engine.receiveAdminReserveTeam(bundle(role));const grant=addition(role);engine.receiveAdminReserveTeam(grant);const mon=engine.state.storage.at(-1);
+    const engine=fresh(),grant=addition(role);seedHistoricalReserve(engine,bundle(role));seedHistoricalReserve(engine,grant);const mon=engine.state.storage.at(-1);
     assert.equal(mon.battleGrowth||0,0);const before=copy(mon),loaded=new Engine(engine.serialize()),saved=loaded.state.storage.find(member=>member.uid===mon.uid);assert.deepEqual(copy(saved),before);
-    const at=loaded.state.storage.findIndex(member=>member.uid===mon.uid);assert(loaded.release(at).ok);assert.equal(loaded.receiveAdminReserveTeam(grant,{restore:true}).added,1);assert.equal(loaded.state.storage.at(-1).battleGrowth||0,0);
+    const at=loaded.state.storage.findIndex(member=>member.uid===mon.uid);assert(loaded.release(at).ok);if(role==='sub'){const kept=JSON.stringify(loaded.state);assertDisabled(loaded.receiveAdminReserveTeam(grant,{restore:true}));assert.equal(JSON.stringify(loaded.state),kept);}else{assert.equal(loaded.receiveAdminReserveTeam(grant,{restore:true}).added,1);assert.equal(loaded.state.storage.at(-1).battleGrowth||0,0);}
     assert(loaded.state.storage.filter(member=>member.grantId.startsWith('admin-trained-v64:')).every(member=>member.battleGrowth===99));
   }
 });
@@ -481,7 +500,7 @@ test('invalid combat-growth histories are rejected before v64 migration can repl
 });
 
 test('the bridge durably saves migrated already-received six-member records once and retries quota failure without a second correction',()=>{
-  for(const role of Object.keys(roles))for(const playing of [true,false]){
+  for(const role of entitledRoles)for(const playing of [true,false]){
     const {raw,grant}=oldReserveSave(role),h=bridgeHarness({playing,initialSave:raw,role}),before=JSON.stringify(h.engine.state),expected=new Engine(raw).serialize();
     h.control.fail=true;assert(h.receive(grant).pending);assert.equal(h.control.raw,JSON.stringify(raw));assert.equal(JSON.stringify(h.engine.state),before);assert.equal(h.control.writes,0);
     h.control.fail=false;const result=h.receive(grant);assert(result.ok,JSON.stringify({role,playing,result}));assert.equal(result.added,0);assert.equal(h.control.writes,1);assert.equal(h.control.remembered,1);
@@ -489,4 +508,106 @@ test('the bridge durably saves migrated already-received six-member records once
     const once=h.control.raw;assert(h.receive(grant).alreadyReceived);assert.equal(h.control.writes,1);assert.equal(h.control.raw,once);
     if(playing)assertMigratedReserve(raw,h.engine);else assert.equal(JSON.stringify(h.engine.state),before,'The title screen keeps the inactive live engine untouched');
   }
+});
+
+function futoGift(grantId){return {grantId,level:70,stats:{hp:1000,atk:300,def:250,spAtk:400,spDef:280,speed:260,accuracy:110,evasion:105},moves:D.species.futo.moves.slice()};}
+function initialGiftCalls(role='sub'){
+  const alias=futoGift('admin-initial:'+PLAYER);alias.id=alias.grantId;delete alias.grantId;
+  return [
+    ['grantFuto',futoGift('admin-initial:'+PLAYER)],['grantFuto',alias],
+    ['receiveAdminLegendary',{grantId:'admin-legendary:'+PLAYER,species:'arvelion',level:70}],
+    ['receiveAdminMythical',{grantId:'admin-mythical:'+PLAYER,species:'floravelle',level:70}],
+    ['receiveAdminReserveTeam',bundle(role)],['receiveAdminReserveTeam',bundle(role),{restore:true}],
+    ['receiveAdminReserveTeam',addition(role)],['receiveAdminReserveTeam',addition(role),{restore:true}]
+  ];
+}
+
+test('sub has no reserve entitlement even for a valid cached bundle, before adventure, battle, capacity or receipt checks',()=>{
+  for(const condition of ['ready','unstarted','battle','full','receipts'])for(const grant of [bundle('sub'),addition('sub')]){
+    const engine=condition==='unstarted'?new Engine():fresh();
+    if(condition==='battle')engine.battle={};
+    if(condition==='full')for(let i=0;i<192;i++)engine.state.storage.push(engine.makeMonster('komori',1));
+    if(condition==='receipts')engine.state.giftReceipts=Array.from({length:10000},(_,i)=>'gift:'+i);
+    const before=JSON.stringify(engine.state),payload=copy(grant),normalized=rules.normalizeBundle(grant);
+    assert.equal(normalized.role,'sub','Historical payloads remain readable for compatibility');assert.deepEqual(copy(grant),payload);
+    const status=engine.adminReserveTeamStatus(grant);assertDisabled(status);assert.equal(status.canReceive,false);assert.equal(status.canRestore,false);
+    for(const options of [{},{restore:true}])assertDisabled(engine.receiveAdminReserveTeam(grant,options));
+    assert.equal(JSON.stringify(engine.state),before,'Disabled delivery must neither add monsters nor consume receipts');
+  }
+});
+
+test('the current sub role blocks every initial-gift bridge path and old-role payload before any pending or storage transaction',()=>{
+  for(const playing of [true,false])for(const condition of ['ready','ranked','trade','busy','battle','no-save','quota']){
+    const h=bridgeHarness({playing,role:'sub'});
+    if(condition==='ranked')h.ctx.rankedLocked=()=>true;
+    if(condition==='trade')h.ctx.tradeLocked=()=>true;
+    if(condition==='busy')h.ctx.busy=true;
+    if(condition==='battle')h.engine.battle={};
+    if(condition==='no-save'){h.ctx.storedSave=null;h.control.raw=null;}
+    if(condition==='quota')h.control.fail=true;
+    const before=JSON.stringify(h.engine.state),raw=h.control.raw,stored=JSON.stringify(h.ctx.storedSave);
+    for(const formerRole of Object.keys(roles)){
+      for(const call of initialGiftCalls(formerRole))assertDisabled(h.mutate(...call));
+      for(const grant of [bundle(formerRole),addition(formerRole)]){const result=h.status(grant);assertDisabled(result);assert.equal(result.canReceive,false);assert.equal(result.canRestore,false);}
+    }
+    assert.equal(JSON.stringify(h.engine.state),before);assert.equal(h.control.raw,raw);assert.equal(JSON.stringify(h.ctx.storedSave),stored);
+    assert.equal(h.control.writes,0);assert.equal(h.control.events,0);assert.equal(h.control.remembered,0);
+  }
+});
+
+test('sub keeps the chosen ordinary adventure starter and receives no automatic party, reserve, receipt or collection changes',()=>{
+  for(const starter of D.starters){
+    const original=new Engine();assert(original.newGame(starter).ok);const initial=original.serialize(),h=bridgeHarness({role:'sub',initialSave:initial});
+    for(const call of initialGiftCalls())assertDisabled(h.mutate(...call));
+    assert.deepEqual(copy(h.engine.serialize()),copy(initial));assert.equal(h.engine.state.party.length,1);assert.equal(h.engine.state.party[0].species,starter);assert.equal(h.engine.state.party[0].level,5);
+    assert.equal(h.engine.state.storage.length,0);assert.equal(h.engine.state.giftReceipts.length,0);assert.equal(h.control.writes,0);
+  }
+});
+
+test('role changes cannot revive queued initial gifts and returning to an entitled role restores its existing delivery rules',()=>{
+  for(const priorRole of entitledRoles){
+    const h=bridgeHarness({role:priorRole}),before=JSON.stringify(h.engine.state),calls=initialGiftCalls(priorRole);
+    h.ctx.LT.Admin.player={id:PLAYER,isAdmin:true,adminRole:'sub'};
+    for(const call of calls)assertDisabled(h.mutate(...call));
+    assert.equal(JSON.stringify(h.engine.state),before);assert.equal(h.control.writes,0);
+    h.ctx.LT.Admin.player={id:PLAYER,isAdmin:true,adminRole:priorRole};
+    assert.equal(h.receive(bundle(priorRole)).added,6);assert.equal(h.receive(addition(priorRole)).added,1);
+    assert.equal(h.engine.state.storage.length,7);const restored=JSON.stringify(h.engine.state);
+    for(const grant of [bundle('sub'),addition('sub')])assert.equal(h.receive(grant,{restore:true}).ok,false);
+    assert.equal(JSON.stringify(h.engine.state),restored,'Changing role does not revive an old sub entitlement');
+    h.ctx.LT.Admin.player.adminRole='sub';for(const call of calls)assertDisabled(h.mutate(...call));assert.equal(JSON.stringify(h.engine.state),restored);
+  }
+});
+
+test('sub still receives explicit manual Futo gifts while main and sub-sub retain all initial companions',()=>{
+  for(const playing of [true,false]){
+    const h=bridgeHarness({role:'sub',playing}),starter=copy(h.ctx.storedSave.party[0]),manual=futoGift('manual-distribution:'+PLAYER);
+    const result=h.mutate('grantFuto',manual);assert(result.ok);assert.notEqual(result.disabled,true);assert.equal(h.control.writes,1);
+    assert.deepEqual(copy(h.ctx.storedSave.party[0]),starter);const mon=h.ctx.storedSave.party[1];assert.equal(mon.species,'futo');assert.equal(mon.grantId,manual.grantId);assert.deepEqual(copy(mon.customStats),manual.stats);
+    assert(h.mutate('grantFuto',manual).alreadyReceived);assert.equal(h.control.writes,1);assert.deepEqual(copy(h.ctx.storedSave.giftReceipts),[manual.grantId]);
+  }
+  for(const role of entitledRoles){
+    const h=bridgeHarness({role});for(const call of initialGiftCalls(role))assert(h.mutate(...call).ok,role+'/'+call[0]);
+    assert.equal(all(h.engine).length,11);assert.equal(h.engine.state.giftReceipts.length,10);
+    assert.equal(all(h.engine).filter(mon=>mon.species==='futo').length,1);assert.equal(all(h.engine).filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')).length,6);
+  }
+});
+
+test('historically owned sub initial gifts and receipts survive loading and blocked retries; missing members stay missing',()=>{
+  const {raw}=oldReserveSave('sub',[99,99,99,99,99,99]),engine=new Engine(raw);seedHistoricalReserve(engine,addition('sub'));
+  const initial=futoGift('admin-initial:'+PLAYER),futo=engine.makeMonster('futo',initial.level,initial.stats,initial.moves);
+  const legendary=engine.makeMonster('arvelion',70),mythical=engine.makeMonster('floravelle',70);
+  Object.assign(futo,{grantId:initial.grantId,nickname:'相棒フート'});Object.assign(legendary,{grantId:'admin-legendary:'+PLAYER,shiny:true});mythical.grantId='admin-mythical:'+PLAYER;
+  for(const mon of [futo,legendary,mythical]){engine.state.storage.push(mon);engine.state.giftReceipts.push(mon.grantId);engine.markCaught(mon.species);}
+  const at=engine.state.storage.findIndex(mon=>mon.grantId?.startsWith('admin-trained-v64:')),released=engine.state.storage[at];assert(engine.release(at).ok);
+  const save=engine.serialize(),h=bridgeHarness({role:'sub',initialSave:save}),before=copy(h.engine.serialize());assert.deepEqual(before,copy(save));
+  for(const call of initialGiftCalls())assertDisabled(h.mutate(...call));
+  assert.deepEqual(copy(h.engine.serialize()),before);assert.equal(h.control.raw,JSON.stringify(save));assert.equal(h.control.writes,0);
+  assert(!all(h.engine).some(mon=>mon.uid===released.uid));assert(h.engine.state.giftReceipts.includes(released.grantId));
+  assert(all(h.engine).filter(mon=>mon.grantId?.startsWith('admin-trained-v64:')).every(mon=>mon.battleGrowth===99&&mon.gender==='female'));
+  assert.equal(all(h.engine).find(mon=>mon.species==='lunaxion').battleGrowth||0,0);assert.equal(h.engine.state.party[1].hp,0);
+  const previous=copy(all(h.engine).find(mon=>mon.grantId===initial.grantId)),config={...initial,stats:{...initial.stats,atk:333}};
+  assert(h.mutate('updateOwnedFuto',initial.grantId,config).ok);const updated=all(h.engine).find(mon=>mon.grantId===initial.grantId);
+  assert.equal(updated.uid,previous.uid);assert.equal(updated.nickname,previous.nickname);assert.equal(updated.customStats.atk,333);assert.equal(h.engine.state.giftReceipts.length,save.giftReceipts.length);
+  const operator={id:PLAYER,isAdmin:true,adminRole:'sub'};assert(h.engine.startAdminEncounter('komori',5,operator).ok,'The no-gift policy keeps explicit operator encounter controls');
 });

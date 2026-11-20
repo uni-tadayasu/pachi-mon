@@ -39,8 +39,11 @@ class LocalD1 {
 function ok(response){assert.equal(response.status,200,JSON.stringify(response));return response;}
 function party(species='arvelion',level=70){return copy([new LT.Engine().makeMonster(species,level)]);}
 function ownedParty(actor,profile){
+  // Sub starts an ordinary adventure and hosts battles with caught/trained
+  // partners. Legacy gift ownership is covered independently of delivery.
+  if(profile.player.adminRole==='sub')return copy(['komorizen','shizunaria','akehomura'].map(species=>({...new LT.Engine().makeMonster(species,70),nickname:actor.name})));
   const grant=profile.grants.find(row=>row.grantId==='admin-initial:'+actor.id);
-  assert(grant,'Every administrator receives their own initial Futo');
+  assert(grant,'Main and third retain their initial Futo');
   const engine=new LT.Engine();
   return copy([
     {...engine.makeMonster('arvelion',70),grantId:'admin-legendary:'+actor.id,nickname:actor.name},
@@ -119,7 +122,7 @@ function setup(t){
   return {env,advance,call,register,admins,threeAdmins,presence,createRoom,revoke,live,start,participants,threeParticipants};
 }
 
-test('both administrators receive initial companions, current Kasai identities and independent editable rooms',async t=>{
+test('sub starts without gifts while both administrators keep current identities and independent editable rooms',async t=>{
   const h=setup(t),{main,sub}=await h.admins(),visitor=await h.register('旅人');
   for(const actor of [main,sub]){
     const profile=ok(await h.call('/me',actor));
@@ -127,11 +130,11 @@ test('both administrators receive initial companions, current Kasai identities a
     assert.equal(profile.player.adminRole,actor.id===main.id?'main':'sub');
     assert.equal(profile.player.name,actor.name);
     assert.equal(profile.player.displayName,actor.id===main.id?'謎のトレーナー カサイ':'サカイ');
-    assert.deepEqual(profile.initialCompanions,[
+    assert.deepEqual(profile.initialCompanions,actor.id===sub.id?[]:[
       {grantId:'admin-legendary:'+actor.id,species:'arvelion',level:70},
       {grantId:'admin-mythical:'+actor.id,species:'floravelle',level:70}
     ]);
-    assert.equal(profile.grants.filter(row=>row.grantId==='admin-initial:'+actor.id).length,1);
+    assert.equal(profile.grants.filter(row=>row.grantId==='admin-initial:'+actor.id).length,actor.id===sub.id?0:1);
   }
   const ordinary=ok(await h.call('/me',visitor));
   assert.deepEqual(ordinary.initialCompanions,[]);assert.equal(ordinary.player.adminRole,null);
@@ -192,7 +195,7 @@ test('secondary owned parties and signed mythical/trainer proofs have the same a
     assert.equal(identity.name,actor.id===main.id?'謎のトレーナー カサイ':'サカイ');
   }
   assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM kasai_parties').get().n,2);
-  const stolen=copy(rosters.get(sub.id));stolen[2].grantId='admin-mythical:'+main.id;
+  const stolen=copy(rosters.get(sub.id));stolen[2]={...new LT.Engine().makeMonster('floravelle',70),grantId:'admin-mythical:'+main.id};
   assert.equal((await h.call('/world/kasai/party',sub,'POST',{party:stolen})).error.code,'KASAI_PARTY_NOT_OWNED');
   assert.equal((await h.call('/duel-pass',sub,'POST',{sessionId,side:0,grantId:'admin-mythical:'+main.id})).status,403);
   ok(await h.revoke(main,sub));
@@ -363,12 +366,12 @@ test('all three seats retain distinct authoritative identities and the third has
     const profile=ok(await h.call('/me',actor));
     assert.equal(profile.player.isAdmin,true);assert.equal(profile.player.adminRole,roles[index]);assert.equal(profile.player.name,actor.name);
     assert.equal(profile.player.displayName,names[index]);
-    assert.deepEqual(profile.initialCompanions,[
+    assert.deepEqual(profile.initialCompanions,actor.id===sub.id?[]:[
       {grantId:'admin-legendary:'+actor.id,species:'arvelion',level:70},
       {grantId:'admin-mythical:'+actor.id,species:'floravelle',level:70}
     ]);
     const initial=profile.grants.filter(row=>row.grantId==='admin-initial:'+actor.id);
-    assert.equal(initial.length,1);assert.deepEqual(initial[0].stats,changed.stats);
+    assert.equal(initial.length,actor.id===sub.id?0:1);if(initial.length)assert.deepEqual(initial[0].stats,changed.stats);
     const roster=ownedParty(actor,profile);rosters.set(actor.id,roster);
     assert.equal(ok(await h.call('/world/kasai/party',actor,'POST',{party:roster})).playerId,actor.id);
     assert.equal(ok(await h.call('/world/kasai/party',actor)).playerId,actor.id);

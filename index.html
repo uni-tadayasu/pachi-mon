@@ -3317,6 +3317,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
     }
     adminReserveTeamStatus(bundle){
       let normalized;try{normalized=normalizeAdminReserveBundle(bundle);}catch(error){return fail(error.message);}
+      // Keep historical sub-operator individuals valid, but never deliver or
+      // restore their former starter bundles into a new personal adventure.
+      if(normalized.role==='sub')return {ok:false,disabled:true,canReceive:false,canRestore:false,message:'サブ運営への初期パチモン配布はありません。冒険で仲間を集めてください。'};
       const receipts=new Set(this.state.giftReceipts||[]),owned=new Map([...this.state.party.map(mon=>[mon.grantId,{mon,destination:'party'}]),...this.state.storage.map(mon=>[mon.grantId,{mon,destination:'storage'}])]);
       const members=normalized.members.map(member=>{
         const found=owned.get(member.grantId),present=!!found&&canonicalSpecies(found.mon.species)===member.species;
@@ -8714,6 +8717,10 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // has safely written the local save. A full party/storage keeps the gift in
   // the server inbox; no receipt is consumed before space is available.
   function persistGiftMutation(method,...args){
+    // Apply the current role before busy/pending checks, so an older inbox
+    // response cannot re-enable initial gifts or leave them waiting forever.
+    const giftOwner=LT.Admin?.player,initialFuto=method==='grantFuto'&&String(args[0]?.grantId??args[0]?.id??'').startsWith('admin-initial:');
+    if(giftOwner?.isAdmin===true&&giftOwner.adminRole==='sub'&&(initialFuto||['receiveAdminLegendary','receiveAdminMythical','receiveAdminReserveTeam'].includes(method)))return {ok:false,disabled:true,message:'サブ運営への初期パチモン配布はありません。冒険で仲間を集めてください。'};
     if(rankedLocked())return {ok:false,pending:true,message:'ランク対戦の待機・対戦を終えると受け取れます。'};
     if(method==='receiveAdminReserveTeam'){
       const owner=LT.Admin?.player,bundle=args[0];
@@ -8893,6 +8900,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     receiveAdminReserveTeam:(bundle,options)=>persistGiftMutation('receiveAdminReserveTeam',bundle,options),
     adminReserveTeamStatus:bundle=>{
       const owner=LT.Admin?.player;
+      if(owner?.isAdmin===true&&owner.adminRole==='sub')return {ok:false,disabled:true,canReceive:false,canRestore:false,message:'サブ運営への初期パチモン配布はありません。冒険で仲間を集めてください。'};
       if(owner?.isAdmin!==true||!owner.adminRole||bundle?.playerId!==owner.id||bundle?.role!==owner.adminRole)return {ok:false,message:'現在の運営権限を確認できません。'};
       try{return (playing?engine:storedSave?new Engine(storedSave):new Engine()).adminReserveTeamStatus(bundle);}
       catch(error){return {ok:false,message:error?.message||'冒険の記録を確認できません。'};}
@@ -10599,7 +10607,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
 <script src="battle-vfx.js?v=20261120-lunar-super-v74"></script>
-<script src="admin-console.js?v=20261120-battle-growth-v79"></script>
+<script src="admin-console.js?v=20261120-sub-original-adventure-v80"></script>
 <script src="secret-rooms.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-challenge.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-party.js?v=20261119-sub-admin-v62"></script>

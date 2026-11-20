@@ -55,13 +55,17 @@ function expectedMigrated(mon){
   return next;
 }
 
-test('each authenticated admin role receives exactly its requested reserve entitlement',async()=>{
+test('main and third receive initial entitlements while sub receives no automatic Pokemon',async()=>{
   const h=setup(),actors=await h.actors();
   assert.equal((await h.call('/me')).status,401);
   assert.equal((await h.call('/me',actors.visitor)).adminReserveTeam,null);
   for(const role of ['main','sub','sub-sub']){
     const result=await h.call('/me',actors[role]);
     assert.equal(result.status,200);assert.equal(result.player.adminRole,role);
+    if(role==='sub'){
+      assert.equal(result.adminReserveTeam,null);assert.equal(result.adminReserveAddition,null);assert.deepEqual(result.initialCompanions,[]);assert.deepEqual(result.grants,[]);
+      assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(actors[role].id).n,0);continue;
+    }
     assert.deepEqual(result.adminReserveTeam,expectedTeam(actors[role].id,role));
     assert.equal(new Set(result.adminReserveTeam.members.map(member=>member.grantId)).size,6);
     assert.equal(result.initialCompanions.length,2,'Existing Lv70 initial companions remain separate');
@@ -73,7 +77,7 @@ test('each authenticated admin role receives exactly its requested reserve entit
 
 test('repeated and paged reserve reads are stable and create no additional gift records',async()=>{
   const h=setup(),actors=await h.actors(),before=Object.fromEntries(['grants','grant_batches','kasai_parties'].map(table=>[table,h.env.DB.sqlite.prepare('SELECT * FROM '+table).all()]));
-  for(const role of ['main','sub','sub-sub'])for(const path of ['/me','/me?limit=1','/me?limit=1&cursor=9999'])assert.deepEqual((await h.call(path,actors[role])).adminReserveTeam,expectedTeam(actors[role].id,role));
+  for(const role of ['main','sub','sub-sub'])for(const path of ['/me','/me?limit=1','/me?limit=1&cursor=9999'])assert.deepEqual((await h.call(path,actors[role])).adminReserveTeam,role==='sub'?null:expectedTeam(actors[role].id,role));
   for(const table of Object.keys(before))assert.deepEqual(h.env.DB.sqlite.prepare('SELECT * FROM '+table).all(),before[table]);
 });
 
@@ -82,17 +86,17 @@ test('revocation removes reserve authorization and a changed role receives its o
   const revoke=await h.call('/admin/devices/revoke',actors.main,'POST',{playerId:actors.sub.id,claimedAt:old.claimedAt,confirmed:true});assert.equal(revoke.status,200);
   assert.equal((await h.call('/me',actors.sub)).adminReserveTeam,null);
   await h.appoint(actors.main,actors.sub,'sub');
-  assert.deepEqual((await h.call('/me',actors.sub)).adminReserveTeam,expectedTeam(actors.sub.id,'sub'),'Reinstating a role reuses stable receipts for restoration');
+  assert.equal((await h.call('/me',actors.sub)).adminReserveTeam,null,'Reinstating the sub role cannot restore automatic gifts');
   const registration=(await h.call('/admin/config',actors.main)).adminRegistration;
   assert.equal((await h.call('/admin/release',actors.main,'POST',{confirmed:true,expectedRegistration:registration})).status,200);
   assert.deepEqual((await h.call('/me',actors.sub)).adminReserveTeam,expectedTeam(actors.sub.id,'main'),'Promotion follows the actual registered role');
   assert.equal((await h.call('/me',actors.main)).adminReserveTeam,null);
 });
 
-test('all six trained members can be saved for live admin battles with later allocations and changed held items',async()=>{
+test('all six already-owned trained members remain usable for every role, including sub with no new deliveries',async()=>{
   const h=setup(),actors=await h.actors();
   for(const role of ['main','sub','sub-sub']){
-    const team=(await h.call('/me',actors[role])).adminReserveTeam,party=partyFor(team);
+    const team=expectedTeam(actors[role].id,role),party=partyFor(team);
     party[0].alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};delete party[0].heldItem;party[0].nickname='そだてた';
     const result=await h.call('/world/kasai/party',actors[role],'POST',{party});
     assert.equal(result.status,200,JSON.stringify(result));assert.equal(result.party.length,6);
@@ -105,7 +109,7 @@ test('all six trained members can be saved for live admin battles with later all
 test('legacy six-member records regain full direct growth without replacing identity or spent allocation',async()=>{
  const h=setup(),actors=await h.actors();
  for(const role of ['main','sub','sub-sub']){
-  const team=(await h.call('/me',actors[role])).adminReserveTeam,party=partyFor(team);
+  const team=expectedTeam(actors[role].id,role),party=partyFor(team);
   for(const [index,mon] of party.entries()){if(index%2)mon.battleGrowth=0;else delete mon.battleGrowth;mon.nickname='育ち'+index;mon.moveOrder=[3,1,0,2];mon.alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};mon.hp=index===5?0:Math.max(1,mon.hp-11);}
   const original=copy(party),result=await h.call('/world/kasai/party',actors[role],'POST',{party});
   assert.equal(result.status,200,JSON.stringify(result));assert(result.party.every(mon=>mon.battleGrowth===99&&mon.bonusPoints===99));
@@ -117,7 +121,8 @@ test('legacy six-member records regain full direct growth without replacing iden
   const saved=copy(result.party);
   for(const battleGrowth of [-1,.5,100,null,'99']){const invalid=copy(original);invalid[0].battleGrowth=battleGrowth;assert.equal((await h.call('/world/kasai/party',actors[role],'POST',{party:invalid})).status,400);}
   assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,saved);
-  assert.equal((await h.call('/me',actors[role])).adminReserveAddition.members[0].battleGrowth,undefined,'The separate hidden leader does not receive the six-member upgrade');
+  const addition=(await h.call('/me',actors[role])).adminReserveAddition;
+  if(role==='sub')assert.equal(addition,null);else assert.equal(addition.members[0].battleGrowth,undefined,'The separate hidden leader does not receive the six-member upgrade');
  }
 });
 
@@ -152,14 +157,14 @@ test('trained members cannot be submitted by another player or with another regi
   else assert([400,403].includes(normalized.status),JSON.stringify(normalized));
 });
 
-test('the Lunaxion entitlement is separate, stable, genderless for every current role and private to that role',async()=>{
+test('the Lunaxion delivery is separate and private for main and third, and remains disabled for sub',async()=>{
   const h=setup(),actors=await h.actors(),before=Object.fromEntries(['grants','grant_batches','kasai_parties'].map(table=>[table,h.env.DB.sqlite.prepare('SELECT * FROM '+table).all()]));
   for(const role of ['main','sub','sub-sub'])for(const path of ['/me','/me?limit=1','/me?limit=1&cursor=9999']){
     const result=await h.call(path,actors[role]);assert.equal(result.status,200);
+    if(role==='sub'){assert.equal(result.adminReserveTeam,null);assert.equal(result.adminReserveAddition,null);continue;}
     assert.deepEqual(result.adminReserveTeam,expectedTeam(actors[role].id,role));
     assert.deepEqual(result.adminReserveAddition,expectedAddition(actors[role].id,role));
     assert(!result.adminReserveTeam.members.some(member=>member.grantId===result.adminReserveAddition.members[0].grantId));
-    if(role==='sub')assert(result.adminReserveTeam.members.every(member=>member.gender==='female'));
   }
   assert.equal((await h.call('/me',actors.visitor)).adminReserveAddition,null);
   assert.equal((await h.call('/me?playerId='+actors.main.id+'&role=main',actors.visitor)).adminReserveAddition,null);
@@ -168,16 +173,16 @@ test('the Lunaxion entitlement is separate, stable, genderless for every current
   assert.equal((await h.call('/admin/devices/revoke',actors.main,'POST',{playerId:actors.sub.id,claimedAt:registration.claimedAt,confirmed:true})).status,200);
   assert.equal((await h.call('/me',actors.sub)).adminReserveAddition,null);
   await h.appoint(actors.main,actors.sub,'sub');
-  assert.deepEqual((await h.call('/me',actors.sub)).adminReserveAddition,expectedAddition(actors.sub.id,'sub'));
+  assert.equal((await h.call('/me',actors.sub)).adminReserveAddition,null);
 });
 
-test('Lunaxion can enter an authenticated saved battle party with its chosen build alongside old members',async()=>{
+test('already-owned Lunaxion can enter every roles saved battle party alongside old members',async()=>{
   const h=setup(),actors=await h.actors();
   for(const role of ['main','sub','sub-sub']){
-    const entitlements=await h.call('/me',actors[role]),party=partyFor(entitlements.adminReserveAddition);
+    const party=partyFor(expectedAddition(actors[role].id,role));
     party[0].uid='addition-'+role;party[0].nickname='がん';party[0].moveOrder=[3,1,0,2];delete party[0].heldItem;
     party[0].alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};
-    party.push(...partyFor(entitlements.adminReserveTeam).slice(0,5));
+    party.push(...partyFor(expectedTeam(actors[role].id,role)).slice(0,5));
     const result=await h.call('/world/kasai/party',actors[role],'POST',{party});assert.equal(result.status,200,JSON.stringify(result));
     assert.equal(result.party[0].species,'lunaxion');assert.equal(result.party[0].gender,undefined);assert.equal(result.party[0].bonusPoints,99);
     for(const key of ['uid','nickname','moveOrder','alloc','grantId'])assert.deepEqual(result.party[0][key],party[0][key]);

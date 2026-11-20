@@ -214,7 +214,7 @@ test('initial companion receipt survives reload only after its save succeeds',()
   }
   const engine=new ctx.LT.Engine();engine.newGame(ctx.LT.DATA.starters[0]);
   let failWrite=true,saved=null,writes=0;const events=[];
-  Object.assign(ctx,{tradeLocked:()=>false,Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
+  Object.assign(ctx,{tradeLocked:()=>false,rankedLocked:()=>false,Engine:ctx.LT.Engine,engine,playing:true,busy:false,storedSave:engine.serialize(),SAVE_KEY:'test-save',lastSave:0,
     localStorage:{setItem:(key,value)=>{if(failWrite)throw Error('Storage full');saved=value;writes++;}},
     performance:{now:()=>100},updateAll(){},loadStored(){},
     CustomEvent:class{constructor(type,options={}){this.type=type;this.detail=options.detail;}},
@@ -777,8 +777,140 @@ function reserveBundle(role='main',id=PLAYER_A.id){
 function reserveAddition(role='main',id=PLAYER_A.id){return {version:2,playerId:id,role,members:[{grantId:`admin-galdogran-v68:${role}:${id}:galdogran`,species:'lunaxion',level:100,gender:'none',heldItem:'trainband',bonusPoints:99}]};}
 function enableReserve(h){h.ctx.LT.AdminReserveRules=reserveRules();return h;}
 
-test('each current role receives its own trained six once per paginated synchronization',async()=>{
-  for(const role of ['main','sub','sub-sub']){
+function initialPayload(owner){return {player:owner,adminExists:true,
+  initialCompanions:[{...LEGENDARY,grantId:'admin-legendary:'+owner.id},{grantId:'admin-mythical:'+owner.id,species:'floravelle',level:70}],
+  adminReserveTeam:reserveBundle(owner.adminRole,owner.id),adminReserveAddition:reserveAddition(owner.adminRole,owner.id),
+  grants:[{grantId:'admin-initial:'+owner.id}],nextCursor:null};}
+function attachInitialConsole(h){
+  const groups={team:{hidden:false},addition:{hidden:false}};
+  const boxes={
+    '#pachi-admin-reserve':{innerHTML:'',closest:()=>groups.team},
+    '#pachi-admin-reserve-addition':{innerHTML:'',closest:()=>groups.addition},
+    '[data-admin-initial-policy]':{textContent:''},'[data-admin-config-policy]':{textContent:''},
+    '[data-admin-futo-policy]':{textContent:''},'.pachi-status':h.statusLine
+  };
+  for(const [name,value] of Object.entries({level:CONFIG.level,...CONFIG.stats}))boxes[`[name="${name}"]`]={value:String(value)};
+  CONFIG.moves.forEach((value,index)=>boxes[`[name="move${index}"]`]={value});
+  const dialog={open:true,querySelector:selector=>boxes[selector]||null,querySelectorAll:()=>[],close(){this.open=false;}};
+  h.api.attachConsole(dialog);return {boxes,groups,dialog};
+}
+
+test('sub ignores all automatic initial gifts across pages while ordinary gifts remain receivable',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'},reserveCalls=[],existing={party:[{uid:'already-owned',species:'futo',hp:67}],giftReceipts:['admin-initial:'+PLAYER_A.id]};
+  const original=JSON.stringify(existing);
+  const h=enableReserve(harness({settings:true,handle:c=>{
+    if(c.path==='/me'){const page=c.search.includes('cursor=')?2:1;return response({...initialPayload(owner),grants:[{grantId:'admin-initial:'+owner.id},{id:'admin-initial:'+owner.id},{grantId:'manual-'+page}],nextCursor:page===1?8:null});}
+  },bridge:{getEngine:()=>({state:existing}),receiveAdminReserveTeam:bundle=>{reserveCalls.push(bundle);return {ok:false,pending:true};}}}));
+  adopt(h,TOKEN_A,owner);const view=attachInitialConsole(h);await h.api.sync();
+  assert.deepEqual(h.applied.map(grant=>grant.grantId),['manual-1','manual-2']);
+  assert.equal(h.initial.length,0);assert.equal(h.updated.length,0);assert.equal(reserveCalls.length,0);
+  assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(h.toasts.length,0);
+  assert.equal(h.api.reserveTeam,null);assert.equal(h.api.reserveAddition,null);
+  assert.equal(JSON.stringify(existing),original,'Existing individuals and receipts are never deleted or rewritten');
+  assert(view.groups.team.hidden&&view.groups.addition.hidden);
+  assert.equal(view.boxes['#pachi-admin-reserve'].innerHTML,'');assert.equal(view.boxes['#pachi-admin-reserve-addition'].innerHTML,'');
+  assert.match(h.serviceBody.innerHTML,/自分の冒険で仲間にしたパチモン/);
+  assert.match(h.serviceBody.innerHTML,/初期メンバーの自動配布・復元はありません/);
+  assert.match(h.serviceBody.innerHTML,/data-admin-action="console"/);
+  assert(!h.serviceBody.innerHTML.includes('アルヴェリオンは運営の初期メンバー'));
+});
+
+test('main and sub-sub retain every initial gift path and initial Futo config updates',async()=>{
+  for(const role of ['main','sub-sub']){
+    const owner={...PLAYER_A,adminRole:role},received=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?response(initialPayload(owner)):null,
+      bridge:{receiveAdminReserveTeam:bundle=>{received.push(bundle);return {ok:true,alreadyReceived:true};}}}));
+    adopt(h,TOKEN_A,owner);await h.api.sync();
+    assert.deepEqual(received.map(bundle=>bundle.version),[1,2]);
+    assert.deepEqual(h.initial.map(mon=>mon.species),['arvelion','floravelle']);
+    assert.equal(h.applied[0].grantId,'admin-initial:'+owner.id);assert.equal(h.updated[0].grantId,'admin-initial:'+owner.id);
+  }
+});
+
+test('intentionally disabled deliveries are not counted as pending',async()=>{
+  for(const disableGrant of [true,false]){
+    const owner={...PLAYER_A,adminRole:'main'},disabled=()=>({ok:false,disabled:true}),updates=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?response({...initialPayload(owner),grants:[{id:'admin-initial:'+owner.id}]}):null,
+      bridge:{receiveAdminReserveTeam:disabled,receiveAdminLegendary:disabled,receiveAdminMythical:disabled,
+        grantFuto:()=>disableGrant?disabled():{ok:true,alreadyReceived:true},updateOwnedFuto:id=>{updates.push(id);return disabled();}}}));
+    adopt(h,TOKEN_A,owner);await h.api.sync();
+    assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(h.toasts.length,0);
+    assert.deepEqual(updates,disableGrant?[]:['admin-initial:'+owner.id]);
+  }
+});
+
+test('a delayed inbox cannot apply initial gifts under a newer role in either direction',async()=>{
+  for(const [prior,next] of [['main','sub'],['sub','main']]){
+    const owner={...PLAYER_A,adminRole:prior},delayed=deferred(),received=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?delayed.promise:c.path==='/world/presence'?response({self:{id:owner.id,isAdmin:true,adminRole:next}}):null,
+      bridge:{receiveAdminReserveTeam:bundle=>{received.push(bundle);return {ok:true,added:6};}}}));
+    adopt(h,TOKEN_A,owner);const pending=h.api.sync();await until(()=>h.calls.some(call=>call.path==='/me'));
+    await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+    const payload=initialPayload(owner);payload.grants.push({grantId:'explicit-gift'});delayed.resolve(response(payload));await pending;
+    assert.equal(h.ctx.LT.Admin.player.adminRole,next);assert.equal(received.length,0);assert.equal(h.initial.length,0);assert.equal(h.updated.length,0);
+    assert.deepEqual(h.applied.map(grant=>grant.grantId),['explicit-gift']);assert.equal(h.ctx.LT.Admin.pending,0);
+  }
+});
+
+test('sub cannot invoke either reserve restore even through stale buttons',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'},h=enableReserve(harness({settings:true}));adopt(h,TOKEN_A,owner);
+  const view=attachInitialConsole(h);h.api.refreshSettings();
+  for(const method of ['restoreAdminReserveTeam','restoreAdminReserveAddition'])await assert.rejects(h.api[method](),/自動配布・復元はありません/);
+  for(const action of ['restore-reserve','restore-reserve-addition'])await h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:action},disabled:false,isConnected:true})}});
+  assert.equal(h.calls.length,0);assert.equal(h.api.reserveBusy,false);assert(view.groups.team.hidden&&view.groups.addition.hidden);
+  assert.match(h.statusLine.textContent,/初期メンバーの自動配布・復元はありません/);
+});
+
+test('a fresh sub profile cancels a restore started under main before it applies the payload',async()=>{
+  for(const method of ['restoreAdminReserveTeam','restoreAdminReserveAddition']){
+    const owner={...PLAYER_A,adminRole:'main'},delayed=deferred(),received=[];
+    const h=enableReserve(harness({handle:c=>c.path==='/me'?delayed.promise:null,
+      bridge:{receiveAdminReserveTeam:bundle=>{received.push(bundle);return {ok:true,added:1};}}}));
+    adopt(h,TOKEN_A,owner);h.api.adoptReserveTeam(initialPayload(owner));const view=attachInitialConsole(h);h.api.renderAdminReserveTeam();
+    assert(!view.groups.team.hidden&&!view.groups.addition.hidden);
+    const restoring=h.api[method]();await until(()=>h.calls.some(call=>call.path==='/me'));
+    delayed.resolve(response({...initialPayload(owner),player:{...owner,adminRole:'sub'}}));
+    await assert.rejects(restoring,/初期メンバーの自動配布・復元はありません/);
+    assert.equal(received.length,0);assert.equal(h.api.reserveTeam,null);assert.equal(h.api.reserveAddition,null);assert.equal(h.api.reserveBusy,false);
+    assert(view.groups.team.hidden&&view.groups.addition.hidden);
+  }
+});
+
+test('role changes immediately hide cached restore panels and show the own-adventure policy',async()=>{
+  const owner={...PLAYER_A,adminRole:'main'};let role='sub';
+  const h=enableReserve(harness({settings:true,handle:c=>c.path==='/world/presence'?response({self:{id:owner.id,isAdmin:true,adminRole:role}}):null}));
+  adopt(h,TOKEN_A,owner);h.api.adoptReserveTeam(initialPayload(owner));const view=attachInitialConsole(h);h.api.renderAdminReserveTeam();
+  assert.match(view.boxes['#pachi-admin-reserve'].innerHTML,/restore-reserve/);
+  await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+  assert.equal(h.api.reserveTeam,null);assert.equal(h.api.reserveAddition,null);assert(view.groups.team.hidden&&view.groups.addition.hidden);
+  assert.match(view.boxes['[data-admin-initial-policy]'].textContent,/自分の冒険/);
+  assert.match(view.boxes['[data-admin-futo-policy]'].textContent,/初期フートは自動追加されません/);
+  role='sub-sub';await h.ctx.LT.Admin.worldRequest('/world/presence',{method:'POST',body:{}});
+  h.api.adoptReserveTeam(initialPayload({...owner,adminRole:role}));h.api.renderAdminReserveTeam();
+  assert(!view.groups.team.hidden&&!view.groups.addition.hidden);
+  assert.match(view.boxes['#pachi-admin-reserve'].innerHTML,/restore-reserve/);
+  assert.match(view.boxes['#pachi-admin-reserve-addition'].innerHTML,/restore-reserve-addition/);
+  assert(!view.boxes['[data-admin-initial-policy]'].textContent.includes('自動配布・復元はありません'));
+});
+
+test('sub keeps Futo configuration and explicit distribution to self and other players',async()=>{
+  const owner={...PLAYER_A,adminRole:'sub'};
+  const h=enableReserve(harness({settings:true,handle:c=>{
+    if(c.path==='/me')return response(initialPayload(owner));
+    if(c.path==='/admin/config'&&c.method==='PUT')return response({config:c.body.config,revision:2});
+    if(c.path==='/admin/grants')return response({recipientCount:1});
+  }}));
+  adopt(h,TOKEN_A,owner);attachInitialConsole(h);
+  await h.api.handleConsole({target:{closest:()=>({dataset:{adminAction:'config'},disabled:false,isConnected:true})}});
+  assert.equal(h.calls.filter(call=>call.path==='/admin/config'&&call.method==='PUT').length,1);
+  assert.match(h.statusLine.textContent,/これから配布するフートに反映/);assert(!h.statusLine.textContent.includes('運営のフートにも'));
+  for(const target of ['self',PLAYER_B.id]){h.api.prepareGrant(target,CONFIG);assert.equal((await h.api.submitPendingGrant()).recipientCount,1);}
+  assert.deepEqual(h.calls.filter(call=>call.path==='/admin/grants').map(call=>call.body.target),['self',PLAYER_B.id]);
+  assert.equal(h.applied.length,0);assert.equal(h.initial.length,0);assert.equal(h.updated.length,0);
+});
+
+test('main and sub-sub receive their own trained six once per paginated synchronization',async()=>{
+  for(const role of ['main','sub-sub']){
     const owner={...PLAYER_A,adminRole:role},bundle=reserveBundle(role),applied=[];
     const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:bundle,grants:[],nextCursor:c.search.includes('cursor=')?null:4}):null,
       bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:6};}}}));
@@ -810,7 +942,7 @@ test('reserve capacity failures stay pending and a later synchronization can saf
 });
 
 test('manual reserve restore refreshes authorization and repeated taps share one request',async()=>{
-  const owner={...PLAYER_A,adminRole:'sub'},bundle=reserveBundle('sub'),pending=deferred(),applied=[];
+  const owner={...PLAYER_A,adminRole:'sub-sub'},bundle=reserveBundle('sub-sub'),pending=deferred(),applied=[];
   const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:1,restored:1,message:'1体を復元しました。'};}}}));
   adopt(h,TOKEN_A,owner);
   const first=h.api.restoreAdminReserveTeam(),second=h.api.restoreAdminReserveTeam();
@@ -841,8 +973,8 @@ test('a newer role heartbeat prevents an older reserve bundle from being deliver
   assert.equal(applied.length,0);assert.equal(h.ctx.LT.Admin.player.adminRole,'sub');assert.equal(h.api.reserveTeam,null);
 });
 
-test('each role receives the Lunaxion addition independently of the old six and only once across pages',async()=>{
-  for(const role of ['main','sub','sub-sub']){
+test('main and sub-sub receive the Lunaxion addition independently of the old six and only once across pages',async()=>{
+  for(const role of ['main','sub-sub']){
     const owner={...PLAYER_A,adminRole:role},applied=[];
     const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle(role),adminReserveAddition:reserveAddition(role),grants:[],nextCursor:c.search.includes('cursor=')?null:7}):null,
       bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:value.version===2?1:0,alreadyReceived:value.version===1};}}}));
@@ -850,15 +982,15 @@ test('each role receives the Lunaxion addition independently of the old six and 
     assert.equal(applied.length,2);assert.equal(applied[0].value.version,1);assert.equal(applied[1].value.version,2);
     assert.equal(applied[0].value.members.length,6);assert.equal(applied[1].value.members.length,1);
     assert.equal(applied[1].value.members[0].gender,'none');assert.equal(applied[1].value.members[0].species,'lunaxion');
-    if(role==='sub')assert(applied[0].value.members.every(member=>member.gender==='female'));
+    assert(applied[0].value.members.every(member=>member.gender==='male'));
     assert(applied.every(entry=>entry.options===undefined));assert.equal(h.ctx.LT.Admin.pending,0);
     assert(h.toasts.some(message=>message.includes('1体をひかえに追加')));
   }
 });
 
 test('Lunaxion pending state counts one and retries without turning the old six into restoration',async()=>{
-  const owner={...PLAYER_A,adminRole:'sub'},applied=[];let blocked=true;
-  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle('sub'),adminReserveAddition:reserveAddition('sub'),grants:[]}):null,
+  const owner={...PLAYER_A,adminRole:'sub-sub'},applied=[];let blocked=true;
+  const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveTeam:reserveBundle('sub-sub'),adminReserveAddition:reserveAddition('sub-sub'),grants:[]}):null,
     bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({version:value.version,options});return value.version===1?{ok:true,alreadyReceived:true}:blocked?{ok:false,pending:true}:{ok:true,added:1};},adminReserveTeamStatus:()=>({newCount:1})}}));
   adopt(h,TOKEN_A,owner);await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,1);assert.equal(h.toasts.length,0);
   blocked=false;await h.api.sync();assert.equal(h.ctx.LT.Admin.pending,0);assert.equal(applied.filter(entry=>entry.version===2).length,2);
@@ -878,18 +1010,18 @@ test('invalid addition payloads cannot borrow the old bundle, another role, anot
 });
 
 test('dedicated Lunaxion restore refreshes authorization, shares the operation lock, and never restores v64',async()=>{
-  const owner={...PLAYER_A,adminRole:'sub'},pending=deferred(),applied=[];
+  const owner={...PLAYER_A,adminRole:'sub-sub'},pending=deferred(),applied=[];
   const h=enableReserve(harness({handle:c=>c.path==='/me'?pending.promise:null,
     bridge:{receiveAdminReserveTeam:(value,options)=>{applied.push({value,options});return {ok:true,added:1,restored:1,message:'1体を復元しました。'};}}}));
   adopt(h,TOKEN_A,owner);
   const first=h.api.restoreAdminReserveAddition();await until(()=>h.calls.some(c=>c.path==='/me'));
   assert.equal(await h.api.restoreAdminReserveAddition(),null);assert.equal(await h.api.restoreAdminReserveTeam(),null);
-  pending.resolve(response({player:owner,adminReserveTeam:reserveBundle('sub'),adminReserveAddition:reserveAddition('sub')}));
+  pending.resolve(response({player:owner,adminReserveTeam:reserveBundle('sub-sub'),adminReserveAddition:reserveAddition('sub-sub')}));
   assert.equal((await first).restored,1);assert.equal(applied.length,1);assert.equal(applied[0].value.version,2);
   assert.equal(applied[0].options.restore,true);assert.equal(h.api.reserveBusy,false);assert.equal(h.calls.filter(c=>c.path==='/me').length,1);
   const boxes={'#pachi-admin-reserve':{innerHTML:''},'#pachi-admin-reserve-addition':{innerHTML:''}};
   h.api.attachConsole({open:true,querySelector:selector=>boxes[selector]||null});h.api.renderAdminReserveTeam();
-  assert.match(boxes['#pachi-admin-reserve'].innerHTML,/全員Lv\.100・メス/);
+  assert.match(boxes['#pachi-admin-reserve'].innerHTML,/全員Lv\.100・オス/);
   assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/ルナクシオン · Lv\.100・性別なし/);
   assert.match(boxes['#pachi-admin-reserve-addition'].innerHTML,/data-admin-action="restore-reserve-addition"/);
   assert(!boxes['#pachi-admin-reserve-addition'].innerHTML.includes('data-admin-action="restore-reserve"'));
@@ -911,7 +1043,7 @@ test('Lunaxion restore rejects delayed identities, a revoked role and a newer co
 
 
 test('delayed old-backend addition payloads keep the same receipt while normalizing their species before delivery',async()=>{
-  for(const role of ['main','sub','sub-sub'])for(const retired of ['galdogran','galdoras'])for(const gender of ['male','female']){
+  for(const role of ['main','sub-sub'])for(const retired of ['galdogran','galdoras'])for(const gender of ['male','female']){
     const owner={...PLAYER_A,adminRole:role},legacy=reserveAddition(role),applied=[];legacy.members[0].species=retired;legacy.members[0].gender=gender;
     const h=enableReserve(harness({handle:c=>c.path==='/me'?response({player:owner,adminReserveAddition:legacy,grants:[]}):null,
       bridge:{receiveAdminReserveTeam:value=>{applied.push(value);return {ok:true,alreadyReceived:true,added:0};}}}));

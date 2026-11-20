@@ -1,4 +1,5 @@
 /* Pachi Monsters — offline play.
+ * v80: sub operators start their own adventure without automatic starter gifts.
  * v79: participant-only XP, direct battle growth and trained operator companions.
  * v78: owned-team Lv.50 ranked battles, automatic match entry and server ratings.
  * v69: a maximized one-screen title and its on-demand overview refresh together.

@@ -75,6 +75,12 @@ function seedLegacyAllBatch(env, owner, config = legacyConfig()) {
   env.DB.sqlite.prepare("INSERT INTO grants (grant_id, batch_id, player_id, config_json, created_at) SELECT ? || ':' || id, ?, id, ?, ? FROM players").run(id, id, json, now);
   return {id, payloadHash, json};
 }
+function seedLegacyInitialGrant(env,creator,recipient,config=DEFAULT_CONFIG,batchId=`admin-initial:${recipient.id}`){
+  const json=JSON.stringify(config),hash=createHash('sha256').update(json).digest('hex'),grantId=`admin-initial:${recipient.id}`;
+  env.DB.sqlite.prepare('INSERT INTO grant_batches (id,creator_id,target,payload_hash,config_json,max_player_row,created_at) VALUES (?,?,?,?,?,(SELECT row_id FROM players WHERE id=?),?)').run(batchId,creator.id,recipient.id,hash,json,recipient.id,1234);
+  env.DB.sqlite.prepare('INSERT INTO grants (grant_id,batch_id,player_id,config_json,created_at) VALUES (?,?,?,?,?)').run(grantId,batchId,recipient.id,json,1234);
+  return {grantId,batchId,json,row:env.DB.sqlite.prepare('SELECT * FROM grants WHERE grant_id=?').get(grantId)};
+}
 async function signFixture(env, data) {
   const payload = Buffer.from(JSON.stringify(data));
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.DUEL_SIGNING_KEY), {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
@@ -714,8 +720,8 @@ test('admin device lookup and grant require current authority, exact existing pl
   const registered=await call('/api/admin/devices?playerId='+target.id,{token:owner.token});
   assert.deepEqual(registered.candidate,{...granted.devices[1],isAdmin:true});
   assert.equal(JSON.stringify(registered).includes('token_hash'),false);
-  const me=await call('/api/me',{token:target.token});assert.equal(me.player.isAdmin,true);assert.deepEqual(me.initialCompanions,legendaryEntitlement(target));
-  assert.equal(me.grants.filter(grant=>grant.grantId==='admin-initial:'+target.id).length,1);
+  const me=await call('/api/me',{token:target.token});assert.equal(me.player.isAdmin,true);assert.deepEqual(me.initialCompanions,[]);
+  assert.equal(me.grants.filter(grant=>grant.grantId==='admin-initial:'+target.id).length,0);
 });
 
 test('concurrent device grants fill exactly two deputy seats and duplicate retries are idempotent',async()=>{
@@ -726,6 +732,7 @@ test('concurrent device grants fill exactly two deputy seats and duplicate retri
   for(const [index,result] of results.entries())if(result.status!==200){assert.equal(result.status,409);assert.equal(result.error.code,'ADMIN_CAPACITY_REACHED');assert.equal((await call('/api/me',{token:candidates[index].token})).grants.length,0);}
   assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_members').get().n,3);
   assert.equal(env.DB.sqlite.prepare('SELECT player_id FROM admin_owner').get().player_id,owner.id);
+  for(const member of env.DB.sqlite.prepare('SELECT singleton,player_id FROM admin_members').all())assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE grant_id=?').get('admin-initial:'+member.player_id).n,member.singleton===2?0:1,'Concurrent legacy allocation checks the actual assigned seat');
   const before=env.DB.sqlite.prepare('SELECT * FROM grant_batches').all();
   const repeated=await Promise.all([grant(winner),grant(winner)]);assert(repeated.every(result=>result.status===200&&result.added===false));
   assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grant_batches').all(),before);
@@ -733,7 +740,7 @@ test('concurrent device grants fill exactly two deputy seats and duplicate retri
   const request={method:'POST',token:main.token,body:{playerId:sub.id,confirmed:true}};
   const simultaneous=await Promise.all([h.call('/api/admin/devices',request),h.call('/api/admin/devices',request)]);
   assert(simultaneous.every(result=>result.status===200));assert.equal(simultaneous.filter(result=>result.added).length,1);
-  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(sub.id).n,1);
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(sub.id).n,0);
 });
 
 test('secondary admin has equal config and distribution powers while each config response identifies its own registration',async()=>{
@@ -744,11 +751,76 @@ test('secondary admin has equal config and distribution powers while each config
   const updated=await call('/api/admin/config',{method:'PUT',token:sub.token,body:{config:changedConfig()}});assert.equal(updated.status,200);
   for(const actor of [main,sub]){
     const config=await call('/api/admin/config',{token:actor.token});assert.equal(config.adminRegistration.playerId,actor.id);assert.deepEqual(config.config,changedConfig());
-    const initial=(await call('/api/me',{token:actor.token})).grants.find(grant=>grant.grantId==='admin-initial:'+actor.id);assert.deepEqual(initial.stats,changedConfig().stats);
+    const initial=(await call('/api/me',{token:actor.token})).grants.find(grant=>grant.grantId==='admin-initial:'+actor.id);if(actor.id===sub.id)assert.equal(initial,undefined);else assert.deepEqual(initial.stats,changedConfig().stats);
     assert.equal((await call('/api/admin/players',{token:actor.token})).players.filter(player=>player.isAdmin).length,2);
   }
   assert.deepEqual((await call('/api/me',{token:visitor.token})).grants[0],oldGift,'Previously delivered gifts stay snapshots');
   const all=await call('/api/admin/grants',{method:'POST',token:sub.token,body:{requestId:crypto.randomUUID(),target:'all'}});assert.equal(all.status,200);assert.equal(all.recipientCount,3);
+  assert.equal((await call('/api/me',{token:sub.token})).grants.length,1,'An explicitly requested all-player gift still includes sub');
+});
+
+test('sub hides old pending initial grants from every inbox replay while manual gifts and existing Futo proofs remain valid',async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register('自力で冒険');
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,role:'sub',confirmed:true}})).status,200);
+  assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(sub.id).n,0);
+  const old=seedLegacyInitialGrant(env,main,sub,DEFAULT_CONFIG,`admin-recovery:P0000000000000001:${sub.id}`);
+  const manual=[];
+  for(let i=0;i<3;i++){
+    const requestId=crypto.randomUUID(),result=await call('/api/admin/grants',{method:'POST',token:main.token,body:{requestId,target:sub.id}});
+    assert.equal(result.status,200);manual.push(requestId+':'+sub.id);
+  }
+  const before=env.DB.sqlite.prepare('SELECT * FROM grants WHERE player_id=? ORDER BY row_id').all(sub.id);
+  for(const path of ['/api/me','/api/me?cursor=0&limit=100','/api/me?playerId='+main.id+'&role=main']){
+    const profile=await call(path,{token:sub.token});assert.equal(profile.status,200);assert.deepEqual(profile.grants.map(grant=>grant.grantId),manual);
+    assert.deepEqual(profile.initialCompanions,[]);assert.equal(profile.adminReserveTeam,null);assert.equal(profile.adminReserveAddition,null);
+  }
+  let cursor=0;const paged=[];
+  do{const page=await call('/api/me?limit=1&cursor='+cursor,{token:sub.token});assert.equal(page.grants.length,1);paged.push(page.grants[0].grantId);cursor=page.nextCursor;}while(cursor!==null);
+  assert.deepEqual(paged,manual,'Filtering happens before LIMIT, so hidden initial rows cannot hide manual gifts');
+  const claimed=await call('/api/admin/claim',{method:'POST',token:sub.token,body:{key:SECRET,recover:true}});
+  assert.equal(claimed.status,200);assert.deepEqual(claimed.initialCompanions,[]);assert.deepEqual(claimed.grants.map(grant=>grant.grantId),manual);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants WHERE player_id=? ORDER BY row_id').all(sub.id),before,'Inbox/claim retries never remove, redeliver, or mutate stored ownership rows');
+  assert.equal((await call('/api/admin/config',{method:'PUT',token:sub.token,body:{config:changedConfig()}})).status,200);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants WHERE grant_id=?').get(old.grantId),old.row,'Undelivered sub initial rows are not revived by config updates; existing owned stats stay valid');
+  const initial=(await call('/api/me',{token:main.token})).grants.find(grant=>grant.grantId==='admin-initial:'+main.id);assert.deepEqual(initial.stats,changedConfig().stats);
+  const sessionId='a'.repeat(32),pass=await call('/api/duel-pass',{method:'POST',token:sub.token,body:{grantId:old.grantId,sessionId,side:0}});assert.equal(pass.status,200);
+  const proof=await call('/api/duel-pass/verify',{method:'POST',body:{pass:pass.pass,sessionId,side:0}});assert.equal(proof.status,200);assert.equal(proof.grantId,old.grantId);assert.deepEqual(proof.stats,DEFAULT_CONFIG.stats);
+  assert.equal((await call('/api/me',{token:sub.token})).grants.length,3);
+});
+
+for(const role of ['sub','sub-sub'])test(`recovery into ${role} keeps the role-specific initial-delivery policy without deleting historical ownership`,async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),previous=await register(),replacement=await register();
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:previous.id,role,confirmed:true}})).status,200);
+  const historical=seedLegacyInitialGrant(env,main,replacement,legacyConfig());enableRecovery(env,previous);
+  const request={method:'POST',token:replacement.token,body:{key:SECRET,recover:true},origin:RECOVERY_ORIGIN};
+  const result=await call('/api/admin/claim',request);assert.equal(result.status,200);assert.equal(result.player.adminRole,role);
+  assert.equal(result.grants.length,role==='sub'?0:1);assert.equal(result.initialCompanions.length,role==='sub'?0:2);
+  const saved=env.DB.sqlite.prepare('SELECT * FROM grants WHERE grant_id=?').get(historical.grantId);assert.equal(saved.row_id,historical.row.row_id);
+  if(role==='sub')assert.deepEqual(saved,historical.row);else assert.deepEqual(validateConfig(JSON.parse(saved.config_json)),DEFAULT_CONFIG);
+  const recoveryCount=env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM grant_batches WHERE id LIKE 'admin-recovery:%' AND target=?").get(replacement.id).n;assert.equal(recoveryCount,role==='sub'?0:1);
+  const me=await call('/api/me',{token:replacement.token,origin:RECOVERY_ORIGIN});assert.equal(me.grants.length,role==='sub'?0:1);
+  assert.equal(me.adminReserveTeam?.members.length??0,role==='sub'?0:6);assert.equal(me.adminReserveAddition?.members.length??0,role==='sub'?0:1);
+  const retry=await call('/api/admin/claim',request);assert.equal(retry.status,200);assert.equal(retry.grants.length,result.grants.length);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants WHERE grant_id=?').get(historical.grantId),saved);
+  assert.equal((await call('/api/me',{token:main.token})).grants.filter(grant=>grant.grantId==='admin-initial:'+main.id).length,1);
+});
+
+for(const historical of [false,true])test(`promotion to main ${historical?'preserves an already-owned initial Futo':'issues a missing initial Futo exactly once'} after a gift-free sub role`,async()=>{
+  const {call,admin,register,env}=setup(),main=await admin(),sub=await register();
+  assert.equal((await call('/api/admin/devices',{method:'POST',token:main.token,body:{playerId:sub.id,role:'sub',confirmed:true}})).status,200);
+  const old=historical?seedLegacyInitialGrant(env,main,sub,legacyConfig(),`admin-recovery:P0000000000000001:${sub.id}`):null;
+  assert.equal((await call('/api/admin/config',{method:'PUT',token:main.token,body:{config:changedConfig()}})).status,200);
+  assert.deepEqual((await call('/api/me',{token:sub.token})).grants,[],'Sub remains gift-free until the actual promotion');
+  const expectedRegistration=(await call('/api/admin/config',{token:main.token})).adminRegistration;
+  const request={method:'POST',token:main.token,body:{confirmed:true,expectedRegistration}},released=await call('/api/admin/release',request);assert.equal(released.status,200);
+  const profile=await call('/api/me',{token:sub.token});assert.equal(profile.player.adminRole,'main');assert.equal(profile.grants.length,1);assert.equal(profile.grants[0].grantId,'admin-initial:'+sub.id);
+  const row=env.DB.sqlite.prepare('SELECT * FROM grants WHERE player_id=?').get(sub.id);
+  if(old)assert.deepEqual(row,old.row,'Promotion never overwrites an existing individual configuration or receipt');
+  else assert.deepEqual(profile.grants[0].stats,changedConfig().stats);
+  const before=env.DB.sqlite.prepare('SELECT * FROM grant_batches').all();
+  assert.equal((await call('/api/admin/release',request)).status,403);
+  const repeated=await call('/api/admin/claim',{method:'POST',token:sub.token,body:{key:SECRET}});assert.equal(repeated.status,200);assert.equal(repeated.grants.length,1);
+  assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grants WHERE player_id=?').get(sub.id),row);assert.deepEqual(env.DB.sqlite.prepare('SELECT * FROM grant_batches').all(),before);
 });
 
 test('self release preserves the other admin and keeps ordinary key registration hidden until both leave',async()=>{
@@ -926,7 +998,8 @@ test('racing explicit appointments never silently move a player or occupy an unr
   const results=await Promise.all(['sub','sub-sub'].map(role=>h.call('/api/admin/devices',{method:'POST',token:owner.token,body:{playerId:target.id,role,confirmed:true}})));
   assert.equal(results.filter(result=>result.status===200).length,1);assert.equal(results.find(result=>result.status!==200).error.code,'ADMIN_ROLE_CHANGED');
   assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM admin_members WHERE player_id=?').get(target.id).n,1);
-  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(target.id).n,1);
+  const assigned=h.env.DB.sqlite.prepare('SELECT singleton FROM admin_members WHERE player_id=?').get(target.id).singleton;
+  assert.equal(h.env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM grants WHERE player_id=?').get(target.id).n,assigned===2?0:1);
 });
 
 for(const role of ['main','sub','sub-sub'])test(`three-seat recovery replaces only ${role} while preserving both other registrations`,async()=>{
