@@ -20,7 +20,7 @@ function fresh(){
 }
 const elements=new Map(),writes=[];let quota=false;
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const c=vm.createContext({tradeLocked:()=>false,console,Engine,DATA,LT:{onlineActive:false},engine:fresh(),playing:true,busy:false,storedSave:null,lastSave:0,moveAnim:{},SAVE_KEY:'party-save',performance:{now:()=>123},escape:esc,nameOf:displayName,
+const c=vm.createContext({tradeLocked:()=>false,rankedLocked:()=>false,console,Engine,DATA,LT:{onlineActive:false},engine:fresh(),playing:true,busy:false,storedSave:null,lastSave:0,moveAnim:{},SAVE_KEY:'party-save',performance:{now:()=>123},escape:esc,nameOf:displayName,
   portrait:()=>'<canvas></canvas>',updateAll(){c.updates=(c.updates||0)+1;},toast(message){c.toastMessage=message;},$:id=>elements.get(id),
   localStorage:{setItem(key,value){if(quota)throw Error('Quota');writes.push({key,value});}},
   openModal(title,markup,pane){c.modal={title,markup,pane};elements.clear();for(const match of markup.matchAll(/id="([^"]+)"/g))elements.set(match[1],{hidden:false,textContent:'',focus(options){c.focused={id:match[1],options};}});}
@@ -51,10 +51,11 @@ quota=false;click(2,1);assert.equal(writes.length,3,'A failed move can be retrie
 before=JSON.stringify(c.engine.serialize());click(0,1,true);assert.equal(JSON.stringify(c.engine.serialize()),before);
 // A delayed click cannot move a different occupant after another update.
 c.showPartyOrder();const staleHandler=elements.get('party-order-list').onclick;c.engine.state.party.reverse();before=JSON.stringify(c.engine.serialize());click(1,2,false,staleHandler);assert.equal(JSON.stringify(c.engine.serialize()),before);assert(elements.get('party-order-result').textContent.includes('並びが変わりました'));
-for(const blocked of ['busy','battle','online','title','engine']){
-  c.engine=fresh();c.busy=false;c.playing=true;c.LT.onlineActive=false;c.showPartyOrder();
+for(const blocked of ['busy','battle','online','ranked','title','engine']){
+  c.engine=fresh();c.busy=false;c.playing=true;c.LT.onlineActive=false;c.rankedLocked=()=>false;c.showPartyOrder();
   const handler=elements.get('party-order-list').onclick;
   if(blocked==='busy')c.busy=true;if(blocked==='battle')c.engine.battle={};if(blocked==='online')c.LT.onlineActive=true;if(blocked==='title')c.playing=false;if(blocked==='engine')c.engine=new Engine(c.engine.serialize());
+  if(blocked==='ranked')c.rankedLocked=()=>true;
   before=JSON.stringify(c.engine.serialize());const count=writes.length;click(1,0,false,handler);assert.equal(JSON.stringify(c.engine.serialize()),before,blocked);assert.equal(writes.length,count,blocked);
 }
 assert(html.includes("['party-order','switch','パーティーの並べ替え']"));assert(html.includes("'party-order':showPartyOrder"));assert(html.includes('data-ui="party-order">パーティーを並べ替える'));

@@ -7159,6 +7159,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(_){}
     return false;
   }
+  const rankedLocked=()=>{
+    if(LT.Ranked?.isLocked?.()!==true)return false;
+    // A recovered server match must not trap an already open peer/trade flow.
+    // That flow can be closed normally; ranked recovery then takes ownership.
+    return !!LT.onlineEncounter?.ranked||!(LT.onlineActive||LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.()||LT.KasaiLive?.isActive?.());
+  };
   const tradeLocked=()=>{
     if(tradeSaveChanged())return true;
     const locked=LT.Trade?.isLocked?.()===true||LT.tradeActive===true;
@@ -7166,7 +7172,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     return locked;
   };
   function save(showMessage = false) {
-    if (!playing||tradeLocked()) return false;
+    if (!playing||tradeLocked()||rankedLocked()) return false;
     try {
       const data = engine.serialize();
       const old = localStorage.getItem(SAVE_KEY);
@@ -7643,6 +7649,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     else if(aboutDisplayed)closeModal();
   }
   function openModal(title, html, pane = '') {
+    if(rankedLocked()){void LT.Ranked?.open?.();return;}
     partyReorder?.cancel();
     restoreAboutGame();
     pressedDirection = null; if(activePane==='music'&&pane!=='music')sound.preview(null); activePane = pane;
@@ -7702,7 +7709,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     } else chooseAvatar(true);
   }
   function showPlayerName(){
-    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに名前を変更できます。');return;}
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())){toast('冒険中の移動できるときに名前を変更できます。');return;}
     const expectedEngine=engine;
     openModal('主人公の名前を変更',`<form id="player-name-form"><label class="nickname-label" for="player-name-input">主人公の名前（12文字まで）</label><input id="player-name-input" class="nickname-input" type="text" value="${escape(engine.state.playerName)}" autocomplete="off" spellcheck="false" aria-describedby="player-name-input-count player-name-help player-name-result"><p id="player-name-input-count" class="muted" aria-live="polite"></p><p id="player-name-help" class="muted">この冒険の主人公名を変更します。仲間のニックネームや育成記録はそのままです。</p><p id="player-name-result" class="notice" role="status" hidden></p><div class="modal-actions"><button class="btn" type="button" id="player-name-cancel">やめる</button><button class="btn btn-primary" type="submit" id="player-name-save">この名前で保存</button></div></form>`,'player-name');
     const input=$('player-name-input'),button=$('player-name-save'),binding=bindPlayerNameInput('player-name-input',()=>{},()=>[button]);
@@ -7711,7 +7718,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       event.preventDefault();if(button.disabled||binding.isComposing())return;
       const status=$('player-name-result');
       try{
-        if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))throw Error('冒険の状態が変わりました。もう一度開いてください。');
+        if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))throw Error('冒険の状態が変わりました。もう一度開いてください。');
         const candidate=new Engine(JSON.parse(JSON.stringify(engine.state))),result=candidate.renamePlayer(input.value);
         if(!result.ok)throw Error(result.message);
         const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -7765,7 +7772,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal(`${DATA.items[id].name}を使う`, '<div class="switch-list">'+engine.state.party.map((m,i) => `<button class="party-card" data-heal="${i}" data-item="${id}" ${engine.checkItem(id,i).ok ? '' : 'disabled'}>${portrait(m,60)}<span class="party-meta"><strong>${escape(nameOf(m))}</strong><span class="party-stats">体力 ${m.hp} / ${engine.stats(m).hp}</span>${hpBar(m)}</span></button>`).join('')+'</div>');
   }
   function persistPartyOrder(uid,from,to,expectedEngine,expectedOrder){
-    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'移動できるときに並べ替えてください。'};
+    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return {ok:false,message:'移動できるときに並べ替えてください。'};
     if(!Array.isArray(expectedOrder)||expectedOrder.length!==engine.state.party.length||expectedOrder.some((id,i)=>engine.state.party[i].uid!==id)||engine.state.party[from]?.uid!==uid)return {ok:false,message:'仲間の並びが変わりました。もう一度開いてください。'};
     try{
       const candidate=new Engine(JSON.parse(JSON.stringify(engine.state))),result=candidate.moveParty(from,to);
@@ -7776,7 +7783,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(_){return {ok:false,message:'端末に保存できません。並びは変更していません。空き容量を確認して、もう一度お試しください。'};}
   }
   function showPartyOrder(selectedUid=null,message=''){
-    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに並べ替えられます。');return;}
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())){toast('冒険中の移動できるときに並べ替えられます。');return;}
     const expectedEngine=engine,expectedOrder=engine.state.party.map(mon=>mon.uid);
     openModal('パーティーの並べ替え',`<p class="notice">「前へ」「後ろへ」で順番を変更できます。戦闘では、先頭から最初に動ける仲間が登場します。</p><p id="party-order-result" class="notice" role="status" aria-live="polite"${message?'':' hidden'}>${escape(message)}</p><div id="party-order-list" class="party-order-list">`+engine.state.party.map((mon,i)=>`<article class="party-order-row" id="party-order-row-${i}" tabindex="-1"><button type="button" class="party-card" data-party="${i}" aria-label="${i+1}番目 ${escape(nameOf(mon))}の詳細"><strong class="party-order-number">${i+1}</strong>${portrait(mon,54)}<span class="party-meta"><strong>${escape(nameOf(mon))}${i===0?' <small>先頭</small>':''}</strong><span class="party-stats">Lv.${mon.level} · 体力 ${mon.hp}/${engine.stats(mon).hp}</span></span></button><div class="party-order-controls" role="group" aria-label="${escape(nameOf(mon))}の順番"><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="${i-1}" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を1つ前へ"${i===0?' disabled':''}>↑ 前へ</button><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="${i+1}" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を1つ後ろへ"${i===engine.state.party.length-1?' disabled':''}>↓ 後ろへ</button><button type="button" class="btn btn-small" data-party-order="${i}" data-party-to="0" data-party-uid="${escape(mon.uid)}" aria-label="${escape(nameOf(mon))}を先頭へ"${i===0?' disabled':''}>先頭へ</button></div></article>`).join('')+'<div class="modal-actions"><button type="button" class="btn btn-primary" data-ui="close">完了</button></div></div>','party-order');
     $('party-order-list').onclick=event=>{
@@ -7792,7 +7799,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function setupPartyReorder(){
     if(!LT.PartyReorder||!$('party-list'))return;
     partyReorder=new LT.PartyReorder({element:$('party-list'),
-      canStart:()=>playing&&!busy&&!introPending&&!engine.battle&&!fieldDialogOpen()&&!document.querySelector('dialog[open]')&&!(LT.onlineActive||LT.localTradeActive||tradeLocked()),
+      canStart:()=>playing&&!busy&&!introPending&&!engine.battle&&!fieldDialogOpen()&&!document.querySelector('dialog[open]')&&!(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()),
       snapshot:()=>({engine,order:engine.state.party.map(mon=>mon.uid)}),
       onCommit:({uid,from,to,snapshot})=>{
         // The existing atomic path validates identity/order and persists before
@@ -7804,7 +7811,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     });
   }
   function persistMoveOrder(uid,from,to,expectedEngine,expectedMoves){
-    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに、技を並べ替えられます。'};
+    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return {ok:false,message:'冒険中の移動できるときに、技を並べ替えられます。'};
     const mon=[...engine.state.party,...engine.state.storage].find(other=>other.uid===uid);
     if(!mon)return {ok:false,message:'仲間の状態が変わりました。もう一度詳細を開いてください。'};
     const moves=engine.moves(mon);
@@ -7819,7 +7826,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     }catch(_){return {ok:false,message:'端末に保存できません。技の並びは変更していません。空き容量を確認して、もう一度お試しください。'};}
   }
   function showMoveOrder(uid,selectedMove=null,message=''){
-    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())){toast('冒険中の移動できるときに、技を並べ替えられます。');return;}
+    if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())){toast('冒険中の移動できるときに、技を並べ替えられます。');return;}
     const mon=[...engine.state.party,...engine.state.storage].find(other=>other.uid===uid);
     if(!mon){toast('仲間の状態が変わりました。もう一度詳細を開いてください。');return;}
     const expectedEngine=engine,expectedMoves=engine.moves(mon).map(move=>move.id),details=engine.moveDetails(mon);
@@ -7849,7 +7856,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     return '';
   }
   function persistPartyDeposit(index,uid,expectedEngine){
-    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに、ひかえに送れます。'};
+    if(engine!==expectedEngine||!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return {ok:false,message:'冒険中の移動できるときに、ひかえに送れます。'};
     if(!Number.isSafeInteger(index)||index<0||index>=engine.state.party.length||typeof uid!=='string'||engine.state.party[index]?.uid!==uid)return {ok:false,message:'仲間の状態が変わりました。もう一度開いてください。'};
     try{
       const candidate=new Engine(JSON.parse(JSON.stringify(engine.state))),result=candidate.depositParty(index);
@@ -7953,7 +7960,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal(nameOf(mon),`<div class="creature-card">${creatureView(mon,180)}<div><h3>${escape(nameOf(mon))}</h3><p class="species-name">${escape(species.name)} · Lv.${mon.level}</p>${shinyBadge(mon)}${speciesBadges(species)}<p>${escape(creatureDescription(species))}</p>${abilityPanel(mon)}</div></div>${ownedEvolutionNotice(mon)}<div class="modal-actions"><button class="btn" data-nickname="${escape(mon.uid)}">ニックネーム</button><button type="button" class="btn" data-move-order-open="${escape(mon.uid)}">技の並べ替え</button><button class="btn" data-storage-slot="-2">← ひかえへ</button></div>`,'storage-detail');
   }
   function showNickname(uid){
-    const mon=findOwned(uid);if(!mon||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;
+    const mon=findOwned(uid);if(!mon||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return;
     const expectedEngine=engine,returnToOwner=()=>{const index=engine.state.party.findIndex(m=>m.uid===uid);if(index>=0)showParty(index);else showStorageDetail(uid);};
     openModal('ニックネームをつける',`<div class="nickname-summary">${portrait(mon,88)}<div><strong>${escape(nameOf(mon))}</strong><p class="muted">${escape(DATA.species[mon.species].name)}</p></div></div><form id="nickname-form"><label class="nickname-label" for="nickname-input">ニックネーム（5文字まで）</label><input id="nickname-input" class="nickname-input" type="text" value="${escape(mon.nickname||'')}" placeholder="${escape(DATA.species[mon.species].name)}" autocomplete="off" spellcheck="false" aria-describedby="nickname-count nickname-help nickname-result"><p id="nickname-count" class="muted" aria-live="polite"></p><p id="nickname-help" class="muted">空欄で保存すると、本来の名前に戻ります。</p><p id="nickname-result" class="notice" role="status" hidden></p><div class="modal-actions"><button class="btn" type="button" id="nickname-cancel">やめる</button><button class="btn btn-primary" type="submit" id="nickname-save">この名前で保存</button></div></form>`,'nickname');
     const input=$('nickname-input'),button=$('nickname-save'),counter=$('nickname-count');let composing=false;
@@ -7964,7 +7971,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       event.preventDefault();if(button.disabled||composing)return;
       const status=$('nickname-result');
       try{
-        if(engine!==expectedEngine||!playing||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())||!findOwned(uid))throw Error('仲間の状態が変わりました。もう一度開いてください。');
+        if(engine!==expectedEngine||!playing||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())||!findOwned(uid))throw Error('仲間の状態が変わりました。もう一度開いてください。');
         const candidate=new Engine(JSON.parse(JSON.stringify(engine.state))),result=candidate.renameMonster(uid,input.value);
         if(!result.ok)throw Error(result.message);
         const data=candidate.serialize();localStorage.setItem(SAVE_KEY,JSON.stringify(data));
@@ -7973,7 +7980,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     };
   }
   function persistRelease(index, source, uid, expectedEngine) {
-    if (!playing || busy || engine.battle || (LT.onlineActive||LT.localTradeActive||tradeLocked())) return {ok:false,message:'バトルや通信を終えてから、仲間を逃がしてください。'};
+    if (!playing || busy || engine.battle || (LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())) return {ok:false,message:'バトルや通信を終えてから、仲間を逃がしてください。'};
     if (!['party','storage'].includes(source) || engine!==expectedEngine || !uid || engine.state[source][index]?.uid!==uid) return {ok:false,message:'仲間の一覧が変わったため、操作を中止しました。'};
     try {
       // Keep the current party, storage and gift receipts intact until the
@@ -8106,7 +8113,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   globalThis.window?.addEventListener?.('online',()=>toast('通信が戻りました。'));
   globalThis.window?.addEventListener?.('load',registerOfflinePlay);
   function showSettings() {
-    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>カラーとモノクロの2種類です。どちらも細かなドットで表示します。初期設定はカラー。本体の「液晶」ボタンでも交互に切り替えられます。</p><div class="quality-options screen-options">${(LT.RetroScreen?.order||['color','mono']).map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面に走査線と周辺減光を重ねます。初期設定はOFFです</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="setting-row offline-setting"><div><strong>オフラインで遊ぶ</strong><p id="offline-status">${escape(offlineStatusText(offlinePlay.status))}</p><small>画像をすべて保存すると、通信がない場所でもモンスターの姿まで表示されます。オンライン対戦・通信交換は通信が必要です。iPhoneは共有ボタンの「ホーム画面に追加」でアプリのように起動できます。</small></div><div class="offline-actions"><button type="button" class="btn btn-small" id="offline-store-btn" data-ui="offline-store">画像をすべて保存</button><button type="button" class="btn btn-small" id="install-app-btn" data-ui="install-app" hidden>ホーム画面に追加</button></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
+    openModal('冒険の設定', `<div class="setting-row player-profile-setting"><div><strong>主人公の名前</strong><p>${escape(playing?engine.state.playerName:storedSave?.playerName||LT.PlayerIdentity.defaultName)}</p><small>${playing?'12文字まで。冒険の途中でも変更できます。':'冒険を始めるときに名前を設定できます。'}</small></div><button type="button" class="btn btn-small" data-ui="player-name" ${!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())?'disabled':''}>変更する</button></div><div class="setting-row"><div><strong>${ico('music')} オリジナルBGM・効果音</strong><p>${sound.getTracks().length}曲の旋律。地域や戦況で曲が変わります。</p><p>マナーモード中の再生に対応。初回は画面をタップし、端末のメディア音量を上げてください。</p><button type="button" class="btn btn-small" data-ui="audio-resume">音声を再開</button></div><button class="btn btn-small" data-setting="sound" aria-pressed="${settings.sound}">${settings.sound?'ON':'OFF'}</button></div><label class="volume-row">音量 <strong id="volume-label">${Math.round(settings.volume*100)}%</strong><input id="volume-slider" class="volume-slider" type="range" min="0" max="100" value="${Math.round(settings.volume*100)}" aria-label="音量"></label><div class="setting-row"><div><strong>${ico('quality')} 描画品質</strong><p>ドットの鮮明さは共通。天候と演出量を調整</p></div><div class="quality-options">${[['high','演出多め'],['balanced','標準'],['low','軽量']].map(([id,name])=>`<button class="btn btn-small${settings.quality===id?' selected':''}" data-quality="${id}" aria-pressed="${settings.quality===id}">${name}</button>`).join('')}</div></div><div class="setting-row"><div><strong>昼夜の移ろい</strong><p>冒険時間に合わせて空と灯りが変化</p></div><button class="btn btn-small" data-setting="dayNight" aria-pressed="${settings.dayNight}">${settings.dayNight?'ON':'OFF'}</button></div><div class="setting-row screen-mode-setting"><div><strong>画面モード</strong><p>カラーとモノクロの2種類です。どちらも細かなドットで表示します。初期設定はカラー。本体の「液晶」ボタンでも交互に切り替えられます。</p><div class="quality-options screen-options">${(LT.RetroScreen?.order||['color','mono']).map(id=>`<button type="button" class="btn btn-small${settings.screen===id?' selected':''}" data-screen="${id}" aria-pressed="${settings.screen===id}">${escape(LT.RetroScreen.label(id))}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>文字と演出の速さ</strong><p>メッセージの文字送りと、バトル演出のテンポを選べます。演出中はA・Enterで早送りできます。</p><div class="quality-options">${[['slow','ゆっくり'],['normal','ふつう'],['fast','はやい'],['instant','瞬間']].map(([id,label])=>`<button type="button" class="btn btn-small${settings.textSpeed===id?' selected':''}" data-text-speed="${id}" aria-pressed="${settings.textSpeed===id}">${label}</button>`).join('')}</div></div></div><div class="setting-row"><div><strong>常にダッシュ</strong><p>移動を常に早足にします。B・Shiftを押している間もダッシュです。</p></div><button class="btn btn-small" data-setting="autoRun" aria-pressed="${settings.autoRun}">${settings.autoRun?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>ブラウン管風の走査線</strong><p>ゲーム画面に走査線と周辺減光を重ねます。初期設定はOFFです</p></div><button class="btn btn-small" data-setting="crt" aria-pressed="${settings.crt}">${settings.crt?'ON':'OFF'}</button></div><div class="setting-row"><div><strong>動きを控えめにする</strong><p>揺れ、粒子と画面の補間を抑えます</p></div><button class="btn btn-small" data-setting="motion" aria-pressed="${settings.reducedMotion}">${settings.reducedMotion?'ON':'OFF'}</button></div><div class="setting-row controller-settings"><div><strong>${ico('gamepad')} コントローラー</strong><p id="controller-settings-status">${escape(controllerStatus.connected?(controllerStatus.standard?'接続済み · 左スティック・十字キーで操作できます':'この機器の標準マッピングは未対応です'):controllerStatus.supported?'USB / Bluetoothで接続し、ボタンを押すと認識します':'このブラウザーはGamepad APIに対応していません')}</p><small>決定 A / × · 戻る B / ○ · メニュー START / OPTIONS · 走る 肩ボタン</small></div></div><div class="setting-row offline-setting"><div><strong>オフラインで遊ぶ</strong><p id="offline-status">${escape(offlineStatusText(offlinePlay.status))}</p><small>画像をすべて保存すると、通信がない場所でもモンスターの姿まで表示されます。オンライン対戦・通信交換は通信が必要です。iPhoneは共有ボタンの「ホーム画面に追加」でアプリのように起動できます。</small></div><div class="offline-actions"><button type="button" class="btn btn-small" id="offline-store-btn" data-ui="offline-store">画像をすべて保存</button><button type="button" class="btn btn-small" id="install-app-btn" data-ui="install-app" hidden>ホーム画面に追加</button></div></div><div class="modal-actions"><button class="btn" data-ui="music">${ico('music')} 音楽室</button><button class="btn" data-ui="help">${ico('help')} 遊び方</button><button class="btn" data-ui="import">${ico('import')} 記録を読み込む</button></div>`, 'settings');
     bindVolume();requestOfflineStatus();
   }
   function bindVolume(){
@@ -8161,11 +8168,20 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function showMenu() {
     if(!playing){showSettings();return;}
     if(!engine.battle&&tapStreak('stealth',7000)){const r=engine.activateStealth();if(r.ok){closeModal();toast('……主人公の姿が透けた！ 128歩のあいだ、野生のパチモンと出会わない。');announceDiscoveries();return;}}
-    const list=[['online','gamepad','オンライン対戦'],['local','link','ローカル通信'],['trade','switch','オンライン交換'],['rooms','map','秘密部屋'],['player-name','lantern','主人公の名前'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','旅紋と頂の手帳'],['records','trophy','冒険の記録 256→1'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['party-order','switch','パーティーの並べ替え'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
+    const list=[['ranked','trophy','ランク対戦'],['online','gamepad','オンライン対戦'],['local','link','ローカル通信'],['trade','switch','オンライン交換'],['rooms','map','秘密部屋'],['player-name','lantern','主人公の名前'],['dex','book','モンスター図鑑'],['map','map','ワールドマップ'],['league','trophy','旅紋と頂の手帳'],['records','trophy','冒険の記録 256→1'],['quests','quest','旅の依頼'],['bag','bag','道具袋'],['party-order','switch','パーティーの並べ替え'],['storage','storage','仲間の入れ替え'],['music','music','音楽室'],['save','save','冒険を記録'],['export','export','記録を書き出す'],['import','import','記録を読み込む'],['settings','settings','設定'],['help','help','旅の手引き'],['credits','book','制作・ライセンス'],['new','lantern','はじめから'],['title','lantern','タイトルへ']];
     openModal('冒険のメニュー',`<p class="notice">主人公：${escape(engine.state.playerName)}</p><div class="menu-grid">`+list.map(([id,icon,label])=>`<button class="btn" data-ui="${id}">${ico(icon)}<span>${label}</span></button>`).join('')+`</div><p class="muted">冒険時間 ${Math.floor(engine.state.playSeconds/60)}分 · ${engine.state.steps.toLocaleString('ja-JP')}歩 · 旅紋 ${engine.state.seals.length}/${sealCount}<br>記録はこの端末のブラウザに保存されています。</p>`,'menu');
   }
 
+  function openRankedFromMenu(){
+    if(!LT.Ranked){toast('ランク対戦を準備できません。ページを再読み込みしてください。');return false;}
+    if(!playing){toast('冒険を始めるか、再開してからランク対戦を開いてください。');return false;}
+    if(rankedLocked()){closeModal();return LT.Ranked.open();}
+    if(!LT.adminBridge?.canEnterRanked?.()){toast('現在の対戦や交換を終えてからランク対戦を開いてください。');return false;}
+    if(!save()){toast('冒険を保存できないため、ランク対戦を始められません。');return false;}
+    closeModal();releaseHeldInputs();return LT.Ranked.open();
+  }
   function openOnlineFromMenu(options={}){
+    if(rankedLocked()){toast('ランク対戦の待機・対戦を終えてから開いてください。');return false;}
     if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから通信対戦できます。');return false;}
     if(LT.onlineActive||$('online-modal')?.open)return false;
     if(busy||introPending||engine.battle){toast('現在のバトルや演出が終わってから開いてください。');return false;}
@@ -8179,6 +8195,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     openModal('ローカル通信',`<p class="notice"><strong>おすすめは、同じWi-Fi＋QRコードです。</strong>インターネット回線は不要です。オフラインで遊ぶ前に、両方の端末で一度ゲームを読み込んでください。2台を同じWi-Fiにつなぎ、お互いのQRコードを読み取ると接続できます。</p><div class="menu-grid local-menu"><button type="button" class="btn" data-ui="local-battle">${ico('gamepad')}<span>ローカル対戦<small>シングル・ダブル</small></span></button><button type="button" class="btn" data-ui="local-trade">${ico('switch')}<span>ローカル交換<small>手持ち・ひかえから1体</small></span></button></div><p class="local-note">カメラが使えない端末は、コードの貼り付けで接続できます。テザリングなしのBluetooth直接通信は、ブラウザー版では未対応です。</p>`,'local');
   }
   function openTradeFromMenu(options={}){
+    if(rankedLocked()){toast('ランク対戦の待機・対戦を終えてから交換できます。');return false;}
     if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから交換できます。');return false;}
     if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.()){toast('冒険中の移動できるときに交換できます。');return false;}
     if(!LT.Trade){toast('交換を準備できません。ページを再読み込みしてください。');return false;}
@@ -8235,6 +8252,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     const link=document.createElement('a');link.href=url;link.download='Pachi_Monsters_Save.json';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('セーブデータを書き出しました。');
   }
   async function importSave(file) {
+    if(rankedLocked()){toast('ランク対戦の待機・対戦を終えてから記録を読み込めます。');return;}
     if(LT.KasaiLive?.isActive?.()){toast('運営のステージを退出してから記録を読み込んでください。');return;}
     if(tradeLocked()){toast('交換を完了または中止してから記録を読み込んでください。');return;}
     if (!file) return;
@@ -8287,7 +8305,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function walk(dx,dy) {
     if(fieldDialogOpen())return;
     if(LT.KasaiLive?.isActive?.()&&LT.KasaiLive.session?.()?.role==='kasai')return;
-    if (!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()) || busy) return;
+    if (!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()) || busy) return;
     if(LT.KasaiLive?.isActive?.()){
       const next={x:engine.state.x+dx,y:engine.state.y+dy};
       if(engine.map.exits?.some(exit=>exit.x===next.x&&exit.y===next.y)){void LT.KasaiLive.leave?.();return;}
@@ -8320,7 +8338,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   function followHeldKeys(){if(directionSource!=='keyboard')return;const last=[...heldKeys.values()].at(-1)||null;pressedDirection=last;if(!last)directionSource=null;}
   function releaseKeyboard(){heldKeys.clear();keyClock.gap=0;if(directionSource==='keyboard'){pressedDirection=null;directionSource=null;}}
   window.addEventListener('keydown', e=>{
-    if((LT.onlineActive||LT.localTradeActive||tradeLocked()))return;
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return;
     // Field conversations are native dialogs: keep Tab, Enter and Escape with
     // their buttons/cancel handler instead of the adventure's keyboard map.
     if(fieldDialogOpen())return;
@@ -8361,6 +8379,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   window.addEventListener('orientationchange',releaseHeldInputs);
   document.addEventListener('pachi-viewport-change',releaseHeldInputs);
   document.addEventListener('pachi-chat-state',event=>{if(event.detail?.isOpen)releaseHeldInputs();});
+  document.addEventListener('pachi-ranked-state',event=>{if(event.detail?.isOpen||event.detail?.locked){partyReorder?.cancel();releaseHeldInputs();}updateScene();});
   document.addEventListener('visibilitychange',()=>{releaseKeyboard();clearTouchDirections();pressedDirection=null;sprint=false;padSprint=false;controller?.reset();if(document.hidden){if(playing)save();sound.suspend();}else if(settings.sound&&sound.ctx)sound.setEnabled(true);});
   const unlockSound=e=>{if(e.isTrusted&&settings.sound&&!document.hidden&&sound.needsUnlock()){sound.primeRecording?.();sound.setEnabled(true);}};
   document.addEventListener('pointerdown',unlockSound,{capture:true});
@@ -8376,7 +8395,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     for(const [pointerId,btn] of held){btn.classList.remove('pressed');if(btn.hasPointerCapture(pointerId))btn.releasePointerCapture(pointerId);}
   }
   document.querySelectorAll('[data-dir]').forEach(btn=>{
-    btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()))return;touchDirections.delete(e.pointerId);touchDirections.set(e.pointerId,btn);pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();if(!playing || engine.battle || $('modal').open || (LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return;touchDirections.delete(e.pointerId);touchDirections.set(e.pointerId,btn);pressedDirection=btn.dataset.dir;directionSource='touch';btn.setPointerCapture(e.pointerId);lastStep=performance.now();walk(...directions[pressedDirection]);btn.classList.add('pressed');});
     for(const ev of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(ev,e=>{
       if(touchDirections.get(e.pointerId)!==btn)return;
       touchDirections.delete(e.pointerId);
@@ -8416,8 +8435,8 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     touchB.addEventListener('click',event=>{if(event.detail===0&&!event.pointerType)controllerBack();});
     touchB.addEventListener('contextmenu',event=>event.preventDefault());
   }
-  if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
-  if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
+  if($('touch-l'))$('touch-l').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return;if(engine.battle){toast('バトルが終わってから地図を開けます。');return;}showMap();};
+  if($('touch-r'))$('touch-r').onclick=()=>{if(!playing||busy||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return;if(engine.battle){toast('バトルが終わってから図鑑を開けます。');return;}showDex();};
   $('battle-panel')?.addEventListener('pointerdown',()=>{if(busy&&engine.battle)skipBattlePlayback();});
   if($('console-palette'))$('console-palette').onclick=()=>{if(!LT.RetroScreen)return;setScreenMode(LT.RetroScreen.next(settings.screen));toast(`画面モード：${LT.RetroScreen.label(settings.screen)}`);if(activePane==='settings')showSettings();};
   if($('touch-select'))$('touch-select').onclick=()=>{if(!playing)return;if(engine.battle){toast('バトル中は「旅道具」から道具を使えます。');return;}showBag();};
@@ -8438,6 +8457,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   document.addEventListener('click',e=>{
     const b=e.target.closest('button');if(!b || b.disabled)return;
     const d=b.dataset;
+    if(rankedLocked()&&!b.closest('#ranked-battle-dialog')){void LT.Ranked?.open?.();return;}
     if(tradeLocked()){if(!b.closest('#pachi-trade-dialog'))LT.Trade?.open?.();return;}
     if(d.avatar){try{selectedPlayerName=LT.PlayerIdentity.normalizeName(selectedPlayerName);}catch(error){toast(error.message);return;}selectedAvatar=d.avatar==='female'?'female':'male';chooseStarter();return;}
     if(d.nickname){showNickname(d.nickname);return;}
@@ -8489,7 +8509,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(d.ui==='local-trade'){closeModal();LT.LocalTrade?.open?.();return;}
     if(d.ui==='install-app'){const prompt=offlinePlay.installPrompt;if(prompt){offlinePlay.installPrompt=null;prompt.prompt?.();prompt.userChoice?.finally?.(renderOfflineStatus);}return;}
     if(d.ui==='audio-resume'){settings.sound=true;saveSettings();updateSound();sound.setEnabled(true).then(ok=>{if(activePane==='settings')showSettings();toast(ok?'音声を再開しました。音量は端末側でも調整できます。':'画面をもう一度タップして音声を再開してください。');});return;}
-    if(d.ui){sound.fx('click');const actions={online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
+    if(d.ui){sound.fx('click');const actions={ranked:openRankedFromMenu,online:openOnlineFromMenu,credits:showCredits,league:showLeague,records:showRecords,quests:showQuests,music:showMusic,'music-stop':()=>{settings.sound=false;sound.setEnabled(false);saveSettings();updateSound();showMusic();},close:closeModal,dex:showDex,map:showMap,bag:showBag,storage:showStorage,'party-order':showPartyOrder,'trade':openTradeFromMenu,save:()=>save(true),export:()=>exportSave(),'export-stored':()=>exportSave(storedSave),import:()=>$('import-input').click(),settings:showSettings,'player-name':showPlayerName,help:showHelp,title:goTitle,'new-confirm':()=>chooseAvatar(true),'avatar-back':()=>chooseAvatar(false),new:requestNew};actions[d.ui]?.();}
   });
   // ── Allocation points: taps and press-and-hold stay on the detail screen ──
   let allocationCommit=0,allocationHold=null,allocationHoldClick=null;
@@ -8554,9 +8574,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     // A held key repeats; when the repeats stop without a key-up (it was lost), the key is up.
     if(directionSource==='keyboard'&&keyClock.gap>0&&now-keyClock.last>Math.max(1000,keyClock.gap*3))releaseKeyboard();
     if(pressedDirection && now-lastStep>((settings.autoRun&&(sprint||padSprint))?56:(sprint||padSprint||settings.autoRun)?90:145)){lastStep=now;walk(...directions[pressedDirection]);}
-    if(now-lastClock>=1000){if(playing && !$('modal').open && !(LT.onlineActive||LT.localTradeActive||tradeLocked()) && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
+    if(now-lastClock>=1000){if(playing && !$('modal').open && !(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()) && !busy)engine.state.playSeconds++;lastClock=now;updateScene();sound.tick();}
     else sound.tick();
-    if((LT.onlineActive||LT.localTradeActive||tradeLocked())||!playing)return;
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())||!playing)return;
     if(now-lastFrame<(settings.quality==='low'?50:settings.quality==='balanced'?32:16))return;lastFrame=now;
     let options=sceneOptions();
     options.moving=false;options.walkPhase=engine.state.steps;
@@ -8575,8 +8595,9 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     // battles and menu portraits. No extra reduction or per-frame pixel readback.
   }
 
-  function fieldDialogOpen(){return !!(LT.Chat?.isDialogOpen?.()||LT.KasaiLive?.isDialogOpen?.()||LT.KasaiLive?.isWorking?.()||LT.World?.isDialogOpen?.()||LT.Rooms?.isDialogOpen?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isDialogOpen?.()||LT.KasaiChallenge?.isWorking?.());}
+  function fieldDialogOpen(){return !!(LT.Ranked?.isDialogOpen?.()||rankedLocked()||LT.Chat?.isDialogOpen?.()||LT.KasaiLive?.isDialogOpen?.()||LT.KasaiLive?.isWorking?.()||LT.World?.isDialogOpen?.()||LT.Rooms?.isDialogOpen?.()||LT.Rooms?.isWorking?.()||LT.KasaiChallenge?.isDialogOpen?.()||LT.KasaiChallenge?.isWorking?.());}
   function closeFieldDialog(){
+    if(LT.Ranked?.isDialogOpen?.())return LT.Ranked.closeDialog();
     if(LT.Chat?.isDialogOpen?.())return LT.Chat.closeDialog();
     if(LT.KasaiLive?.isDialogOpen?.())return LT.KasaiLive.closeDialog();
     if(LT.KasaiChallenge?.isDialogOpen?.())return LT.KasaiChallenge.closeDialog();
@@ -8585,12 +8606,12 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   }
   function controllerContext(){
     if(fieldDialogOpen()){
-      const scope=document.querySelector('#global-chat-dialog[open],#kasai-live-dialog[open],#kasai-challenge-dialog[open],#secret-room-dialog[open],#world-player-dialog[open]');
+      const scope=document.querySelector('#ranked-battle-dialog[open],#global-chat-dialog[open],#kasai-live-dialog[open],#kasai-challenge-dialog[open],#secret-room-dialog[open],#world-player-dialog[open]');
       return {mode:'modal',busy:!scope,scope:scope||document.body,defaultTarget:scope?.querySelector('.btn-primary:not(:disabled)')||scope?.querySelector('button:not(:disabled)')};
     }
     if(tradeLocked()){const scope=document.getElementById('pachi-trade-dialog');return {mode:'modal',busy:!scope,scope:scope||document.body,defaultTarget:scope?.querySelector('button:not(:disabled),input,select')};}
     if(LT.localTradeActive){const scope=document.getElementById('local-trade-dialog');if(scope)return {mode:'modal',busy:false,scope,defaultTarget:scope.querySelector('.btn-primary:not(:disabled)')||scope.querySelector('button:not(:disabled),select:not(:disabled),textarea')};}
-    if((LT.onlineActive||LT.localTradeActive||tradeLocked())){
+    if((LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())){
       const scope=$('online-modal'),active=document.activeElement;
       // Online selections rebuild their cards and restore DOM focus. Keep that
       // replacement focused without changing the adventure menus' defaults.
@@ -8624,16 +8645,18 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     if(!LT.Gamepad)return;
     controller=new LT.Gamepad({context:controllerContext,onMove:(dir,run)=>{
       if(!dir){if(directionSource==='gamepad'){pressedDirection=null;directionSource=null;}padSprint=false;return;}
-      if(!playing||engine.battle||$('modal').open||fieldDialogOpen()||(LT.onlineActive||LT.localTradeActive||tradeLocked())||busy)return;
+      if(!playing||engine.battle||$('modal').open||fieldDialogOpen()||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())||busy)return;
       padSprint=run;const changed=directionSource!=='gamepad'||pressedDirection!==dir;
       directionSource='gamepad';pressedDirection=dir;
       if(changed){lastStep=performance.now();walk(...directions[dir]);}
-    },onConfirm:target=>{if(busy)return;if(target){target.click();return;}if(engine.battle?.result)finishBattle();else if(playing)interact();},onBack:controllerBack,onMenu:()=>{if(fieldDialogOpen()){closeFieldDialog();return;}if(tradeLocked()){LT.Trade?.close?.();return;}if(LT.onlineActive){LT.OnlineUI?.close();return;}if(busy)return;if($('modal').open)closeModal();else if(playing)showMenu();else showSettings();},onStatus:updateControllerStatus});
+    },onConfirm:target=>{if(busy&&!LT.onlineEncounter?.ranked)return;if(target){target.click();return;}if(engine.battle?.result)finishBattle();else if(playing)interact();},onBack:controllerBack,onMenu:()=>{if(fieldDialogOpen()){closeFieldDialog();return;}if(tradeLocked()){LT.Trade?.close?.();return;}if(LT.onlineActive){LT.OnlineUI?.close();return;}if(busy)return;if($('modal').open)closeModal();else if(playing)showMenu();else showSettings();},onStatus:updateControllerStatus});
   }
 
   document.addEventListener('pachi-online-return',()=>{if(playing)showMenu();});
   document.addEventListener("pachi-online-state",()=>{pressedDirection=null;directionSource=null;sprint=false;padSprint=false;updateScene();});
+  LT.requestRanked=()=>openRankedFromMenu();
   LT.requestOnline=(options={})=>{
+    if(rankedLocked()){toast('ランク対戦の待機・対戦を終えてから通信対戦できます。');return false;}
     if(LT.KasaiLive?.isActive?.()){toast('運営との対戦が終わり、ステージを退出してから通信対戦できます。');return false;}
     if(booting||LT.onlineActive||$('online-modal')?.open||LT.localTradeActive||LT.tradeActive||LT.Trade?.isLocked?.())return false;
     if(!LT.OnlineUI)return false;
@@ -8654,6 +8677,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   // has safely written the local save. A full party/storage keeps the gift in
   // the server inbox; no receipt is consumed before space is available.
   function persistGiftMutation(method,...args){
+    if(rankedLocked())return {ok:false,pending:true,message:'ランク対戦の待機・対戦を終えると受け取れます。'};
     if(method==='receiveAdminReserveTeam'){
       const owner=LT.Admin?.player,bundle=args[0];
       if(owner?.isAdmin!==true||!owner.adminRole||bundle?.playerId!==owner.id||bundle?.role!==owner.adminRole)return {ok:false,message:'現在の運営権限を確認できません。'};
@@ -8706,10 +8730,33 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
   LT.adminBridge={
     commitTrade,
     closeModal,showDialogue,
+    canEnterRanked:()=>{
+      if(!playing||booting||busy||introPending||engine.battle||LT.localTradeActive||tradeLocked()||LT.KasaiLive?.isActive?.())return false;
+      if(LT.onlineActive&&!LT.onlineEncounter?.ranked)return false;
+      return !document.querySelector('dialog[open]:not(#ranked-battle-dialog):not(#modal)');
+    },
+    canResumeRanked:()=>playing&&!booting&&!LT.localTradeActive&&!tradeLocked()&&!LT.KasaiLive?.isActive?.()&&(!LT.onlineActive||LT.onlineEncounter?.ranked===true),
+    getRankedRoster:()=>{
+      if(!playing||!storedSave?.started)return [];
+      return [...storedSave.party.map(mon=>({mon:JSON.parse(JSON.stringify(mon)),where:'手持ち'})),...storedSave.storage.map(mon=>({mon:JSON.parse(JSON.stringify(mon)),where:'ひかえ'}))];
+    },
+    setRankedBattle:(snapshot,side,matchId)=>{
+      if(snapshot){
+        if(!matchId||![0,1].includes(side))return false;
+        if(LT.onlineActive&&!LT.onlineEncounter?.ranked)return false;
+        LT.onlineActive=true;LT.onlineBattle=snapshot;LT.onlineEncounter={ranked:true,matchId,side};
+        LT.onlineBattleResult=snapshot.winner===null?null:snapshot.winner==='draw'?'draw':snapshot.winner===side?'won':'lost';
+      }else{
+        if(!LT.onlineEncounter?.ranked||LT.onlineEncounter.matchId!==matchId)return false;
+        LT.onlineActive=false;LT.onlineBattle=null;LT.onlineBattleResult=null;LT.onlineEncounter=null;
+      }
+      partyReorder?.cancel();releaseHeldInputs();moveAnim=null;updateScene();
+      document.dispatchEvent(new CustomEvent('pachi-online-state'));return true;
+    },
     getEngine:()=>playing?engine:storedSave?new Engine(storedSave):null,
     enterSharedRoom:map=>{
       if(LT.KasaiLive?.isActive?.())return {ok:false,message:'運営のステージを退出してから移動できます。'};
-      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'冒険中の移動できるときに入室できます。'};
+      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return {ok:false,message:'冒険中の移動できるときに入室できます。'};
       const point=map?.returnPoint,outside=point&&DATA.maps[point.map];
       if(!map?.sharedRoom||!/^room:P[0-9a-f]{16}$/.test(map.id)||!outside||outside.sharedRoom||!engine.walkable(outside,point.x,point.y)||!engine.walkable(map,map.spawn?.x,map.spawn?.y))return {ok:false,message:'部屋の入口と出口を確認できません。'};
       if(!save())return {ok:false,message:'冒険を保存できません。端末の空き容量を確認してください。'};
@@ -8728,19 +8775,19 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     },
     leaveSharedRoom:()=>{
       if(LT.KasaiLive?.isActive?.())return {ok:false,message:'ステージの「退出する」からフィールドへ戻れます。'};
-      if(!playing||busy||engine.battle||!engine.map.sharedRoom||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'進行中の操作が終わると外へ戻れます。'};
+      if(!playing||busy||engine.battle||!engine.map.sharedRoom||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return {ok:false,message:'進行中の操作が終わると外へ戻れます。'};
       const point=engine.map.returnPoint,map=point&&DATA.maps[point.map];
       if(!map||map.sharedRoom||!engine.walkable(map,point.x,point.y))return {ok:false,message:'部屋の出口を確認できません。'};
       engine.state.map=point.map;engine.state.x=point.x;engine.state.y=point.y;engine.state.facing=point.facing||'down';engine.encounterCooldown=8;
       pressedDirection=null;directionSource=null;releaseKeyboard();moveAnim=null;updateAll();save();resize();LT.World?.moved?.();LT.Rooms?.moved?.();return {ok:true};
     },
     canEnterKasaiLive:()=>{
-      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return false;
+      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return false;
       if(document.querySelector('dialog[open]'))return false;
       try{return !!storedSave?.started&&localStorage.getItem(SAVE_KEY)===JSON.stringify(storedSave);}catch(_){return false;}
     },
     getKasaiLiveParty:()=>{
-      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return null;
+      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return null;
       try{return storedSave?.started&&localStorage.getItem(SAVE_KEY)===JSON.stringify(storedSave)?JSON.parse(JSON.stringify(storedSave.party)):null;}catch(_){return null;}
     },
     stageKasaiLive:(room,session)=>{
@@ -8776,6 +8823,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       pressedDirection=null;directionSource=null;releaseKeyboard();moveAnim=null;updateAll();save();resize();LT.World?.moved?.();LT.Rooms?.moved?.();return {ok:true};
     },
     setKasaiLiveBattle:snapshot=>{
+      if(LT.onlineEncounter?.ranked)return false;
       if(snapshot){
         LT.onlineActive=true;LT.onlineBattle=snapshot;LT.onlineEncounter={kasai:true};
         const side=LT.KasaiLive?.session?.()?.role==='kasai'?1:0;
@@ -8785,13 +8833,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
       document.dispatchEvent(new CustomEvent('pachi-online-state'));
     },
     startKasaiBattle:challenge=>{
-      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return {ok:false,message:'進行中の操作が終わってから運営調律士に話しかけてください。'};
+      if(!playing||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return {ok:false,message:'進行中の操作が終わってから運営調律士に話しかけてください。'};
       if(LT.Admin?.player?.isAdmin===true||LT.Admin?.player?.id&&LT.Admin.player.id===engine.map?.roomOwner)return {ok:false,message:'運営は自分自身に挑戦できません。自分の部屋は「秘密部屋」から飾れます。'};
       return {ok:false,message:'運営調律士本人にフィールドで話しかけ、リアルタイム対戦に挑戦してください。'};
     },
     startSecretEncounter:(species,level,owner,options={})=>{
       if(LT.KasaiLive?.isActive?.())return {ok:false,message:'運営のステージを退出してから幻の草むらを使えます。'};
-      if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
+      if(!playing||busy||engine.battle||(LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked()))return {ok:false,message:'冒険中の移動できるときに使えます。'};
       if(!owner||owner.isAdmin!==true||LT.Admin?.player?.isAdmin!==true||owner.id!==LT.Admin.player.id)return {ok:false,message:'運営権限を確認できません。'};
       const result=engine.startAdminEncounter(species,level,owner,{shiny:options?.shiny===true,gender:options?.gender});
       if(result.ok){closeModal();openBattle();}
@@ -8815,13 +8863,13 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     saveNow:()=>playing?save():false,
     canSyncKasaiParty:()=>{
       if(LT.KasaiLive?.isActive?.())return false;
-      if(!playing||LT.Admin?.player?.isAdmin!==true||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked())return false;
+      if(!playing||LT.Admin?.player?.isAdmin!==true||busy||introPending||engine.battle||LT.onlineActive||LT.localTradeActive||tradeLocked()||rankedLocked())return false;
       const source=playing?engine.state:storedSave;if(!source?.started)return false;
       try{return localStorage.getItem(SAVE_KEY)===JSON.stringify(storedSave);}catch(_){return false;}
     },
     getSavedKasaiParty:()=>LT.adminBridge.canSyncKasaiParty()?JSON.parse(JSON.stringify(storedSave.party)):null,
     checkTrade,
-    isBusy:()=>busy||introPending||!!engine?.battle||!!LT.onlineActive||tradeLocked(),
+    isBusy:()=>busy||introPending||!!engine?.battle||!!LT.onlineActive||tradeLocked()||rankedLocked(),
     toast
   };
   LT.portraitHTML=(mon,size=64)=>portrait(mon,size);
@@ -10252,6 +10300,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     if(!locked)normalizeTeam(members,count);
     const enough=selected.length>=count&&selected.slice(0,count).every(Boolean);
     body.innerHTML=`<div class="link-intro"><div><span class="link-kicker">FRIENDS. RIVALS. PARTNERS.</span><h3>きみのチームで、<br><em>友だちに挑もう。</em></h3>${worldEncounter?`<p class="link-encounter-name">対戦相手：<strong>${esc(LT.onlineEncounter?.opponent?.name||worldEncounter.name)}</strong></p>`:''}<p>プレイヤー1人 対 1人。冒険で仲間にしたパチモンからチームを組む<br>レベル50のフレンド対戦。振り分けポイントと持ち物も反映します。</p></div><div class="link-partners" aria-hidden="true">${D.starters.map(id=>portrait(id,92)).join('')}</div></div>
+      ${!peer&&!connecting?`<section class="link-ranked-entry"><div><strong>ランク対戦</strong><p>所持パチモン3体・Lv.50。近いレートの相手を探して、自動で対戦を開始します。</p></div><button id="link-ranked" type="button" class="btn btn-primary">ランク対戦を開く</button></section>`:''}
       <div class="link-connect-grid"><section class="link-box"><h4>01 / バトルの準備</h4><label class="link-field">プレイヤー名<input id="link-name" maxlength="16" autocomplete="off" value="${esc(localTrainerName())}" ${locked||localKasai()?'disabled':''}></label>
       <div class="link-modes" aria-label="対戦ルール"><button type="button" data-link-mode="single" aria-pressed="${mode==='single'}" ${peer?'disabled':''}><b>シングル</b><small>1体ずつ · チーム3体</small></button><button type="button" data-link-mode="double" aria-pressed="${mode==='double'}" ${peer?'disabled':''}><b>ダブル</b><small>2体ずつ · チーム4体</small></button></div>
       <p class="link-small">部屋を作った人がルールを決定します。</p></section>
@@ -10456,6 +10505,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     if(b.dataset.linkTransport){if(!peer&&!connecting){transport=b.dataset.linkTransport==='local'?'local':'internet';error='';status='';render();}return;}
     if(b.dataset.linkNet){if(!peer&&!connecting){localNet=b.dataset.linkNet==='bluetooth'?'bluetooth':'wifi';LT.LocalNet?.remember?.(localNet);error='';status='';render();}return;}
     switch(b.id){
+      case 'link-ranked':if(!peer&&!connecting){returnToMenu=false;dialog.addEventListener('close',()=>void LT.requestRanked?.(),{once:true});close();}break;
       case 'link-host':await connect(true);break;
       case 'link-join':if(joinCode.length!==6){error='6文字のルームコードを入力してください。';render();}else await connect(false);break;
       case 'link-copy':try{await navigator.clipboard.writeText(room);announce('ルームコードをコピーしました。');}catch(_){announce('コピーできませんでした。表示された6文字を相手に伝えてください。');}break;
@@ -10488,7 +10538,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </script>
 <script src="battle-health.js?v=20261119-curse-health-v49"></script>
 <script src="battle-vfx.js?v=20261120-lunar-super-v74"></script>
-<script src="admin-console.js?v=20261120-global-chat-v77"></script>
+<script src="admin-console.js?v=20261120-ranked-battle-v78"></script>
 <script src="secret-rooms.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-challenge.js?v=20261120-room-owner-names-v76"></script>
 <script src="kasai-party.js?v=20261119-sub-admin-v62"></script>
@@ -10498,6 +10548,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <script src="secret-encounter.js?v=20261120-originality-v67"></script>
 <script src="field-world.js?v=20261120-global-chat-v77"></script>
 <script src="global-chat.js?v=20261120-global-chat-v77"></script>
+<script src="ranked-rules.js?v=20261120-ranked-battle-v78"></script>
+<script src="ranked-battle.js?v=20261120-ranked-battle-v78"></script>
 <link rel="stylesheet" href="trade-client.css?v=20261118-easy-connect-v37">
 <link rel="stylesheet" href="local-link.css?v=20261118-easy-connect-v37">
 <script src="trade-client.js?v=20261119-world-v55-live"></script>
@@ -10519,5 +10571,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <link rel="stylesheet" href="responsive-fit.css?v=20261120-galdoras-max-fit-v70">
 <link rel="stylesheet" href="console-controls.css?v=20261120-system-buttons-v73">
 <link rel="stylesheet" href="global-chat.css?v=20261120-global-chat-v77">
+<link rel="stylesheet" href="ranked-battle.css?v=20261120-ranked-battle-v78">
 </body>
 </html>

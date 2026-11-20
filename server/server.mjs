@@ -2,6 +2,7 @@
 // ADMIN_CLAIM_KEY is a runtime secret. Never place it in client code or source.
 import {RULES_VERSION as KASAI_RULES_VERSION,LEGACY_RULES_VERSION as KASAI_LEGACY_RULES_VERSION,MAX_ACTIONS as KASAI_MAX_ACTIONS,KASAI_TEAM,normalizeParty as normalizeKasaiParty,replayChallenge} from './kasai-replay.mjs';
 import {createLiveBattle,validateLiveOrders,resolveLiveRound} from './kasai-live-engine.mjs';
+import {rankedRoute,hasRankedMembership} from './ranked-service.mjs';
 const BASE_ORIGIN = 'https://uni-tadayasu.github.io';
 const encoder = new TextEncoder();
 const DEFAULT_MOVES = ['futo_breaker', 'futo_burst', 'futo_ascend', 'futo_restore'];
@@ -309,16 +310,18 @@ async function tradeRoute(request,env,path,method,player){
     const prior=await env.DB.prepare('SELECT id FROM trades WHERE host_id=? AND request_id=?').bind(player.id,requestId).first();
     if(prior)return {trade:tradeView(await requireTrade(env,prior.id,player.id),player.id)};
     if(await activeTrade(env,player.id))fail(409,'ACTIVE_TRADE','進行中の交換を先に確認してください。');
+    if(await hasRankedMembership(env,player.id))fail(409,'RANKED_BUSY','ランク対戦を終了してから交換してください。');
     await consumeLimit(env,request,`trade-create:${player.id}`,20,3600000,true);
     for(let attempt=0;attempt<5;attempt++){
       const id=crypto.randomUUID(),now=Date.now();
       await env.DB.batch([
-        env.DB.prepare("INSERT OR IGNORE INTO trades (id,code,request_id,host_id,created_at,expires_at) SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM trade_active WHERE player_id=?)").bind(id,tradeCode(),requestId,player.id,now,now+TRADE_TTL,player.id),
+        env.DB.prepare("INSERT OR IGNORE INTO trades (id,code,request_id,host_id,created_at,expires_at) SELECT ?,?,?,?,?,? WHERE NOT EXISTS (SELECT 1 FROM trade_active WHERE player_id=?) AND NOT EXISTS (SELECT 1 FROM ranked_members WHERE player_id=?)").bind(id,tradeCode(),requestId,player.id,now,now+TRADE_TTL,player.id,player.id),
         env.DB.prepare('INSERT OR IGNORE INTO trade_active (player_id,trade_id) SELECT host_id,id FROM trades WHERE id=?').bind(id)
       ]);
       const created=await env.DB.prepare('SELECT id FROM trades WHERE host_id=? AND request_id=?').bind(player.id,requestId).first();
       if(created)return {trade:tradeView(await tradeRow(env,created.id),player.id)};
       if(await activeTrade(env,player.id))fail(409,'ACTIVE_TRADE','進行中の交換を先に確認してください。');
+      if(await hasRankedMembership(env,player.id))fail(409,'RANKED_BUSY','ランク対戦を終了してから交換してください。');
     }
     fail(503,'TRADE_CODE_BUSY','ルームを作成できませんでした。少し待って再試行してください。');
   }
@@ -340,11 +343,13 @@ async function tradeRoute(request,env,path,method,player){
       if(!invitation)fail(409,'WORLD_INVITATION_REQUIRED','フィールドのお誘いで「参加する」を選んでください。');
     }
     if(await activeTrade(env,player.id))fail(409,'ACTIVE_TRADE','進行中の交換を先に確認してください。');
+    if(await hasRankedMembership(env,player.id))fail(409,'RANKED_BUSY','ランク対戦を終了してから交換してください。');
     await env.DB.batch([
-      env.DB.prepare("UPDATE trades SET guest_id=?,revision=revision+1,host_confirm=NULL,guest_confirm=NULL WHERE id=? AND state='open' AND guest_id IS NULL AND expires_at>? AND NOT EXISTS (SELECT 1 FROM trade_active WHERE player_id=?)").bind(player.id,row.id,Date.now(),player.id),
+      env.DB.prepare("UPDATE trades SET guest_id=?,revision=revision+1,host_confirm=NULL,guest_confirm=NULL WHERE id=? AND state='open' AND guest_id IS NULL AND expires_at>? AND NOT EXISTS (SELECT 1 FROM trade_active WHERE player_id=?) AND NOT EXISTS (SELECT 1 FROM ranked_members WHERE player_id=?)").bind(player.id,row.id,Date.now(),player.id,player.id),
       env.DB.prepare('INSERT OR IGNORE INTO trade_active (player_id,trade_id) SELECT guest_id,id FROM trades WHERE id=? AND guest_id=?').bind(row.id,player.id)
     ]);
     const joined=await tradeRow(env,row.id);
+    if(joined.guest_id!==player.id&&await hasRankedMembership(env,player.id))fail(409,'RANKED_BUSY','ランク対戦を終了してから交換してください。');
     if(joined.guest_id!==player.id)fail(409,'TRADE_UNAVAILABLE','ルームの状態が変わりました。コードを確認してください。');
     return {trade:tradeView(joined,player.id)};
   }
@@ -960,6 +965,7 @@ async function kasaiLiveRoute(request,env,path,method,player){
     if(owner.player_id===player.id)fail(403,'KASAI_SELF_BATTLE','運営のカサイは自分自身とバトルできません。');
     if(body.roomId&&body.roomId!==owner.player_id)fail(409,'KASAI_ROOM_UNAVAILABLE','現在のカサイに話しかけてください。');
     if(await activeLiveRow(env,player.id)||await activeLiveRow(env,owner.player_id))fail(409,'KASAI_LIVE_BUSY','カサイは現在ほかの挑戦者と過ごしています。');
+    if(await hasRankedMembership(env,player.id)||await hasRankedMembership(env,owner.player_id))fail(409,'RANKED_BUSY','ランク対戦が終わるまで運営との対戦には参加できません。');
     let positions;try{positions=await worldNearby(env,player.id,owner.player_id,now);}catch(error){if(error instanceof ApiError)fail(409,error.code==='WORLD_PLAYER_OFFLINE'?'KASAI_LIVE_OFFLINE':'KASAI_LIVE_NOT_NEARBY','同じフィールドで、実際のカサイの近くから話しかけてください。');throw error;}
     if(!Object.hasOwn(WORLD_MAP_BOUNDS,positions.sender.map_id))fail(409,'KASAI_LIVE_NOT_NEARBY','外のフィールドでカサイに話しかけてください。');
     if(positions.sender.status!=='idle'||positions.target.status!=='idle')fail(409,'KASAI_LIVE_BUSY','どちらかが別の操作中です。冒険に戻ってから話しかけてください。');
@@ -971,13 +977,15 @@ async function kasaiLiveRoute(request,env,path,method,player){
         SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)
         AND NOT EXISTS(SELECT 1 FROM admin_members WHERE player_id=?)
         AND NOT EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id IN (?,?))
+        AND NOT EXISTS(SELECT 1 FROM ranked_members WHERE player_id IN (?,?))
         AND EXISTS(SELECT 1 FROM world_presence c JOIN world_presence k ON k.player_id=? WHERE c.player_id=? AND c.map_id=k.map_id AND c.map_id=? AND c.updated_at>? AND k.updated_at>? AND c.status='idle' AND k.status='idle' AND ABS(c.x-k.x)+ABS(c.y-k.y)<=?)`)
-        .bind(id,requestId,player.id,owner.player_id,room.owner_id,returns[0],returns[1],partyJSON,positions.sender.avatar,now,now,now+KASAI_LIVE_TALK_TTL,seed,now,now,owner.player_id,player.id,player.id,owner.player_id,owner.player_id,player.id,positions.sender.map_id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS),
+        .bind(id,requestId,player.id,owner.player_id,room.owner_id,returns[0],returns[1],partyJSON,positions.sender.avatar,now,now,now+KASAI_LIVE_TALK_TTL,seed,now,now,owner.player_id,player.id,player.id,owner.player_id,player.id,owner.player_id,owner.player_id,player.id,positions.sender.map_id,now-WORLD_TTL,now-WORLD_TTL,WORLD_RADIUS),
       ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare('INSERT INTO kasai_live_members (player_id,session_id,side) SELECT ?,?,? WHERE EXISTS(SELECT 1 FROM kasai_live_sessions WHERE id=?)').bind(member,id,side,id)),
       ...[player.id,owner.player_id].map((member,side)=>env.DB.prepare(`UPDATE world_presence SET map_id=?,x=12,y=?,facing=?,status='busy' WHERE player_id=? AND EXISTS(SELECT 1 FROM kasai_live_members WHERE player_id=? AND session_id=?)`)
         .bind('room:'+room.owner_id,side===0?16:4,side===0?'up':'down',member,member,id))
     ]);
     const created=await env.DB.prepare(KASAI_LIVE_SELECT+' WHERE s.challenger_id=? AND s.request_id=?').bind(player.id,requestId).first();
+    if(!created&&(await hasRankedMembership(env,player.id)||await hasRankedMembership(env,owner.player_id)))fail(409,'RANKED_BUSY','ランク対戦が終わるまで運営との対戦には参加できません。');
     if(!created)fail(409,'KASAI_LIVE_BUSY','カサイの状態が変わりました。近くでもう一度話しかけてください。');
     return {session:await liveView(env,created,player.id,now),serverTime:now};
   }
@@ -1157,6 +1165,7 @@ async function worldChatRoute(request,env,path,method,player,now) {
 }
 async function worldRoute(request,env,path,method,player) {
   const now=Date.now();
+  if(path==='/api/world/ranked'||path.startsWith('/api/world/ranked/'))return rankedRoute(request,env,path,method,player,{fail,bodyJSON,consumeLimit,activeTrade,validateOwned:kasaiOwnedParty,refreshLive:sweepLiveSessions});
   if(path==='/api/world/chat'||path.startsWith('/api/world/chat/'))return worldChatRoute(request,env,path,method,player,now);
   if(path==='/api/world/population'&&method==='GET')return worldPopulation(env,now);
   if(path==='/api/world/rooms'||path.startsWith('/api/world/rooms/'))return roomsRoute(request,env,path,method,player);

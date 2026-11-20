@@ -24,7 +24,7 @@ const ctx = vm.createContext({
   directions: { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] },
   walk: (dx, dy) => walked.push([dx, dy]),
   interact() {}, showMenu() {}, showDex() {}, showMap() {}, showBag() {}, finishBattle() {}, save() {},
-  clearTouchDirections() {}, controller: null, battleSkip: false, padSprint: false, LT: {}, tradeLocked: () => false, fieldDialogOpen: () => false
+  clearTouchDirections() {}, controller: null, battleSkip: false, padSprint: false, LT: {}, tradeLocked: () => false, rankedLocked: () => false, fieldDialogOpen: () => false
 });
 vm.runInContext(`var pressedDirection=null,directionSource=null;${block};this.state=()=>({pressedDirection,directionSource,sprint});this.lost=now=>{${loopLine.trim().split(';')[0]};};`, ctx);
 const fire = (type, init) => { for (const fn of listeners[type] || []) fn({ preventDefault() {}, target: { tagName: 'CANVAS' }, repeat: false, metaKey: false, ctrlKey: false, altKey: false, ...init }); };
@@ -68,5 +68,9 @@ now += 200; ctx.lost(now); assert.equal(state().pressedDirection, null, 'a lost 
 // Without repeats (repeat switched off, or still in the first delay) nothing is guessed.
 now = 10000; down('ArrowDown', 'ArrowDown'); now += 5000; ctx.lost(now); assert.equal(state().pressedDirection, 'down');
 up('ArrowDown', 'ArrowDown');
+
+const beforeRanked=walked.length;ctx.rankedLocked=()=>true;
+down('ArrowRight','ArrowRight');assert.equal(walked.length,beforeRanked,'waiting for a ranked match never moves the field');
+assert.equal(state().pressedDirection,null);ctx.rankedLocked=()=>false;
 
 console.log(JSON.stringify({ ok: true, checks: ['Shift and Caps Lock change the letter', 'no-code keyboards', 'two keys hand over', 'shortcuts never walk', 'releasing ⌘/Ctrl/Alt releases all', 'focus loss forgets held keys', 'lost key-up detected from stopped repeats', 'no guessing without repeats'] }));

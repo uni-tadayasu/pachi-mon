@@ -1,4 +1,5 @@
 /* Pachi Monsters — offline play.
+ * v78: owned-team Lv.50 ranked battles, automatic match entry and server ratings.
  * v69: a maximized one-screen title and its on-demand overview refresh together.
  * v70: the supplied Galdoras artwork and non-evolving roster replace old forms.
  * v71: Galdo and Galdoran join the off-dex line leading to final-form Galdoras.

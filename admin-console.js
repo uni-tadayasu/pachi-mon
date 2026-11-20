@@ -601,7 +601,7 @@
   setInterval(()=>{if(!document.hidden)void sync();},30000);
   LT.Admin={sync,open:openConsole,get player(){return player;},get pending(){return pending;},
     async worldRequest(path,options={}){
-      if(typeof path!=='string'||!/^\/world\/(?:presence|population|chat(?:\/[1-9][0-9]*|\?summary=1&after=(?:0|[1-9][0-9]*))?|trainer-pass(?:\/verify)?|invitations(?:\/[a-zA-Z0-9-]+(?:\/(?:respond|cancel))?)?|rooms(?:\/(?:mine|kasai|catalog|P[0-9a-f]{16}(?:\/relocate)?)|\?map=[a-zA-Z0-9_%.-]+)?|kasai\/(?:party|live(?:\/[a-zA-Z0-9-]+\/(?:arrive|talk|answer|actions|leave|ack|claim))?|challenges(?:\/[a-zA-Z0-9-]+\/(?:complete|cancel))?|reward(?:\/ack)?))$/.test(path))throw new Error('交流先の指定が正しくありません。');
+      if(typeof path!=='string'||!/^\/world\/(?:presence|population|ranked(?:\/(?:queue|history|leaderboard|matches\/[0-9a-f-]{36}\/(?:actions|forfeit|ack)))?|chat(?:\/[1-9][0-9]*|\?summary=1&after=(?:0|[1-9][0-9]*))?|trainer-pass(?:\/verify)?|invitations(?:\/[a-zA-Z0-9-]+(?:\/(?:respond|cancel))?)?|rooms(?:\/(?:mine|kasai|catalog|P[0-9a-f]{16}(?:\/relocate)?)|\?map=[a-zA-Z0-9_%.-]+)?|kasai\/(?:party|live(?:\/[a-zA-Z0-9-]+\/(?:arrive|talk|answer|actions|leave|ack|claim))?|challenges(?:\/[a-zA-Z0-9-]+\/(?:complete|cancel))?|reward(?:\/ack)?))$/.test(path))throw new Error('交流先の指定が正しくありません。');
       await ensureIdentity();
       const requestedProfile=player;
       const data=await request(path,{method:options.method||'GET',...(options.body!==undefined?{body:options.body}:{}),keepalive:options.keepalive===true});

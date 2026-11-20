@@ -9,7 +9,7 @@ import {validateLiveOrders} from '../kasai-live-engine.mjs';
 const LT=createReplayRuntime(),copy=value=>JSON.parse(JSON.stringify(value));
 const SECRET='two-admin-integration-test-claim-key';
 const SIGNING='two-admin-integration-test-signing-secret-at-least-32';
-const MIGRATIONS=['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql','0008_room_templates.sql','0009_global_chat.sql'];
+const MIGRATIONS=['0000_admin.sql','0001_trades.sql','0002_world.sql','0003_rooms.sql','0004_kasai_party.sql','0005_kasai_live.sql','0006_sub_admin.sql','0007_third_admin.sql','0008_room_templates.sql','0009_global_chat.sql','0010_ranked.sql'];
 
 class LocalD1 {
   constructor(){
