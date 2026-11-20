@@ -37,8 +37,8 @@ function ui(complete=false){
 const cards=markup=>[...markup.matchAll(/\bdata-dex="([^"]+)"/g)].map(match=>match[1]);
 function assertNoHidden(markup){for(const id of hiddenIds){assert(!markup.includes(id),`Hidden ID ${id} leaked`);assert(!markup.includes(DATA.species[id].name),`Hidden name ${id} leaked`);}}
 
-test('all 269 internal discoveries still render exactly the 256 public dex entries',()=>{
-  const app=ui(true);assert.equal(app.engine.state.caught.length,269);assert.equal(publicIds.length,256);
+test('all 268 internal discoveries still render exactly the 256 public dex entries',()=>{
+  const app=ui(true);assert.equal(app.engine.state.caught.length,268);assert.equal(publicIds.length,256);
   app.context.showDex();const {markup,pane}=app.modal;assert.equal(pane,'dex');
   assert.deepEqual(cards(markup),publicIds);assertNoHidden(markup);
   assert.match(markup,/捕獲 <strong>256<\/strong> \/ 256/);assert.match(markup,/発見 256<\/p>/);
@@ -103,7 +103,7 @@ test('owned hidden companions show their name and growth details without an inve
 test('the adventure record counts public species only, both complete and partially collected',()=>{
   const app=ui(true);app.context.showRecords();
   const firstRow=()=>/<li class="ladder-row[^"]*">([\s\S]*?)<\/li>/.exec(app.modal.markup)?.[1];
-  assert.match(firstRow(),/<strong>256 \/ 256<\/strong>/);assert(!firstRow().includes('269'));assertNoHidden(app.modal.markup);
+  assert.match(firstRow(),/<strong>256 \/ 256<\/strong>/);assert(!firstRow().includes('268'));assertNoHidden(app.modal.markup);
   app.engine.state.caught=['komori',...hiddenIds];app.context.showRecords();
   assert.match(firstRow(),/<strong>1 \/ 256<\/strong>/);assertNoHidden(app.modal.markup);
   assert.deepEqual(app.previews,['records','records']);

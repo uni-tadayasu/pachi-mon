@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Exercise the actual detail/confirmation callbacks and save transaction.
+// Keep the actual party/reserve detail screens free of the removed form action.
 const assert=require('node:assert/strict'),test=require('node:test');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8'),model=vm.createContext({console});
@@ -40,67 +40,33 @@ function ui(destination='party',level=100){
 }
 const owned=c=>[...c.engine.state.party,...c.engine.state.storage].find(mon=>mon.uid===c.uid);
 function details(c){const index=c.engine.state.party.findIndex(mon=>mon.uid===c.uid);if(index>=0)c.showParty(index);else c.showStorageDetail(c.uid);}
-function rejectWithoutWrite(c,action){const state=c.engine.state,before=copy(state),stored=c.storedSave,last=c.lastSave,attempts=c.attempts;
-  action();assert.equal(c.engine.state,state);assert.deepEqual(copy(c.engine.state),before);assert.equal(c.storedSave,stored);assert.equal(c.lastSave,last);assert.equal(c.attempts,attempts);
-}
-
-test('both owned-detail screens offer Lv50 evolution, preview its new art, escape nicknames and allow cancellation',()=>{
-  for(const destination of ['party','storage'])for(const level of [50,100]){
+test('party and reserve show the finished Galdoras form at every level without an evolution action',()=>{
+  for(const destination of ['party','storage'])for(const level of [1,49,50,70,100]){
     const c=ui(destination,level),before=copy(c.engine.state);details(c);
-    assert(c.modal.markup.includes('ガルドグランへ進化'));assert(c.elements.has('owned-evolution-open'));
-    c.elements.get('owned-evolution-open').onclick();assert.equal(c.modal.pane,'owned-evolution');
-    assert(c.modal.markup.includes('data-creature="galdogran"'));assert(c.modal.markup.includes('&lt;A&gt;'));assert(!c.modal.markup.includes('<A>'));
-    assert(c.modal.markup.includes('残りPP'));assert(c.modal.markup.includes('体力は現在の割合'));assert(c.modal.markup.includes('戻せません'));
-    assert.equal(c.focused,'owned-evolution-cancel');c.elements.get('owned-evolution-cancel').onclick();
-    assert.equal(c.modal.pane,destination==='party'?'party':'storage-detail');assert.deepEqual(copy(c.engine.state),before);assert.equal(c.attempts,0);
+    assert.equal(c.modal.pane,destination==='party'?'party':'storage-detail');
+    assert(c.modal.markup.includes('data-creature="galdoras"'));assert(!c.modal.markup.includes('galdogran'));
+    assert(!c.modal.markup.includes('owned-evolution'));assert(!c.modal.markup.includes('ガルドグラン'));
+    assert(c.modal.markup.includes('&lt;A&gt;'));assert(!c.modal.markup.includes('<A>'));
+    assert(c.modal.markup.includes('data-nickname='));assert(c.modal.markup.includes('data-move-order-open='));
+    assert.deepEqual(copy(c.engine.state),before);assert.equal(c.attempts,0);
+    if(destination==='party')assert(c.modal.markup.includes('完成した姿'));
   }
-  const young=ui('party',49);details(young);assert(!young.elements.has('owned-evolution-open'));
-  const evolved=ui();assert(evolved.engine.evolveOwned(evolved.uid).ok);details(evolved);assert(!evolved.elements.has('owned-evolution-open'));
 });
 
-test('confirmation writes before applying and failed storage can retry with the entire live individual intact',()=>{
+test('old owned-form saves render the canonical details with the same individual and no save side effect',()=>{
   for(const destination of ['party','storage']){
-    const c=ui(destination),state=c.engine.state,before=copy(state),previous=copy(owned(c)),oldMax=c.engine.stats(owned(c)).hp,stored=c.storedSave;
-    c.showOwnedEvolution(c.uid);
-    c.onWrite=value=>{assert.equal(c.engine.state,state);assert.deepEqual(copy(c.engine.state),before);assert.equal(c.storedSave,stored);
-      assert.equal(JSON.parse(value)[destination].find(mon=>mon.uid===c.uid).species,'galdogran');};
-    c.storageFails=true;c.elements.get('owned-evolution-confirm').onclick();
-    assert.equal(c.engine.state,state);assert.deepEqual(copy(c.engine.state),before);assert.equal(c.storedSave,stored);assert.equal(c.lastSave,7);assert.equal(c.writes.length,0);
-    assert.equal(c.elements.get('owned-evolution-result').hidden,false);assert.equal(c.elements.get('owned-evolution-confirm').disabled,false);assert.equal(c.sounds.length,0);
-    c.storageFails=false;c.elements.get('owned-evolution-confirm').onclick();
-    assert.equal(c.writes.length,1);assert.equal(c.lastSave,123);assert.notEqual(c.engine.state,state);assert.equal(owned(c).species,'galdogran');
-    assert.equal(owned(c).hp,Math.round(previous.hp*c.engine.stats(owned(c)).hp/oldMax));
-    assert.deepEqual({...copy(owned(c)),species:'galdoras',hp:previous.hp},previous);
-    assert.equal(c.modal.pane,destination==='party'?'party':'storage-detail');assert.deepEqual(c.sounds,['evolution']);assert(c.updates>0);
-    assert.deepEqual(copy(new Engine(JSON.parse(c.writes[0][1])).state),copy(c.engine.state));
+    const c=ui(destination),raw=c.engine.serialize(),old=raw[destination].find(mon=>mon.uid===c.uid);old.species='galdogran';
+    raw.seen.push('galdogran');raw.caught.push('galdogran');c.engine=new Engine(raw);
+    const before=copy(c.engine.state);details(c);
+    assert.equal(owned(c).species,'galdoras');assert.equal(owned(c).nickname,'<A>');
+    assert(c.modal.markup.includes('ガルドラス'));assert(!c.modal.markup.includes('owned-evolution'));
+    assert.deepEqual(copy(c.engine.state),before);assert.equal(c.attempts,0);
   }
 });
 
-test('busy states, communication and exchange locks block opening and committing an existing confirmation',()=>{
-  for(const block of ['not-playing','busy','battle','online','local-trade','trade-lock']){
-    const c=ui();c.showOwnedEvolution(c.uid);const confirm=c.elements.get('owned-evolution-confirm').onclick;
-    if(block==='not-playing')c.playing=false;if(block==='busy')c.busy=true;if(block==='battle')c.engine.battle={};
-    if(block==='online')c.LT.onlineActive=true;if(block==='local-trade')c.LT.localTradeActive=true;if(block==='trade-lock')c.tradeLock=true;
-    rejectWithoutWrite(c,confirm);assert.equal(c.elements.get('owned-evolution-result').hidden,false);
-    c.modal=null;rejectWithoutWrite(c,()=>c.showOwnedEvolution(c.uid));assert.equal(c.modal,null);assert(c.toasts.length>0);
-  }
-});
-
-test('changed adventures, missing or changed individuals and stopped evolution never commit a stale choice',()=>{
-  for(const change of ['engine','missing','nickname','held-item','evolved']){
-    const c=ui();c.showOwnedEvolution(c.uid);const confirm=c.elements.get('owned-evolution-confirm').onclick;
-    if(change==='engine')c.engine=new Engine(c.engine.serialize());if(change==='missing')c.engine.state.party.splice(1,1);
-    if(change==='nickname')owned(c).nickname='かわった';if(change==='held-item')owned(c).heldItem='everpebble';
-    if(change==='evolved')assert(c.engine.evolveOwned(c.uid).ok);
-    rejectWithoutWrite(c,confirm);assert.equal(c.elements.get('owned-evolution-result').hidden,false);
-  }
-  for(const destination of ['party','storage']){
-    const c=ui(destination);owned(c).heldItem='everpebble';details(c);
-    assert.equal(c.elements.get('owned-evolution-open').disabled,true);assert(c.modal.markup.includes('とどまりの小石を外す'));
-    rejectWithoutWrite(c,()=>c.elements.get('owned-evolution-open').onclick());c.showOwnedEvolution(c.uid);
-    assert.equal(c.elements.get('owned-evolution-confirm').disabled,true);rejectWithoutWrite(c,()=>c.elements.get('owned-evolution-confirm').onclick());
-  }
-  const moved=ui('storage');moved.showOwnedEvolution(moved.uid);const confirm=moved.elements.get('owned-evolution-confirm').onclick;
-  assert(moved.engine.exchange(moved.engine.state.party.length,0).ok);confirm();
-  assert.equal(owned(moved).species,'galdogran');assert.equal(moved.modal.pane,'party');assert.equal(moved.writes.length,1);
+test('ordinary species keep their existing evolution notice and the removed action is absent from shipped UI',()=>{
+  const c=ui(),mon=owned(c);mon.species='komori';mon.level=5;details(c);
+  assert(c.modal.markup.includes('新しい姿に進化します'));assert(!c.elements.has('owned-evolution-open'));
+  for(const name of ['ownedEvolutionPanel','bindOwnedEvolution','persistOwnedEvolution','showOwnedEvolution'])assert(!html.includes('function '+name+'('));
+  assert.equal(Engine.prototype.evolveOwned,undefined);assert.equal(DATA.species.galdoras.evolvesTo,undefined);
 });

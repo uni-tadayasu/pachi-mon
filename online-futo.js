@@ -151,7 +151,7 @@
   }
 
   const baseFingerprint = Duel.rulesFingerprint.bind(Duel);
-  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68';
+  Duel.rulesFingerprint = () => baseFingerprint() + ':link-teams-v9-special-three-standard-full-allocation-owned-items-glitch-line-v39:owned-move-order-v48:owned-permanent-curse-v49:owned-offdex-lines-v54:kasai-reward-gender-v56:admin-trained-gender-v64:owned-hidden-leaders-v65:admin-galdogran-v68:galdoras-single-form-v70';
   LT.DuelSession = LinkSession;
-  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 13 };
+  LT.OnlineFuto = { owned, ownedLegendary, ownedMythical, isMythicalMember, rosterIds, allocationFor, allocationOf, moveOrdersFor, cursesFor, ownedList, ownedItems, linkAllocation: FUTO_LINK_ALLOCATION, version: 14 };
 })();

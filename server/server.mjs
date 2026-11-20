@@ -182,7 +182,8 @@ async function adminReserveAddition(env, playerId) {
   const registration=await adminRecord(env,playerId),role=adminRole(registration?.singleton);
   if(!role)return null;
   // A separate receipt never reissues or rewrites the six v64 members.
-  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};
+  // Keep the historical v68 entitlement ID so old receipts suppress a second delivery.
+  return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};
 }
 function recoveryAllowed(env, request, owner) {
   // The configured old owner is the one-time latch: a successful CAS changes
@@ -653,7 +654,7 @@ async function kasaiRoute(request,env,path,method,player) {
   if(path==='/api/world/kasai/party'&&method==='GET'){
     const url=new URL(request.url),target=url.searchParams.has('playerId')?adminPlayerId(url.searchParams.get('playerId')):player.is_admin?player.id:null;
     const row=await currentKasaiParty(env,target);
-    return {party:row?JSON.parse(row.party_json):null,playerId:row?.player_id||null,updatedAt:row?.updated_at||null,serverTime:now};
+    return {party:row?normalizeKasaiParty(JSON.parse(row.party_json)):null,playerId:row?.player_id||null,updatedAt:row?.updated_at||null,serverTime:now};
   }
   if(path==='/api/world/kasai/party'&&method==='POST'){
     const registration=await requireAdmin(env,player);

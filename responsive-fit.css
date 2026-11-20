@@ -1,4 +1,4 @@
-/* v69: one viewport, maximized title, separate artwork/status/control regions. */
+/* v70: one viewport, maximized title, separate artwork/status/control regions. */
 html.viewport-fit{--fit-topbar:48px;--fit-controls:76px;--fit-gap:6px}
 html.viewport-fit:has(body.is-playing){height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
 html.viewport-fit body.is-playing{position:fixed;inset:0;width:100%;height:var(--app-height,100dvh);min-width:0;min-height:0;margin:0;overflow:hidden}
@@ -121,50 +121,51 @@ html.viewport-fit dialog :is(canvas,img){max-width:100%;object-fit:contain}
 
 /* The opening illustration is a sibling of the text, never its background. */
 /* The title is a single viewport. The overview opens in the shared dialog. */
-html.viewport-fit:not(:has(body.is-playing)){height:100%;min-height:0;max-height:100%;overflow:hidden;overscroll-behavior:none}
-html.viewport-fit body:not(.is-playing){position:fixed;inset:0;width:100%;height:var(--app-height,100dvh);min-height:0;min-width:0;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
-html.viewport-fit .title-screen:not([hidden]){position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);grid-template-rows:clamp(44px,8dvh,76px) minmax(0,1fr) auto;gap:clamp(5px,1vw,16px);width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:100%;margin:0;padding:max(4px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overflow:hidden;background:#101a3f}
-html.viewport-fit .title-screen::before,html.viewport-fit .title-screen::after{display:none}
-html.viewport-fit .title-topbar{grid-column:1/-1;grid-row:1;position:static;display:flex;align-items:center;gap:8px;width:100%;height:100%;min-height:0;margin:0;padding:3px clamp(4px,1vw,20px);box-shadow:none}
-html.viewport-fit .title-edition{font-size:clamp(12px,1.4vw,24px)}
-html.viewport-fit .title-edition small{font-size:clamp(8px,.8vw,14px)}
-html.viewport-fit .title-backdrop{grid-column:2;grid-row:2;position:relative;overflow:hidden;inset:auto;z-index:auto;display:block;width:100%;height:100%;min-width:0;min-height:0;margin:0;border:2px solid var(--pm-frame-soft);background-color:#182c56;background-position:center;background-size:contain;background-repeat:no-repeat;box-shadow:none}
-html.viewport-fit .title-backdrop>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
-html.viewport-fit .title-backdrop::after{display:none}
-html.viewport-fit .title-inner{grid-column:1;grid-row:2;position:static;display:flex;align-items:stretch;width:100%;height:100%;min-width:0;min-height:0;margin:0;padding:0;container-type:size}
-html.viewport-fit .title-copy{position:static;display:flex;flex-direction:column;justify-content:center;gap:clamp(4px,1cqh,12px);width:100%;height:100%;max-width:none;min-width:0;min-height:0;max-height:100%;margin:0;padding:clamp(8px,min(3cqw,3cqh),32px);background:var(--pm-window);box-shadow:none;overflow:hidden}
-html.viewport-fit .title-copy>*{flex-shrink:0}
-html.viewport-fit :is(.title-eyebrow,.title-description,.title-world-note,.title-art-caption){display:none}
-html.viewport-fit .title-wordmark{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);align-items:center;gap:clamp(6px,2cqw,20px);width:100%;min-width:0;margin:0}
-html.viewport-fit .title-wordmark h1{min-width:0;margin:0;font-size:clamp(26px,min(13cqw,16cqh),120px);line-height:1.2;letter-spacing:0;white-space:nowrap}
-html.viewport-fit .title-english{display:block;width:100%;max-width:240px;height:auto;justify-self:end;flex:none;margin:0;padding:0;border:0;font-size:0;line-height:0}
-html.viewport-fit .title-copy h2{display:block;font-size:clamp(15px,min(5cqw,5cqh),38px);line-height:1.35;margin:0}
-html.viewport-fit .title-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(5px,1.5cqw,12px);width:100%;max-width:none;margin:0}
-html.viewport-fit .title-buttons>:is(button,.btn),html.viewport-fit .title-buttons>#continue-btn:not([hidden])+#start-btn{grid-column:auto;display:flex;align-items:center;justify-content:flex-start;gap:clamp(4px,1cqw,10px);width:100%;min-width:0;min-height:clamp(44px,min(13cqh,17cqw),88px);height:auto;margin:0;padding:clamp(5px,1.5cqw,14px);font-size:clamp(12px,min(3.5cqw,4cqh),26px);line-height:1.35;white-space:normal;overflow-wrap:anywhere}
-html.viewport-fit .title-buttons>#continue-btn[hidden]+#start-btn{grid-column:1/-1}
-html.viewport-fit .title-buttons .button-arrow{display:none}
-html.viewport-fit .title-buttons svg{width:clamp(16px,4cqw,28px);height:clamp(16px,4cqw,28px);flex:0 0 auto}
-html.viewport-fit .title-status{min-width:0;margin:0;font-size:clamp(9px,min(2.7cqw,2.8cqh),18px);line-height:1.4;white-space:normal;overflow-wrap:anywhere}
-html.viewport-fit .title-audio-hint{margin:0;font-size:clamp(10px,min(2.6cqw,2.5cqh),16px);line-height:1.4}
-html.viewport-fit .title-metrics{display:flex;justify-content:space-between;flex-wrap:nowrap;gap:clamp(5px,1cqw,12px);max-width:none;margin:0;padding:0;border:0}
-html.viewport-fit .title-metrics>div{display:flex;align-items:baseline;min-width:0;gap:4px;padding:4px 2px}
-html.viewport-fit .title-metrics strong{font-size:clamp(20px,min(6cqw,6cqh),48px)}
-html.viewport-fit .title-metrics span{font-size:clamp(9px,min(2.2cqw,2.5cqh),16px);max-width:none}
-html.viewport-fit .title-footer{grid-column:1/-1;grid-row:3;position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;max-width:none;min-height:0;margin:0;padding:4px 0;box-shadow:none}
-html.viewport-fit .title-footer>span:first-child{display:none}
-html.viewport-fit .title-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(4px,.7vw,12px);width:100%;min-width:0;max-width:1100px;margin:0}
-html.viewport-fit .title-footer .title-links>a,html.viewport-fit #title-discover{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:44px;margin:0;padding:5px;font-size:clamp(11px,1.1vw,18px);line-height:1.3;white-space:normal;overflow-wrap:anywhere;text-align:center}
-html.viewport-fit .title-footer>.title-copyright{display:flex;flex-direction:column;align-items:flex-end;gap:0;width:auto;margin:0;font-size:10px;line-height:1.4}
-html.viewport-fit .title-copyright button{min-height:28px;margin:0;padding:3px}
-html.viewport-fit #about-game[hidden]{display:none!important}
-html.viewport-fit #modal #about-game:not([hidden]){display:block;width:100%;max-width:none;min-height:0;margin:0;padding:8px 0;overflow-wrap:anywhere;background:none}
-html.viewport-fit #modal-content:has(>#about-game){padding:12px}
-html.viewport-fit #modal #about-game .game-info-inner{width:100%;max-width:none;margin:0}
-html.viewport-fit #modal #about-game .game-info-heading{margin-bottom:20px}
-html.viewport-fit #modal #about-game .game-info-grid{margin:20px 0;gap:12px}
-html.viewport-fit #modal #about-game .game-info-controls{padding-top:20px}
-html.viewport-fit #modal #about-game .game-info-faq{padding-top:20px}
-html.viewport-fit #modal #about-game .game-info-footer{padding:16px 0;margin-top:16px}
+html.viewport-fit:root:not(:has(body.is-playing)){height:100%;min-height:0;max-height:100%;overflow:hidden;overscroll-behavior:none}
+html.viewport-fit:root body:not(.is-playing){position:fixed;inset:0;width:100%;height:var(--app-height,100dvh);min-height:0;min-width:0;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+html.viewport-fit:root .title-screen:not([hidden]){position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);grid-template-rows:clamp(44px,8dvh,76px) minmax(0,1fr) auto;gap:clamp(5px,1vw,16px);width:100%;height:100%;min-width:0;min-height:0;max-width:none;max-height:100%;margin:0;padding:max(4px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));overflow:hidden;background:#101a3f}
+html.viewport-fit:root .title-screen::before,html.viewport-fit:root .title-screen::after{display:none}
+html.viewport-fit:root .title-topbar{grid-column:1/-1;grid-row:1;position:static;display:flex;align-items:center;gap:8px;width:100%;max-width:none;height:100%;max-height:none;min-height:0;margin:0;padding:3px clamp(4px,1vw,20px);box-shadow:none}
+html.viewport-fit:root .title-edition{font-size:clamp(12px,1.4vw,24px)}
+html.viewport-fit:root .title-edition small{font-size:clamp(8px,.8vw,14px)}
+html.viewport-fit:root .title-backdrop{grid-column:2;grid-row:2;position:relative;overflow:hidden;inset:auto;z-index:auto;display:block;width:100%;height:100%;min-width:0;min-height:0;margin:0;border:2px solid var(--pm-frame-soft);background-color:#182c56;background-position:center;background-size:contain;background-repeat:no-repeat;box-shadow:none}
+html.viewport-fit:root .title-backdrop>canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center}
+html.viewport-fit:root .title-backdrop::after{display:none}
+html.viewport-fit:root .title-inner{grid-column:1;grid-row:2;position:static;display:flex;align-items:stretch;width:100%;max-width:none;height:100%;min-width:0;min-height:0;margin:0;padding:0;container-type:size}
+html.viewport-fit:root .title-copy{position:static;display:flex;flex-direction:column;justify-content:center;gap:clamp(4px,1cqh,12px);width:100%;height:100%;max-width:none;min-width:0;min-height:0;max-height:100%;margin:0;padding:clamp(8px,min(3cqw,3cqh),32px);background:var(--pm-window);box-shadow:none;overflow:hidden}
+html.viewport-fit:root .title-copy>*{flex-shrink:0}
+html.viewport-fit:root :is(.title-eyebrow,.title-description,.title-world-note,.title-art-caption){display:none}
+html.viewport-fit:root .title-wordmark{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);align-items:center;gap:clamp(6px,2cqw,20px);width:100%;min-width:0;margin:0}
+html.viewport-fit:root .title-wordmark h1{min-width:0;margin:0;font-size:clamp(26px,min(13cqw,16cqh),120px);line-height:1.2;letter-spacing:0;white-space:nowrap}
+html.viewport-fit:root .title-english{display:block;width:100%;max-width:240px;height:auto;justify-self:end;flex:none;margin:0;padding:0;border:0;font-size:0;line-height:0}
+html.viewport-fit:root .title-copy h2{display:block;font-size:clamp(15px,min(5cqw,5cqh),38px);line-height:1.35;margin:0}
+html.viewport-fit:root .title-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(5px,1.5cqw,12px);width:100%;max-width:none;margin:0}
+html.viewport-fit:root .title-buttons>:is(button,.btn),html.viewport-fit:root .title-buttons>#continue-btn:not([hidden])+#start-btn{grid-column:auto;display:flex;align-items:center;justify-content:flex-start;gap:clamp(4px,1cqw,10px);width:100%;min-width:0;min-height:clamp(44px,min(13cqh,17cqw),88px);height:auto;margin:0;padding:clamp(5px,1.5cqw,14px);font-size:clamp(12px,min(3.5cqw,4cqh),26px);line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit:root .title-buttons>:is(#continue-btn,#start-btn){grid-column:auto}
+html.viewport-fit:root .title-buttons>#continue-btn[hidden]+#start-btn{grid-column:1/-1}
+html.viewport-fit:root .title-buttons .button-arrow{display:none}
+html.viewport-fit:root .title-buttons svg{width:clamp(16px,4cqw,28px);height:clamp(16px,4cqw,28px);flex:0 0 auto}
+html.viewport-fit:root .title-status{min-width:0;margin:0;font-size:clamp(9px,min(2.7cqw,2.8cqh),18px);line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+html.viewport-fit:root .title-audio-hint{margin:0;font-size:clamp(10px,min(2.6cqw,2.5cqh),16px);line-height:1.4}
+html.viewport-fit:root .title-metrics{display:flex;justify-content:space-between;flex-wrap:nowrap;gap:clamp(5px,1cqw,12px);max-width:none;margin:0;padding:0;border:0}
+html.viewport-fit:root .title-metrics>div{display:flex;align-items:baseline;min-width:0;gap:4px;padding:4px 2px}
+html.viewport-fit:root .title-metrics strong{font-size:clamp(20px,min(6cqw,6cqh),48px)}
+html.viewport-fit:root .title-metrics span{font-size:clamp(9px,min(2.2cqw,2.5cqh),16px);max-width:none}
+html.viewport-fit:root .title-footer{grid-column:1/-1;grid-row:3;position:static;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;max-width:none;min-height:0;margin:0;padding:4px 0;box-shadow:none}
+html.viewport-fit:root .title-footer>span:first-child{display:none}
+html.viewport-fit:root .title-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(4px,.7vw,12px);width:100%;min-width:0;max-width:1100px;margin:0}
+html.viewport-fit:root .title-footer .title-links>a,html.viewport-fit:root #title-discover{display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:44px;margin:0;padding:5px;font-size:clamp(11px,1.1vw,18px);line-height:1.3;white-space:normal;overflow-wrap:anywhere;text-align:center}
+html.viewport-fit:root .title-footer>.title-copyright{display:flex;flex-direction:column;align-items:flex-end;gap:0;width:auto;margin:0;font-size:10px;line-height:1.4}
+html.viewport-fit:root .title-copyright button{min-height:28px;margin:0;padding:3px}
+html.viewport-fit:root #about-game[hidden]{display:none!important}
+html.viewport-fit:root #modal #about-game:not([hidden]){display:block;width:100%;max-width:none;min-height:0;margin:0;padding:8px 0;overflow-wrap:anywhere;background:none}
+html.viewport-fit:root #modal-content:has(>#about-game){padding:12px}
+html.viewport-fit:root #modal #about-game .game-info-inner{width:100%;max-width:none;margin:0}
+html.viewport-fit:root #modal #about-game .game-info-heading{margin-bottom:20px}
+html.viewport-fit:root #modal #about-game .game-info-grid{margin:20px 0;gap:12px}
+html.viewport-fit:root #modal #about-game .game-info-controls{padding-top:20px}
+html.viewport-fit:root #modal #about-game .game-info-faq{padding-top:20px}
+html.viewport-fit:root #modal #about-game .game-info-footer{padding:16px 0;margin-top:16px}
 
 @media(min-width:1200px) and (min-height:700px){
  html.viewport-fit body.is-playing:not(.in-battle) .game-layout{grid-template-columns:minmax(0,1fr) clamp(220px,19vw,280px)}
@@ -265,41 +266,45 @@ html.viewport-fit #modal #about-game .game-info-footer{padding:16px 0;margin-top
 /* Portrait keeps the full illustration at its natural ratio; the remaining
    height belongs to the title and controls, with no page below the footer. */
 @media(orientation:portrait) and (max-width:1100px){
- html.viewport-fit .title-screen:not([hidden]){grid-template-columns:minmax(0,1fr);grid-template-rows:clamp(40px,6dvh,60px) auto minmax(0,1fr) auto;gap:5px;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
- html.viewport-fit .title-topbar{grid-row:1;padding:2px 4px}
- html.viewport-fit .title-backdrop{grid-column:1;grid-row:2;height:auto;aspect-ratio:1672/940;max-height:32dvh;align-self:center}
- html.viewport-fit .title-inner{grid-column:1;grid-row:3}
- html.viewport-fit .title-copy{gap:clamp(4px,1cqh,8px);padding:clamp(8px,3cqh,20px)}
- html.viewport-fit .title-copy h2{font-size:clamp(15px,min(5cqw,4.5cqh),28px)}
- html.viewport-fit .title-metrics{display:none}
- html.viewport-fit .title-footer{grid-column:1;grid-row:4;grid-template-columns:minmax(0,1fr);gap:0;padding:0}
- html.viewport-fit .title-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;max-width:none}
- html.viewport-fit .title-footer .title-links>a,html.viewport-fit #title-discover{min-height:40px;font-size:clamp(11px,3vw,16px)}
- html.viewport-fit .title-footer>.title-copyright{display:none}
+ html.viewport-fit:root .title-screen:not([hidden]){grid-template-columns:minmax(0,1fr);grid-template-rows:clamp(40px,6dvh,60px) auto minmax(0,1fr) auto;gap:5px;padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+ html.viewport-fit:root .title-topbar{grid-row:1;padding:2px 4px}
+ html.viewport-fit:root .title-backdrop{grid-column:1;grid-row:2;height:auto;aspect-ratio:1672/940;max-height:32dvh;align-self:center}
+ html.viewport-fit:root .title-inner{grid-column:1;grid-row:3}
+ html.viewport-fit:root .title-copy{gap:clamp(4px,1cqh,8px);padding:clamp(8px,3cqh,20px)}
+ html.viewport-fit:root .title-copy h2{font-size:clamp(15px,min(5cqw,4.5cqh),28px)}
+ html.viewport-fit:root .title-metrics{display:none}
+ html.viewport-fit:root .title-footer{grid-column:1;grid-row:4;grid-template-columns:minmax(0,1fr);gap:0;padding:0}
+ html.viewport-fit:root .title-links{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;max-width:none}
+ html.viewport-fit:root .title-footer .title-links>a,html.viewport-fit:root #title-discover{min-height:40px;font-size:clamp(11px,3vw,16px)}
+ html.viewport-fit:root .title-footer>.title-copyright{display:none}
 }
 @media(orientation:portrait) and (max-height:650px){
- html.viewport-fit .title-screen:not([hidden]){grid-template-rows:36px auto minmax(0,1fr) auto;gap:4px}
- html.viewport-fit .title-backdrop{max-height:27dvh}
- html.viewport-fit .title-copy h2{display:none}
- html.viewport-fit .title-copy{gap:4px;padding:7px 9px}
- html.viewport-fit .title-buttons>:is(button,.btn),html.viewport-fit .title-buttons>#continue-btn:not([hidden])+#start-btn{min-height:44px;padding:5px;font-size:12px}
- html.viewport-fit .title-status{font-size:9px}
- html.viewport-fit .title-audio-hint{font-size:10px}
- html.viewport-fit .title-footer .title-links>a,html.viewport-fit #title-discover{min-height:36px;font-size:11px}
+ html.viewport-fit:root .title-screen:not([hidden]){grid-template-rows:36px auto minmax(0,1fr) auto;gap:4px}
+ html.viewport-fit:root .title-backdrop{max-height:27dvh}
+ html.viewport-fit:root .title-copy h2{display:none}
+ html.viewport-fit:root .title-copy{gap:4px;padding:7px 9px}
+ html.viewport-fit:root .title-buttons>:is(button,.btn),html.viewport-fit:root .title-buttons>#continue-btn:not([hidden])+#start-btn{min-height:44px;padding:5px;font-size:12px}
+ html.viewport-fit:root .title-status{font-size:9px}
+ html.viewport-fit:root .title-audio-hint{font-size:10px}
+ html.viewport-fit:root .title-footer .title-links>a,html.viewport-fit:root #title-discover{min-height:36px;font-size:11px}
 }
 @media(orientation:landscape) and (max-height:550px){
- html.viewport-fit .title-screen:not([hidden]){grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);grid-template-rows:34px minmax(0,1fr) auto;gap:4px;padding-left:max(5px,env(safe-area-inset-left));padding-right:max(5px,env(safe-area-inset-right))}
- html.viewport-fit .title-copy{padding:7px 9px;gap:4px}
- html.viewport-fit :is(.title-copy h2,.title-metrics){display:none}
- html.viewport-fit .title-buttons{gap:5px}
- html.viewport-fit .title-buttons>:is(button,.btn),html.viewport-fit .title-buttons>#continue-btn:not([hidden])+#start-btn{min-height:40px;padding:5px;font-size:12px}
- html.viewport-fit .title-status{font-size:9px}
- html.viewport-fit .title-audio-hint{font-size:10px}
- html.viewport-fit .title-footer{grid-template-columns:minmax(0,1fr);padding:0}
- html.viewport-fit .title-footer>.title-copyright{display:none}
- html.viewport-fit .title-footer .title-links>a,html.viewport-fit #title-discover{min-height:34px;font-size:11px}
- html.viewport-fit .title-topbar{padding:0 4px}
- html.viewport-fit .title-brand .brand-mark{height:28px;width:26px}
- html.viewport-fit .title-edition{font-size:11px}
- html.viewport-fit .title-edition small{font-size:7px}
+ html.viewport-fit:root .title-screen:not([hidden]){grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);grid-template-rows:34px minmax(0,1fr) auto;gap:4px;padding-left:max(5px,env(safe-area-inset-left));padding-right:max(5px,env(safe-area-inset-right))}
+ html.viewport-fit:root .title-copy{padding:7px 9px;gap:4px}
+ html.viewport-fit:root :is(.title-copy h2,.title-metrics){display:none}
+ html.viewport-fit:root .title-buttons{gap:5px}
+ html.viewport-fit:root .title-buttons>:is(button,.btn),html.viewport-fit:root .title-buttons>#continue-btn:not([hidden])+#start-btn{min-height:40px;padding:5px;font-size:12px}
+ html.viewport-fit:root .title-status{font-size:9px}
+ html.viewport-fit:root .title-audio-hint{font-size:10px}
+ html.viewport-fit:root .title-footer{grid-template-columns:minmax(0,1fr);padding:0}
+ html.viewport-fit:root .title-footer>.title-copyright{display:none}
+ html.viewport-fit:root .title-footer .title-links>a,html.viewport-fit:root #title-discover{min-height:34px;font-size:11px}
+ html.viewport-fit:root .title-topbar{padding:0 4px}
+ html.viewport-fit:root .title-brand .brand-mark{height:28px;width:26px}
+ html.viewport-fit:root .title-edition{font-size:11px}
+ html.viewport-fit:root .title-edition small{font-size:7px}
+}
+
+@media(orientation:portrait) and (min-height:651px) and (max-width:600px){
+ html.viewport-fit:root .title-buttons>:is(button,.btn),html.viewport-fit:root .title-buttons>#continue-btn:not([hidden])+#start-btn{min-height:clamp(44px,min(18cqh,21cqw),108px);font-size:clamp(12px,min(4cqw,4cqh),22px)}
 }

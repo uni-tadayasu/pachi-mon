@@ -13,7 +13,7 @@ for(const [,attrs,code]of blocks){
 const code=marker=>{const value=blocks.find(([,attrs,source])=>!/\bsrc=/.test(attrs)&&source.includes(marker));assert(value,marker);return value[2];};
 vm.runInContext(code('deterministic, save-independent rental-team duels'),context);
 const {LT}=context,{DATA:D,Engine,Duel,TypeSystem:T,Abilities:A}=LT;
-const plain=value=>JSON.parse(JSON.stringify(value)),ID='galdoras',EVOLVED_ID='galdogran';
+const plain=value=>JSON.parse(JSON.stringify(value)),ID='galdoras';
 const IDS=['galdoras_crown','galdoras_fault','galdoras_bastion','galdoras_mend'];
 const owner={id:'P1234567890abcdef',isAdmin:true};
 const hero=()=>{const e=new Engine();assert(e.newGame('komori').ok);e.rng=()=>.5;return e;};
@@ -40,47 +40,42 @@ function fight(mode='solo',side=0,slot=0,targetId='hibana',actorId=ID){
 function positions(run){for(const mode of ['solo','single','double'])for(const side of [0,1])for(let slot=0;slot<(mode==='double'?2:1);slot++)run(mode,side,slot);}
 const damage=events=>{const hit=events.find(event=>event.kind==='damage');assert(hit&&hit.amount>0,'An actual hit must deal damage');return hit;};
 
-test('the stone/earth lineage preserves the original leader and shares four exclusive techniques and canonical armor',()=>{
+test('the single-form stone/earth leader preserves its base stats, four exclusive techniques and canonical armor',()=>{
   const s=D.species[ID];assert(s);assert.equal(s.name,'ガルドラス');assert.equal(s.title,'巌冠の覇王');
   assert.deepEqual(plain(s.types),['stone','earth']);assert.equal(s.element,'stone');assert.equal(D.elements.stone.name,'石');
   assert(s.hiddenDex&&s.glitchOnly&&s.specialOnly&&s.hiddenLeader);assert.equal(s.acquisition,'operator-secret');
-  assert.equal(s.evolvesTo,EVOLVED_ID);assert.equal(s.evolveLevel,50);assert.equal(s.atlasNumber,undefined);assert.deepEqual(plain(D.offDexLeaders.ids),[ID,EVOLVED_ID]);
+  assert.equal(s.evolvesTo,undefined);assert.equal(s.evolveLevel,undefined);assert.equal(D.species.galdogran,undefined);assert.equal(D.retiredSpecies.galdogran,undefined);assert.equal(s.atlasNumber,undefined);assert.deepEqual(plain(D.offDexLeaders.ids),[ID]);
   assert.deepEqual(plain(s.base),{hp:66,atk:46,def:44,spAtk:26,spDef:36,speed:18,accuracy:100,evasion:100});
   assert.deepEqual(plain(s.moves),IDS);assert.deepEqual(plain(D.offDexLeaders.moves),IDS);
   const expected=[['stone','attack','physical',70,95,8,'pierce'],['earth','attack','physical',90,90,5,'attackRecharge'],
     ['stone','guard','status',0,100,6,undefined],['earth','heal','status',50,100,6,undefined]];
   IDS.forEach((id,index)=>{const m=D.moves[id];assert(m.hiddenDex);assert.deepEqual([m.element,m.kind,m.category,m.power,m.accuracy,m.pp,m.effect],expected[index]);
-    assert.deepEqual(Object.values(D.species).filter(species=>species.moves.includes(id)).map(species=>species.id),[ID,EVOLVED_ID]);});
+    assert.deepEqual(Object.values(D.species).filter(species=>species.moves.includes(id)).map(species=>species.id),[ID]);});
   assert.equal(A.get(ID).name,'巌王の甲殻');assert.equal(A.get(ID).kind,'defense');assert.deepEqual(plain(A.get(ID).params),{category:'physical',mul:.8});
   const total=species=>['hp','atk','def','spAtk','spDef','speed'].reduce((sum,key)=>sum+species.base[key],0);
-  assert(Object.values(D.species).filter(species=>species.hiddenDex&&![ID,EVOLVED_ID].includes(species.id)).every(species=>total(s)>total(species)));
+  assert(Object.values(D.species).filter(species=>species.hiddenDex&&![ID].includes(species.id)).every(species=>total(s)>total(species)));
   assert(s.base.speed<s.base.atk&&s.base.speed<s.base.def,'The physical leader retains its deliberate speed tradeoff');
-  const evolved=D.species[EVOLVED_ID];assert.equal(evolved.name,'ガルドグラン');assert(!evolved.evolvesTo);
-  assert(evolved.hiddenDex&&evolved.glitchOnly&&evolved.specialOnly&&evolved.hiddenLeader&&evolved.evolutionOnly&&evolved.evolved);
-  assert.equal(evolved.acquisition,'operator-secret');assert.equal(evolved.atlasNumber,undefined);
-  assert.deepEqual(plain(evolved.types),plain(s.types));assert.deepEqual(plain(evolved.moves),IDS);assert.equal(A.get(EVOLVED_ID).id,A.get(ID).id);
-  for(const key of ['hp','atk','def','spAtk','spDef','speed'])assert(evolved.base[key]>s.base[key]&&evolved.base[key]<=s.base[key]*1.25,`${key}: evolution remains a measured increase`);
-  assert(total(evolved)>total(s));assert.equal(T.effectiveness('leaf',EVOLVED_ID),2.25);assert.equal(T.effectiveness('tide',EVOLVED_ID),2.25);
+
 });
 
 test('public discovery, ordinary encounters, trainers, collection goals and new adventures exclude the leader',()=>{
-  assert.equal(Object.keys(D.species).length,269);assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
-  assert.equal(D.content.hiddenSpecies,13);assert.equal(D.content.playableSpecies,269);assert.equal(D.content.totalSpecies,256);
-  for(const id of [ID,EVOLVED_ID]){
+  assert.equal(Object.keys(D.species).length,268);assert.equal(Object.values(D.species).filter(s=>!s.hiddenDex).length,256);
+  assert.equal(D.content.hiddenSpecies,12);assert.equal(D.content.playableSpecies,268);assert.equal(D.content.totalSpecies,256);
+  for(const id of [ID]){
     assert(!D.starters.includes(id));assert(!D.collectionRoutes.wild.includes(id));assert(Object.values(D.collectionRoutes.starters).every(ids=>!ids.includes(id)));
     assert(Object.values(D.maps).every(map=>!map.encounters?.includes(id)));
     for(const group of [D.rivals,D.guardians,D.elites,D.champions])assert(Object.values(group).every(trainer=>trainer.species!==id&&!trainer.team?.some(mon=>mon.species===id)));
   }
   const e=hero(),before=plain(e.quests());assert(![...e.state.party,...e.state.storage].some(mon=>mon.species===ID));
   e.markCaught(ID);assert.deepEqual(plain(e.quests()),before);assert.equal(e.state.flags.nullLineClaimed,undefined);
-  for(const id of [ID,EVOLVED_ID]){assert.equal(LT.TradeRules.isEligible(e.makeMonster(id,50)),false);assert.throws(()=>e.tradeMonster(e.makeMonster(id,50)),/交換/);}
+  for(const id of [ID]){assert.equal(LT.TradeRules.isEligible(e.makeMonster(id,50)),false);assert.throws(()=>e.tradeMonster(e.makeMonster(id,50)),/交換/);}
 });
 
 test('operator capture requires current authorization and preserves requested sex, appearance, form and level',()=>{
   for(const denied of [null,{}, {id:owner.id,isAdmin:false},{id:'invalid',isAdmin:true},{id:owner.id,isAdmin:1}]){
     const e=hero(),before=JSON.stringify(e.state);assert.equal(e.startAdminEncounter(ID,70,denied).ok,false);assert.equal(JSON.stringify(e.state),before);assert.equal(e.battle,null);
   }
-  for(const id of [ID,EVOLVED_ID])for(const destination of ['party','storage'])for(const gender of ['male','female'])for(const level of [1,70,100]){
+  for(const id of [ID])for(const destination of ['party','storage'])for(const gender of ['male','female'])for(const level of [1,70,100]){
     const e=hero();if(destination==='storage')while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',5));
     assert(e.startAdminEncounter(id,level,owner,{gender,shiny:true}).ok);assert.equal(e.resonanceChance(),1);
     assert(e.action({type:'resonate'}).ok);const mon=e.state[destination].at(-1);
@@ -91,7 +86,7 @@ test('operator capture requires current authorization and preserves requested se
 });
 
 test('save round-trips keep the owned individual while rejecting forged type and ability overrides',()=>{
-  for(const id of [ID,EVOLVED_ID])for(const destination of ['party','storage']){
+  for(const id of [ID])for(const destination of ['party','storage']){
     const e=hero(),mon=e.makeMonster(id,100);e.state[destination].push(mon);e.markCaught(id);
     Object.assign(mon,{nickname:'いわおう',gender:'female',shiny:true,heldItem:'trainband',alloc:{hp:32,atk:32,def:32,spAtk:32,spDef:32,speed:32},moveOrder:[3,1,0,2],curse:true});
     mon.hp=e.stats(mon).hp-7;mon.pp.galdoras_crown=1;
@@ -102,43 +97,52 @@ test('save round-trips keep the owned individual while rejecting forged type and
       const restored=new Engine(saved).state[destination].at(-1);
       assert.deepEqual(plain(restored),expected);assert.deepEqual(plain(T.of(restored)),['stone','earth']);assert.equal(A.get(restored).id,'sovereign_carapace');
     }
-    const oldMax=e.stats(mon).hp,events=[];e.giveXP(mon,999999,events);assert.equal(mon.level,100);assert.equal(mon.species,EVOLVED_ID);
-    assert.equal(events.filter(event=>event.kind==='evolve').length,id===ID?1:0);
-    assert.equal(mon.hp,id===ID?Math.round(expected.hp*e.stats(mon).hp/oldMax):expected.hp);
-    assert.deepEqual({...plain(mon),species:id,hp:expected.hp},expected,'Evolution preserves the existing individual and all non-form data');
+    const events=[];e.giveXP(mon,999999,events);assert.equal(mon.level,100);assert.equal(mon.species,ID);
+    assert.equal(events.filter(event=>event.kind==='evolve').length,0);assert.deepEqual(plain(mon),expected);
   }
 });
 
-test('Lv50 threshold and explicit evolution also work for existing reserve and Lv100 individuals without forced load migration',()=>{
-  const threshold=hero(),young=threshold.makeMonster(ID,49);threshold.state.party.push(young);
-  let events=[];threshold.giveXP(young,threshold.xpToNext(49)-1,events);assert.equal(young.species,ID);assert.equal(young.level,49);
-  assert.equal(threshold.evolveOwned(young.uid).ok,false);
-  events=[];threshold.giveXP(young,1,events);assert.equal(young.species,EVOLVED_ID);assert.equal(young.level,50);
-  assert.equal(events.filter(event=>event.kind==='evolve').length,1);assert(!events.some(event=>event.kind==='learn'));
-  for(const destination of ['party','storage'])for(const level of [50,70,100])for(const health of [0,.37,1]){
-    const e=hero(),mon=e.makeMonster(ID,level);e.state[destination].push(mon);e.markCaught(ID);
-    Object.assign(mon,{nickname:'いしのこ',gender:'male',shiny:true,heldItem:'trainband',bonusPoints:99,
-      alloc:{hp:32,atk:32,def:32,spAtk:32,spDef:32,speed:32},moveOrder:[3,1,0,2],curse:true,xp:level===100?0:19});
-    mon.hp=Math.round(e.stats(mon).hp*health);mon.pp.galdoras_crown=1;mon.pp.galdoras_fault=0;
-    const old=plain(mon),oldMax=e.stats(mon).hp,load=new Engine(e.serialize());
-    assert.deepEqual(plain(load.state[destination].at(-1)),old,'Loading an old high-level record must not force evolution');
-    const result=e.evolveOwned(mon.uid);assert(result.ok);assert.equal(result.events.filter(event=>event.kind==='evolve').length,1);
-    assert.equal(mon.species,EVOLVED_ID);assert.equal(mon.hp,health?Math.max(1,Math.round(old.hp*e.stats(mon).hp/oldMax)):0);
-    assert.deepEqual({...plain(mon),species:ID,hp:old.hp},old,'Manual evolution retains UID, XP, PP, allocation, item, nickname and move order');
-    assert(e.state.caught.includes(ID)&&e.state.caught.includes(EVOLVED_ID));assert.equal(e.state.stats.evolutions,1);
-    assert.deepEqual(plain(new Engine(e.serialize()).state[destination].at(-1)),plain(mon));
-    const after=JSON.stringify(e.state);assert.equal(e.evolveOwned(mon.uid).ok,false);assert.equal(JSON.stringify(e.state),after);
+const legacySave=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/v69-stone-leader-save.json'),'utf8'));
+test('real v69 saves migrate the retired form without altering identity, PP, training, items or receipts',()=>{
+  for(const version of [1,2,3,4]){
+    const input=plain(legacySave);input.version=version;const untouched=plain(input),e=new Engine(input);
+    assert.deepEqual(input,untouched,'Loading does not mutate the supplied backup');
+    assert.deepEqual(plain(e.state.party),input.party);
+    for(let index=0;index<input.storage.length;index++){
+      const before=input.storage[index],mon=e.state.storage[index];
+      assert.deepEqual(plain(mon),{...before,species:'galdoras',hp:Math.min(before.hp,e.stats(mon).hp)},before.uid);
+    }
+    assert.equal(e.state.storage[0].hp,0);assert.equal(e.state.storage[1].hp,77);
+    assert.equal(input.storage[2].hp,616);assert.equal(e.state.storage[2].hp,606,'Only HP above the canonical maximum is clamped');
+    assert.deepEqual(plain(e.state.giftReceipts),input.giftReceipts);
+    for(const key of ['seen','caught'])assert.deepEqual(plain(e.state[key]),[...new Set(input[key].map(id=>id==='galdogran'?'galdoras':id))]);
+    const canonical=plain(input);canonical.party=plain(e.state.party);canonical.storage=plain(e.state.storage);canonical.seen=plain(e.state.seen);canonical.caught=plain(e.state.caught);
+    assert.deepEqual(plain(e.state.stats),plain(new Engine(canonical).state.stats),'Migration adds no capture or evolution beyond normal legacy-version loading');
+    if(version>=2)assert.deepEqual(plain(e.state.stats),input.stats);
+    assert.deepEqual(plain(new Engine(e.serialize()).state),plain(e.state),'Migration is idempotent');
   }
 });
 
-test('owned evolution rejects unowned or busy targets and respects the evolution-stopping held item',()=>{
-  const e=hero(),mon=e.makeMonster(ID,100);e.state.storage.push(mon);mon.heldItem='everpebble';
-  const before=JSON.stringify(e.state);assert.equal(e.evolveOwned(mon.uid).ok,false);assert.equal(JSON.stringify(e.state),before);
-  const events=[];e.giveXP(mon,1,events);assert.equal(mon.species,ID);assert(!events.some(event=>event.kind==='evolve'));
-  assert.equal(e.evolveOwned('not-owned').ok,false);assert.equal(e.evolveOwned(e.state.party[0].uid).ok,false);
-  delete mon.heldItem;assert(e.startBattle('hibana',5,null,{wild:false}));
-  const inBattle=JSON.stringify(e.state);assert.equal(e.evolveOwned(mon.uid).ok,false);assert.equal(JSON.stringify(e.state),inBattle);
-  e.battle=null;assert(e.evolveOwned(mon.uid).ok);assert.equal(mon.species,EVOLVED_ID);
+test('old forms in either owned location normalize before validation while corrupted data remains rejected',()=>{
+  for(const destination of ['party','storage']){
+    const e=hero(),input=e.serialize(),old=plain(legacySave.storage[1]);input[destination].push(old);input.seen.push('galdogran');input.caught.push('galdogran');
+    const restored=new Engine(input),mon=restored.state[destination].at(-1);assert.equal(mon.species,ID);
+    assert.deepEqual(plain(mon),{...old,species:ID});
+    for(const mutate of [mon=>mon.hp=-1,mon=>mon.pp.galdoras_crown=-1,mon=>mon.pp.galdoras_crown=999,mon=>mon.level=101,mon=>mon.moveOrder=[0,0,1,2]]){
+      const bad=plain(input);mutate(bad[destination].at(-1));assert.throws(()=>new Engine(bad));
+    }
+  }
+});
+
+test('Galdoras never evolves through level gains or an old manual action, including at the level cap',()=>{
+  assert.equal(Engine.prototype.evolveOwned,undefined);
+  for(const level of [1,49,50,70,100])for(const heldItem of [undefined,'trainband','everpebble']){
+    const e=hero(),mon=e.makeMonster(ID,level),events=[];if(heldItem)mon.heldItem=heldItem;
+    e.state.party.push(mon);const uid=mon.uid;e.giveXP(mon,99999999,events);
+    assert.equal(mon.species,ID);assert.equal(mon.uid,uid);assert.equal(mon.level,100);
+    assert(!events.some(event=>event.kind==='evolve'));assert(!e.state.caught.includes('galdogran'));
+    assert.equal(e.startAdminEncounter('galdogran',100,owner).ok,false,'Removed form cannot be acquired as a new species');
+  }
 });
 
 test('stone and earth attacks use physical stats, consistent damage, guard penetration and the declared matchups',()=>{

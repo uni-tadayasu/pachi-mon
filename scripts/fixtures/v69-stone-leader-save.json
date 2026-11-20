@@ -1,0 +1,235 @@
+{
+  "version": 4,
+  "started": true,
+  "map": "village",
+  "x": 21,
+  "y": 17,
+  "facing": "down",
+  "avatar": "male",
+  "playerName": "プレイヤー",
+  "party": [
+    {
+      "uid": "lt-mwohj9i0-1",
+      "species": "komori",
+      "level": 5,
+      "xp": 0,
+      "hp": 50,
+      "shiny": false,
+      "pp": {
+        "atlas_leaf_1": 30,
+        "lifeline": 30,
+        "nudge": 30,
+        "atlas_leaf_11": 15
+      }
+    }
+  ],
+  "storage": [
+    {
+      "uid": "v69-ordinary-0",
+      "species": "galdogran",
+      "level": 49,
+      "xp": 11,
+      "hp": 0,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 2,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "nickname": "引継0",
+      "gender": "male",
+      "heldItem": "everpebble",
+      "bonusPoints": 99,
+      "alloc": {
+        "hp": 20,
+        "atk": 10,
+        "speed": 6
+      },
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "curse": true
+    },
+    {
+      "uid": "v69-ordinary-1",
+      "species": "galdogran",
+      "level": 70,
+      "xp": 11,
+      "hp": 77,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 2,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "nickname": "引継1",
+      "gender": "female",
+      "heldItem": "everpebble",
+      "bonusPoints": 99,
+      "alloc": {
+        "hp": 20,
+        "atk": 10,
+        "speed": 6
+      },
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "curse": true
+    },
+    {
+      "uid": "v69-ordinary-2",
+      "species": "galdogran",
+      "level": 100,
+      "xp": 0,
+      "hp": 616,
+      "shiny": true,
+      "pp": {
+        "galdoras_crown": 2,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "nickname": "引継2",
+      "gender": "male",
+      "heldItem": "everpebble",
+      "bonusPoints": 99,
+      "alloc": {
+        "hp": 20,
+        "atk": 10,
+        "speed": 6
+      },
+      "moveOrder": [
+        3,
+        1,
+        0,
+        2
+      ],
+      "curse": true
+    },
+    {
+      "uid": "lt-mwohj9i1-5",
+      "species": "galdogran",
+      "level": 100,
+      "xp": 0,
+      "hp": 576,
+      "shiny": false,
+      "pp": {
+        "galdoras_crown": 8,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "grantId": "admin-galdogran-v68:main:P0123456789abcdef:galdogran",
+      "gender": "male",
+      "heldItem": "trainband",
+      "bonusPoints": 99
+    },
+    {
+      "uid": "lt-mwohj9i2-6",
+      "species": "galdogran",
+      "level": 100,
+      "xp": 0,
+      "hp": 576,
+      "shiny": false,
+      "pp": {
+        "galdoras_crown": 8,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "grantId": "admin-galdogran-v68:sub:P0123456789abcdef:galdogran",
+      "gender": "male",
+      "heldItem": "trainband",
+      "bonusPoints": 99
+    },
+    {
+      "uid": "lt-mwohj9i2-7",
+      "species": "galdogran",
+      "level": 100,
+      "xp": 0,
+      "hp": 576,
+      "shiny": false,
+      "pp": {
+        "galdoras_crown": 8,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "grantId": "admin-galdogran-v68:sub-sub:P0123456789abcdef:galdogran",
+      "gender": "male",
+      "heldItem": "trainband",
+      "bonusPoints": 99
+    },
+    {
+      "uid": "v69-existing-galdoras",
+      "species": "galdoras",
+      "level": 77,
+      "xp": 0,
+      "hp": 451,
+      "shiny": false,
+      "pp": {
+        "galdoras_crown": 8,
+        "galdoras_fault": 5,
+        "galdoras_bastion": 6,
+        "galdoras_mend": 6
+      },
+      "nickname": "そのまま",
+      "moveOrder": [
+        3,
+        2,
+        1,
+        0
+      ]
+    }
+  ],
+  "giftReceipts": [
+    "admin-galdogran-v68:main:P0123456789abcdef:galdogran",
+    "admin-galdogran-v68:sub:P0123456789abcdef:galdogran",
+    "admin-galdogran-v68:sub-sub:P0123456789abcdef:galdogran"
+  ],
+  "tradeReceipts": [],
+  "inventory": {
+    "salve": 5,
+    "tonic": 2,
+    "chime": 8,
+    "remedy": 2
+  },
+  "held": {},
+  "coins": 120,
+  "seals": [],
+  "leagueWins": [],
+  "seen": [
+    "komori",
+    "galdogran",
+    "galdoras"
+  ],
+  "caught": [
+    "komori",
+    "galdogran",
+    "galdoras"
+  ],
+  "flags": {},
+  "steps": 0,
+  "playSeconds": 0,
+  "visited": [
+    "village"
+  ],
+  "questsClaimed": [],
+  "stats": {
+    "wins": 0,
+    "captures": 0,
+    "towerBest": 0,
+    "rivalWins": 0,
+    "evolutions": 0
+  },
+  "secrets": [],
+  "tricks": []
+}

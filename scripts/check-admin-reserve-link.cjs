@@ -50,7 +50,7 @@ function makePeer(role, roleIndex) {
   })) };
   assert.equal(engine.receiveAdminReserveTeam(bundle).added, 6);
   assert.equal(engine.receiveAdminReserveTeam({version:2,playerId,role,members:[{
-    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99
+    grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99
   }]}).added,1);
   const members = engine.state.storage.slice();
   members.forEach((mon, index) => {

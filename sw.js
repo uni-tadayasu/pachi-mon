@@ -1,5 +1,6 @@
 /* Pachi Monsters — offline play.
  * v69: a maximized one-screen title and its on-demand overview refresh together.
+ * v70: the supplied Galdoras artwork and non-evolving roster replace old forms.
  * The page, its code and the core art are stored at install, so the game starts
  * without a connection. Pages are fetched network-first (updates arrive whenever
  * online); code and art are served cache-first by exact versioned URL and older
@@ -112,7 +113,7 @@ function retiredArt(url) {
   const u = new URL(url), base = scope();
   if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) return false;
   const path = u.pathname.slice(base.pathname.length);
-  return /^assets\/(?:galdoras-(?:front|back)-v65|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
+  return /^assets\/(?:galdoras-(?:front|back)-v65|original-(?:galdoras-v67|galdogran-v68)|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
     || (path === 'assets/dex/futo.webp' && u.searchParams.get('v') !== '20261120-originality-v67');
 }
 

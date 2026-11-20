@@ -33,7 +33,7 @@ function setup(){
   return {env,call,register,appoint,actors};
 }
 function expectedTeam(playerId,role){return {version:1,playerId,role,members:[starters[role],...common].map(species=>({grantId:`admin-trained-v64:${role}:${playerId}:${species}`,species,level:100,gender:role==='sub'?'female':'male',heldItem:'trainband',bonusPoints:99}))};}
-function expectedAddition(playerId,role){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdogran',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};}
+function expectedAddition(playerId,role){return {version:2,playerId,role,members:[{grantId:`admin-galdogran-v68:${role}:${playerId}:galdogran`,species:'galdoras',level:100,gender:'male',heldItem:'trainband',bonusPoints:99}]};}
 function partyFor(bundle){
   const LT=createReplayRuntime(),engine=new LT.Engine();
   return bundle.members.map((member,index)=>{
@@ -112,7 +112,7 @@ test('trained members cannot be submitted by another player or with another regi
   else assert([400,403].includes(normalized.status),JSON.stringify(normalized));
 });
 
-test('the Galdogran entitlement is separate, stable, male for every current role and private to that role',async()=>{
+test('the Galdoras entitlement is separate, stable, male for every current role and private to that role',async()=>{
   const h=setup(),actors=await h.actors(),before=Object.fromEntries(['grants','grant_batches','kasai_parties'].map(table=>[table,h.env.DB.sqlite.prepare('SELECT * FROM '+table).all()]));
   for(const role of ['main','sub','sub-sub'])for(const path of ['/me','/me?limit=1','/me?limit=1&cursor=9999']){
     const result=await h.call(path,actors[role]);assert.equal(result.status,200);
@@ -131,7 +131,7 @@ test('the Galdogran entitlement is separate, stable, male for every current role
   assert.deepEqual((await h.call('/me',actors.sub)).adminReserveAddition,expectedAddition(actors.sub.id,'sub'));
 });
 
-test('Galdogran can enter an authenticated saved battle party with its chosen build alongside old members',async()=>{
+test('Galdoras can enter an authenticated saved battle party with its chosen build alongside old members',async()=>{
   const h=setup(),actors=await h.actors();
   for(const role of ['main','sub','sub-sub']){
     const entitlements=await h.call('/me',actors[role]),party=partyFor(entitlements.adminReserveAddition);
@@ -139,23 +139,50 @@ test('Galdogran can enter an authenticated saved battle party with its chosen bu
     party[0].alloc={hp:64,atk:64,def:64,spAtk:64,spDef:41};
     party.push(...partyFor(entitlements.adminReserveTeam).slice(0,5));
     const result=await h.call('/world/kasai/party',actors[role],'POST',{party});assert.equal(result.status,200,JSON.stringify(result));
-    assert.equal(result.party[0].species,'galdogran');assert.equal(result.party[0].gender,'male');assert.equal(result.party[0].bonusPoints,99);
+    assert.equal(result.party[0].species,'galdoras');assert.equal(result.party[0].gender,'male');assert.equal(result.party[0].bonusPoints,99);
     for(const key of ['uid','nickname','moveOrder','alloc','grantId'])assert.deepEqual(result.party[0][key],party[0][key]);
     assert.equal(result.party[0].heldItem,undefined);
     if(role==='sub')assert(result.party.slice(1).every(mon=>mon.gender==='female'));
   }
 });
 
-test('Galdogran cannot claim another recipient or role and rejects changed grant growth before a save write',async()=>{
+test('Galdoras cannot claim another recipient or role and rejects changed grant growth before a save write',async()=>{
   const h=setup(),actors=await h.actors(),party=partyFor(expectedAddition(actors.main.id,'main'));
   for(const actor of [actors.sub,actors['sub-sub'],actors.visitor]){
     const result=await h.call('/world/kasai/party',actor,'POST',{party});assert.equal(result.status,403,JSON.stringify(result));
   }
   const wrongRole=partyFor(expectedAddition(actors.main.id,'sub'));
   assert.equal((await h.call('/world/kasai/party',actors.main,'POST',{party:wrongRole})).error.code,'KASAI_PARTY_NOT_OWNED');
-  for(const mutate of [m=>m.gender='female',m=>m.level=99,m=>m.bonusPoints=100,m=>m.species='galdoras']){
+  for(const mutate of [m=>m.gender='female',m=>m.level=99,m=>m.bonusPoints=100,m=>m.species='komori']){
     const invalid=copy(party);mutate(invalid[0]);
     const result=await h.call('/world/kasai/party',actors.main,'POST',{party:invalid});assert([400,403].includes(result.status),JSON.stringify(result));
   }
   assert.equal((await h.call('/world/kasai/party',actors.main)).party,null);
+});
+
+
+test('legacy owned forms normalize before server ownership checks and preserve their saved build',async()=>{
+  const h=setup(),actors=await h.actors(),fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v69-stone-leader-save.json',import.meta.url),'utf8'));
+  for(const role of ['main','sub','sub-sub']){
+    const member=expectedAddition(actors[role].id,role).members[0],legacy=copy(fixture.storage.find(mon=>mon.grantId?.includes(':'+role+':')));
+    legacy.grantId=member.grantId;legacy.nickname='引継';legacy.moveOrder=[3,1,0,2];legacy.pp.galdoras_crown=1;delete legacy.heldItem;
+    const result=await h.call('/world/kasai/party',actors[role],'POST',{party:[legacy]});assert.equal(result.status,200,JSON.stringify(result));
+    const LT=createReplayRuntime(),maximum=new LT.Engine().stats({...legacy,species:'galdoras'}).hp;
+    assert.deepEqual(result.party[0],{...legacy,species:'galdoras',hp:Math.min(legacy.hp,maximum)});
+    assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,result.party);
+    const forged=copy(legacy);forged.grantId=forged.grantId.replace(/:galdogran$/,':galdoras');
+    assert.equal((await h.call('/world/kasai/party',actors[role],'POST',{party:[forged]})).status,400);
+    assert.deepEqual((await h.call('/world/kasai/party',actors[role])).party,result.party,'Rejected IDs do not overwrite the valid migrated party');
+  }
+});
+
+test('previously registered v69 admin parties are read as Galdoras without deleting their saved identity',async()=>{
+  const h=setup(),actors=await h.actors(),fixture=JSON.parse(readFileSync(new URL('../../scripts/fixtures/v69-stone-leader-save.json',import.meta.url),'utf8'));
+  for(const role of ['main','sub','sub-sub']){
+    const legacy=copy(fixture.storage.find(mon=>mon.grantId?.includes(':'+role+':')));legacy.grantId=expectedAddition(actors[role].id,role).members[0].grantId;
+    const stored=JSON.stringify([legacy]);h.env.DB.sqlite.prepare('INSERT INTO kasai_parties (player_id,party_json,updated_at) VALUES (?,?,?)').run(actors[role].id,stored,12345);
+    const result=await h.call('/world/kasai/party',actors[role]);assert.equal(result.status,200,JSON.stringify(result));
+    assert.equal(result.party[0].species,'galdoras');assert.equal(result.party[0].uid,legacy.uid);assert.equal(result.party[0].grantId,legacy.grantId);
+    assert.equal(result.updatedAt,12345);assert.equal(h.env.DB.sqlite.prepare('SELECT party_json FROM kasai_parties WHERE player_id=?').get(actors[role].id).party_json,stored,'Read-time normalization preserves the historical record');
+  }
 });

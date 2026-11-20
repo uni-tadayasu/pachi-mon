@@ -5,10 +5,10 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {canvas,imageStats}=require('./check-art.cjs');
 const root=path.resolve(__dirname,'..'),settle=()=>new Promise(setImmediate);
-const ids=['nullmie','nullva','zeroveil','shimomaru','shimorei','hyogald','pearlmi','pearlgoa','pearlseria','galdoras','galdogran','futo'];
-const files=['original-null-line-v67.png','original-tide-line-v67.png','original-pearl-line-v67.png','original-galdoras-v67.png','original-galdogran-v68.png','original-futo-v67.png'].map(file=>`assets/${file}`);
+const ids=['nullmie','nullva','zeroveil','shimomaru','shimorei','hyogald','pearlmi','pearlgoa','pearlseria','galdoras','futo'];
+const files=['original-null-line-v67.png','original-tide-line-v67.png','original-pearl-line-v67.png','galdoras-user-v70.png','original-futo-v67.png'].map(file=>`assets/${file}`);
 const unchanged={rurikoro:'assets/offdex-v54-07.png',rurigorm:'assets/offdex-v54-08.png'};
-const retired=new Set(['nullmie-v46.png','nullva-v46.png','zeroveil-v46.png','galdoras-front-v65.png','galdoras-back-v65.png','futo-front-v2.png','futo-back-v2.png','futo.png',...Array.from({length:6},(_,i)=>`offdex-v54-0${i+1}.png`)].map(file=>`assets/${file}`));
+const retired=new Set(['nullmie-v46.png','nullva-v46.png','zeroveil-v46.png','galdoras-front-v65.png','galdoras-back-v65.png','original-galdoras-v67.png','original-galdogran-v68.png','futo-front-v2.png','futo-back-v2.png','futo.png',...Array.from({length:6},(_,i)=>`offdex-v54-0${i+1}.png`)].map(file=>`assets/${file}`));
 const source=fs.readFileSync(path.join(root,'creature-art.js'),'utf8');
 const blocks=[...fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
 const pixels=cv=>cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
@@ -78,6 +78,8 @@ async function main(){
   for(const file of files)assert(fs.existsSync(path.join(root,file)),`Missing generated atlas: ${file}`);
   const run=await runtime(),{LT,art}=run;
   assert.deepEqual(Array.from(art.revisedIds),ids);assert(ids.every(id=>art.hasRevised(id)));
+  assert(!art.hasRevised('galdogran'),'The cancelled evolution must not retain an active artwork entry');
+  assert.equal(art.revisedArt.galdoras.file,'assets/galdoras-user-v70.png');assert.equal(art.revisedArt.galdoras.stage,0);
   assert(!art.hasRevised('rurikoro')&&!art.hasRevised('rurigorm'),'Unchanged rock family unexpectedly rerouted');
   for(const id of ids.filter(id=>id!=='futo')){
     assert(LT.DATA.species[id].hiddenDex,`${id}: off-dex identity was lost`);

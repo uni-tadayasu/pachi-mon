@@ -27,7 +27,7 @@ function runtime() {
 }
 const env = runtime(), { LT } = env, { DATA: D, Abilities: A, Engine, Duel, TypeSystem: T } = LT;
 const modes = ['solo', 'single', 'double'], originalIds = Object.keys(D.species);
-assert.equal(originalIds.length, 269, 'Every existing species, including all thirteen off-dex companions, is covered');
+assert.equal(originalIds.length, 268, 'Every existing species, including all twelve off-dex companions, is covered');
 assert.equal(Object.keys(A.catalog).length, 29);
 assert.deepEqual(copy(A.assignments), source.species);
 assert.deepEqual(copy(A.catalog), Object.fromEntries(source.abilities.map(ability => [ability.id, ability])));
@@ -347,7 +347,7 @@ assert.deepEqual(copy(plain.stats(plain.makeMonster(original, 50))), copy(plain.
 // Repeated real rounds remain deterministic, including activations, switches,
 // replacement phases and every synchronized event snapshot.
 for (const id of fixtures) delete D.species[id];
-assert.equal(Object.keys(D.species).length, 269);
+assert.equal(Object.keys(D.species).length, 268);
 let rounds = 0, activations = 0;
 for (const mode of ['single', 'double']) {
   const size = Duel.teamSize(mode), teams = [
@@ -388,7 +388,7 @@ assert.equal(LT.Duel.rulesFingerprint(), initialFingerprint); assert.equal(LT.Du
     assert(sessions.some(session => session.snapshot().phase === 'error'), 'Clients with different ability rules are rejected at the handshake');
   } finally { sessions.forEach(session => session.close()); remote.close(); env.close(); }
   console.log(JSON.stringify({
-    ok: true, abilities: 29, species: 269, effectComparisons: comparisons, seededRounds: rounds, observedActivations: activations,
+    ok: true, abilities: 29, species: 268, effectComparisons: comparisons, seededRounds: rounds, observedActivations: activations,
     checks: ['canonical species assignments and spoof rejection', 'conditional attack and defense effects', 'solo/single/double damage parity',
       'speed changes real turn order', 'accuracy changes hit outcomes', 'five status wards: normal and forced infliction',
       'existing conditions preserved; curse separate; void immunity retained', 'healing and capped actual-damage drain',

@@ -56,8 +56,10 @@ const publicTypes = TYPES.order.filter(type => !D.elements[type].hiddenDex);
 // Glitch companions exist in saves and battle data, but have no public dex page,
 // learner listing, dex number or sitemap entry.
 const ids = Object.keys(D.species).filter(id=>!D.species[id].hiddenDex), no = id => ids.indexOf(id) + 1, pad = n => String(n).padStart(3, '0');
+// Save migrations for hidden companions must not create public redirect pages.
+const retiredPublicSpecies = Object.entries(D.retiredSpecies || {}).filter(([, newId]) => ids.includes(newId));
 if(selected){
-  const allowed=new Set(['index.html','monsters/index.html','guide/index.html','moves/index.html','404.html','sitemap.xml',...ids.map(id=>`monsters/${id}.html`),...Object.keys(D.retiredSpecies||{}).map(id=>`monsters/${id}.html`)]);
+  const allowed=new Set(['index.html','monsters/index.html','guide/index.html','moves/index.html','404.html','sitemap.xml',...ids.map(id=>`monsters/${id}.html`),...retiredPublicSpecies.map(([id])=>`monsters/${id}.html`)]);
   if(!selected.size||[...selected].some(file=>!allowed.has(file)))throw Error('Unknown --only page target');
 }
 const totalSpeciesCount = Object.keys(D.species).length, hiddenSpeciesCount = totalSpeciesCount - ids.length;
@@ -332,7 +334,7 @@ write(path.join(ROOT, 'moves', 'index.html'), page({ depth: 1, canonical: `${SIT
     itemListElement: allMoves.map((m, i) => ({ '@type': 'ListItem', position: i + 1, name: m.name, url: `${SITE}/moves/#${m.id}` })) }] }));
 
 // ---------- retired species: their old pages point to the species that replaced them ----------
-for (const [oldId, newId] of Object.entries(D.retiredSpecies || {})) {
+for (const [oldId, newId] of retiredPublicSpecies) {
   const target = D.species[newId]; if (!target) continue;
   write(path.join(ROOT, 'monsters', `${oldId}.html`), `<!doctype html>
 <html lang="ja">
@@ -378,7 +380,7 @@ write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SI
       if (types.includes('WebPage')) { entity.description = description; entity.dateModified = LASTMOD; }
       if (types.includes('VideoGame')) {
         entity.description = description;
-        entity.softwareVersion = '69.0';
+        entity.softwareVersion = '70.0';
         entity.featureList = [
           `公開図鑑${ids.length}種・図鑑外${hiddenSpeciesCount}種を含む全${totalSpeciesCount}種のパチモン`,
           `公開${publicMoveCount}種の技（非公開の専用技${hiddenMoveCount}種を含め全${totalMoveCount}種）`,
