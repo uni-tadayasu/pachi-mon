@@ -1127,10 +1127,19 @@
         break;
       }
       case 'capture': {
-        const radius=(80-55*ease(t))*s;
-        for(let i=0;i<3;i++){const a=t*2+i*TAU/3;ellipse(cx,cy,radius,radius*(.35+i*.18),p[i],2,.8,a,a+Math.PI*1.75);}
-        for(let i=0;i<12;i++){const a=i*TAU/12+t*1.5;star(cx+Math.cos(a)*radius,cy+Math.sin(a)*radius,4*s,p[i%3],a,.9);}
-        glow(cx,cy,36*s,smooth(t)*.4);break;
+        // A tuning chime sends woven bands of light between the two partners.
+        // The creature stays visible; nothing is thrown or closed around it.
+        const envelope=Math.sin(t*Math.PI),radius=(20+48*ease(t))*s;
+        for(let i=0;i<3;i++){
+          const u=clamp(t*1.5-i*.18),pos=mixPoint(source,{x:cx,y:cy},ease(u));
+          const r=(9+i*4)*s,alpha=Math.sin(u*Math.PI)*.85;
+          stroke([[pos.x-r,pos.y],[pos.x,pos.y-r],[pos.x+r,pos.y],[pos.x,pos.y+r]],p[i],2,alpha,true);
+        }
+        for(const sign of [-1,1]){
+          stroke([[cx-radius,cy+sign*12*s],[cx-radius*.45,cy+sign*25*s],[cx+radius*.2,cy+sign*12*s],[cx+radius,cy+sign*25*s]],p[sign>0?1:2],2,envelope*.8);
+          star(cx+sign*radius,cy,5*s,p[0],Math.PI/4,envelope*.9);
+        }
+        glow(cx,cy,28*s,envelope*.22);break;
       }
       case 'miss': {
         const missTarget={x:cx+(cx>source.x?55:-55)*s,y:cy-35*s},pos=mixPoint(source,missTarget,ease(phase(t,.08,.7))),prev=mixPoint(source,missTarget,clamp(ease(phase(t,.08,.7))-.09));

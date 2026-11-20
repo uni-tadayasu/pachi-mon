@@ -93,6 +93,8 @@
  *   rear portraits, dedicated moves, shared battle rules and owned online roster.
  * v66: every creature uses bolder contour and motif shading on a coarser
  *   112px grid; matching public portraits and their versioned URLs refresh.
+ * v67: original designs for eleven species, resonance commands and new art;
+ *   remove retired portraits from caches without touching adventure saves.
  * © 2026 KASAI SOLUTIONS INC.
  */
 'use strict';
@@ -101,6 +103,15 @@ const KEEP = [SHELL, ART, FONTS];
 const ASSET = /\.(?:js|css|webp|png|svg|json|webmanifest|woff2?|ico|mp3)$/i;
 const scope = () => new URL(self.registration?.scope || self.location.href);
 const local = path => new URL(path, scope()).href;
+// Retired character portraits must not return through an offline cache fallback.
+// Other cached art stays available; localStorage adventure records are untouched.
+function retiredArt(url) {
+  const u = new URL(url), base = scope();
+  if (u.origin !== base.origin || !u.pathname.startsWith(base.pathname)) return false;
+  const path = u.pathname.slice(base.pathname.length);
+  return /^assets\/(?:galdoras-(?:front|back)-v65|futo(?:-(?:front|back)-v2)?|(?:nullmie|nullva|zeroveil)-v(?:39|46)|offdex-v54-0[1-6])\.png$/.test(path)
+    || (path === 'assets/dex/futo.webp' && u.searchParams.get('v') !== '20261120-originality-v67');
+}
 
 // Same-origin files the page links or loads directly: scripts, styles, icons, images.
 function shellUrls(html) {
@@ -189,6 +200,10 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     for (const name of await caches.keys()) if (name.startsWith('pachi-') && !KEEP.includes(name)) await caches.delete(name);
+    for (const name of [SHELL, ART]) {
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) if (retiredArt(request.url)) await cache.delete(request);
+    }
     await self.clients.claim();
   })());
 });

@@ -51,30 +51,35 @@
     tortoise:'leaf',golem:'crystal',manta:'tide',whale:'tide',jelly:'crystal',flower:'leaf',seahorse:'tide',crab:'tide',
     scorpion:'tide',dragon:'ember',serpent:'tide',gecko:'leaf',lizard:'ember'
   };
-  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map(), leaderSheets = new Map();
-  // These off-dex forms have their own front/rear sheets. Keep them lazy so
-  // undiscovered monsters never add image requests to ordinary startup.
-  const glitchArt=Object.freeze({
-    nullmie:{file:'assets/nullmie-v46.png',stage:0},
-    nullva:{file:'assets/nullva-v46.png',stage:1},
-    zeroveil:{file:'assets/zeroveil-v46.png',stage:2}
+  const cache = new Map(), sheets = new Map(), evolutionSheets = new Map(), uniqueSheets = new Map(), revisedSheets = new Map();
+  // Each new atlas contains independently authored front/rear pairs. Row order
+  // is explicit so an evolved form can never borrow its predecessor's image.
+  // Shared files are requested once, on demand, including both rear/front views.
+  const revisedArt=Object.freeze({
+    nullmie:{file:'assets/original-null-line-v67.png',row:0,rows:3,stage:0,nativeSize:[1024,1536],front:[0,0,512,376],back:[512,0,512,376]},
+    nullva:{file:'assets/original-null-line-v67.png',row:1,rows:3,stage:1,nativeSize:[1024,1536],front:[0,376,512,440],back:[512,376,512,440]},
+    zeroveil:{file:'assets/original-null-line-v67.png',row:2,rows:3,stage:2,nativeSize:[1024,1536],front:[0,816,512,720],back:[512,816,512,720]},
+    shimomaru:{file:'assets/original-tide-line-v67.png',row:0,rows:3,stage:0},
+    shimorei:{file:'assets/original-tide-line-v67.png',row:1,rows:3,stage:1},
+    hyogald:{file:'assets/original-tide-line-v67.png',row:2,rows:3,stage:2},
+    pearlmi:{file:'assets/original-pearl-line-v67.png',row:0,rows:3,stage:0,nativeSize:[1199,1312],front:[0,0,599,385],back:[599,0,600,385],frontDirection:-1,backDirection:1},
+    pearlgoa:{file:'assets/original-pearl-line-v67.png',row:1,rows:3,stage:1,nativeSize:[1199,1312],front:[0,385,599,330],back:[599,385,600,330],frontDirection:-1,backDirection:1},
+    pearlseria:{file:'assets/original-pearl-line-v67.png',row:2,rows:3,stage:2,nativeSize:[1199,1312],front:[0,715,599,597],back:[599,715,600,597],frontDirection:-1,backDirection:1},
+    galdoras:{file:'assets/original-galdoras-v67.png',row:0,rows:1,stage:0},
+    futo:{file:'assets/original-futo-v67.png',row:0,rows:1,stage:0,frontDirection:-1,backDirection:1}
   });
-  // The numbered references are separate species, including their own rear
-  // views. These stay out of the public individual-art/dex catalogue.
+  for(const entry of Object.values(revisedArt)){for(const value of Object.values(entry))if(Array.isArray(value))Object.freeze(value);Object.freeze(entry);}
+  const revisedIds=Object.freeze(Object.keys(revisedArt));
+  const revisedIdsByFile=new Map();
+  for(const [id,entry] of Object.entries(revisedArt)){
+    if(!revisedIdsByFile.has(entry.file))revisedIdsByFile.set(entry.file,[]);
+    revisedIdsByFile.get(entry.file).push(id);
+  }
+  const hasRevised=id=>Object.hasOwn(revisedArt,id);
+  // These two unchanged rock forms keep their existing dedicated views.
   const offDexArt=Object.freeze({
-    pearlmi:{file:'assets/offdex-v54-01.png',stage:0},
-    pearlgoa:{file:'assets/offdex-v54-02.png',stage:1},
-    pearlseria:{file:'assets/offdex-v54-03.png',stage:2},
-    shimomaru:{file:'assets/offdex-v54-04.png',stage:0},
-    shimorei:{file:'assets/offdex-v54-05.png',stage:1},
-    hyogald:{file:'assets/offdex-v54-06.png',stage:2},
     rurikoro:{file:'assets/offdex-v54-07.png',stage:0},
     rurigorm:{file:'assets/offdex-v54-08.png',stage:1}
-  });
-  // Keep the supplied front intact and load the independently authored rear.
-  // Separate files preserve both silhouettes and let either view load alone.
-  const leaderArt=Object.freeze({
-    galdoras:{front:'assets/galdoras-front-v65.png',back:'assets/galdoras-back-v65.png',frontDirection:0,backDirection:1}
   });
   const lineages = new Map();
   let lineageSource = null, lineageSize = -1;
@@ -105,35 +110,27 @@
     }
     return evolutionSheets.get(key);
   }
-  function requestGlitch(id){
-    if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(glitchArt[id].file,root).href,true);
-    return uniqueSheets.get(id);
+  function requestRevised(id){
+    const entry=revisedArt[id];
+    if(!revisedSheets.has(entry.file))loadAtlas(revisedSheets,entry.file,new URL(entry.file,root).href,true,revisedIdsByFile.get(entry.file));
+    return revisedSheets.get(entry.file);
   }
   function requestOffDex(id){
     if(!uniqueSheets.has(id))loadAtlas(uniqueSheets,id,new URL(offDexArt[id].file,root).href,true);
     return uniqueSheets.get(id);
   }
-  function requestLeader(id,back=false){
-    const key=`${id}:${back?1:0}`;
-    if(!leaderSheets.has(key))loadAtlas(leaderSheets,key,new URL(leaderArt[id][back?'back':'front'],root).href,true);
-    return leaderSheets.get(key);
-  }
   function preload(ids,{back=false}={}){
     const requests=[];
     for(const id of typeof ids==='string'?[ids]:ids||[]){
-      if(id==='futo'){for(const rear of back==='both'?[false,true]:[!!back])requests.push(futoRecords[rear?'back':'front'].promise);continue;}
+      if(hasRevised(id)&&LT.DATA?.species?.[id]){requests.push(requestRevised(id).promise);continue;}
       if(id==='arvelion'||id==='floravelle'){const record=uniqueSheets.get(id);if(record)requests.push(record.promise);continue;}
-      if(glitchArt[id]&&LT.DATA?.species?.[id]){requests.push(requestGlitch(id).promise);continue;}
       if(offDexArt[id]&&LT.DATA?.species?.[id]){requests.push(requestOffDex(id).promise);continue;}
-      if(leaderArt[id]&&LT.DATA?.species?.[id]){for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestLeader(id,rear).promise);continue;}
       const family=lineage(id),location=family&&lookup.get(family.shape);
       if(!family?.stage||!location)continue;
       for(const rear of back==='both'?[false,true]:[!!back])requests.push(requestEvolution(location,family.stage,rear).promise);
     }
     return Promise.all(requests);
   }
-  const futoRecords={front:{image:null,loaded:false,failed:false,promise:null,frame:null},back:{image:null,loaded:false,failed:false,promise:null,frame:null}};
-  const futoFallbackRecord={image:null,loaded:false,failed:false,promise:null,frame:null};
   const root = new URL('.', document.currentScript?.src || document.baseURI);
   function hash(value) { let n=2166136261; for(const c of String(value)) n=Math.imul(n^c.charCodeAt(0),16777619); return n>>>0; }
   function canvas(w, h) { const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
@@ -156,7 +153,7 @@
     const x=Math.floor((cell%4)*image.naturalWidth/4), y=Math.floor(Math.floor(cell/4)*image.naturalHeight/4);
     return [x,y,Math.floor((cell%4+1)*image.naturalWidth/4)-x,Math.floor((Math.floor(cell/4)+1)*image.naturalHeight/4)-y];
   }
-  function loadAtlas(collection,key,url,notify=false) {
+  function loadAtlas(collection,key,url,notify=false,speciesIds=null) {
     const image=new Image(),record={image,loaded:false,failed:false,url,promise:null,frames:notify?evolutionFrames[key]:null};
     collection.set(key,record);
     record.promise=new Promise(resolve=>{
@@ -169,7 +166,9 @@
         release(ok);
         if(ok&&(late||notify)){
           cache.clear();
-          document.dispatchEvent(new Event('pachi-art-ready'));
+          const event=new Event('pachi-art-ready');
+          if(speciesIds)event.speciesIds=speciesIds.slice();
+          document.dispatchEvent(event);
         }
       };
       // Release startup/preload callers while retaining eventual image recovery.
@@ -183,70 +182,54 @@
   function load(group,back){
     return loadAtlas(sheets,`${group}:${back?1:0}`,new URL(`assets/creatures-${group?'b':'a'}-${back?'back':'front'}.webp`,root).href);
   }
-  function loadFutoSource(record,file,back=false){
-    const image=record.image=new Image();
-    record.promise=new Promise(resolve=>{
-      let settled=false,finished=false;
-      const release=ok=>{if(settled)return;settled=true;clearTimeout(timer);resolve(ok);};
-      const fallback=()=>{
-        // A failed rear must not fetch or display a front illustration.
-        if(record===futoRecords.front&&!futoFallbackRecord.promise)loadFutoSource(futoFallbackRecord,'assets/futo.png');
-      };
-      const finish=ok=>{
-        if(finished)return;finished=true;
-        const late=settled;record.loaded=ok;record.failed=!ok;
-        image.onload=null;image.onerror=null;release(ok);
-        if(ok){
-          // Only this view and its shiny derivative can be stale. Preserve the
-          // opposite view when its own request has already succeeded.
-          const prefix=`futo:${back?1:0}:`;
-          for(const key of cache.keys())if(key.startsWith(prefix))cache.delete(key);
-          // Normal startup is covered by Art.ready; notify only later changes.
-          if(late||record===futoFallbackRecord){
-            const event=new Event('pachi-art-ready');event.speciesIds=['futo'];document.dispatchEvent(event);
-          }
-        }else fallback();
-      };
-      const timer=setTimeout(()=>{record.failed=true;release(false);fallback();},18000);
-      image.onload=()=>finish(image.naturalWidth>0&&image.naturalHeight>0);
-      image.onerror=()=>finish(false);
-      image.src=new URL(file,root).href;
-    });
-    return record.promise;
+  function revisedCell(entry,back,image){
+    // Measured frames may override the nominal grid when generated figures
+    // occupy uneven cells. Values are in nativeSize pixels, front/rear separate.
+    const frame=entry[back?'back':'front'],size=entry.nativeSize;
+    if(frame){
+      if(!Array.isArray(frame)||frame.length!==4||!Array.isArray(size)||size.length!==2||
+        ![...frame,...size].every(Number.isFinite)||frame[2]<=0||frame[3]<=0||size.some(n=>n<=0))return null;
+      const fx=image.naturalWidth/size[0],fy=image.naturalHeight/size[1];
+      const x=clamp(Math.floor(frame[0]*fx),0,image.naturalWidth),y=clamp(Math.floor(frame[1]*fy),0,image.naturalHeight);
+      const right=clamp(Math.ceil((frame[0]+frame[2])*fx),0,image.naturalWidth),bottom=clamp(Math.ceil((frame[1]+frame[3])*fy),0,image.naturalHeight);
+      return right>x&&bottom>y?[x,y,right-x,bottom-y]:null;
+    }
+    const column=back?1:0,sx=Math.floor(column*image.naturalWidth/2),sy=Math.floor(entry.row*image.naturalHeight/entry.rows);
+    return [sx,sy,Math.floor((column+1)*image.naturalWidth/2)-sx,Math.floor((entry.row+1)*image.naturalHeight/entry.rows)-sy];
   }
-  function loadFuto(){return Promise.all([
-    loadFutoSource(futoRecords.front,'assets/futo-front-v2.png'),
-    loadFutoSource(futoRecords.back,'assets/futo-back-v2.png',true)
-  ]);}
-  function sourceFrame(record){
-    if(record.frame)return record.frame;
-    const image=record.image,raw=canvas(image.naturalWidth,image.naturalHeight),rc=raw.getContext('2d',{willReadFrequently:true});
-    rc.drawImage(image,0,0);const pixels=rc.getImageData(0,0,raw.width,raw.height).data;
-    let left=raw.width,right=-1,top=raw.height,bottom=-1;
+  function revisedFrame(record,entry,back){
+    const key=`${entry.row}:${back?1:0}`;
+    const frames=record.sourceFrames||(record.sourceFrames=new Map());
+    if(frames.has(key))return frames.get(key);
+    const image=record.image,cell=revisedCell(entry,back,image);
+    if(!cell){frames.set(key,null);return null;}
+    const [sx,sy,sw,sh]=cell;
+    const raw=canvas(sw,sh),rc=raw.getContext('2d',{willReadFrequently:true});
+    rc.drawImage(image,sx,sy,sw,sh,0,0,sw,sh);
+    const pixels=rc.getImageData(0,0,sw,sh).data;
+    let left=sw,right=-1,top=sh,bottom=-1;
+    // Inspect only this cell; ignore nearly transparent fringe in its bounds.
+    // Do not recolor, erase, or reconstruct any pixels from the source PNG.
     for(let i=3;i<pixels.length;i+=4)if(pixels[i]>12){
-      const p=(i-3)/4,x=p%raw.width,y=Math.floor(p/raw.width);
+      const p=(i-3)/4,x=p%sw,y=Math.floor(p/sw);
       left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
     }
-    record.frame=right>=left&&bottom>=top?[left,top,right-left+1,bottom-top+1]:null;
-    raw.width=raw.height=1;return record.frame;
+    const frame=right>=left&&bottom>=top?[sx+left,sy+top,right-left+1,bottom-top+1]:null;
+    frames.set(key,frame);raw.width=raw.height=1;return frame;
   }
-  function futoSprite(back=false){
-    const authored=futoRecords[back?'back':'front'];
-    const record=authored.loaded?authored:!back&&futoFallbackRecord.loaded?futoFallbackRecord:null;
-    // The supplied original is a front-only fallback. Missing rear art falls
-    // through to the renderer's procedural rear, never a mirrored front.
-    if(!record)return null;
-    const key=`futo:${back?1:0}:${record===authored?'authored':'original'}`;
-    if(cache.has(key))return cache.get(key);
-    const frame=sourceFrame(record);if(!frame)return null;
+  function revisedSprite(id,back=false){
+    const entry=revisedArt[id],record=requestRevised(id);
+    // Pending/error states must never redisplay the retired character artwork.
+    // The portrait renderer supplies a neutral waiting emblem for these IDs.
+    if(!record.loaded)return null;
+    const key=`${id}:${back?1:0}`;
+    if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
+    const frame=revisedFrame(record,entry,back);if(!frame)return null;
     const scale=Math.min((SIZE-24)/frame[2],(SIZE-24)/frame[3]);
-    const w=Math.round(frame[2]*scale),h=Math.round(frame[3]*scale);
+    const width=Math.max(1,Math.round(frame[2]*scale)),height=Math.max(1,Math.round(frame[3]*scale));
     const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
-    // Remove transparent padding only. Both views share the same 12px margin
-    // and baseline, without painting, mirroring, or distorting the figure.
-    c.drawImage(record.image,...frame,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
-    cache.set(key,cv);
-    if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
+    c.drawImage(record.image,...frame,Math.round((SIZE-width)/2),SIZE-12-height,width,height);
+    cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
   // A small dedicated silhouette remains available offline; it does not borrow
@@ -302,25 +285,12 @@
     cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
     return cv;
   }
-  function leaderSprite(id,back=false){
-    const record=requestLeader(id,back);if(!record.loaded)return null;
-    const key=`${id}:${back?1:0}`;
-    if(cache.has(key)){const cv=cache.get(key);cache.delete(key);cache.set(key,cv);return cv;}
-    const frame=sourceFrame(record);if(!frame)return null;
-    const scale=Math.min((SIZE-24)/frame[2],(SIZE-24)/frame[3]),w=Math.round(frame[2]*scale),h=Math.round(frame[3]*scale);
-    const cv=canvas(SIZE,SIZE),c=cv.getContext('2d');c.imageSmoothingEnabled=false;
-    c.drawImage(record.image,...frame,Math.round((SIZE-w)/2),SIZE-12-h,w,h);
-    cache.set(key,cv);if(cache.size>CACHE_LIMIT)cache.delete(cache.keys().next().value);
-    return cv;
-  }
   function getBase(id, back=false) {
     const d=LT.DATA?.species?.[id];
     if(!d)return null;
-    if(id==='futo')return futoSprite(back);
+    if(hasRevised(id))return revisedSprite(id,back);
     if(id==='arvelion'||id==='floravelle')return uniqueSprite(id,back);
-    if(glitchArt[id]){requestGlitch(id);return uniqueSprite(id,back);}
     if(offDexArt[id]){requestOffDex(id);return uniqueSprite(id,back);}
-    if(leaderArt[id])return leaderSprite(id,back);
     const family=lineage(id),stage=family?.stage||0;
     const shape=stage?family.shape:d.shape||'sprig';
     const mature=stage>0||d.rarity==='legendary'||d.evolved;
@@ -429,24 +399,17 @@
   }
   function orientation(id,back=false){
     const d=LT.DATA?.species?.[id];if(!d)return {direction:0,source:'unavailable',authoredBack:false};
-    if(id==='futo')return futoRecords[back?'back':'front'].loaded
-      ? {direction:back?1:-1,source:'futo-authored',authoredBack:!!back,stage:0}
-      : !back&&futoFallbackRecord.loaded
-        ? {direction:1,source:'futo-original-front',authoredBack:false,stage:0}
-        : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
+    if(hasRevised(id)){
+      const entry=revisedArt[id],loaded=!!revisedSheets.get(entry.file)?.loaded;
+      return {direction:loaded?(entry[back?'backDirection':'frontDirection']??(back?-1:1)):0,source:loaded?'revised-authored':'revised-pending',authoredBack:loaded&&!!back,stage:entry.stage,file:entry.file};
+    }
     if(id==='floravelle')return {direction:back?1:-1,source:uniqueSheets.get(id)?.loaded?'floravelle-original':'floravelle-fallback',authoredBack:!!back,stage:0};
     if(id==='arvelion')return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'arvelion-original',authoredBack:!!back,stage:0}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
-    if(glitchArt[id])return uniqueSheets.get(id)?.loaded
-      ? {direction:back?1:-1,source:'glitch-authored',authoredBack:!!back,stage:glitchArt[id].stage}
-      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:glitchArt[id].stage};
     if(offDexArt[id])return uniqueSheets.get(id)?.loaded
       ? {direction:back?1:-1,source:'offdex-authored',authoredBack:!!back,stage:offDexArt[id].stage}
       : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:offDexArt[id].stage};
-    if(leaderArt[id])return leaderSheets.get(`${id}:${back?1:0}`)?.loaded
-      ? {direction:leaderArt[id][back?'backDirection':'frontDirection'],source:'leader-authored',authoredBack:!!back,stage:0}
-      : {direction:back?-1:1,source:'fallback',authoredBack:!!back,stage:0};
     const family=lineage(id),shape=family?.stage?family.shape:d.shape||'sprig';
     const mature=family?.stage>0||d.rarity==='legendary'||d.evolved;
     let stage=0,location=lookup.get(mature&&lookup.has(`${shape}-mature`)?`${shape}-mature`:shape);
@@ -456,14 +419,26 @@
     const key=`${location.group}:${stage}:${back?1:0}`;
     return {direction:authoredDirections[key][location.cell],source:stage?'evolution':'original',authoredBack:!!back,stage,group:location.group,cell:location.cell};
   }
-  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadFuto(),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261119-kiraseed-v50',root).href)]);
-  LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
+  const ready=Promise.all([load(0,false),load(0,true),load(1,false),load(1,true),loadAtlas(uniqueSheets,'arvelion',new URL('assets/arvelion.png?v=20261116-lion',root).href),loadAtlas(uniqueSheets,'floravelle',new URL('assets/floravelle.png?v=20261119-kiraseed-v50',root).href)]);
+  LT.CreatureArt={ready,get,preload,lineage,alternate,shinyPalette,orientation,authoredDirections,revisedArt,revisedIds,hasRevised,supportsBack:id=>!!LT.DATA?.species?.[id],clearCache(){cache.clear();},spriteSize:SIZE,
     forms:groups.map(row=>row.slice()),
-    status(){return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
-      glitchRequested:Object.keys(glitchArt).filter(id=>uniqueSheets.has(id)).length,glitchLoaded:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.loaded).length,glitchFailed:Object.keys(glitchArt).filter(id=>uniqueSheets.get(id)?.failed).length,
-      offDexRequested:Object.keys(offDexArt).filter(id=>uniqueSheets.has(id)).length,offDexLoaded:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.loaded).length,offDexFailed:Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.failed).length,
-      leaderRequested:leaderSheets.size,leaderLoaded:[...leaderSheets.values()].filter(record=>record.loaded).length,leaderFailed:[...leaderSheets.values()].filter(record=>record.failed).length,
-      futoLoaded:futoRecords.front.loaded||futoFallbackRecord.loaded,futoFrontLoaded:futoRecords.front.loaded,futoBackLoaded:futoRecords.back.loaded,
-      futoFailed:futoRecords.front.failed||futoRecords.back.failed,futoFrontFailed:futoRecords.front.failed,futoBackFailed:futoRecords.back.failed,futoOriginalFallbackLoaded:futoFallbackRecord.loaded,arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};}
+    status(){
+      const revisedState=id=>revisedSheets.get(revisedArt[id].file),count=(ids,flag)=>ids.filter(id=>flag?revisedState(id)?.[flag]:!!revisedState(id)).length;
+      const glitchIds=['nullmie','nullva','zeroveil'],offDexIds=['pearlmi','pearlgoa','pearlseria','shimomaru','shimorei','hyogald'];
+      const futo=revisedState('futo'),leader=revisedState('galdoras');
+      return {loaded:[...sheets.values()].filter(s=>s.loaded).length,failed:[...sheets.values()].filter(s=>s.failed).length,
+        evolutionRequested:evolutionSheets.size,evolutionLoaded:[...evolutionSheets.values()].filter(s=>s.loaded).length,evolutionFailed:[...evolutionSheets.values()].filter(s=>s.failed).length,
+        revisedRequested:revisedSheets.size,revisedLoaded:[...revisedSheets.values()].filter(s=>s.loaded).length,revisedFailed:[...revisedSheets.values()].filter(s=>s.failed).length,
+        glitchRequested:count(glitchIds),glitchLoaded:count(glitchIds,'loaded'),glitchFailed:count(glitchIds,'failed'),
+        offDexRequested:count(offDexIds)+Object.keys(offDexArt).filter(id=>uniqueSheets.has(id)).length,
+        offDexLoaded:count(offDexIds,'loaded')+Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.loaded).length,
+        offDexFailed:count(offDexIds,'failed')+Object.keys(offDexArt).filter(id=>uniqueSheets.get(id)?.failed).length,
+        leaderRequested:leader?1:0,leaderLoaded:leader?.loaded?1:0,leaderFailed:leader?.failed?1:0,
+        futoLoaded:!!futo?.loaded,futoFrontLoaded:!!futo?.loaded,futoBackLoaded:!!futo?.loaded,
+        futoFailed:!!futo?.failed,futoFrontFailed:!!futo?.failed,futoBackFailed:!!futo?.failed,futoOriginalFallbackLoaded:false,
+        arvelionLoaded:!!uniqueSheets.get('arvelion')?.loaded,arvelionFailed:!!uniqueSheets.get('arvelion')?.failed,
+        floravelleLoaded:!!uniqueSheets.get('floravelle')?.loaded,floravelleFailed:!!uniqueSheets.get('floravelle')?.failed,cached:cache.size,cacheLimit:CACHE_LIMIT};
+    }
+
   };
 })();

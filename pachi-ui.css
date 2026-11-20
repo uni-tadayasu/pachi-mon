@@ -232,6 +232,10 @@ html:not(.mobile-screen) body.in-battle .journal{display:none}
 #battle-log p:last-child{color:#fff}
 .battle-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px;background:transparent}
 .battle-actions>*{min-width:0}
+.battle-actions.resonance-actions>.command-techniques{grid-column:1/-1;align-items:flex-start}
+.battle-actions.resonance-actions>.command-resonance{grid-column:auto;background:#173f45;border-color:#79b7ad;color:#f5ecd7}
+.battle-actions.resonance-actions>.command-resonance small{color:#d3e5dc}
+.battle-actions.resonance-actions:not(:has(.command-resonance))>.command-depart{grid-column:1/-1}
 .battle-actions .btn{position:relative;min-height:50px;padding:8px 12px 10px 24px;font-size:16px;justify-content:flex-start;gap:8px;white-space:normal;text-align:left}
 .battle-actions .btn small{display:block;width:100%;font-size:11px;line-height:1.5;color:var(--pm-text-3);letter-spacing:.02em}
 .battle-actions .btn-primary small{color:rgba(58,34,0,.75)}

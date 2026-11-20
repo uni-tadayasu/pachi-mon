@@ -58,7 +58,7 @@ assert(D.maps.cinderisle.encounters.includes('akebino'));assert(D.collectionRout
 // no habitat, without changing the location of an obtainable evolved form.
 let dexContent='';
 const dexContext=vm.createContext({DATA:D,engine:{state:{seen:Object.keys(D.species),caught:[]}},
-  openModal:(_title,content)=>{dexContent=content;},creatureView:()=>'',typeBadge:()=>'',
+  openModal:(_title,content)=>{dexContent=content;},creatureView:()=>'',speciesBadges:()=>'',abilityPanel:()=>'',
   creatureDescription:()=>'',evolutionLineage:()=>'',escape:value=>String(value)});
 vm.runInContext(html.slice(html.indexOf('  function showDexEntry(id) {'),html.indexOf('  function showMap() {')),dexContext);
 for(const starter of D.starters){

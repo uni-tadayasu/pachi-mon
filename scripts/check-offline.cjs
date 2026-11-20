@@ -81,7 +81,22 @@ function fire(type, init) {
   for (const url of offline.core) assert(await art.match(BASE + url), `core art ${url} is stored at install`);
   assert(offline.files.length > offline.core.length, 'the rest waits for use or a request');
   assert(self.skipped, 'a new worker takes over at once');
+  // Existing installs may still hold retired designs and older Futo thumbnails.
+  const retired = ['galdoras-front-v65.png','galdoras-back-v65.png','futo.png','futo-front-v2.png','futo-back-v2.png',
+    ...['nullmie','nullva','zeroveil'].flatMap(id=>[`${id}-v39.png`,`${id}-v46.png`]),
+    ...Array.from({length:6},(_,i)=>`offdex-v54-0${i+1}.png`),'dex/futo.webp?v=20261120-bold-pixels-v66'];
+  for (const url of retired) await art.put(BASE+'assets/'+url,new FakeResponse('retired'));
+  await shell.put(BASE+'assets/futo-front-v2.png',new FakeResponse('retired-shell-copy'));
+  const currentFuto=BASE+'assets/dex/futo.webp?v=20261120-originality-v67';
+  await art.put(currentFuto,new FakeResponse('current-futo'));
   await waitFor(fire('activate', {})); assert(self.claimed);
+  for (const url of retired) assert.equal(await caches.match(BASE+'assets/'+url),undefined,`retired ${url} must be removed`);
+  assert.equal(await (await art.match(currentFuto)).text(),'current-futo','current thumbnail survives cleanup');
+  for (const url of offline.core) assert(await art.match(BASE+url),'unrelated cached art survives cleanup');
+  const revised=offline.files.filter(f=>/assets\/original-.*-v67\.png$/.test(f.url));
+  assert.equal(revised.length,5,'all five revised atlases are available offline');
+  assert(revised.every(f=>offline.core.includes(f.url)),'revised designs are installed with core art');
+  assert(!offline.files.some(f=>retired.some(url=>f.url.split('?')[0]==='assets/'+url.split('?')[0])),'offline downloads exclude retired portraits');
 
   // ── Offline launch: the stored page answers, for the root and for start_url.
   online = false;

@@ -51,7 +51,7 @@ nodes.get('battle-switch-confirm').onclick();assert.equal(c.engine.battle.active
 // A successful large attack may defeat a trainer member before its recharge.
 // Render the real replacement menu: only continuing with that actor is enabled.
 {
- soloReset();const e=c.engine,actor=e.state.party[0],box={innerHTML:''};
+ soloReset();const e=c.engine,actor=e.state.party[0],box={innerHTML:'',classList:{toggle(){}}};
  actor.rechargeTurns=1;e.battle.enemyTeam=[e.battle.enemy,e.makeMonster('komori',1)];e.battle.enemyIndex=0;e.battle.enemy.hp=0;e.battle.pendingReplacement={enemyIndex:1,allyRequired:false};
  const before=soloSnapshot(),pp=copy(actor.pp),menu=vm.createContext({engine:e,DATA:D,escape:esc,nameOf:model.LT.displayName,portrait:()=>'<canvas></canvas>',paintPortraits(){},$:id=>{assert.equal(id,'battle-actions');return box;}});
  vm.runInContext(extract('  function battleActions(','  function captureBattleView('),menu);menu.battleActions();
@@ -59,6 +59,27 @@ nodes.get('battle-switch-confirm').onclick();assert.equal(c.engine.battle.active
  assert.deepEqual(buttons,[{index:0,disabled:false},{index:1,disabled:true},{index:2,disabled:true}]);
  assert(box.innerHTML.includes('技の反動が残っている'));assert(box.innerHTML.includes('次の1ターンを休みます'));assert.equal(soloSnapshot(),before,'Rendering the recharge restriction does not alter the battle');
  c.confirmBattleSwitch(0,true);assert.equal(c.actions,1);assert.equal(e.battle.activeIndex,0);assert.equal(e.battle.enemyIndex,1);assert.equal(e.battle.turn,0);assert.equal(actor.rechargeTurns,1);assert.deepEqual(copy(actor.pp),pp);
+}
+// The new direct resonance command obeys the existing inventory, capacity and
+// trainer restrictions. Merely rendering any menu must never consume a turn.
+{
+ const e=soloGame(),classes=new Set(),box={innerHTML:'',querySelectorAll(){return [];},classList:{toggle(name,on){on?classes.add(name):classes.delete(name);}}};
+ const menu=vm.createContext({engine:e,DATA:D,busy:false,escape:esc,ico:()=>'',refitBattleText(){},$:()=>box});
+ vm.runInContext(extract('  function battleActions(','  function captureBattleView('),menu);
+ const render=()=>{const before=JSON.stringify({save:e.serialize(),battle:e.battle});menu.battleActions();assert.equal(JSON.stringify({save:e.serialize(),battle:e.battle}),before);return [...box.innerHTML.matchAll(/<button\b([^>]*)>/g)].map(m=>({action:/data-battle="([^"]+)"/.exec(m[1])?.[1],disabled:/\bdisabled\b/.test(m[1])}));};
+ let buttons=render();assert(classes.has('resonance-actions'));
+ assert.deepEqual(buttons.map(b=>b.action),['moves','switch','items','resonate','flee']);
+ assert(!buttons.find(b=>b.action==='resonate').disabled);
+ e.state.inventory.chime=0;assert(render().find(b=>b.action==='resonate').disabled);
+ e.state.inventory.chime=1;
+ while(e.state.party.length<D.limits.party)e.state.party.push(e.makeMonster('komori',1));
+ e.state.storage=Array.from({length:D.limits.storage},()=>e.makeMonster('komori',1));
+ assert(render().find(b=>b.action==='resonate').disabled);
+ e.state.storage=[];
+ for(const type of ['guardian','rival','towerFloor','elite','champion','kasai']){
+   e.battle[type]=true;buttons=render();assert(!buttons.some(b=>b.action==='resonate'),type+' cannot use resonance');assert(buttons.find(b=>b.action==='flee').disabled);delete e.battle[type];
+ }
+ e.battle.result='win';render();assert(!classes.has('resonance-actions'));
 }
 // Invalid targets and stale confirmations never act on a new occupant/round.
 for(const invalid of [-1,99,1.5,NaN,'1',0]){soloReset();c.confirmBattleSwitch(invalid);assert.equal(c.modal,null);assert.equal(c.actions,0);}

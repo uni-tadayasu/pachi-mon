@@ -23,7 +23,7 @@ function write(file,contents){
   if(fs.existsSync(file)&&fs.readFileSync(file,'utf8')===contents)return;
   fs.writeFileSync(file,contents);written.push(relative);
 }
-const dexSprite = id => `assets/dex/${id}.webp?v=20261120-bold-pixels-v66`;
+const dexSprite = id => `assets/dex/${id}.webp?v=${id==='futo'?'20261120-originality-v67':'20261120-bold-pixels-v66'}`;
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const context = vm.createContext({ console });
@@ -68,7 +68,7 @@ for (const m of Object.values(D.maps)) for (const sid of m.encounters || []) (ha
 function obtain(id) {
   const s = D.species[id];
   if (id === D.legendary?.species) return `野生のパチモンが出る草むらだけに現れ、草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出現する伝説のパチモン（野生Lv.${D.legendary.minLevel}）。`;
-  if (id === D.mythical?.species) return `謎のトレーナー カサイの専用部屋で本人とのリアルタイム対戦に勝つと、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダムに決まります。手持ちに空きがあっても、ひかえが${D.limits.storage}体以上のときは受け取れません。空きを作った後は「秘密部屋」の「カサイの勝利報酬を確認」から受け取ってください。自動では受け取りません。運営は初期メンバーとしても迎えられます。通常の草むらには出現せず、交換もできません。`;
+  if (id === D.mythical?.species) return `謎の調律士 カサイの専用部屋で本人とのリアルタイム対戦に勝つと、プレイヤーごとに一度だけLv.70を1体受け取れます。報酬の性別は♂・♀からランダムに決まります。手持ちに空きがあっても、ひかえが${D.limits.storage}体以上のときは受け取れません。空きを作った後は「秘密部屋」の「カサイの勝利報酬を確認」から受け取ってください。自動では受け取りません。運営は初期メンバーとしても迎えられます。通常の草むらには出現せず、交換もできません。`;
   if (s.adminOnly) return '運営専用の幻のパチモン。一般の冒険で入手する方法はありません。';
   if (s.specialOnly) return '運営からの配布で受け取れる特別なパチモン。';
   if (D.starters.includes(id)) return '冒険の最初に選べる相棒の1体（野生には出現しません）。';
@@ -201,7 +201,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
 <article class="window guide">
   <h1>パチモン攻略ガイド｜遊び方・バトル・進化のコツ</h1>
   <p class="lead">「パチモン」はブラウザで遊べる無料のドット絵モンスター育成RPGです。登録やインストールは不要で、PC・スマートフォン・ゲームパッドで遊べます。このページでは、はじめての冒険に役立つ基本とコツをまとめています。</p>
-  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">パチモンの捕まえ方</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">128ステージと2人のチャンピオン</a></li><li><a href="#stages">全128ステージ一覧</a></li><li><a href="#conditions">状態異常</a></li><li><a href="#held">持ち物48種</a></li><li><a href="#growth">性別と振り分けポイント</a></li><li><a href="#secrets">隠し要素と裏技</a></li><li><a href="#moves">技とエフェクト</a></li><li><a href="#offline">オフラインで遊ぶ</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#local">ローカル通信（近くの友だちと）</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
+  <nav class="toc" aria-label="目次"><ol><li><a href="#start">冒険のはじめかた</a></li><li><a href="#controls">操作方法</a></li><li><a href="#battle">バトルの基本</a></li><li><a href="#types">タイプ相性表</a></li><li><a href="#catch">共鳴で仲間を迎える</a></li><li><a href="#evolve">進化と育成</a></li><li><a href="#rare">伝説・幻・色違い</a></li><li><a href="#journey">128ステージと二つの頂</a></li><li><a href="#stages">全128ステージ一覧</a></li><li><a href="#conditions">状態異常</a></li><li><a href="#held">持ち物48種</a></li><li><a href="#growth">性別と振り分けポイント</a></li><li><a href="#secrets">隠し要素と裏技</a></li><li><a href="#moves">技とエフェクト</a></li><li><a href="#offline">オフラインで遊ぶ</a></li><li><a href="#online">オンライン対戦・交換</a></li><li><a href="#local">ローカル通信（近くの友だちと）</a></li><li><a href="#settings">便利な設定</a></li></ol></nav>
   <h2 id="start">冒険のはじめかた</h2>
   <p>トップページの「旅をはじめる」から主人公（男性・女性）と名前を決め、最初の相棒を3体から選びます。相棒は2回進化し、最後まで一緒に戦えます。</p>
   <ul>${starterLines.map(line => `<li>${line.map((id, i) => `<a href="../monsters/${id}.html">${esc(D.species[id].name)}</a>${i < line.length - 1 ? `（Lv.${D.species[id].evolveLevel}）→ ` : ''}`).join('')}（${esc(typeName(D.species[line[0]].element))}）</li>`).join('')}</ul>
@@ -219,29 +219,29 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p>標準マッピングのゲームパッドにも対応しています。左スティック・十字キーで移動、下側のボタンで決定、右側のボタンで戻ります。</p>
   <h2 id="battle">バトルの基本</h2>
   <p><strong>特性</strong>は、すべてのパチモンが種族ごとに1つ持つ、自動で働く能力です。手持ち・ひかえの仲間にも自動で反映され、覚えるための道具やコインは不要です。進化すると進化先の種族の特性になります。冒険のバトル、通信シングル・ダブルで同じ効果が働きます。特性名と正確な効果は、パチモンの詳細・図鑑・通信のチーム編成・交換の確認画面で読めます。戦闘中は特性名を選ぶと効果を確認できます。</p>
-  <p>バトルは「たたかう・バッグ・パチモン・にげる」から行動を選びます。素早さの高いほうが先に動き、防御の技は優先して発動します。技にはPP（使用回数）があり、すべて使い切ると反動を受ける「踏ん張り打ち」になります。宿や休み場では体力とPPを無料で全回復できます。</p>
+  <p>バトルは「技を選ぶ・相棒交代・旅道具・距離を取る」から行動を選びます。野生のパチモンと出会ったときは、メインの行動から「共鳴」を直接選べます。素早さの高いほうが先に動き、防御の技は優先して発動します。技にはPP（使用回数）があり、すべて使い切ると反動を受ける「踏ん張り打ち」になります。宿や休み場では体力とPPを無料で全回復できます。</p>
   <ul><li>物理技は「物理攻撃」と相手の「物理防御」、特殊技は「特殊攻撃」と相手の「特殊防御」でダメージが決まります。</li><li>自分のどちらかのタイプと一致する技は、威力が1回だけ1.15倍になります。</li><li>防御の技は次に受けるダメージを半分にします。「守りを貫く」技は防御を無視します。</li><li>回復の技は最大体力の一定割合を回復し、吸収の技は与えたダメージの25%を回復します。</li></ul>
   <h2 id="types">タイプ相性表</h2>
   <p>公開タイプは${typeList(publicTypes)}の${publicTypes.length}種類です。有利な相手に1.5倍、不利な相手に0.7倍、同じ属性同士に0.8倍、それ以外には1倍のダメージになります。表は行が攻撃技、列が防御側のタイプです。</p>
   <p>2属性の複合タイプは、受ける技と各タイプの倍率を掛け合わせます。両方が弱点なら2.25倍、両方が耐性なら0.49倍、弱点と耐性の組み合わせなら1.05倍です。自分のどちらかのタイプと一致する技は、1回だけ1.15倍になります。「無」は単独タイプで、攻撃・防御とも属性相性は常に1倍です。</p>
   <p>技が当たったときの音でも相性が分かります。弱点を突いたときは鋭く上がる音、効きにくいときは低く沈む音、通常は短い打撃音が鳴ります。ソロ・通信対戦の両方に対応し、急所や防御によるダメージの増減では音の種類は変わりません。</p>
   <div class="table-wrap"><table class="type-chart"><caption>技のタイプ → 防御側のタイプ</caption><thead><tr><th scope="col">攻撃技 ↓</th>${publicTypes.map(type => `<th scope="col">${typeChip(type)}</th>`).join('')}</tr></thead><tbody>${typeRows}</tbody></table></div>
-  <h2 id="catch">パチモンの捕まえ方</h2>
-  <p>草むらを歩くと野生のパチモンが現れます。体力を減らしてから「バッグ」の「パチカプセル」を使うと捕まえやすくなります。パチカプセルは道具店で買え、勝利後に拾えることもあります。調律士（トレーナー）のパチモンは捕まえられません。仲間は${D.limits.party}体まで連れて歩け、ひかえには最大${D.limits.storage}体を預けられます。手持ち・ひかえが両方とも満員のときは、新しい仲間を迎える前に空きを作ってください。旧バージョンの記録が${D.limits.storage}体を超えていても、保存済みの仲間は保持されます。追加を止めた状態で入れ替えや見送りができ、空きができると新しい仲間を迎えられます。</p>
+  <h2 id="catch">共鳴で仲間を迎える</h2>
+  <p>草むらを歩くと野生のパチモンが現れます。バトルのメインの行動から「共鳴」を選ぶと共鳴鈴を鳴らし、その響きに応答した相手と絆を結んで仲間に迎えます。1回につき共鳴鈴を1個使います。相手の体力を減らすほど成功率が上がります。共鳴鈴は道具店で買え、勝利後に拾えることもあります。ほかの調律士のパチモンとは共鳴できません。仲間は${D.limits.party}体まで連れて歩け、ひかえには最大${D.limits.storage}体を預けられます。手持ち・ひかえが両方とも満員のときは、新しい仲間を迎える前に空きを作ってください。旧バージョンの記録が${D.limits.storage}体を超えていても、保存済みの仲間は保持されます。追加を止めた状態で入れ替えや見送りができ、空きができると新しい仲間を迎えられます。</p>
   <h2 id="evolve">進化と育成</h2>
   <p>ソロのバトルでは、手持ちの全員が経験値をもらえます。その相手との戦いで実際に場に出たパチモンは、もらえる経験値が<strong>1.5倍</strong>になります。途中で交代した個体も対象です。場に出ず待機していた手持ちは従来どおりの経験値をもらい、ひかえには経験値は入りません。相手が次のパチモンを繰り出すと、出場した個体の判定も切り替わります。「学びの帯」を持たせて出場した個体は、効果が重なって<strong>2.25倍</strong>になります。</p>
   <p>レベルの上限は100です。多くのパチモンはLv.8・12・16・22・24・32などで進化し、進化前の特徴を受け継いだ新しい姿になります。各パチモンの進化レベルは<a href="../monsters/">パチモン図鑑</a>で確認できます。</p>
   <h2 id="rare">伝説・幻・色違い</h2>
-  <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出会え（Lv.${D.legendary.minLevel}）、道・街・室内では現れません。体力を減らすほど捕まえやすくなりますが、捕獲率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
+  <p>伝説の<a href="../monsters/${esc(D.legendary.species)}.html">${esc(D.species[D.legendary.species].name)}</a>は、野生のパチモンが出る草むらだけに現れます。草むらを1歩進むごとに1/${D.legendary.encounterOdds}の確率で出会え（Lv.${D.legendary.minLevel}）、道・街・室内では現れません。体力を減らすほど共鳴しやすくなりますが、成功率は低めです。野生のパチモンとの遭遇ごとに1/3000の確率で色違いが現れます。色違いは見た目だけが変わる特別な個体です。</p>
   <h3 id="kasai-challenge">カサイに勝利してキラシードを迎える</h3>
-  <p>幻の<a href="../monsters/floravelle.html">キラシード</a>は、謎のトレーナー カサイとの<strong>リアルタイム対戦の勝利報酬</strong>で仲間にできます。接続中の運営カサイにフィールドで話しかけて対戦を選ぶと、二人が専用部屋へ移動します。挑戦者は60秒以内に奥のカサイへ話しかけ、運営が対戦を許可すると始まります。時間内に話しかけないと二人ともフィールドへ戻ります。カサイは挑戦者が退出するまで向かいの席から移動できません。双方の保存済みの手持ちを使い、人数・順番・レベル・技・育成は入室時の構成を反映します。戦いの開始時に双方の体力とPPが全回復し、技と交代で戦います。運営カサイ本人は自分への挑戦や勝利報酬の受取はできません。挑戦と報酬の確認にはインターネット接続が必要です。</p>
+  <p>幻の<a href="../monsters/floravelle.html">キラシード</a>は、謎の調律士 カサイとの<strong>リアルタイム対戦の勝利報酬</strong>で仲間にできます。接続中の運営カサイにフィールドで話しかけて対戦を選ぶと、二人が専用部屋へ移動します。挑戦者は60秒以内に奥のカサイへ話しかけ、運営が対戦を許可すると始まります。時間内に話しかけないと二人ともフィールドへ戻ります。カサイは挑戦者が退出するまで向かいの席から移動できません。双方の保存済みの手持ちを使い、人数・順番・レベル・技・育成は入室時の構成を反映します。戦いの開始時に双方の体力とPPが全回復し、技と交代で戦います。運営カサイ本人は自分への挑戦や勝利報酬の受取はできません。挑戦と報酬の確認にはインターネット接続が必要です。</p>
   <p>報酬は<strong>プレイヤーごとに一度だけ、Lv.70のキラシード1体</strong>です。性別は<strong>♂・♀からランダム</strong>に決まり、受け取りの再確認で変わりません。手持ちに空きがあっても、<strong>ひかえが${D.limits.storage}体以上のときは受け取れません</strong>。挑戦前にひかえの空きを作っておきましょう。満員や通信切断で受け取れなかった場合は、空きを作り、「秘密部屋」の「カサイの勝利報酬を確認」から「報酬を受け取る」を選びます。空きができても自動では受け取りません。勝利はサーバーで記録され、退出した後でも未受取の報酬を確認できます。</p>
   <p>運営は従来どおり初期メンバーとしてもキラシードを迎えられます。通常の草むらには出現せず、進化はせずにLv.100まで育ちます。育てた個体はオンライン・ローカルの通信対戦に編成できますが、交換はできません。</p>
-  <h2 id="journey">128ステージ・32の旅紋・2人のチャンピオン</h2>
-  <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者、<strong>2人</strong>のチャンピオン。</p>
+  <h2 id="journey">128ステージ・32の旅紋・二つの頂</h2>
+  <p>パチモンの世界は「2の累乗」でできています。<strong>256種</strong>のパチモン、<strong>128</strong>のステージ、<strong>64曲</strong>のBGM、<strong>32</strong>の旅紋、<strong>16</strong>の隠し要素、<strong>8つ</strong>の裏技バグ、<strong>4人</strong>の四境の守護者。そして二つの頂には、星路の継承者と天頂の覇者の<strong>2人</strong>が待っています。</p>
   <ul><li>4つのステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館の紋章守に勝つと旅紋がもらえます。深部からは自分の町へ戻る近道があります。</li>
-  <li>子午線（第1〜64ステージ）の16旅紋を集めると、第64ステージ「${esc(D.maps.meridianleague.name)}」で四境の守護者4人と、1人目のチャンピオン「${esc(D.champion.name)}」に挑めます。</li>
-  <li>勝つと評議院の東門から卯酉線（第65〜128ステージ）へ。さらに16旅紋（合計32）を集めると、第128ステージ「${esc(D.maps.zenithcrossing.name)}」で2人目のチャンピオン「${esc(D.champion2.name)}」（Lv.100）が待っています。</li>
+  <li>子午線（第1〜64ステージ）の16旅紋を集めると、第64ステージ「${esc(D.maps.meridianleague.name)}」で四境の守護者4人と、星路の継承者「${esc(D.champion.name)}」に挑めます。</li>
+  <li>勝つと評議院の東門から卯酉線（第65〜128ステージ）へ。さらに16旅紋（合計32）を集めると、第128ステージ「${esc(D.maps.zenithcrossing.name)}」で天頂の覇者「${esc(D.champion2.name)}」（Lv.100）が待っています。</li>
   <li>旅紋を手に入れた紋章守には何度でも再戦できます。50階の星詠みの塔や旅の依頼など、クリア後の遊びもあります。</li></ul>
   <h2 id="stages">全128ステージ一覧</h2>
   <div class="table-wrap"><table><thead><tr><th>地方</th><th>旅紋</th><th>町</th><th>道</th><th>名所</th><th>深部</th></tr></thead><tbody>${Array.from({ length: 32 }, (_, d) => { const ms = D.regionIds.slice(d * 4, d * 4 + 4).map(id => D.maps[id]), g = Object.values(D.guardians)[d]; return `<tr><th>${d < 16 ? '子午線' : '卯酉線'} 第${d + 1}地方<br><small>${esc(ms[0].region)}</small></th><td>${esc(g.seal)}<br><small>${esc(g.name)}</small></td>${ms.map(m => `<td>${String(m.stage).padStart(3, '0')} ${esc(m.name)}${m.encounters.length ? `<br><small>Lv.${m.level[0]}〜${m.level[1]}</small>` : ''}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div>
@@ -275,7 +275,7 @@ const guideBody = `${crumbNav([['トップ', '../'], ['攻略ガイド', '']], 1
   <p class="cta"><a class="button" href="../">パチモンを無料で遊ぶ ▶</a></p>
 </article>`;
 fs.mkdirSync(path.join(ROOT, 'guide'), { recursive: true });
-write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。カサイ本人とのリアルタイム対戦、Lv.70キラシードの一度限りの勝利報酬と受け取り条件、全128ステージ、32の旅紋、操作、8タイプ・複合タイプの相性、捕獲、進化、状態異常、持ち物、振り分けポイント、オンライン・ローカル対戦を解説します。', body: guideBody,
+write(path.join(ROOT, 'guide', 'index.html'), page({ depth: 1, canonical: `${SITE}/guide/`, title: 'パチモン攻略ガイド｜遊び方・操作・タイプ相性・進化のコツ', description: '無料ドット絵RPG「パチモン」の攻略ガイド。カサイ本人とのリアルタイム対戦、Lv.70キラシードの一度限りの勝利報酬と受け取り条件、全128ステージ、32の旅紋、操作、8タイプ・複合タイプの相性、共鳴で仲間を迎える方法、進化、状態異常、持ち物、振り分けポイント、オンライン・ローカル対戦を解説します。', body: guideBody,
   jsonld: [crumbs([['トップ', `${SITE}/`], ['攻略ガイド', `${SITE}/guide/`]]), { '@context': 'https://schema.org', '@type': 'Article', headline: 'パチモン攻略ガイド', inLanguage: 'ja', dateModified: DATE, author: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, publisher: { '@type': 'Organization', name: 'KASAI SOLUTIONS INC.' }, mainEntityOfPage: `${SITE}/guide/` }] }));
 
 // ---------- moves ----------

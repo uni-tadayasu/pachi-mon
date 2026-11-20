@@ -1,5 +1,5 @@
 {
- "version": "2026-11-20-v66",
+ "version": "2026-11-20",
  "files": [
   {
    "url": "assets/arvelion.png?v=20261116-lion",
@@ -222,26 +222,6 @@
    "bytes": 889974
   },
   {
-   "url": "assets/futo-back-v2.png",
-   "bytes": 819177
-  },
-  {
-   "url": "assets/futo-front-v2.png",
-   "bytes": 750833
-  },
-  {
-   "url": "assets/futo.png",
-   "bytes": 554441
-  },
-  {
-   "url": "assets/galdoras-back-v65.png",
-   "bytes": 1593795
-  },
-  {
-   "url": "assets/galdoras-front-v65.png",
-   "bytes": 2132767
-  },
-  {
    "url": "assets/kasai-overworld-v55.json",
    "bytes": 2452
   },
@@ -250,44 +230,32 @@
    "bytes": 1204302
   },
   {
-   "url": "assets/nullmie-v46.png",
-   "bytes": 532138
-  },
-  {
-   "url": "assets/nullva-v46.png",
-   "bytes": 684990
-  },
-  {
-   "url": "assets/offdex-v54-01.png",
-   "bytes": 1597000
-  },
-  {
-   "url": "assets/offdex-v54-02.png",
-   "bytes": 1841124
-  },
-  {
-   "url": "assets/offdex-v54-03.png",
-   "bytes": 2080972
-  },
-  {
-   "url": "assets/offdex-v54-04.png",
-   "bytes": 900212
-  },
-  {
-   "url": "assets/offdex-v54-05.png",
-   "bytes": 803200
-  },
-  {
-   "url": "assets/offdex-v54-06.png",
-   "bytes": 1429806
-  },
-  {
    "url": "assets/offdex-v54-07.png",
    "bytes": 942610
   },
   {
    "url": "assets/offdex-v54-08.png",
    "bytes": 1304652
+  },
+  {
+   "url": "assets/original-futo-v67.png",
+   "bytes": 1341997
+  },
+  {
+   "url": "assets/original-galdoras-v67.png",
+   "bytes": 1119958
+  },
+  {
+   "url": "assets/original-null-line-v67.png",
+   "bytes": 1805312
+  },
+  {
+   "url": "assets/original-pearl-line-v67.png",
+   "bytes": 1416190
+  },
+  {
+   "url": "assets/original-tide-line-v67.png",
+   "bytes": 1999704
   },
   {
    "url": "assets/sub-admin-overworld-v62.json",
@@ -312,10 +280,6 @@
   {
    "url": "assets/traveller-npcs-v33.png",
    "bytes": 1764301
-  },
-  {
-   "url": "assets/zeroveil-v46.png",
-   "bytes": 1017139
   }
  ],
  "core": [
@@ -326,28 +290,22 @@
   "assets/environment-props-v33.png",
   "assets/environment-terrain-v33.png",
   "assets/environment-trees-v33.png",
-  "assets/galdoras-back-v65.png",
-  "assets/galdoras-front-v65.png",
   "assets/kasai-overworld-v55.json",
   "assets/kasai-overworld-v55.png",
-  "assets/nullmie-v46.png",
-  "assets/nullva-v46.png",
-  "assets/offdex-v54-01.png",
-  "assets/offdex-v54-02.png",
-  "assets/offdex-v54-03.png",
-  "assets/offdex-v54-04.png",
-  "assets/offdex-v54-05.png",
-  "assets/offdex-v54-06.png",
   "assets/offdex-v54-07.png",
   "assets/offdex-v54-08.png",
+  "assets/original-futo-v67.png",
+  "assets/original-galdoras-v67.png",
+  "assets/original-null-line-v67.png",
+  "assets/original-pearl-line-v67.png",
+  "assets/original-tide-line-v67.png",
   "assets/sub-admin-overworld-v62.json",
   "assets/sub-admin-overworld-v62.png",
   "assets/sub-sub-admin-overworld-v62.png",
   "assets/traveller-female-v33.png",
   "assets/traveller-hero-v33.png",
-  "assets/traveller-npcs-v33.png",
-  "assets/zeroveil-v46.png"
+  "assets/traveller-npcs-v33.png"
  ],
- "totalBytes": 81289185,
- "coreBytes": 40887011
+ "totalBytes": 72234752,
+ "coreBytes": 33957029
 }
