@@ -1,4 +1,5 @@
 /* Pachi Monsters — offline play.
+ * v82: living waiting party members gain small XP; direct growth stays participant-only.
  * v81: compact desktop controls and consistent normal/expanded screen regions.
  * v80: sub operators start their own adventure without automatic starter gifts.
  * v79: participant-only XP, direct battle growth and trained operator companions.

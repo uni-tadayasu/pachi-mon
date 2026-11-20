@@ -3730,6 +3730,9 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       const activeIndex=this.state.party.findIndex(m=>m.hp>0);
       if(activeIndex<0){this.returnToVillage();return false;}
       this.battle={enemy:this.makeMonster(species,level),activeIndex,guardian,turn:0,log:[],result:null,allyGuard:false,enemyGuard:false,healCooldown:{ally:0,enemy:0},title:guardian?`${D.guardians[guardian].name}の試練`:'野生のモンスターとのバトル'};
+      // Only companions present at the start may share XP. A newly caught
+      // individual joins the party before reward resolution, but earns none.
+      this.battle.xpPartyUids=this.state.party.map(mon=>mon.uid);
       this.recordBattleParticipant();
       // One independent roll per wild encounter; trainer/tower battles never roll.
       this.battle.enemy.shiny=!!(wild&&!guardian&&!D.species[species].specialOnly&&this.rng()<1/SHINY_ODDS);
@@ -3758,11 +3761,14 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       // Participation belongs to this opponent and to individual UIDs, never
       // party slots. Repeated KO/capture resolution cannot grant XP twice.
       b.xpRewardedEnemyUid=b.enemy.uid;
-      const participants=new Set(b.xpParticipants||[]);
+      const participants=new Set(b.xpParticipants||[]),startingParty=new Set(b.xpPartyUids||[]);
       for(const mon of this.state.party){
-        if(!participants.has(mon.uid))continue;
         if(b.secretEncounter && mon.uid===b.secretCaughtUid)continue;
-        this.giveXP(mon,amount*1.5,events,{battleParticipation:true});
+        const participated=participants.has(mon.uid);
+        // Keep retired CPU Kasai transcripts deterministic under their original
+        // rule ID. Other living, unentered companions receive 20% of combat XP.
+        if(!participated && (b.kasai || !startingParty.has(mon.uid) || mon.hp<=0))continue;
+        this.giveXP(mon,amount*(participated?1.5:0.3),events,{battleParticipation:participated});
       }
     }
     defeatOpponent(events) {
@@ -3771,7 +3777,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
       if(!this.state.party.some(mon=>mon.hp>0)){this.endBattle('lost',events);return;}
       if(b.enemyTeam && b.enemyIndex<b.enemyTeam.length-1){
         const xp=20+b.enemy.level*6;
-        this.event(events,`出場した仲間だけが、旅の経験 ${xp} の1.5倍を得た。`,'reward');
+        this.event(events,`出場した仲間が、旅の経験 ${xp} の1.5倍を得た。${b.kasai?'':'未出場で元気な手持ちにも、その20%の経験値が入った。'}`,'reward');
         this.awardBattleXP(xp,events);
         // Keep the defeated combatant on screen while its effects finish.
         // Both sides change only after the player confirms the next ally.
@@ -4227,7 +4233,7 @@ dialog::backdrop{background:#122e36b8;backdrop-filter:none}dialog{padding:22px;b
         const xp=leagueBoss?160+b.enemy.level*30:b.towerFloor?80+b.enemy.level*18:guardian?(b.rematch?60+b.enemy.level*18:100+b.enemy.level*30):rival?70+b.enemy.level*18:32+b.enemy.level*10;
         const earned=coins*(this.state.party.some(m=>holds(m,'coins'))?2:1);
         this.state.coins=Math.min(9999999,this.state.coins+earned);
-        this.event(events,`${earned} コインを得た。出場した仲間だけが、旅の経験 ${xp} の1.5倍を得た。`,'reward');
+        this.event(events,`${earned} コインを得た。出場した仲間が、旅の経験 ${xp} の1.5倍を得た。${b.kasai?'':'未出場で元気な手持ちにも、その20%の経験値が入った。'}`,'reward');
         this.awardBattleXP(xp,events);
         if(!this.isTrainerBattle() && this.rng()<0.3){this.state.inventory.chime=Math.min(999,this.state.inventory.chime+1);this.event(events,'共鳴鈴を 1 個見つけた。','reward');}
         if(guardian && !b.rematch && !this.state.seals.includes(guardian.id)) {
@@ -8114,7 +8120,7 @@ document.addEventListener('pachi-art-ready',()=>LT.Art.clearCache());
     marker(engine.state.x,engine.state.y,'#e95c48','player');
   }
   function showHelp() {
-    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶと共鳴鈴を1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。ソロの経験値は、その相手との戦いで実際に場に出た個体だけが1.5倍で獲得します。途中交代で出場した個体も対象です。場に出ていない手持ち・ひかえ・捕獲直後の個体には経験値が入りません。出場してレベルが上がるごとに、通常成長へ体力+2、攻撃・防御・特攻・特防・素早さを各+1直接加算します。この実戦成長は個体に蓄積し、進化やランク対戦のLv.50補正でも保持します。相手が次のパチモンを出すと出場判定を切り替えます。「学びの帯」と重なると2.25倍。経験値でレベルアップし、一部は進化します。仲間は6体、ひかえは192体までです。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と二つの頂</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>芽・潮・灯・風・晶の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプを持つパチモンは、副タイプでもその状態異常にかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>id==='void'?`<p>${typeBadge(id)} 与ダメージ・被ダメージの属性相性は、すべて1倍です。</p>`:`<p>${typeBadge(id)} → ${LT.TypeSystem.order.filter(type=>LT.TypeSystem.chart[id]?.[type]===1.5).map(typeBadge).join(' ')} に有利（1.5倍）</p>`).join('')+'</div><p>公開タイプは芽・潮・灯・風・晶・雷・氷・土・石の9種類です。石は風と氷に強く、芽と潮に弱いタイプです。複合タイプは、受ける技と2つのタイプの相性を掛け合わせます（例：両方が弱点なら2.25倍、両方が耐性なら0.49倍）。同じタイプには0.8倍、有利な関係の逆向きには0.7倍、その他は1倍です（風と晶は互いに1.5倍）。自分のどちらかのタイプと一致する技は、1回だけ1.15倍になります。</p><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「旅道具」で共鳴鈴や回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>着弾音は「弱点＝鋭く上がる音」「通常＝短い打撃音」「効きにくい＝低く沈む音」の3種類。ソロ・通信対戦の両方で属性相性を知らせます。急所や防御で音の種類は変わりません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。招待リンクを友だちに送って接続し、シングル・ダブルを選べます。6文字コードでも参加できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
+    openModal('旅の手引き', '<div class="help-section"><h3>歩く・話す</h3><p>PC：矢印 / WASDで移動。E / Enter / スペースで話す・調べる。Jで図鑑、Mで地図、Bでかばん、Escでメニュー。Shiftを押しながら移動すると走れます。</p><p>スマホ：十字キーは押し続けて移動できます。「A」で話す・調べる。バトルは画面のボタンをタップします。</p><h3>コントローラー</h3><p>標準マッピング対応のゲームパッドをUSBやBluetoothで接続し、いずれかのボタンを押すと認識します。左スティック・十字キーで移動や項目選択、下側のボタン（A / ×）で決定、右側（B / ○）で戻る、START / OPTIONSでメニュー、肩ボタンで走ります。音が出ない場合は画面のサウンドボタンを一度タップしてください。機種・ブラウザーにより対応が異なります。</p><h3>モンスターと共鳴する</h3><p>濃い草むらで野生のモンスターと出会います。体力を減らし「共鳴」を選ぶと共鳴鈴を1個使います。弱らせるほど成功率が上がります。倒しきる前に共鳴しましょう。</p><h3>バトルと育成</h3><p>わざ・道具・交代で1ターンを使います。素早さの高いモンスターが先に行動します。ソロの経験値は、その相手との戦いで実際に場に出た個体が基本経験値の1.5倍を獲得します。途中交代で出場した個体も対象です。戦闘開始時から手持ちにいる未出場の仲間も、体力が残っていれば基本経験値の0.3倍（出場個体の20%）を獲得し、レベルアップできます。ひかえ・捕獲直後の個体・未出場で瀕死の個体は対象外です。出場してレベルが上がるごとに、通常成長へ体力+2、攻撃・防御・特攻・特防・素早さを各+1直接加算します。この実戦成長は個体に蓄積し、進化やランク対戦のLv.50補正でも保持します。未出場の仲間は通常のレベル成長のみです。相手が次のパチモンを出すと出場判定を切り替えます。「学びの帯」はそれぞれの獲得経験値をさらに1.5倍にします。経験値でレベルアップし、一部は進化します。仲間は6体、ひかえは192体までです。</p><h3>8種類の能力</h3><p>体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さ・命中・回避がバトルに影響します。物理わざは物理攻撃と物理防御、特殊わざは特殊攻撃と特殊防御で威力が決まり、命中と回避で当たりやすさが変わります。</p><h3>128ステージと32の旅紋</h3><p>世界は子午線（第1〜64ステージ）と卯酉線（第65〜128ステージ）の2本。4ステージ（町・道・名所・深部）で1つの地方になり、各地方の町にある紋章館で旅紋を1つもらえます。深部からは自分の町へ戻る近道があります。</p><h3>四境の守護者と二つの頂</h3><p>子午線の16旅紋を集めたら、第64ステージ「子午線評議院」で四境の守護者4人と星路の継承者に挑戦。勝つと評議院の東門から卯酉線へ渡れます。卯酉線の16旅紋（合計32）を集めたら、第128ステージ「天頂の交点」で天頂の覇者が待っています。</p><h3>状態異常（タイプ別）</h3><p>芽・潮・灯・風・晶の攻撃技は、ときどき相手を状態異常にします。<strong>花毒</strong>（芽・毎ターン1/8ダメージ）、<strong>水封</strong>（潮・泡で動けない、灯の技で弾ける）、<strong>灯焼け</strong>（灯・毎ターン1/16ダメージ＋物理技が半減）、<strong>目眩</strong>（風・素早さ半減＋ときどき動けない）、<strong>結晶化</strong>（晶・1〜3ターン動けない）。同じタイプを持つパチモンは、副タイプでもその状態異常にかかりません。水封と結晶化はバトル終了で、ほかは宿・すっきり草・瀕死で治ります。状態異常の野生は捕まえやすくなります。</p><h3>持ち物（48種）</h3><p>パーティーのパチモンを選んで「持たせる」から1つ渡せます。威力アップ、ダメージ軽減、状態異常の予防・回復、ピンチの回復、経験値アップ、進化を止める小石など48種類。道具屋の「持ち物コーナー」で、旅紋が増えるほど品ぞろえが増えます。持ち物を持たせたままでは交換できません。</p><h3>性別と振り分けポイント</h3><p>パチモンには性別（♂・♀）があります（伝説・幻・フートは性別なし）。レベルが1上がるごとに振り分けポイントが2もらえ、パーティー画面で体力・物理攻撃・物理防御・特殊攻撃・特殊防御・素早さに自由に振り分けられます（1能力64まで、体力は1ポイントで+2）。「おまかせ」と「リセット」もいつでも使えます。</p><h3>16の隠し要素と8つの裏技</h3><p>メニューの「冒険の記録 256→1」に、見つけた隠し要素と裏技バグが記録されます。まだ見つけていないものにはヒントが表示されます。建物の扉へ歩くと入室し、室内の出口へ進むと外に戻れます。</p><h3>属性のめぐり</h3><div class="element-guide">'+Object.entries(DATA.elements).map(([id,e])=>id==='void'?`<p>${typeBadge(id)} 与ダメージ・被ダメージの属性相性は、すべて1倍です。</p>`:`<p>${typeBadge(id)} → ${LT.TypeSystem.order.filter(type=>LT.TypeSystem.chart[id]?.[type]===1.5).map(typeBadge).join(' ')} に有利（1.5倍）</p>`).join('')+'</div><p>公開タイプは芽・潮・灯・風・晶・雷・氷・土・石の9種類です。石は風と氷に強く、芽と潮に弱いタイプです。複合タイプは、受ける技と2つのタイプの相性を掛け合わせます（例：両方が弱点なら2.25倍、両方が耐性なら0.49倍）。同じタイプには0.8倍、有利な関係の逆向きには0.7倍、その他は1倍です（風と晶は互いに1.5倍）。自分のどちらかのタイプと一致する技は、1回だけ1.15倍になります。</p><h3>パチモンバトル</h3><p>「たたかう」で技を選び、「旅道具」で共鳴鈴や回復道具を使います。「パチモン」で交代できます。相手の体力を減らすと捕まえやすくなります。調律士戦では捕獲・逃走できません。</p><p>着弾音は「弱点＝鋭く上がる音」「通常＝短い打撃音」「効きにくい＝低く沈む音」の3種類。ソロ・通信対戦の両方で属性相性を知らせます。急所や防御で音の種類は変わりません。</p><p>技にはPP（使用回数）があり、使うと1減ります。すべてのPPがなくなると、反動を受ける「踏ん張り打ち」が使えます。休憩所で体力とPPを全回復して次の紋章館へ出発しましょう。</p><h3>迷ったら</h3><p>右側の「次の目的」と地図を確認しましょう。各地の休憩所は無料です。負けても村で回復して再出発できます。</p><h3>オンライン対戦</h3><p>冒険中はメニューの「オンライン対戦」から入れます。冒険を一時停止し、別のチームで通信対戦を行います。閉じると冒険のメニューへ戻り、同じ場所から再開できます。招待リンクを友だちに送って接続し、シングル・ダブルを選べます。6文字コードでも参加できます。</p><h3>記録について</h3><p>冒険はこのブラウザに自動保存されます。プライベートモードやブラウザデータ削除で消えることがあるため、メニューの「セーブ書き出し」でバックアップしてください。別端末では「読み込み」で続きを遊べます。バトル途中の保存は探索から再開します。</p></div>', 'help');
   }
   // ── Offline play: the service worker keeps the game (and, on request, all art) on the device.
   const offlinePlay={registration:null,installPrompt:null,storing:false,status:null};

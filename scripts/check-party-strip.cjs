@@ -30,7 +30,7 @@ function harness(columns=6){
   let clock=100,quota=false,modal=false,dialogue=false,trade=false,nextPointer=0;const writes=[],toasts=[],details=[];
   document.querySelector=()=>modal?{}:null;
   const c=vm.createContext({console,Engine,DATA,LT:{...model.LT},engine:fresh(),playing:true,busy:false,introPending:false,partyReorder:null,storedSave:null,lastSave:0,moveAnim:{},
-    window,document,performance:{now:()=>clock},SAVE_KEY:'party-strip-save',nameOf:displayName,$:id=>id==='party-list'?list:null,fieldDialogOpen:()=>dialogue,tradeLocked:()=>trade,
+    window,document,performance:{now:()=>clock},SAVE_KEY:'party-strip-save',nameOf:displayName,$:id=>id==='party-list'?list:null,fieldDialogOpen:()=>dialogue,tradeLocked:()=>trade,rankedLocked:()=>false,
     CustomEvent:class{constructor(type){this.type=type;}},sound:{fx(){}},toast:message=>toasts.push(message),
     localStorage:{setItem(key,value){if(quota)throw Error('Quota');writes.push({key,value});}},updateAll(){c.partyReorder?.cancel();render();}
   });
