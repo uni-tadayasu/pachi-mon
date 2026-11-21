@@ -4,12 +4,12 @@
  * language and valid structured data; links and images resolve; the sitemap
  * lists exactly the indexable pages; visible facts agree with the game data. */
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
-const root = path.join(__dirname, '..'), SITE = 'https://www.kasai-solutions-inc.com';
+const root = path.join(__dirname, '..'), SITE = 'https://uni-tadayasu.github.io/pachi-mon';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const pages = ['index.html', 'guide/index.html', 'moves/index.html', 'monsters/index.html', '404.html', ...fs.readdirSync(path.join(root, 'monsters')).filter(f => f.endsWith('.html') && f !== 'index.html').map(f => `monsters/${f}`)];
 const attr = (html, re) => re.exec(html)?.[1];
 const strip = text => String(text).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-const canonicals = new Map();
+const canonicals = new Map(), pageCanonicals = new Set();
 const titles = new Set(), descriptions = new Set(), metadataDates = new Map();
 const today = new Date().toISOString().slice(0, 10);
 const contentHash = contents => crypto.createHash('sha256').update(contents.replace(/<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g, block => block.replace(/("dateModified"\s*:\s*")[^"]+("\s*)/g, '$1__SEO_LASTMOD__$2')).replace(/<time data-content-updated datetime="[^"]+">[^<]+<\/time>/g, '<time data-content-updated datetime="__SEO_LASTMOD__">__SEO_LASTMOD__</time>')).digest('hex');
@@ -17,6 +17,8 @@ let links = 0, images = 0;
 let redirects = 0;
 for (const file of pages) {
   const html = read(file), dir = path.dirname(file);
+  assert(!/https?:\/\/(?:www\.)?kasai-solutions-inc\.com(?:[/?#"\s]|$)/i.test(html.slice(0, html.indexOf('</head>'))), `${file}: metadata is detached from the Sengoku VS domain`);
+  assert.equal(attr(html, /<meta name="robots" content="([^"]+)"/), 'noindex, follow', `${file}: the archived page is excluded from search`);
   const viewport = attr(html, /<meta name="viewport" content="([^"]+)"/);
   assert(viewport?.includes('width=device-width') && viewport.includes('initial-scale=1'), `${file}: responsive viewport`);
   assert(!/user-scalable\s*=\s*(?:no|0)|maximum-scale\s*=\s*1(?:\D|$)/.test(viewport), `${file}: page zoom remains available`);
@@ -67,7 +69,8 @@ for (const file of pages) {
   const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
   assert.equal((markup.match(/<h1[\s>]/g) || []).length, 1, `${file}: one h1`);
   const noindex = /<meta name="robots" content="noindex/.test(html);
-  assert.equal(noindex, file === '404.html', `${file}: only the 404 page is noindex`);
+  assert.equal(noindex, true, `${file}: every archived page is noindex`);
+  assert(!pageCanonicals.has(canonical), `${file}: canonical is unique`); pageCanonicals.add(canonical);
   if (!noindex) { assert(!canonicals.has(canonical), `${file}: canonical is unique`); canonicals.set(canonical, file); }
   // Images have alt text and exist; internal links resolve (anchors included).
   for (const m of html.matchAll(/<img\b[^>]*>/g)) {
@@ -86,11 +89,15 @@ for (const file of pages) {
     links++;
   }
 }
-// ── Sitemap: exactly the indexable pages, with the dex images.
+// ── The archived site has no indexable pages; content-date checks still apply.
 const sitemap = read('sitemap.xml'), locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
 assert.deepEqual([...locs].sort(), [...canonicals.keys()].sort(), 'the sitemap lists every indexable page and nothing else');
 assert.equal((sitemap.match(/<image:image>/g) || []).length, [...canonicals.keys()].filter(url => /\/monsters\/[^/]+\.html$/.test(url)).length, 'every species page carries its sprite');
 const state = JSON.parse(read('scripts/seo-page-state.json'));
+for (const [file, date] of metadataDates) {
+  assert.equal(state[file]?.lastmod, date, `${file}: date state matches the page`);
+  assert.equal(state[file]?.hash, contentHash(read(file)), `${file}: regenerate SEO after a meaningful page change`);
+}
 for (const match of sitemap.matchAll(/<url><loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod>/g)) {
   const file = canonicals.get(match[1]);
   assert.equal(match[2], metadataDates.get(file), `${file}: sitemap date matches page date`);
@@ -103,7 +110,10 @@ const socialImage = fs.readFileSync(path.join(root, 'assets/ogp-handheld.png'));
 assert.equal(socialImage.readUInt32BE(16), 1200, 'share image width matches metadata');
 assert.equal(socialImage.readUInt32BE(20), 630, 'share image height matches metadata');
 const robots = read('robots.txt');
-assert(robots.includes(`Sitemap: ${SITE}/sitemap.xml`) && /Disallow: \/scripts\//.test(robots) && /Disallow: \/server\//.test(robots));
+assert(!/^Sitemap:/mi.test(robots), 'the archived sitemap is not advertised');
+assert(/^Allow: \/\s*$/m.test(robots) && !/^Disallow: \/\s*$/m.test(robots), 'crawlers can read the noindex directives');
+assert(/Disallow: \/scripts\//.test(robots) && /Disallow: \/server\//.test(robots));
+assert(/<meta name="robots" content="noindex, follow">/.test(read('tools/viewport-check.html')), 'the public viewport helper is also noindex');
 // ── FAQ remains useful visible content after retirement of FAQ rich results.
 const home = read('index.html'), start = home.indexOf('<section class="game-info-faq"'), section = home.slice(start, home.indexOf('</section>', start));
 const visible = [...section.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map(m => [strip(m[1]), strip(m[2])]);

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 'use strict';
-/* Builds the indexable companion pages from the shipped game data:
+/* Builds the archived, noindex companion pages from the shipped game data:
  *   monsters/index.html       — the public encyclopedia
  *   monsters/<id>.html        — one page per species
  *   guide/index.html          — beginner and system guide
  *   moves/index.html          — public moves and who learns them
  *   404.html                  — the not-found page
- *   sitemap.xml               — every public page (with dex images)
+ *   sitemap.xml               — empty while this legacy site is excluded from search
  * The home page metadata and static overview use the same public game data.
  * scripts/seo-page-state.json preserves real content modification dates.
  * Usage: node scripts/build-seo-pages.cjs   (SEO_DATE=YYYY-MM-DD to pin lastmod)
@@ -14,7 +14,7 @@
  * Sprites come from scripts/build-dex-sprites.cjs (assets/dex/<id>.webp). */
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
 const ROOT = path.resolve(__dirname, '..');
-const SITE = 'https://www.kasai-solutions-inc.com';
+const SITE = 'https://uni-tadayasu.github.io/pachi-mon';
 const DATE = process.env.SEO_DATE || new Date().toISOString().slice(0, 10);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(DATE) || new Date(DATE).toISOString().slice(0, 10) !== DATE) throw Error('SEO_DATE must be a valid YYYY-MM-DD date');
 const LASTMOD = '__SEO_LASTMOD__';
@@ -35,6 +35,8 @@ function write(file,contents){
   const relative=path.relative(ROOT,file).split(path.sep).join('/');
   if(selected&&!selected.has(relative))return;
   if (relative.endsWith('.html')) {
+    // The legacy game remains playable, but must not be indexed as Sengoku VS.
+    contents = contents.replace(/<meta name="robots" content="[^"]*"\s*\/?>/g, '<meta name="robots" content="noindex, follow">');
     const prior = previousState[relative];
     const modified = prior?.hash === contentHash(contents) ? prior.lastmod : DATE;
     contents = contents.replaceAll(LASTMOD, modified);
@@ -107,8 +109,8 @@ function obtain(id) {
 const rarityLabel = { common: '通常', evolved: '進化形', rare: '希少', legendary: '伝説', mythical: '幻', gift: '配布限定' };
 
 const fontLinks = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">`;
-function page({ depth, canonical, title, description, body, jsonld = [], noindex = false, root = false }) {
-  const up = root ? '/' : depth ? '../'.repeat(depth) : './';
+function page({ depth, canonical, title, description, body, jsonld = [], root = false }) {
+  const up = root ? `${SITE}/` : depth ? '../'.repeat(depth) : './';
   const image = `${SITE}/assets/ogp-handheld.png`, imageAlt = 'パチモン｜無料のドット絵モンスター育成RPGの紹介画像';
   const webPage = { '@context': 'https://schema.org', '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical, name: title, description, inLanguage: 'ja', dateModified: LASTMOD, isPartOf: { '@id': `${SITE}/#website` } };
   return `<!doctype html>
@@ -119,7 +121,7 @@ function page({ depth, canonical, title, description, body, jsonld = [], noindex
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${canonical}">
-<meta name="robots" content="${noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'}">
+<meta name="robots" content="noindex, follow">
 <link rel="alternate" hreflang="ja" href="${canonical}">
 <link rel="alternate" hreflang="x-default" href="${canonical}">
 <meta name="theme-color" content="#1a2a78">
@@ -353,9 +355,9 @@ for (const [oldId, newId] of retiredPublicSpecies) {
 }
 
 // ---------- 404 ----------
-write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SITE}/404.html`, noindex: true, title: 'ページが見つかりません｜パチモン',
+write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SITE}/404.html`, title: 'ページが見つかりません｜パチモン',
   description: 'お探しのページは見つかりませんでした。パチモンのトップ、図鑑、技一覧、攻略ガイドからお探しください。',
-  body: `<article class="window"><h1>ページが見つかりません</h1><p class="lead">お探しのページは移動したか、削除された可能性があります。</p><ul><li><a href="/">パチモンを無料で遊ぶ（トップ）</a></li><li><a href="/monsters/">パチモン図鑑</a></li><li><a href="/moves/">技一覧</a></li><li><a href="/guide/">攻略ガイド</a></li></ul></article>` }));
+  body: `<article class="window"><h1>ページが見つかりません</h1><p class="lead">お探しのページは移動したか、削除された可能性があります。</p><ul><li><a href="${SITE}/">パチモンを無料で遊ぶ（トップ）</a></li><li><a href="${SITE}/monsters/">パチモン図鑑</a></li><li><a href="${SITE}/moves/">技一覧</a></li><li><a href="${SITE}/guide/">攻略ガイド</a></li></ul></article>` }));
 
 // ---------- home metadata and visible overview ----------
 {
@@ -430,7 +432,7 @@ write(path.join(ROOT, '404.html'), page({ depth: 0, root: true, canonical: `${SI
   write(path.join(ROOT, 'index.html'), head + home.slice(headEnd, aboutStart) + about + home.slice(aboutEnd));
 }
 
-// ---------- content dates and sitemap (with public dex images) ----------
+// ---------- content dates and an empty sitemap for this archived site ----------
 const urls = [[`${SITE}/`, 'index.html'], [`${SITE}/guide/`, 'guide/index.html'], [`${SITE}/monsters/`, 'monsters/index.html'], [`${SITE}/moves/`, 'moves/index.html'], ...ids.map(id => [`${SITE}/monsters/${id}.html`, `monsters/${id}.html`, id])];
 const currentState = {};
 for (const [loc, file] of [...urls, [`${SITE}/404.html`, '404.html']]) {
@@ -443,8 +445,7 @@ for (const [loc, file] of [...urls, [`${SITE}/404.html`, '404.html']]) {
 const stateText = JSON.stringify(currentState, null, 2) + '\n';
 if (!fs.existsSync(stateFile) || fs.readFileSync(stateFile, 'utf8') !== stateText) { fs.writeFileSync(stateFile, stateText); written.push('scripts/seo-page-state.json'); }
 write(path.join(ROOT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${urls.map(([loc, file, id]) => `  <url><loc>${loc}</loc><lastmod>${currentState[file].lastmod}</lastmod>${id ? `<image:image><image:loc>${SITE}/${dexSprite(id)}</image:loc></image:image>` : ''}</url>`).join('\n')}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 </urlset>
 `);
-console.log(selected ? `Generated only ${[...selected].join(', ')} (${written.length} files changed).` : `Built ${ids.length} public species pages (${totalSpeciesCount} species in game), ${publicMoveCount} public moves (${totalMoveCount} in game), the guide, the 404 page and a sitemap with ${urls.length} URLs (${written.length} files changed).`);
+console.log(selected ? `Generated only ${[...selected].join(', ')} (${written.length} files changed).` : `Built ${ids.length} archived species pages (${totalSpeciesCount} species in game), ${publicMoveCount} public moves (${totalMoveCount} in game), the guide, the 404 page and an empty sitemap (${written.length} files changed).`);

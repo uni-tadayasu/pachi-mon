@@ -2,5 +2,3 @@ User-agent: *
 Allow: /
 Disallow: /scripts/
 Disallow: /server/
-
-Sitemap: https://www.kasai-solutions-inc.com/sitemap.xml
